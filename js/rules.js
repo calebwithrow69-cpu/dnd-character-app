@@ -1,0 +1,221 @@
+import { computeAC, gearSaveBonus } from "./gear.js";
+
+// Pure D&D 2024 rules helpers. No DOM, no state — math and tables only,
+// so the sheet, dice and wizard all compute numbers the same way.
+
+export const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"];
+
+export const ABILITY_LABEL = {
+  str: "Strength", dex: "Dexterity", con: "Constitution",
+  int: "Intelligence", wis: "Wisdom", cha: "Charisma"
+};
+export const ABILITY_SHORT = { str: "Str", dex: "Dex", con: "Con", int: "Int", wis: "Wis", cha: "Cha" };
+export const ABILITY_BY_LABEL = {
+  Strength: "str", Dexterity: "dex", Constitution: "con",
+  Intelligence: "int", Wisdom: "wis", Charisma: "cha"
+};
+
+export const SKILLS = [
+  { id: "acrobatics", label: "Acrobatics", ability: "dex" },
+  { id: "animal", label: "Animal Handling", ability: "wis" },
+  { id: "arcana", label: "Arcana", ability: "int" },
+  { id: "athletics", label: "Athletics", ability: "str" },
+  { id: "deception", label: "Deception", ability: "cha" },
+  { id: "history", label: "History", ability: "int" },
+  { id: "insight", label: "Insight", ability: "wis" },
+  { id: "intimidation", label: "Intimidation", ability: "cha" },
+  { id: "investigation", label: "Investigation", ability: "int" },
+  { id: "medicine", label: "Medicine", ability: "wis" },
+  { id: "nature", label: "Nature", ability: "int" },
+  { id: "perception", label: "Perception", ability: "wis" },
+  { id: "performance", label: "Performance", ability: "cha" },
+  { id: "persuasion", label: "Persuasion", ability: "cha" },
+  { id: "religion", label: "Religion", ability: "int" },
+  { id: "sleight", label: "Sleight of Hand", ability: "dex" },
+  { id: "stealth", label: "Stealth", ability: "dex" },
+  { id: "survival", label: "Survival", ability: "wis" }
+];
+
+export const CONDITIONS = [
+  "Blinded", "Charmed", "Deafened", "Frightened", "Grappled", "Incapacitated", "Invisible",
+  "Paralyzed", "Petrified", "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"
+];
+
+export function skillIdByLabel(label) {
+  const hit = SKILLS.find(s => s.label.toLowerCase() === String(label || "").trim().toLowerCase());
+  return hit ? hit.id : null;
+}
+
+// The imported library stores some list fields as Python repr strings
+// ("['Insight', 'Religion']") rather than JSON arrays. This reads either.
+export function parseList(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v !== "string" || !v.trim()) return [];
+  const matches = v.match(/'([^']*)'|"([^"]*)"/g);
+  if (!matches) return v.split(",").map(s => s.trim()).filter(Boolean);
+  return matches.map(m => m.slice(1, -1));
+}
+
+// "Wisdom", "Strength or Dexterity" -> first ability key found.
+export function primaryAbility(primaryText) {
+  const m = /(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)/.exec(primaryText || "");
+  return m ? ABILITY_BY_LABEL[m[1]] : null;
+}
+
+// Species traits carry a line like "Speed: 30 feet".
+export function speciesSpeed(traits) {
+  const m = /Speed:\s*(\d+)/i.exec(traits || "");
+  return m ? parseInt(m[1], 10) : 30;
+}
+export function speciesSize(traits) {
+  const m = /Size:\s*([A-Za-z]+)/i.exec(traits || "");
+  return m ? m[1] : "";
+}
+
+export function abilityMod(score) {
+  return Math.floor((Number(score || 10) - 10) / 2);
+}
+export function fmtMod(n) {
+  n = Number(n) || 0;
+  return (n >= 0 ? "+" : "−") + Math.abs(n);
+}
+export function proficiencyBonus(level) {
+  return 2 + Math.floor((Math.max(1, level) - 1) / 4);
+}
+
+// Standard spell slot tables, [character level] -> slots per spell level.
+const FULL = {
+  1: [2], 2: [3], 3: [4, 2], 4: [4, 3], 5: [4, 3, 2], 6: [4, 3, 3],
+  7: [4, 3, 3, 1], 8: [4, 3, 3, 2], 9: [4, 3, 3, 3, 1], 10: [4, 3, 3, 3, 2],
+  11: [4, 3, 3, 3, 2, 1], 12: [4, 3, 3, 3, 2, 1], 13: [4, 3, 3, 3, 2, 1, 1],
+  14: [4, 3, 3, 3, 2, 1, 1], 15: [4, 3, 3, 3, 2, 1, 1, 1], 16: [4, 3, 3, 3, 2, 1, 1, 1],
+  17: [4, 3, 3, 3, 2, 1, 1, 1, 1], 18: [4, 3, 3, 3, 3, 1, 1, 1, 1],
+  19: [4, 3, 3, 3, 3, 2, 1, 1, 1], 20: [4, 3, 3, 3, 3, 2, 2, 1, 1]
+};
+// 2024 Paladins and Rangers get slots from level 1.
+const HALF = {
+  1: [2], 2: [2], 3: [3], 4: [3], 5: [4, 2], 6: [4, 2], 7: [4, 3], 8: [4, 3],
+  9: [4, 3, 2], 10: [4, 3, 2], 11: [4, 3, 3], 12: [4, 3, 3], 13: [4, 3, 3, 1],
+  14: [4, 3, 3, 1], 15: [4, 3, 3, 2], 16: [4, 3, 3, 2], 17: [4, 3, 3, 3, 1],
+  18: [4, 3, 3, 3, 1], 19: [4, 3, 3, 3, 2], 20: [4, 3, 3, 3, 2]
+};
+const PACT = {
+  1: [1, 1], 2: [2, 1], 3: [2, 2], 4: [2, 2], 5: [2, 3], 6: [2, 3], 7: [2, 4], 8: [2, 4],
+  9: [2, 5], 10: [2, 5], 11: [3, 5], 12: [3, 5], 13: [3, 5], 14: [3, 5], 15: [3, 5],
+  16: [3, 5], 17: [4, 5], 18: [4, 5], 19: [4, 5], 20: [4, 5]
+};
+export const CASTER_TYPE = {
+  Bard: "full", Cleric: "full", Druid: "full", Sorcerer: "full", Wizard: "full",
+  Paladin: "half", Ranger: "half", Warlock: "pact"
+};
+const CAST_ABILITY = {
+  Bard: "cha", Cleric: "wis", Druid: "wis", Sorcerer: "cha", Wizard: "int",
+  Paladin: "cha", Ranger: "wis", Warlock: "cha"
+};
+export function spellcastingAbility(className) { return CAST_ABILITY[className] || null; }
+
+const clampLevel = l => Math.min(20, Math.max(1, Number(l) || 1));
+
+// Unified slot list: [{level, max, pact}] — pact slots are one row at the pact level.
+export function slotRows(className, level) {
+  const type = CASTER_TYPE[className];
+  if (!type) return [];
+  const lv = clampLevel(level);
+  if (type === "pact") {
+    const [count, slotLevel] = PACT[lv];
+    return [{ level: slotLevel, max: count, pact: true }];
+  }
+  const table = type === "full" ? FULL : HALF;
+  return (table[lv] || []).map((max, i) => ({ level: i + 1, max, pact: false }));
+}
+
+// Which ability a weapon swings with. A stored str/dex choice wins;
+// Finesse uses the better of the two; otherwise ranged = Dex, melee = Str.
+export function weaponAbilityMod(weapon, abilities) {
+  const str = abilityMod(abilities.str), dex = abilityMod(abilities.dex);
+  if (weapon.ability === "str") return str;
+  if (weapon.ability === "dex") return dex;
+  if (weapon.ability === "fin" || /finesse/i.test(weapon.props || "")) return Math.max(str, dex);
+  return weapon.kind === "Ranged" ? dex : str;
+}
+
+export function rollDie(sides) {
+  if (window.crypto && crypto.getRandomValues) {
+    const buf = new Uint32Array(1);
+    // rejection sampling so every face is exactly equally likely
+    const limit = Math.floor(0x100000000 / sides) * sides;
+    do { crypto.getRandomValues(buf); } while (buf[0] >= limit);
+    return 1 + (buf[0] % sides);
+  }
+  return 1 + Math.floor(Math.random() * sides);
+}
+
+// Everything derived from a character's saved state. Nothing here is ever
+// stored, so derived numbers can't go stale.
+export function deriveCharacter(char) {
+  const level = char.level || 1;
+  const prof = proficiencyBonus(level);
+  const mods = {};
+  ABILITIES.forEach(a => { mods[a] = abilityMod(char.abilities?.[a] ?? 10); });
+
+  const saveItems = gearSaveBonus(char);
+  const saves = {};
+  ABILITIES.forEach(a => { saves[a] = mods[a] + ((char.saveProf || []).includes(a) ? prof : 0) + saveItems; });
+
+  const skills = SKILLS.map(s => {
+    const proficient = (char.skillProf || []).includes(s.id);
+    const expert = (char.skillExpertise || []).includes(s.id);
+    const bonus = mods[s.ability] + (expert ? prof * 2 : proficient ? prof : 0);
+    return { ...s, proficient, expert, bonus };
+  });
+  const perception = skills.find(s => s.id === "perception").bonus;
+
+  const acInfo = computeAC(char);
+  const acTotal = acInfo.total;
+
+  const castAbility = spellcastingAbility(char.class);
+  const spellInfo = castAbility ? {
+    ability: castAbility, mod: mods[castAbility],
+    dc: 8 + prof + mods[castAbility], attackBonus: prof + mods[castAbility],
+    slots: slotRows(char.class, level)
+  } : null;
+
+  return {
+    level, prof, mods, saves, skills, ac: acTotal, acInfo, spellInfo,
+    initiative: mods.dex + Number(char.initBonus || 0),
+    passivePerception: 10 + perception
+  };
+}
+
+// Attack: d20 + ability + proficiency + magic. Damage: dice + ability + magic.
+// (Proficiency never adds to damage.)
+export function weaponNumbers(weapon, char) {
+  const d = deriveCharacter(char);
+  const abil = weaponAbilityMod(weapon, char.abilities);
+  const magic = Number(weapon.magic || 0);
+  const proficient = weapon.prof !== false;
+  return {
+    toHit: abil + (proficient ? d.prof : 0) + magic,
+    dmgMod: abil + magic,
+    dice: weapon.dice || "1d4"
+  };
+}
+
+export function standardArray(primary) {
+  const order = [primary, "con", "dex", "wis", "int", "cha", "str"].filter(Boolean);
+  const unique = [...new Set(order)].slice(0, 6);
+  const vals = [15, 14, 13, 12, 10, 8];
+  const out = {};
+  unique.forEach((a, i) => { out[a] = vals[i]; });
+  ABILITIES.forEach(a => { if (out[a] == null) out[a] = 8; });
+  return out;
+}
+
+export function roll4d6DropLowest() {
+  const r = [rollDie(6), rollDie(6), rollDie(6), rollDie(6)].sort((a, b) => b - a);
+  return r[0] + r[1] + r[2];
+}
+
+export function hpAverageGain(hitDie, conMod) {
+  return Math.max(1, Math.floor(hitDie / 2) + 1 + conMod);
+}

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Character Runner</title>
+<meta name="description" content="Offline D&D 2024 character sheets for the group.">
+<meta name="theme-color" content="#10151B">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Char Runner">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app"><div class="empty"><h3>Loading&hellip;</h3><p>Fetching the ruleset for the first time.</p></div></div>
+<div id="roll-root"></div>
+<div id="modal-root"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/app.js"></script>
+<script>
+// Opened by double-clicking the file? Browsers block the app's code that way.
+(function () {
+  var box = function (title, body) {
+    document.getElementById("app").innerHTML = '<div class="empty"><h3>' + title + '</h3><p>' + body + '</p></div>';
+  };
+  if (location.protocol === "file:") {
+    box("Open the web link instead", "This app can't run from a downloaded file — browsers block it. Open your group's Character Runner link (it ends in github.io) and install it from there.");
+    return;
+  }
+  setTimeout(function () {
+    if (!window.__booted) box("Still loading…", "This is taking longer than it should. Check your internet connection and reload. Your browser may also be too old — try the latest Chrome, Safari, Edge or Opera.");
+  }, 9000);
+})();
+</script>
+<noscript><div class="empty"><h3>Turn on JavaScript</h3><p>Character Runner needs JavaScript to run.</p></div></noscript>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

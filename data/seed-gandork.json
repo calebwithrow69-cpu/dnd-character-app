@@ -1,0 +1,408 @@
+{
+  "schema": 1,
+  "id": "gandork",
+  "name": "Gandork the Green",
+  "species": "Human",
+  "class": "Druid",
+  "subclass": "Circle of the Stars",
+  "level": 7,
+  "background": "Farmer",
+  "abilities": {
+    "cha": 8,
+    "con": 16,
+    "dex": 15,
+    "int": 8,
+    "str": 8,
+    "wis": 20
+  },
+  "saveProf": [
+    "int",
+    "wis"
+  ],
+  "skillProf": [
+    "animal",
+    "athletics",
+    "medicine",
+    "nature",
+    "perception",
+    "stealth",
+    "survival"
+  ],
+  "profsText": "Light, Medium armor, Shields. Simple and Martial weapons. Herbalism Kit, Carpenter's Tools.",
+  "languages": "Common, Druidic",
+  "feats": [
+    "Tough",
+    "Lucky",
+    "War Caster"
+  ],
+  "hp": {
+    "cur": 78,
+    "max": 78,
+    "temp": 13
+  },
+  "ac": {
+    "base": 15,
+    "bonus": 1,
+    "shield": true,
+    "dexCap": 2,
+    "armorName": "Half Plate (adamantine)"
+  },
+  "speed": 40,
+  "hitDice": {
+    "total": 7,
+    "spent": 0
+  },
+  "deathSaves": {
+    "success": 0,
+    "fail": 0
+  },
+  "conditions": [],
+  "exhaustion": 0,
+  "concentration": null,
+  "spellcasting": {
+    "ability": "wis",
+    "slotsUsed": [
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "spells": [
+      {
+        "name": "Speak with Animals",
+        "prepared": true,
+        "always": true
+      },
+      {
+        "name": "Guidance",
+        "prepared": false,
+        "always": true
+      },
+      {
+        "name": "Guiding Bolt",
+        "prepared": true,
+        "always": true
+      },
+      {
+        "name": "Druidcraft",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Mending",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Mold Earth",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Starry Wisp",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Thunderclap",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Entangle",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Faerie Fire",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Fog Cloud",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Healing Word",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Ice Knife",
+        "prepared": true,
+        "always": false
+      },
+      {
+        "name": "Thunderwave",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Enlarge/Reduce",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Flaming Sphere",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Heat Metal",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Hold Person",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Spike Growth",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Call Lightning",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Conjure Animals",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Dispel Magic",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Meld into Stone",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Revivify",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Sleet Storm",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Tidal Wave",
+        "prepared": false,
+        "always": false
+      },
+      {
+        "name": "Conjure Minor Elementals",
+        "prepared": false,
+        "always": false
+      }
+    ]
+  },
+  "resources": [
+    {
+      "name": "Wild Shape",
+      "max": 2,
+      "used": 0,
+      "note": "Forms: Wolf, Riding horse, Badger, Spider, Bear",
+      "reset": "short"
+    }
+  ],
+  "weapons": [
+    {
+      "name": "Greatsword",
+      "dice": "2d6",
+      "dtype": "Slashing",
+      "kind": "Melee",
+      "props": "Heavy, Two-Handed",
+      "mastery": "Graze",
+      "ability": "str",
+      "magic": 0
+    },
+    {
+      "name": "Javelin",
+      "dice": "1d6",
+      "dtype": "Piercing",
+      "kind": "Melee",
+      "props": "Thrown (30/120)",
+      "mastery": "Slow",
+      "ability": "str",
+      "magic": 0
+    },
+    {
+      "name": "Battleaxe",
+      "dice": "1d8",
+      "dtype": "Slashing",
+      "kind": "Melee",
+      "props": "Versatile (1d10)",
+      "mastery": "Topple",
+      "ability": "str",
+      "magic": 0
+    },
+    {
+      "name": "Heavy Crossbow",
+      "dice": "1d10",
+      "dtype": "Piercing",
+      "kind": "Ranged",
+      "props": "Ammunition, Heavy, Loading, Two-Handed",
+      "mastery": "Push",
+      "ability": "dex",
+      "magic": 0
+    },
+    {
+      "name": "Shotgun",
+      "dice": "2d10",
+      "dtype": "Piercing",
+      "kind": "Ranged",
+      "props": "Martial, Ammunition",
+      "mastery": "",
+      "ability": "dex",
+      "magic": 0,
+      "ammo": {
+        "cur": 57,
+        "max": 20,
+        "name": "Shells"
+      }
+    },
+    {
+      "name": "Comet Crossbow",
+      "dice": "1d10",
+      "dtype": "Bludgeoning",
+      "kind": "Ranged",
+      "props": "Ammunition, Heavy, Two-Handed · sling bullets · +1d6 cold",
+      "mastery": "",
+      "ability": "dex",
+      "magic": 0,
+      "ammo": {
+        "cur": 20,
+        "max": 20,
+        "name": "Sling bullets"
+      }
+    }
+  ],
+  "inventory": [
+    {
+      "name": "Potion of Healing",
+      "qty": 7,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "Potion (blue)",
+      "qty": 1,
+      "notes": "Unidentified",
+      "weight": 0
+    },
+    {
+      "name": "Rations",
+      "qty": 6,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "Camping gear",
+      "qty": 1,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "Greatsword",
+      "qty": 1,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "Heavy Crossbow",
+      "qty": 1,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "Adamantine Half Plate",
+      "qty": 1,
+      "notes": "Critical hits against you become normal hits.",
+      "weight": 0
+    },
+    {
+      "name": "Half Plate",
+      "qty": 1,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "Shield",
+      "qty": 1,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "The Horn of the Horde",
+      "qty": 1,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "Verdant Staff",
+      "qty": 1,
+      "notes": "",
+      "weight": 0
+    },
+    {
+      "name": "Gem Axe",
+      "qty": 1,
+      "notes": "Crits roll damage dice ×4.",
+      "weight": 0
+    },
+    {
+      "name": "Scroll of Revivify",
+      "qty": 2,
+      "notes": "Cast revivifiy\n",
+      "weight": 0
+    },
+    {
+      "name": "Wand of Fireball",
+      "qty": 1,
+      "notes": "DEX save for half. Check charges and DC with your DM.",
+      "weight": 0
+    },
+    {
+      "name": "Adventurer's Ring",
+      "qty": 1,
+      "notes": "Bonus Action: create light.",
+      "weight": 0
+    },
+    {
+      "name": "Shotgun",
+      "qty": 1,
+      "notes": "Shells are tracked on the weapon.",
+      "weight": 0
+    },
+    {
+      "name": "Comet Crossbow",
+      "qty": 1,
+      "notes": "Magic crossbow that fires sling bullets. Ranged hits deal bludgeoning + 1d6 cold. First hit each turn: everything within 10 ft of the target makes a DC 13 CON save or takes 1d6 cold. Hailing Comets (1/day, action): 20-ft radius, 40-ft cylinder within 120 ft, DC 13 DEX, 8d6 cold (half on save); recharges at dawn.",
+      "weight": 0
+    }
+  ],
+  "coins": {
+    "cp": 1000,
+    "ep": 0,
+    "gp": 6718,
+    "pp": 0,
+    "sp": 500
+  },
+  "classFeatureNotes": "Primal Order: warden. Starry form: {\"form\": \"archer\", \"on\": true}. Custom magic items: [{\"name\": \"Verdant Staff\", \"text\": \"Dc 12 Wisdom Check to restrain one medium creature for 1 round 3/day\"}]",
+  "notes": "Portal list:\n\nOrc Escort\n\nDragonkin escalation\n\nGoblin Assault "
+}

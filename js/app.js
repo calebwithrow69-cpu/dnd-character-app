@@ -1,0 +1,846 @@
+import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword } from "./data.js";
+import * as store from "./store.js";
+import { toast, platform } from "./ui.js";
+import { renderRoster, renderUnlock } from "./views/roster.js";
+import {
+  renderCreate, renderWizardResults, newDraft, buildCharacterFromDraft, validateStep, STEPS,
+  finalAbilities, primaryAbility
+} from "./views/create.js";
+import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices } from "./views/sheet.js";
+import { renderModal, renderRollCard } from "./views/modals.js";
+import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult } from "./views/levelup.js";
+import { SLOTS, itemById, fits, fitsOk, slotOf, wearKind, attunedCount, makeItem } from "./gear.js";
+import { rollFormula, rollD20, describeGroups, spin } from "./dice.js";
+import {
+  deriveCharacter, weaponNumbers, abilityMod, fmtMod, ABILITY_LABEL, SKILLS, slotRows,
+  standardArray, roll4d6DropLowest, hpAverageGain, rollDie, ABILITIES
+} from "./rules.js";
+
+const LS_PREFS = "dnd-prefs-v1";
+const LS_INSTALL = "dnd-install-dismissed";
+
+const APP = {
+  screen: "loading", library: null, campaign: null,
+  char: null, sheetTab: "stats", createDraft: null, seedGandork: null,
+  roll: null, history: [], diceFormula: "",
+  modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "",
+  prefs: readPrefs(), installDismissed: readFlag(LS_INSTALL), persisted: false
+};
+window.APP = APP; // handy from the browser console
+
+const mount = document.getElementById("app");
+const modalRoot = document.getElementById("modal-root");
+const rollRoot = document.getElementById("roll-root");
+
+function readPrefs() { try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch (e) { return {}; } }
+function readFlag(k) { try { return localStorage.getItem(k) === "1"; } catch (e) { return false; } }
+function savePrefs() { try { localStorage.setItem(LS_PREFS, JSON.stringify(APP.prefs)); } catch (e) { } }
+function applyPrefs() {
+  const root = document.documentElement;
+  const t = APP.prefs.theme;
+  if (t === "light" || t === "dark") root.setAttribute("data-theme", t); else root.removeAttribute("data-theme");
+  if (APP.prefs.size && APP.prefs.size !== "normal") root.setAttribute("data-size", APP.prefs.size); else root.removeAttribute("data-size");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = getComputedStyle(root).getPropertyValue("--panel").trim() || "#10151B";
+}
+
+// ---------------- boot ----------------
+async function init() {
+  applyPrefs();
+  window.__booted = true;
+  try {
+    const { library, campaign } = await loadData();
+    APP.library = library; APP.campaign = campaign;
+  } catch (e) {
+    if (e instanceof LockedError) {
+      APP.lockErr = e; APP.screen = "locked";
+      if (!APP._eventsBound) { bindEvents(); bindDrag(); APP._eventsBound = true; }
+      render(); setTimeout(() => document.getElementById("f-pass")?.focus(), 50);
+      return;
+    }
+    mount.innerHTML = `<div class="empty"><h3>Can't load the rules yet</h3><p>The very first time, this app needs an internet connection. Connect to Wi-Fi or data and try again — after that it works offline.</p><p style="margin-top:14px"><button class="btn pri" onclick="location.reload()">Try again</button></p></div>`;
+    return;
+  }
+
+  fetch("data/seed-gandork.json").then(r => (r.ok ? r.json() : null)).then(d => { APP.seedGandork = d; if (APP.screen === "roster") render(); }).catch(() => { });
+
+  const activeId = store.getActiveId();
+  const saved = activeId && store.getCharacter(activeId);
+  if (saved) { APP.char = store.normalize(saved, APP.library); APP.screen = "sheet"; }
+  else APP.screen = "roster";
+
+  if (!APP._eventsBound) { bindEvents(); bindDrag(); APP._eventsBound = true; }
+  render();
+
+  const recheck = (manual) => checkForUpdates({ library: APP.library, campaign: APP.campaign }, (fresh) => {
+    APP.library = fresh.library; APP.campaign = fresh.campaign; APP._rulesIndex = null;
+    toast(fresh.changed.includes("campaign") ? "Your DM updated the campaign rules" : "Rules data updated");
+    render();
+  }, (err) => { APP.lockErr = err; APP.needsNewPassword = true; render(); }).then(() => { if (manual === true) toast(navigator.onLine ? "Checked — you're up to date" : "You're offline right now"); });
+  APP.recheck = recheck;
+  if (!APP._listening) {
+    APP._listening = true;
+    window.addEventListener("online", () => APP.recheck());
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) APP.recheck(); else save(); });
+    window.addEventListener("pagehide", save);
+  }
+  recheck();
+  store.requestPersistence().then(p => { APP.persisted = !!p; }).catch(() => { });
+  if (navigator.storage?.persisted) navigator.storage.persisted().then(p => { APP.persisted = p; }).catch(() => { });
+}
+
+// ---------------- render ----------------
+function render() {
+  const mb = modalRoot.querySelector(".modal-body"), rs = document.querySelector(".results");
+  const keep = { modal: mb ? mb.scrollTop : 0, results: rs ? rs.scrollTop : 0, modalType: APP._lastModalType };
+
+  if (APP.screen === "locked") { mount.innerHTML = renderUnlock(APP); modalRoot.innerHTML = ""; rollRoot.innerHTML = ""; return; }
+  if (APP.screen === "roster") mount.innerHTML = renderRoster(APP);
+  else if (APP.screen === "create") mount.innerHTML = renderCreate(APP);
+  else if (APP.screen === "sheet" && APP.char) mount.innerHTML = renderSheet(APP);
+  else if (APP.screen === "levelup" && APP.char && APP.lvl) mount.innerHTML = renderLevelUp(APP);
+
+  modalRoot.innerHTML = renderModal(APP);
+  rollRoot.innerHTML = APP.screen === "sheet" ? renderRollCard(APP) : "";
+  document.body.classList.toggle("modal-open", !!APP.modal);
+  // keep toasts clear of whatever is pinned to the bottom (tab bar, roll card, wizard button)
+  const card = rollRoot.querySelector(".rollcard .in"), bar = mount.querySelector("nav.tabs, .stickybar");
+  const lift = (bar ? bar.offsetHeight : 0) + (card ? card.offsetHeight + 8 : 0) + 12;
+  document.documentElement.style.setProperty("--toast-lift", lift + "px");
+  document.documentElement.style.setProperty("--page-lift", Math.max(96, lift + 24) + "px");
+
+  const type = APP.modal ? APP.modal.type + (APP.modal.picker || "") : null;
+  if (type && type === keep.modalType) {
+    const nmb = modalRoot.querySelector(".modal-body"); if (nmb) nmb.scrollTop = keep.modal;
+    const nrs = modalRoot.querySelector(".results"); if (nrs) nrs.scrollTop = keep.results;
+  }
+  APP._lastModalType = type;
+}
+
+let persistAsked = false;
+function save() {
+  if (!APP.char) return;
+  if (!store.saveCharacter(APP.char)) toast("Couldn't save — this device's storage is full or blocked");
+  if (!persistAsked) { persistAsked = true; store.requestPersistence().then(p => { if (p) APP.persisted = true; }); }
+}
+function saveAndRender() { save(); render(); }
+
+function openModal(m) {
+  const wasOpen = !!APP.modal;
+  APP.modal = m;
+  if (!wasOpen) { try { history.pushState({ modal: true }, ""); } catch (e) { } }
+  render();
+  const first = modalRoot.querySelector("input[type=search], input.f:not([type=number])");
+  if (first && (m.type === "picker")) setTimeout(() => first.focus({ preventScroll: true }), 30);
+}
+function closeModal() {
+  if (!APP.modal) return;
+  APP.modal = null;
+  render();
+  if (history.state && history.state.modal) { APP._ignorePop = true; history.back(); }
+}
+
+// ---------------- rolls ----------------
+function pushHistory(title, summary) {
+  APP.history.unshift({ title, summary });
+  APP.history = APP.history.slice(0, 20);
+}
+function showRoll(title, parts, alt) {
+  APP.roll = { title, parts, alt };
+  pushHistory(title, parts.map(p => (parts.length > 1 ? p.label + " " : "") + p.total).join(" · "));
+  render();
+}
+function d20Test(title, mod) {
+  const exh = APP.char ? APP.char.exhaustion * 2 : 0;
+  const eff = mod - exh;
+  const r = rollD20(eff);
+  const modTxt = eff ? ` ${eff > 0 ? "+" : "−"} ${Math.abs(eff)}` : "";
+  showRoll(title, [{ label: r.crit ? "Natural 20!" : r.fumble ? "Natural 1" : "Result", total: r.total, bd: `[${r.first}]${modTxt}`, crit: r.crit, fumble: r.fumble }],
+    `With advantage <b>${r.adv}</b> · with disadvantage <b>${r.dis}</b> <span class="sub2">(second die ${r.second})</span>${exh ? ` · includes −${exh} exhaustion` : ""}`);
+  return r;
+}
+
+// ---------------- HP ----------------
+function applyHp(mode) {
+  const input = document.getElementById("hp-amt");
+  const amt = parseInt(input && input.value, 10);
+  if (!amt || amt < 0) { toast("Type an amount first"); input && input.focus(); return; }
+  const c = APP.char, hp = c.hp;
+  if (mode === "damage") {
+    if (hp.cur <= 0) {
+      if (amt >= hp.max) { c.deathSaves.fail = 3; toast("Massive damage — that's death"); }
+      else { c.deathSaves.fail = Math.min(3, c.deathSaves.fail + 1); toast(c.deathSaves.fail >= 3 ? "Third failure — that's death" : "Damage while down: one death save failure"); }
+    } else {
+      const fromTemp = Math.min(hp.temp, amt);
+      hp.temp -= fromTemp;
+      const rest = amt - fromTemp;
+      const overflow = rest - hp.cur;
+      hp.cur = Math.max(0, hp.cur - rest);
+      if (hp.cur === 0) {
+        c.concentration = null;
+        if (overflow >= hp.max) { c.deathSaves.fail = 3; toast("Massive damage — instant death"); }
+        else toast("Down to 0 HP — start death saves");
+      } else if (c.concentration && rest > 0) {
+        toast(`Concentration check: Con save DC ${Math.min(30, Math.max(10, Math.floor(amt / 2)))}`);
+      }
+    }
+  } else if (mode === "heal") {
+    if (hp.cur <= 0) c.deathSaves = { success: 0, fail: 0 };
+    hp.cur = Math.min(hp.max, hp.cur + amt);
+  } else {
+    hp.temp = Math.max(hp.temp, amt);
+    if (amt < hp.temp) toast("Temp HP don't stack — kept the higher amount");
+  }
+  if (input) input.value = "";
+  saveAndRender();
+}
+
+// ---------------- backups ----------------
+async function shareOrDownload(filename, text) {
+  const blob = new Blob([text], { type: "application/json" });
+  const p = platform();
+  if ((p.ios || p.android) && navigator.canShare) {
+    try {
+      const file = new File([blob], filename, { type: "application/json" });
+      if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: filename }); return; }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  toast("Backup saved to your downloads");
+}
+function exportChars(ids, label) {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const safe = (label || "characters").replace(/[^\w-]+/g, "-").slice(0, 40);
+  shareOrDownload(`character-runner-${safe}-${stamp}.json`, JSON.stringify(store.backupPayload(ids), null, 1));
+}
+function importPrompt() {
+  const input = Object.assign(document.createElement("input"), { type: "file", accept: ".json,application/json,text/plain" });
+  input.onchange = async () => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    try {
+      const chars = store.parseImport(await f.text());
+      chars.forEach(c => store.saveCharacter(store.normalize(c, APP.library)));
+      toast(`Restored ${chars.length} character${chars.length === 1 ? "" : "s"}`);
+      APP.modal = null; APP.screen = "roster"; APP.char = null; store.setActiveId(null);
+      render();
+    } catch (e) { toast(e.message || "Couldn't read that file"); }
+  };
+  input.click();
+}
+
+// ---------------- events ----------------
+function bindEvents() {
+  document.addEventListener("click", onClick);
+  document.addEventListener("change", onChange);
+  document.addEventListener("input", onInput);
+  document.addEventListener("submit", onSubmit);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && APP.modal) closeModal(); });
+  window.addEventListener("popstate", () => {
+    if (APP._ignorePop) { APP._ignorePop = false; return; }
+    if (APP.modal) { APP.modal = null; render(); }
+  });
+
+  // Hidden: hold a die for about a second.
+  let holdTimer = null;
+  document.addEventListener("pointerdown", e => {
+    const b = e.target.closest('[data-hold="egg"]');
+    if (!b) return;
+    holdTimer = setTimeout(() => { APP._suppressClick = true; openModal({ type: "slots" }); }, 900);
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev => document.addEventListener(ev, () => clearTimeout(holdTimer)));
+  document.addEventListener("contextmenu", e => { if (e.target.closest(".diebtn")) e.preventDefault(); });
+}
+
+function onClick(e) {
+  const el = e.target.closest("[data-a]");
+  if (!el) return;
+  if (APP._suppressClick && el.dataset.hold === "egg") { APP._suppressClick = false; return; }
+  const a = el.dataset.a;
+  if (a === "closeModalBackdrop" && e.target !== el) return;
+  const fn = ACTIONS[a];
+  if (fn) fn(el, e);
+}
+
+function onSubmit(e) {
+  const form = e.target.closest("[data-form]");
+  if (!form) return;
+  e.preventDefault();
+  if (form.dataset.form === "customRoll") ACTIONS.customRoll();
+  if (form.dataset.form === "unlock") tryUnlock(document.getElementById("f-pass").value);
+}
+
+function refreshWizardChrome() {
+  const d = APP.createDraft;
+  const btn = mount.querySelector('[data-a="nextStep"], [data-a="finishCreate"]');
+  const ok = validateStep(STEPS[d.step], d, APP);
+  if (btn) btn.disabled = !ok;
+  const why = document.getElementById("wizard-why");
+  if (why && STEPS[d.step] === "name") why.textContent = ok ? "" : "Type a name to continue.";
+  const fin = finalAbilities(APP, d);
+  ABILITIES.forEach(a => {
+    const s = mount.querySelector(`[data-final="${a}"]`);
+    if (s) s.textContent = `${fin[a] !== d.base[a] ? "→ " + fin[a] + " " : ""}(${fmtMod(abilityMod(fin[a]))})`;
+  });
+}
+
+function onInput(e) {
+  const el = e.target, ds = el.dataset;
+  if (el.id === "f-name" && APP.createDraft) { APP.createDraft.name = el.value; refreshWizardChrome(); return; }
+  if (el.id === "f-formula") { APP.diceFormula = el.value; return; }
+  if (ds.draftAbility && APP.createDraft) {
+    const v = parseInt(el.value, 10);
+    if (!isNaN(v)) APP.createDraft.base[ds.draftAbility] = Math.max(1, Math.min(30, v));
+    refreshWizardChrome(); return;
+  }
+  if (ds.query === "wizard") { APP.createDraft.query = el.value; const r = document.getElementById("wizard-results"); if (r) r.innerHTML = renderWizardResults(APP); return; }
+  if (ds.query === "picker") {
+    APP.pickerQuery = el.value;
+    const r = document.getElementById("results-picker");
+    if (r) r.innerHTML = APP.modal.picker === "spells" ? renderSpellResults(APP) : renderGearResults(APP, APP.modal.picker);
+    return;
+  }
+  if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
+  if (ds.query === "rules") { APP.rulesQuery = el.value; const r = document.getElementById("results-rules"); if (r) r.innerHTML = renderRulesResults(APP); return; }
+  // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
+  if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
+  if (ds.itemNotes != null && APP.char) { const it = APP.char.inventory[+ds.itemNotes]; if (it) { it.notes = el.value; save(); } return; }
+  if (ds.modal && APP.modal) { APP.modal[ds.modal] = el.value; return; }
+}
+
+function onChange(e) {
+  const el = e.target, ds = el.dataset, c = APP.char;
+  if (ds.draft && APP.createDraft) { APP.createDraft[ds.draft] = el.value; if (ds.draft === "plus2" && APP.createDraft.plus1 === el.value) APP.createDraft.plus1 = ""; render(); return; }
+  if (ds.draftAbility) { render(); return; }
+  if (!c) return;
+  if (ds.ac) {
+    const v = el.value.trim();
+    if (ds.ac === "armorName") c.ac.armorName = v;
+    else if (ds.ac === "dexCap") c.ac.dexCap = v === "" ? null : Number(v);
+    else c.ac[ds.ac] = Number(v) || 0;
+    saveAndRender(); return;
+  }
+  if (ds.itemField && APP.modal && APP.modal.type === "item") {
+    const it = itemById(c, APP.modal.id), v = el.value, f = ds.itemField;
+    if (f === "name") it.name = v.trim() || it.name;
+    else if (f === "qty") it.qty = Math.max(0, parseInt(v, 10) || 0);
+    else if (f === "slot") { if (v === "none") it.slot = "none"; else it.slot = v; }
+    else if (f === "armorType") { if (v) it.armor = { type: v }; else delete it.armor; }
+    else it[f] = parseInt(v, 10) || 0;
+    recheckEquipped(); saveAndRender(); return;
+  }
+  if (ds.weaponField && APP.modal && APP.modal.type === "item") {
+    const w = itemById(c, APP.modal.id).weapon, f = ds.weaponField, v = el.value;
+    w[f] = f === "magic" ? parseInt(v, 10) || 0 : f === "ability" ? (v || null) : v;
+    recheckEquipped(); saveAndRender(); return;
+  }
+  if (ds.coin) { c.coins[ds.coin] = Math.max(0, parseInt(el.value, 10) || 0); save(); return; }
+  if (ds.editAbility) { c.abilities[ds.editAbility] = Math.max(1, Math.min(30, parseInt(el.value, 10) || 10)); saveAndRender(); return; }
+  if (ds.edit) {
+    const v = el.value;
+    if (ds.edit === "name") c.name = v.trim() || c.name;
+    else if (ds.edit === "level") { c.level = Math.max(1, Math.min(20, parseInt(v, 10) || c.level)); c.hitDice.total = c.level; c.hitDice.spent = Math.min(c.hitDice.spent, c.level); }
+    else if (ds.edit === "maxhp") { c.hp.max = Math.max(1, parseInt(v, 10) || c.hp.max); c.hp.cur = Math.min(c.hp.cur, c.hp.max); }
+    else if (ds.edit === "speed" || ds.edit === "initBonus") c[ds.edit] = parseInt(v, 10) || 0;
+    else c[ds.edit] = v;
+    saveAndRender(); return;
+  }
+  if (ds.modal && APP.modal) { APP.modal[ds.modal] = el.value; return; }
+}
+
+// ---------------- actions ----------------
+const ACTIONS = {
+  // roster
+  newChar() { APP.createDraft = newDraft(); APP.screen = "create"; render(); window.scrollTo(0, 0); },
+  importGandork() {
+    if (!APP.seedGandork) return;
+    store.saveCharacter(store.normalize(APP.seedGandork, APP.library));
+    toast("Added Gandork"); render();
+  },
+  openChar(el) {
+    const raw = store.getCharacter(el.dataset.id);
+    if (!raw) return;
+    APP.char = store.normalize(raw, APP.library);
+    save();
+    APP.sheetTab = "stats"; APP.roll = null;
+    store.setActiveId(APP.char.id);
+    APP.screen = "sheet"; render(); window.scrollTo(0, 0);
+  },
+  dismissInstall() { APP.installDismissed = true; try { localStorage.setItem(LS_INSTALL, "1"); } catch (e) { } render(); },
+  openSettings() { openModal({ type: "settings" }); },
+  importPrompt() { importPrompt(); },
+  exportAll() { exportChars(null, "backup"); },
+  setTheme(el) { APP.prefs.theme = el.dataset.v; savePrefs(); applyPrefs(); render(); },
+  setSize(el) { APP.prefs.size = el.dataset.v; savePrefs(); applyPrefs(); render(); },
+  checkUpdates() { APP.recheck && APP.recheck(true); },
+
+  // modal plumbing
+  closeModal() { closeModal(); },
+  closeModalBackdrop() { closeModal(); },
+  showDetail(el) { openModal({ type: "detail", kind: el.dataset.kind, name: el.dataset.name, i: el.dataset.i != null ? +el.dataset.i : null, from: el.dataset.from }); },
+
+  // wizard
+  cancelCreate() { APP.screen = "roster"; APP.createDraft = null; render(); },
+  prevStep() { const d = APP.createDraft; d.step = Math.max(0, d.step - 1); d.query = ""; render(); window.scrollTo(0, 0); },
+  nextStep() {
+    const d = APP.createDraft;
+    if (!validateStep(STEPS[d.step], d, APP)) return;
+    d.step = Math.min(STEPS.length - 1, d.step + 1); d.query = "";
+    render(); window.scrollTo(0, 0);
+  },
+  pickSpecies(el) { APP.createDraft.species = el.dataset.name; render(); },
+  pickClass(el) {
+    const d = APP.createDraft;
+    if (d.class !== el.dataset.name) { d.classSkills = []; d.subclass = ""; }
+    d.class = el.dataset.name; render();
+  },
+  pickBackground(el) {
+    const d = APP.createDraft;
+    if (d.background !== el.dataset.name) { d.plus2 = ""; d.plus1 = ""; d.classSkills = []; }
+    d.background = el.dataset.name; render();
+  },
+  bonusMode(el) { APP.createDraft.bonusMode = el.dataset.mode; render(); },
+  standardArray() {
+    const cls = findByName(APP.library.classes, APP.createDraft.class);
+    APP.createDraft.base = standardArray(primaryAbility(cls?.primary));
+    render(); toast("Standard array placed — swap numbers if you like");
+  },
+  rollStats() {
+    ABILITIES.forEach(a => { APP.createDraft.base[a] = roll4d6DropLowest(); });
+    render(); toast("Rolled 4d6, dropping the lowest die, for each score");
+  },
+  toggleSkill(el) {
+    const d = APP.createDraft, id = el.dataset.id, i = d.classSkills.indexOf(id);
+    if (i >= 0) d.classSkills.splice(i, 1); else d.classSkills.push(id);
+    render();
+  },
+  finishCreate() {
+    const char = buildCharacterFromDraft(APP.createDraft, APP);
+    APP.char = store.normalize(char, APP.library);
+    save();
+    store.setActiveId(APP.char.id);
+    APP.createDraft = null; APP.screen = "sheet"; APP.sheetTab = "stats"; APP.roll = null;
+    if (needsFirstChoices(APP, APP.char)) { APP.lvl = newLevelDraft(APP.char, { fromCreation: true }); APP.screen = "levelup"; }
+    render(); window.scrollTo(0, 0);
+    toast(APP.screen === "levelup" ? "Now make your level 1 choices" : `${APP.char.name} is ready`);
+  },
+
+  // sheet nav
+  backToRoster() { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
+  sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; render(); window.scrollTo(0, 0); },
+  openEdit() { openModal({ type: "edit" }); },
+  askDelete() { APP.modal.confirmDelete = true; render(); },
+  cancelDelete() { APP.modal.confirmDelete = false; render(); },
+  deleteChar() {
+    const name = APP.char.name;
+    store.deleteCharacter(APP.char.id);
+    APP.char = null; APP.modal = null; APP.screen = "roster"; render();
+    toast(`Deleted ${name}`);
+  },
+  exportOne() { exportChars([APP.char.id], APP.char.name); },
+  toggleSaveProf(el) {
+    const a = el.dataset.ab, list = APP.char.saveProf, i = list.indexOf(a);
+    if (el.checked && i < 0) list.push(a); if (!el.checked && i >= 0) list.splice(i, 1);
+    saveAndRender();
+  },
+
+  // HP & rests
+  hpApply(el) { applyHp(el.dataset.mode); },
+  deathSave(el) {
+    const ds = APP.char.deathSaves, k = el.dataset.kind, i = +el.dataset.i;
+    ds[k] = ds[k] === i + 1 ? i : i + 1;
+    saveAndRender();
+  },
+  rollDeathSave() {
+    const c = APP.char, v = rollDie(20);
+    let msg;
+    if (v === 20) { c.hp.cur = 1; c.deathSaves = { success: 0, fail: 0 }; msg = "Natural 20 — you're back up with 1 HP!"; }
+    else if (v === 1) { c.deathSaves.fail = Math.min(3, c.deathSaves.fail + 2); msg = "Natural 1 — two failures"; }
+    else if (v >= 10) { c.deathSaves.success = Math.min(3, c.deathSaves.success + 1); msg = c.deathSaves.success >= 3 ? "Third success — you're stable" : "Success"; }
+    else { c.deathSaves.fail = Math.min(3, c.deathSaves.fail + 1); msg = c.deathSaves.fail >= 3 ? "Third failure — that's death" : "Failure"; }
+    save();
+    showRoll("Death save", [{ label: msg, total: v, bd: "10 or higher succeeds", crit: v === 20, fumble: v === 1 }]);
+  },
+  openShortRest() { openModal({ type: "shortRest", log: [] }); },
+  spendHitDie() {
+    const c = APP.char;
+    if (c.hitDice.spent >= c.hitDice.total) return;
+    const roll = rollDie(c.hitDice.die), gain = Math.max(1, roll + abilityMod(c.abilities.con));
+    c.hitDice.spent += 1;
+    const before = c.hp.cur;
+    c.hp.cur = Math.min(c.hp.max, c.hp.cur + gain);
+    APP.modal.log.push(`Rolled ${roll} on d${c.hitDice.die} → healed ${c.hp.cur - before}`);
+    saveAndRender();
+  },
+  finishShortRest() {
+    const c = APP.char;
+    slotRows(c.class, c.level).filter(r => r.pact).forEach(r => { c.spellcasting.slotsUsed[r.level - 1] = 0; });
+    c.resources.forEach(r => { if (r.reset === "short") r.used = 0; });
+    save(); closeModal();
+    toast("Short rest done" + (c.class === "Warlock" ? " — pact slots back" : ""));
+  },
+  openLongRest() { openModal({ type: "longRest" }); },
+  confirmLongRest() {
+    const c = APP.char;
+    c.hp.cur = c.hp.max; c.hp.temp = 0;
+    c.spellcasting.slotsUsed = c.spellcasting.slotsUsed.map(() => 0);
+    c.hitDice.spent = 0;
+    c.resources.forEach(r => { r.used = 0; });
+    c.deathSaves = { success: 0, fail: 0 };
+    c.exhaustion = Math.max(0, c.exhaustion - 1);
+    c.concentration = null;
+    save(); closeModal();
+    toast("Long rest: everything restored");
+  },
+
+  // level up (full screen)
+  openLevelUp() { APP.lvl = newLevelDraft(APP.char); APP.screen = "levelup"; APP.roll = null; render(); window.scrollTo(0, 0); },
+  startFirstChoices() { APP.lvl = newLevelDraft(APP.char, { fromCreation: true }); APP.screen = "levelup"; render(); window.scrollTo(0, 0); },
+  lvlCancel() { APP.lvl = null; APP.screen = "sheet"; render(); window.scrollTo(0, 0); },
+  lvlPrev() { APP.lvl.step = Math.max(0, APP.lvl.step - 1); APP.lvl.query = ""; render(); window.scrollTo(0, 0); },
+  lvlNext() {
+    const p = levelPlan(APP), st = p.steps[APP.lvl.step];
+    if (!stepValid(APP, st)) return;
+    APP.lvl.step += 1; APP.lvl.query = ""; render(); window.scrollTo(0, 0);
+  },
+  lvlGoto(el) { APP.lvl.step = +el.dataset.i; APP.lvl.query = ""; render(); window.scrollTo(0, 0); },
+  lvlHp(el) {
+    const d = APP.lvl; d.hpMode = el.dataset.mode;
+    if (d.hpMode === "roll" && !d.rolled) d.rolled = rollDie(APP.char.hitDice.die || 8);
+    render();
+  },
+  lvlSubclass(el) { APP.lvl.subclass = el.dataset.name; render(); },
+  lvlAsiMode(el) { APP.lvl.asiMode = el.dataset.v; APP.lvl.query = ""; render(); },
+  lvlAsiSplit(el) { Object.assign(APP.lvl, { asiSplit: el.dataset.v, a2: "", a1a: "", a1b: "" }); render(); },
+  lvlAsiPick(el) {
+    const d = APP.lvl, ab = el.dataset.ab;
+    if (d.asiSplit === "2") d.a2 = d.a2 === ab ? "" : ab;
+    else if (d.a1a === ab) d.a1a = "";
+    else if (d.a1b === ab) d.a1b = "";
+    else if (!d.a1a) d.a1a = ab;
+    else d.a1b = ab;
+    render();
+  },
+  lvlFeat(el) { APP.lvl.feat = APP.lvl.feat === el.dataset.name ? "" : el.dataset.name; render(); },
+  lvlStyle(el) { APP.lvl.style = el.dataset.name; render(); },
+  lvlExpertise(el) { toggleIn(APP.lvl.expertise, el.dataset.id); render(); },
+  lvlMastery(el) { toggleIn(APP.lvl.mastery, el.dataset.name); render(); },
+  lvlOption(el) { toggleIn(APP.lvl.options, el.dataset.name); render(); },
+  lvlCantrip(el) { toggleIn(APP.lvl.cantrips, el.dataset.name); refreshLevelResults(); },
+  lvlSpell(el) { toggleIn(APP.lvl.spells, el.dataset.name); refreshLevelResults(); },
+  lvlShowAll(el) { APP.lvl.showAll = el.checked; render(); },
+  lvlConfirm() { applyLevelUp(); },
+
+  // conditions & concentration
+  openConditions() { openModal({ type: "conditions" }); },
+  toggleCondition(el) {
+    const list = APP.char.conditions, n = el.dataset.name, i = list.indexOf(n);
+    if (el.checked && i < 0) list.push(n); if (!el.checked && i >= 0) list.splice(i, 1);
+    saveAndRender();
+  },
+  removeCondition(el) { APP.char.conditions = APP.char.conditions.filter(x => x !== el.dataset.name); saveAndRender(); },
+  exhStep(el) { APP.char.exhaustion = Math.max(0, Math.min(6, APP.char.exhaustion + +el.dataset.n)); saveAndRender(); },
+  endConc() { APP.char.concentration = null; saveAndRender(); },
+
+  // trackers
+  openResource(el) {
+    const i = el.dataset.i != null ? +el.dataset.i : null;
+    openModal({ type: "resource", i });
+  },
+  resReset(el) { APP.modal.reset = el.dataset.v; render(); },
+  saveResource() {
+    const m = APP.modal, c = APP.char;
+    const existing = m.i != null ? c.resources[m.i] : null;
+    const name = String(m.name ?? existing?.name ?? "").trim();
+    if (!name) { toast("Give the tracker a name"); return; }
+    const max = Math.max(1, Math.min(99, parseInt(m.max ?? existing?.max ?? 1, 10) || 1));
+    const r = { ...(existing || { used: 0 }), name, max, reset: m.reset ?? existing?.reset ?? "long" };
+    r.used = Math.min(r.used, max);
+    if (existing) c.resources[m.i] = r; else c.resources.push(r);
+    closeModal(); save(); render();
+  },
+  deleteResource() { APP.char.resources.splice(APP.modal.i, 1); closeModal(); save(); render(); },
+  toggleResource(el) {
+    const r = APP.char.resources[+el.dataset.i], k = +el.dataset.k, avail = r.max - r.used;
+    r.used = k < avail ? r.used + 1 : r.used - 1;
+    r.used = Math.max(0, Math.min(r.max, r.used));
+    saveAndRender();
+  },
+  resStep(el) { const r = APP.char.resources[+el.dataset.i]; r.used = Math.max(0, Math.min(r.max, r.used + +el.dataset.n)); saveAndRender(); },
+
+  // skills, abilities, rolls on the sheet
+  cycleSkill(el) {
+    const c = APP.char, id = el.dataset.id;
+    const p = c.skillProf.includes(id), x = c.skillExpertise.includes(id);
+    c.skillProf = c.skillProf.filter(s => s !== id); c.skillExpertise = c.skillExpertise.filter(s => s !== id);
+    if (!p && !x) c.skillProf.push(id);
+    else if (p && !x) { c.skillProf.push(id); c.skillExpertise.push(id); }
+    saveAndRender();
+  },
+  rollSkill(el) { const s = deriveCharacter(APP.char).skills.find(x => x.id === el.dataset.id); d20Test(`${s.label} check`, s.bonus); },
+  rollSave(el) { const a = el.dataset.ab; d20Test(`${ABILITY_LABEL[a]} save`, deriveCharacter(APP.char).saves[a]); },
+  rollAbility(el) { const a = el.dataset.ab; d20Test(`${ABILITY_LABEL[a]} check`, deriveCharacter(APP.char).mods[a]); },
+  rollInit() { d20Test("Initiative", deriveCharacter(APP.char).initiative); },
+  rollSpellAttack() { d20Test("Spell attack", deriveCharacter(APP.char).spellInfo.attackBonus); },
+
+  // spells
+  toggleSlot(el) {
+    const lvl = +el.dataset.lvl, i = +el.dataset.i, max = +el.dataset.max, used = APP.char.spellcasting.slotsUsed;
+    const avail = max - (used[lvl - 1] || 0);
+    used[lvl - 1] = Math.max(0, Math.min(max, (used[lvl - 1] || 0) + (i < avail ? 1 : -1)));
+    saveAndRender();
+  },
+  togglePrepared(el) { const s = APP.char.spellcasting.spells.find(x => x.name === el.dataset.name); if (s) s.prepared = el.checked; saveAndRender(); },
+  openCast(el) { openModal({ type: "cast", name: el.dataset.name }); },
+  castWith(el) {
+    const c = APP.char, lvl = +el.dataset.lvl, name = APP.modal.name;
+    const sp = findByName(APP.library.spells, name);
+    if (lvl > 0) {
+      const row = slotRows(c.class, c.level).find(r => r.level === lvl);
+      const used = c.spellcasting.slotsUsed;
+      if (!row || (used[lvl - 1] || 0) >= row.max) { toast("No slots of that level left"); return; }
+      used[lvl - 1] = (used[lvl - 1] || 0) + 1;
+    }
+    if (sp && sp.conc) c.concentration = name;
+    save(); closeModal();
+    toast(`Cast ${name}${lvl ? ` with a level ${lvl} slot` : ""}${sp && sp.conc ? " — concentrating" : ""}`);
+  },
+  addSpell(el) { APP.char.spellcasting.spells.push({ name: el.dataset.name, prepared: true, always: false }); saveAndRender(); },
+  removeSpell(el) {
+    const c = APP.char;
+    c.spellcasting.spells = c.spellcasting.spells.filter(s => s.name !== el.dataset.name);
+    if (c.concentration === el.dataset.name) c.concentration = null;
+    saveAndRender();
+  },
+  pickerLevel(el) { APP.pickerLevel = el.dataset.lv === "" ? null : +el.dataset.lv; render(); },
+  pickerAllClasses(el) { APP.pickerAllClasses = el.checked; render(); },
+
+  // pickers
+  openPicker(el) { APP.pickerQuery = ""; APP.pickerLevel = null; openModal({ type: "picker", picker: el.dataset.picker }); },
+  pickFrom(el) { addPicked(el.dataset.picker, el.dataset.name, false); },
+  pickCustom(el) { addPicked(el.dataset.picker, APP.pickerQuery.trim(), true); },
+  removeFeat(el) { APP.char.feats.splice(+el.dataset.i, 1); closeModal(); saveAndRender(); },
+  toggleShield(el) { APP.char.ac.shield = el.checked; saveAndRender(); },
+
+  // bag & equipment
+  itemTap(el) {
+    const c = APP.char, id = el.dataset.id, it = itemById(c, id);
+    if (!it) return;
+    if (APP.selItem === id || !SLOTS.some(s => fitsOk(it, s.key, c))) { APP.selItem = null; openModal({ type: "item", id }); return; }
+    APP.selItem = id; render();
+  },
+  clearSel() { APP.selItem = null; render(); },
+  slotTap(el) {
+    const slot = el.dataset.slot, c = APP.char;
+    if (APP.selItem) {
+      const it = itemById(c, APP.selItem), r = fits(it, slot, c);
+      if (r === true) equip(APP.selItem, slot); else toast(r);
+      return;
+    }
+    openModal({ type: "slot", slot });
+  },
+  equipHere(el) { equip(el.dataset.id, el.dataset.slot); closeModal(); },
+  unequip(el) { unequip(el.dataset.id); if (APP.modal && APP.modal.type === "slot") closeModal(); else render(); },
+  openItem(el) { openModal({ type: "item", id: el.dataset.id }); },
+  removeItem(el) {
+    const c = APP.char, id = el.dataset.id;
+    unequip(id, true);
+    c.inventory = c.inventory.filter(i => i.id !== id);
+    closeModal(); saveAndRender();
+  },
+  qtyStep(el) {
+    const it = itemById(APP.char, el.dataset.id);
+    it.qty = Math.max(0, (it.qty || 0) + +el.dataset.n);
+    if (it.qty === 0) toast(`Out of ${it.name} — tap its name to remove it`);
+    saveAndRender();
+  },
+  ammoStep(el) { const w = itemById(APP.char, el.dataset.id).weapon; w.ammo.cur = Math.max(0, w.ammo.cur + +el.dataset.n); saveAndRender(); },
+  toggleAttuneReq(el) { const it = itemById(APP.char, APP.modal.id); it.attune = el.checked; if (!el.checked) it.attuned = false; saveAndRender(); },
+  toggleAttuned(el) {
+    const c = APP.char, it = itemById(c, APP.modal.id);
+    if (el.checked && attunedCount(c) >= 3) { el.checked = false; toast("You can be attuned to 3 items at most — end one first"); return; }
+    it.attuned = el.checked; saveAndRender();
+  },
+  makeWeapon() { const it = itemById(APP.char, APP.modal.id); it.weapon = { dice: "1d6", dtype: "", kind: "Melee", props: "", ability: null, magic: 0 }; delete it.slot; saveAndRender(); },
+
+  // attacks
+  attackRoll(el) {
+    const c = APP.char, it = itemById(c, el.dataset.id), w = it.weapon;
+    if (w.ammo) {
+      if (w.ammo.cur <= 0) { toast(`Out of ${w.ammo.name}`); return; }
+      w.ammo.cur -= 1; save();
+    }
+    const n = weaponNumbers(w, c);
+    const exh = c.exhaustion * 2;
+    const hit = rollD20(n.toHit - exh);
+    const dmg = rollFormula(`${n.dice}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""}`);
+    const extra = rollFormula(n.dice);
+    if (!dmg) { toast(`Can't read the damage dice “${n.dice}”`); return; }
+    const critTotal = dmg.total + (extra ? extra.total : 0);
+    const modTxt = hit.mod ? ` ${hit.mod > 0 ? "+" : "−"} ${Math.abs(hit.mod)}` : "";
+    const parts = [
+      { label: hit.crit ? "Natural 20!" : hit.fumble ? "Natural 1" : "To hit", total: hit.total, bd: `[${hit.first}]${modTxt}`, crit: hit.crit, fumble: hit.fumble },
+      hit.crit
+        ? { label: "Crit damage", total: Math.max(0, critTotal), bd: describeGroups(dmg) + (extra ? " + " + describeGroups(extra) : ""), crit: true }
+        : { label: `Damage${w.dtype ? " · " + w.dtype : ""}`, total: Math.max(0, dmg.total), bd: describeGroups(dmg) }
+    ];
+    const mastery = w.mastery && (c.masteries || []).includes(it.name) ? ` · mastery: <b>${w.mastery}</b>` : "";
+    showRoll(`${it.name} attack${w.ammo ? ` · ${w.ammo.cur} ${w.ammo.name} left` : ""}`, parts,
+      `Advantage to hit <b>${hit.adv}</b> · disadvantage <b>${hit.dis}</b>${hit.crit ? "" : ` · if it's a crit: <b>${Math.max(0, critTotal)}</b> damage`}${mastery}`);
+  },
+
+  // dice tab
+  quickRoll(el) {
+    const sides = +el.dataset.sides, count = +(el.dataset.count || 1);
+    if (sides === 20 && count === 1) { d20Test("d20", 0); return; }
+    const r = rollFormula(`${count}d${sides}`);
+    showRoll(`${count}d${sides}`, [{ label: "Total", total: r.total, bd: describeGroups(r) }]);
+  },
+  customRoll() {
+    const f = (APP.diceFormula || "").trim() || "1d20";
+    const r = rollFormula(f);
+    if (!r) { toast("Couldn't read that. Try something like 2d6+3 or 1d8+1d6+2"); return; }
+    showRoll(r.formula, [{ label: "Total", total: r.total, bd: describeGroups(r) }]);
+  },
+  dismissRoll() { APP.roll = null; render(); },
+  clearHistory() { APP.history = []; render(); },
+
+  // egg
+  spinSlots() { const r = spin(5); APP.modal.reels = r.reels; APP.modal.msg = r.winnings > 0 ? `You won ${r.winnings}!` : "The house wins this one."; render(); }
+};
+
+function addPicked(kind, name, custom) {
+  const c = APP.char;
+  if (!name) return;
+  if (kind === "items") {
+    const made = custom ? { id: store.newId(), name, qty: 1, notes: "" }
+      : makeItem(name, { weapons: allWeapons(APP.library, APP.campaign), items: allItems(APP.library, APP.campaign) }, store.newId);
+    const same = c.inventory.find(x => x.name.toLowerCase() === name.toLowerCase() && !x.weapon && !made.weapon && !wearKind(x));
+    if (same) same.qty += 1; else c.inventory.push(made);
+  } else if (kind === "feats") {
+    if (!c.feats.includes(name)) c.feats.push(name);
+  }
+  save();
+  toast(`Added ${name}`);
+  if (custom) APP.pickerQuery = "";
+  render();
+}
+
+function toggleIn(list, v) { const i = list.indexOf(v); if (i >= 0) list.splice(i, 1); else list.push(v); }
+
+function equip(id, slot) {
+  const c = APP.char, it = itemById(c, id);
+  const r = fits(it, slot, c);
+  if (r !== true) { toast(r); return; }
+  const eq = c.equipment;
+  Object.keys(eq).forEach(k => { if (eq[k] === id) delete eq[k]; });
+  const bumped = eq[slot] && eq[slot] !== id ? itemById(c, eq[slot]) : null;
+  eq[slot] = id;
+  if (slot === "main" && /two-handed/i.test(it.weapon?.props || "") && eq.off) { toast("Off hand emptied — that weapon needs both hands"); delete eq.off; }
+  if (wearKind(it) === "shield") c.ac.shield = false;
+  APP.selItem = null;
+  save(); render();
+  if (it.attune && !it.attuned) toast(`${it.name} needs attunement to work — tap it to attune`);
+  else if (bumped) toast(`Swapped out ${bumped.name}`);
+}
+function unequip(id, quiet) {
+  const eq = APP.char.equipment;
+  Object.keys(eq).forEach(k => { if (eq[k] === id) delete eq[k]; });
+  if (!quiet) save();
+}
+function recheckEquipped() {
+  const c = APP.char;
+  Object.entries(c.equipment).forEach(([k, id]) => { const it = itemById(c, id); if (!it || !fitsOk(it, k, c)) delete c.equipment[k]; });
+}
+
+async function tryUnlock(pw) {
+  if (!pw || APP.unlocking) return;
+  APP.unlocking = true; APP.unlockError = ""; render();
+  try {
+    await unlockWithPassword(APP.lockErr, pw);
+    APP.unlocking = false; APP.lockErr = null;
+    if (APP.needsNewPassword) { APP.needsNewPassword = false; APP.screen = APP.char ? "sheet" : "roster"; await init(); toast("Unlocked — you have the latest rules"); return; }
+    await init();
+  } catch (e) {
+    APP.unlocking = false; APP.unlockError = "That password didn't work. Check capital letters and try again."; render();
+    setTimeout(() => { const f = document.getElementById("f-pass"); if (f) { f.focus(); f.select(); } }, 30);
+  }
+}
+ACTIONS.enterNewPassword = () => { APP.screen = "locked"; render(); };
+
+function refreshLevelResults() { const y = window.scrollY; render(); window.scrollTo(0, y); }
+
+function applyLevelUp() {
+  const c = APP.char, d = APP.lvl, p = levelPlan(APP);
+  const ids = new Set(p.steps.map(s => s.id));
+  const before = { level: c.level, con: c.abilities.con };
+  const log = [];
+  if (ids.has("asi")) {
+    if (d.asiMode === "feat" && d.feat) { c.feats.push(d.feat); log.push("Feat: " + d.feat); }
+    else { const r = asiResult(c, d); ABILITIES.forEach(a => { if (r[a] !== c.abilities[a]) log.push(`${ABILITY_LABEL[a]} ${c.abilities[a]}→${r[a]}`); }); c.abilities = r; }
+  }
+  if (!d.fromCreation) {
+    const conMod = abilityMod(c.abilities.con), oldConMod = abilityMod(before.con);
+    const die = c.hitDice.die || 8;
+    const gain = (d.hpMode === "roll" && d.rolled ? Math.max(1, d.rolled + conMod) : hpAverageGain(die, conMod)) + (conMod - oldConMod) * before.level;
+    c.level = d.next; c.hp.max += gain; c.hp.cur += gain; c.hitDice.total = c.level;
+    log.unshift(`+${gain} HP`);
+  }
+  if (ids.has("subclass") && d.subclass) { c.subclass = d.subclass; log.push("Subclass: " + d.subclass); }
+  if (ids.has("style") && d.style) { c.feats.push(d.style); log.push("Fighting style: " + d.style); }
+  if (ids.has("expertise")) d.expertise.forEach(id => { if (!c.skillExpertise.includes(id)) c.skillExpertise.push(id); if (!c.skillProf.includes(id)) c.skillProf.push(id); });
+  if (ids.has("mastery")) c.masteries = [...new Set([...(c.masteries || []), ...d.mastery])];
+  const og = p.steps.find(s => s.id === "options");
+  if (og) { c.choices[og.group.key] = [...new Set([...(c.choices[og.group.key] || []), ...d.options])]; log.push(`${og.group.label}: ${d.options.join(", ")}`); }
+  if (ids.has("cantrips") || ids.has("spells")) [...d.cantrips, ...d.spells].forEach(name => {
+    if (!c.spellcasting.spells.some(s => s.name === name)) c.spellcasting.spells.push({ name, prepared: true, always: false });
+  });
+  c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });
+  save();
+  APP.lvl = null; APP.screen = "sheet"; APP.sheetTab = "stats";
+  render(); window.scrollTo(0, 0);
+  toast(d.fromCreation ? "Level 1 choices saved" : `${c.name} is now level ${c.level}!`);
+}
+
+// ---- drag and drop (laptop; phones use tap-then-tap)
+function bindDrag() {
+  const mark = id => document.querySelectorAll("[data-drop-slot]").forEach(el => {
+    const it = itemById(APP.char, id);
+    el.classList.toggle("can-drop", !!it && fitsOk(it, el.dataset.dropSlot, APP.char));
+  });
+  const clear = () => document.querySelectorAll(".can-drop,.drag-over").forEach(el => el.classList.remove("can-drop", "drag-over"));
+  document.addEventListener("dragstart", e => {
+    const el = e.target.closest && e.target.closest("[data-drag-item]");
+    if (!el || !APP.char) return;
+    APP.dragId = el.dataset.dragItem;
+    e.dataTransfer.setData("text/plain", APP.dragId);
+    e.dataTransfer.effectAllowed = "move";
+    setTimeout(() => mark(APP.dragId), 0);
+  });
+  document.addEventListener("dragend", () => { APP.dragId = null; clear(); });
+  document.addEventListener("dragover", e => {
+    if (!APP.dragId) return;
+    const slot = e.target.closest("[data-drop-slot]");
+    const bag = e.target.closest("[data-drop-bag]");
+    const it = itemById(APP.char, APP.dragId);
+    if ((slot && it && fitsOk(it, slot.dataset.dropSlot, APP.char)) || (bag && slotOf(APP.char, APP.dragId))) {
+      e.preventDefault(); e.dataTransfer.dropEffect = "move";
+      document.querySelectorAll(".drag-over").forEach(x => x.classList.remove("drag-over"));
+      (slot || bag).classList.add("drag-over");
+    }
+  });
+  document.addEventListener("drop", e => {
+    if (!APP.dragId) return;
+    const id = APP.dragId; APP.dragId = null;
+    const slot = e.target.closest("[data-drop-slot]");
+    const bag = e.target.closest("[data-drop-bag]");
+    e.preventDefault(); clear();
+    if (slot) equip(id, slot.dataset.dropSlot);
+    else if (bag && slotOf(APP.char, id)) { unequip(id); render(); toast("Moved to your bag"); }
+  });
+}
+
+init();
