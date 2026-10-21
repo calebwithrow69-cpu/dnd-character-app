@@ -14,7 +14,9 @@ Characters live only in each player's browser storage; the repo holds the app an
 ## Layout
 - `js/rules.js` math and tables · `js/gear.js` slots/armor/AC · `js/progression.js` level-up plan from class tables (data covers levels 1–10)
 - `js/data.js` loading, unlocking, update checks (file fingerprint, no version bumps needed) · `js/store.js` characters, migrations, backups
-- `js/views/*` screens · `js/app.js` events and actions · `service-worker.js` offline cache (bump `CACHE_VERSION` when adding files)
+- `js/choices.js` reads species/background/feat choices out of rules text; entries that read wrong get a `choiceFix` in the rules file ({drop, options, add, when}) · `js/equipment.js` starting-gear packages, prices, coins · `js/install.js` install button / desktop shortcut
+- `js/views/*` screens · `js/app.js` events and actions · `service-worker.js` offline cache
+- **Bump `CACHE_VERSION` on every code or style change** (and list new files in `SHELL_FILES`). Players only get new code when it changes; the page then applies it at launch or via the "Update now" bar. Rules/campaign JSON updates live without a bump.
 
 ## Before pushing
 - `node --check` every JS file; test in a real browser (Playwright, Chromium at `/opt/pw-browsers/chromium`) on phone (390×844) and laptop widths.

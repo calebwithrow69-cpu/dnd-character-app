@@ -1,22 +1,32 @@
 // Offline support.
-// - App files: served from cache instantly, refreshed in the background,
-//   so new code shows up on the next launch with no manual steps.
+// - App files: one complete, versioned copy per release. A new release is
+//   downloaded whole in the background (never mixing old and new files),
+//   then the page applies it: automatically at launch, or with one tap on
+//   the "Update ready" banner if the app is already open.
+//   => Bump CACHE_VERSION on EVERY code/style change, or players won't get it.
 // - Rules data (data/*.json): network first when online, cache when not.
+//   Those update live without a version bump.
 // - Google Fonts: cached the first time they load, so offline keeps the look.
-const CACHE_VERSION = "v5";
+const CACHE_VERSION = "v6";
 const SHELL = "shell-" + CACHE_VERSION;
 const FONTS = "fonts-v1";
 
 const SHELL_FILES = [
   "./", "index.html", "manifest.json", "css/styles.css",
-  "js/app.js", "js/data.js", "js/store.js", "js/rules.js", "js/dice.js", "js/ui.js", "js/gear.js", "js/progression.js", "js/crypt.js", "js/spells.js",
+  "js/app.js", "js/data.js", "js/store.js", "js/rules.js", "js/dice.js", "js/ui.js", "js/gear.js", "js/progression.js", "js/crypt.js", "js/spells.js", "js/install.js", "js/choices.js", "js/equipment.js",
   "js/views/roster.js", "js/views/create.js", "js/views/sheet.js", "js/views/modals.js", "js/views/levelup.js",
   "data/library.enc.json", "data/campaign.json", "data/seed-gandork.json", "data/terms.json",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)).then(() => self.skipWaiting()));
+  // cache: "reload" skips the browser's HTTP cache so the new copy is really new.
+  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES.map((u) => new Request(u, { cache: "reload" })))));
+  // No skipWaiting here: the page decides when to switch (see index.html).
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data === "apply-update") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -46,16 +56,15 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.includes("/data/") && url.pathname.endsWith(".json")) {
     event.respondWith(
-      fetch(req).then((res) => { putCopy(SHELL, req, res); return res; })
-        .catch(() => caches.match(req, { ignoreSearch: true }))
+      fetch(req, { cache: "no-cache" }).then((res) => { putCopy(SHELL, req, res); return res; })
+        .catch(() => caches.open(SHELL).then((c) => c.match(req, { ignoreSearch: true })))
     );
     return;
   }
 
+  // App files: only from this release's cache, so every file matches.
   event.respondWith(
-    caches.match(req, { ignoreSearch: true }).then((cached) => {
-      const network = fetch(req).then((res) => { putCopy(SHELL, req, res); return res; }).catch(() => cached);
-      return cached || network;
-    })
+    caches.open(SHELL).then((c) => c.match(req, { ignoreSearch: true }))
+      .then((hit) => hit || fetch(req).then((res) => { putCopy(SHELL, req, res); return res; }))
   );
 });

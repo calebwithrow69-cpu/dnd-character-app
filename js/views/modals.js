@@ -7,6 +7,8 @@ import { SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, fitsOk, wearKind, attuned
 import { formatText, infoRow, conditionIcon, glossaryEntry } from "../ui.js";
 import { detailFor, renderSpellResults, renderGearResults } from "./sheet.js";
 import { getCredits } from "../dice.js";
+import { installCard } from "../install.js";
+import { shopStock, walletCp, fmtPrice } from "../equipment.js";
 
 export function renderModal(app) {
   const m = app.modal;
@@ -40,6 +42,19 @@ export function renderModal(app) {
         `${searchBox("picker", app.pickerQuery, m.picker === "spells" ? `Search ${esc(c.class)} spells` : "Search, or type a name to add your own")}
          ${filters}
          <div class="results" id="results-picker">${results}</div>`,
+        `<button class="btn pri" data-a="closeModal">Done</button>`);
+    }
+
+    case "shop": {
+      const cats = ["All", "Weapons", "Armor", "Gear", "Magic & potions"];
+      const cat = app.shopCat || "All";
+      const discount = (c.feats || []).some(f => /^Crafter\b/.test(f));
+      return modalShell("Shop",
+        `<p class="small">You have <b class="num">${esc(fmtWallet(c.coins))}</b>.${discount ? ` <span class="tag green">Crafter: 20% off nonmagical</span>` : ""}</p>
+         ${searchBox("shop", app.shopQuery, "Search the shop")}
+         <div class="seg" style="margin-top:10px" role="group" aria-label="Category">${cats.map(k => `<button data-a="shopCat" data-cat="${esc(k)}" aria-pressed="${cat === k}">${esc(k === "Magic & potions" ? "Magic" : k)}</button>`).join("")}</div>
+         <div class="results" id="results-shop">${renderShopResults(app)}</div>
+         <p class="sub2" style="margin-top:8px">Gear prices come from your DM's rules file; weapons and armor use the Player's Handbook list.</p>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
@@ -211,6 +226,7 @@ export function renderModal(app) {
             ${["auto", "light", "dark"].map(t => `<button data-a="setTheme" data-v="${t}" aria-pressed="${theme === t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div></div>
           <div><p class="lab">Text size</p><div class="seg">
             ${[["normal", "Normal"], ["large", "Large"], ["xl", "Extra large"]].map(([v, l]) => `<button data-a="setSize" data-v="${v}" aria-pressed="${size === v}">${l}</button>`).join("")}</div></div>
+          <div class="panel"><div class="panel-head"><h2>Open with one tap</h2></div><div class="panel-body">${installCard(app, { inSettings: true })}</div></div>
           <div class="panel"><div class="panel-head"><h2>Backups</h2></div><div class="panel-body stack">
             <p class="small muted">Characters live only on this device. Save a backup file now and then — send it to yourself or keep it in Files.</p>
             <button class="btn block" data-a="exportAll">Save a backup of all characters</button>
@@ -218,6 +234,7 @@ export function renderModal(app) {
             <p class="sub2">${app.persisted ? "This browser has agreed to keep your data." : "Tip: installing the app to your home screen keeps your data safest."}</p>
           </div></div>
           <div class="panel"><div class="panel-head"><h2>Rules data</h2></div><div class="panel-body stack small">
+            <p class="muted">App updates install themselves: when one is ready the app reloads at launch, or shows an <b>Update now</b> bar if it's already open. Nothing to redownload.</p>
             <p>${esc(app.campaign.name || "Campaign")}: ${L.classes.length} classes, ${L.species.length} species, ${L.spells.length} spells, ${L.items.length} items.</p>
             <button class="btn block" data-a="checkUpdates">Check for updates now</button>
           </div></div>
@@ -247,4 +264,49 @@ export function renderRollCard(app) {
       <div class="lbl">${esc(p.label)}</div><div class="big">${p.total}</div><div class="bd">${p.bd}</div></div>`).join("")}</div>
     ${r.alt ? `<div class="alt">${r.alt}</div>` : ""}
   </div></div>`;
+}
+
+export function shopPrice(c, row) {
+  const crafter = (c.feats || []).some(f => /^Crafter\b/.test(f));
+  return crafter && !row.magic ? Math.round(row.gp * 80) / 100 : row.gp;
+}
+export function fmtWallet(coins) {
+  const parts = ["pp", "gp", "ep", "sp", "cp"].filter(k => +coins?.[k]).map(k => `${coins[k]} ${k}`);
+  return parts.length ? parts.join(", ") : "no money";
+}
+export function renderShopResults(app) {
+  const L = app.library, C = app.campaign, c = app.char;
+  const q = (app.shopQuery || "").trim().toLowerCase();
+  const cat = app.shopCat || "All";
+  const rows = shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing"))
+    .filter(r => (cat === "All" || r.cat === cat) && (!q || r.name.toLowerCase().includes(q)));
+  if (!rows.length) return `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`;
+  const have = walletCp(c.coins);
+  return rows.slice(0, 120).map(r => {
+    const gp = shopPrice(c, r), cost = Math.round(gp * 100);
+    const owned = c.inventory.filter(i => i.name === r.name).reduce((t, i) => t + (i.qty || 0), 0);
+    const key = "shop:" + r.name, open = app.info.has(key);
+    return `<div class="shopitem ${open ? "open" : ""}"><div class="rowline shoprow">
+      <button class="nm" data-a="toggleInfo" data-key="${esc(key)}" aria-expanded="${open}">
+        <span>${esc(r.name)}</span><span class="sub2">${esc([r.cat, r.sub].filter(Boolean).join(" · ").slice(0, 70))}${owned ? ` · you have ${owned}` : ""}</span></button>
+      <button class="btn sm ${cost <= have ? "pri" : ""}" data-a="buyItem" data-name="${esc(r.name)}" ${cost > have ? "disabled" : ""} aria-label="Buy ${esc(r.name)} for ${esc(fmtPrice(gp))}">${esc(fmtPrice(gp))}</button>
+    </div>${open ? `<div class="about">${shopDetail(app, r)}</div>` : ""}</div>`;
+  }).join("") + (rows.length > 120 ? `<p class="sub2">Showing 120 of ${rows.length}. Search to narrow it down.</p>` : "");
+}
+
+function shopDetail(app, r) {
+  const L = app.library, C = app.campaign;
+  if (r.cat === "Armor") {
+    if (r.name === "Shield") return `<p>+2 to AC while you hold it in your off hand.</p>`;
+    const a = ARMOR[r.name];
+    return `<dl class="kv"><dt>Type</dt><dd>${esc(a.cat)} armor</dd><dt>AC</dt><dd>${a.base}${a.dexCap == null ? " + Dex modifier" : a.dexCap ? ` + Dex modifier (max ${a.dexCap})` : ""}</dd>
+      ${a.str ? `<dt>Strength</dt><dd>${a.str}+ or your Speed drops by 10 feet</dd>` : ""}${a.stealth ? `<dt>Stealth</dt><dd>Disadvantage</dd>` : ""}</dl>`;
+  }
+  if (r.cat === "Weapons") {
+    const w = allWeapons(L, C).find(x => x.name === r.name) || {};
+    return `<dl class="kv"><dt>Damage</dt><dd>${esc(w.dice || "")} ${esc(w.dtype || "")}</dd><dt>Type</dt><dd>${esc([w.cat, w.kind].filter(Boolean).join(" "))}</dd>
+      ${w.props ? `<dt>Properties</dt><dd>${esc(w.props)}</dd>` : ""}${w.mastery ? `<dt>Mastery</dt><dd><button class="term" data-term="mastery:${esc(w.mastery)}">${esc(w.mastery)}</button></dd>` : ""}</dl>`;
+  }
+  const it = allItems(L, C).find(x => x.name === r.name);
+  return formatText(it?.text || "");
 }

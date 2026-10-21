@@ -2,14 +2,17 @@ import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedErro
 import * as store from "./store.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
+import { promptInstall, downloadShortcut } from "./install.js";
 import {
-  renderCreate, renderWizardResults, newDraft, buildCharacterFromDraft, validateStep, STEPS,
-  finalAbilities, primaryAbility
+  renderCreate, renderWizardResults, newDraft, buildCharacterFromDraft, validateStep, stepsFor, stepName, WHY,
+  finalAbilities, primaryAbility, listItems, bgAbilities, classSkillOptions, takenSkills, suggestedArray
 } from "./views/create.js";
+import { draftChoices, randomize, optionsFor } from "./choices.js";
 import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
-import { renderModal, renderRollCard } from "./views/modals.js";
+import { renderModal, renderRollCard, renderShopResults, shopPrice } from "./views/modals.js";
+import { shopStock, pay, fmtPrice } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult } from "./views/levelup.js";
-import { SLOTS, itemById, fits, fitsOk, slotOf, wearKind, attunedCount, makeItem } from "./gear.js";
+import { SLOTS, ARMOR, itemById, fits, fitsOk, slotOf, wearKind, attunedCount, makeItem } from "./gear.js";
 import { rollFormula, rollD20, describeGroups, spin } from "./dice.js";
 import { analyzeSpell, castDice } from "./spells.js";
 import {
@@ -84,6 +87,7 @@ async function init() {
   if (!APP._listening) {
     APP._listening = true;
     window.addEventListener("online", () => APP.recheck());
+    window.addEventListener("cr-install-change", () => render());
     document.addEventListener("visibilitychange", () => { if (!document.hidden) APP.recheck(); else save(); });
     window.addEventListener("pagehide", save);
   }
@@ -294,13 +298,35 @@ function onSubmit(e) {
   if (form.dataset.form === "unlock") tryUnlock(document.getElementById("f-pass").value);
 }
 
+function clearPicks(d, prefix) { Object.keys(d.picks || {}).forEach(k => { if (k.startsWith(prefix)) delete d.picks[k]; }); }
+// +2 to the background ability the class wants most, +1 to another
+function randomBonus(d) {
+  const opts = bgAbilities(APP, d);
+  if (!opts.length) return;
+  const cls = findByName(APP.library.classes, d.class);
+  const sug = suggestedArray(APP, d.class) || {};
+  const ranked = [...opts].sort((a, b) => (sug[b] || 0) - (sug[a] || 0));
+  const prim = primaryAbility(cls?.primary);
+  d.bonusMode = "21";
+  d.plus2 = opts.includes(prim) ? prim : ranked[0];
+  d.plus1 = ranked.find(a => a !== d.plus2);
+}
+const NAME_A = ["Bram", "Cor", "Dag", "El", "Fen", "Gar", "Hal", "Isk", "Jor", "Kael", "Lir", "Mor", "Nym", "Os", "Pell", "Quin", "Ros", "Syl", "Tor", "Ul", "Vex", "Wren", "Yor", "Zan"];
+const NAME_B = ["a", "en", "ith", "or", "ia", "ric", "wyn", "ak", "is", "ell", "ow", "ra", "un", "ex", "iel", "ard"];
+const NAME_C = ["the Bold", "the Quiet", "of the Vale", "Ashborn", "Thornfield", "Blackwater", "Stonehand", "the Lucky", "Swiftfoot", "Greycloak", "", "", ""];
+function randomName() {
+  const r = l => l[Math.floor(Math.random() * l.length)];
+  return `${r(NAME_A)}${r(NAME_B)} ${r(NAME_C)}`.trim();
+}
+
 function refreshWizardChrome() {
   const d = APP.createDraft;
   const btn = mount.querySelector('[data-a="nextStep"], [data-a="finishCreate"]');
-  const ok = validateStep(STEPS[d.step], d, APP);
+  const step = stepName(APP, d);
+  const ok = validateStep(step, d, APP);
   if (btn) btn.disabled = !ok;
   const why = document.getElementById("wizard-why");
-  if (why && STEPS[d.step] === "name") why.textContent = ok ? "" : "Type a name to continue.";
+  if (why) why.textContent = ok ? "" : WHY[step] || "";
   const fin = finalAbilities(APP, d);
   ABILITIES.forEach(a => {
     const s = mount.querySelector(`[data-final="${a}"]`);
@@ -317,6 +343,7 @@ function onInput(e) {
     if (!isNaN(v)) APP.createDraft.base[ds.draftAbility] = Math.max(1, Math.min(30, v));
     refreshWizardChrome(); return;
   }
+  if (ds.pickText && APP.createDraft) { APP.createDraft.picks[ds.pickText] = el.value; refreshWizardChrome(); return; }
   if (ds.query === "wizard") { APP.createDraft.query = el.value; const r = document.getElementById("wizard-results"); if (r) r.innerHTML = renderWizardResults(APP); return; }
   if (ds.query === "picker") {
     APP.pickerQuery = el.value;
@@ -324,6 +351,7 @@ function onInput(e) {
     if (r) r.innerHTML = APP.modal.picker === "spells" ? renderSpellResults(APP) : renderGearResults(APP, APP.modal.picker);
     return;
   }
+  if (ds.query === "shop") { APP.shopQuery = el.value; const r = document.getElementById("results-shop"); if (r) r.innerHTML = renderShopResults(APP); return; }
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
   if (ds.query === "rules") { APP.rulesQuery = el.value; const r = document.getElementById("results-rules"); if (r) r.innerHTML = renderRulesResults(APP); return; }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
@@ -418,6 +446,13 @@ const ACTIONS = {
     store.setActiveId(APP.char.id);
     APP.screen = "sheet"; render(); window.scrollTo(0, 0);
   },
+  async installApp() {
+    const ok = await promptInstall();
+    if (ok === null) toast("Use your browser's menu to install");
+    else if (ok) toast("Installed — open it from the new icon");
+    render();
+  },
+  downloadShortcut() { const n = downloadShortcut(); toast(`Saved "${n}" — move it to your Desktop`); },
   dismissInstall() { APP.installDismissed = true; try { localStorage.setItem(LS_INSTALL, "1"); } catch (e) { } render(); },
   openSettings() { openModal({ type: "settings" }); },
   importPrompt() { importPrompt(); },
@@ -436,20 +471,50 @@ const ACTIONS = {
   prevStep() { const d = APP.createDraft; d.step = Math.max(0, d.step - 1); d.query = ""; render(); window.scrollTo(0, 0); },
   nextStep() {
     const d = APP.createDraft;
-    if (!validateStep(STEPS[d.step], d, APP)) return;
-    d.step = Math.min(STEPS.length - 1, d.step + 1); d.query = "";
+    if (!validateStep(stepName(APP, d), d, APP)) return;
+    d.step = Math.min(stepsFor(APP, d).length - 1, d.step + 1); d.query = "";
     render(); window.scrollTo(0, 0);
   },
-  pickSpecies(el) { APP.createDraft.species = el.dataset.name; render(); },
+  pickSpecies(el) {
+    const d = APP.createDraft;
+    if (d.species !== el.dataset.name) clearPicks(d, "sp:");
+    d.species = el.dataset.name; render();
+  },
   pickClass(el) {
     const d = APP.createDraft;
-    if (d.class !== el.dataset.name) { d.classSkills = []; d.subclass = ""; }
+    if (d.class !== el.dataset.name) { d.classSkills = []; d.subclass = ""; d.equipClass = "A"; }
     d.class = el.dataset.name; render();
   },
   pickBackground(el) {
     const d = APP.createDraft;
-    if (d.background !== el.dataset.name) { d.plus2 = ""; d.plus1 = ""; d.classSkills = []; }
+    if (d.background !== el.dataset.name) { d.plus2 = ""; d.plus1 = ""; d.classSkills = []; d.equipBg = "A"; clearPicks(d, "bg:"); }
     d.background = el.dataset.name; render();
+  },
+  // a species/background/feat choice
+  pick(el) {
+    const d = APP.createDraft, id = el.dataset.id, v = el.dataset.v;
+    const def = [...draftChoices(APP, d, "species"), ...draftChoices(APP, d, "bg")].find(x => x.id === id);
+    if (!def) return;
+    const cur = [].concat(d.picks[id] || []);
+    let next;
+    if (def.n > 1) {
+      next = cur.includes(v) ? cur.filter(x => x !== v) : cur.length < def.n ? [...cur, v] : cur;
+      if (next === cur) { toast(`You can pick ${def.n} — tap one to swap it out`); return; }
+    } else next = cur[0] === v ? null : v;
+    if (next == null || (Array.isArray(next) && !next.length)) delete d.picks[id]; else d.picks[id] = next;
+    // answers that depended on the old pick (a feat's own choices, a lineage's traits) no longer apply
+    clearPicks(d, id + ">");
+    const defs = [...draftChoices(APP, d, "species"), ...draftChoices(APP, d, "bg")];
+    Object.keys(d.picks).forEach(k => {
+      const dep = defs.find(x => x.id === k);
+      if (!dep) { if (/^(sp|bg):/.test(k)) delete d.picks[k]; return; }
+      if (dep.kind === "text") return;
+      const ok = new Set(optionsFor(dep, APP, d).map(o => o.v));
+      const kept = [].concat(d.picks[k]).filter(v => ok.has(v));
+      if (!kept.length) delete d.picks[k]; else d.picks[k] = dep.n > 1 ? kept : kept[0];
+    });
+    d.classSkills = d.classSkills.filter(sk => !takenSkills(APP, d).includes(sk));
+    render();
   },
   bonusMode(el) { APP.createDraft.bonusMode = el.dataset.mode; render(); },
   standardArray() {
@@ -461,20 +526,67 @@ const ACTIONS = {
     ABILITIES.forEach(a => { APP.createDraft.base[a] = roll4d6DropLowest(); });
     render(); toast("Rolled 4d6, dropping the lowest die, for each score");
   },
+  pickEquip(el) { APP.createDraft[el.dataset.which] = el.dataset.k; render(); },
+  randomName() { APP.createDraft.name = randomName(); render(); },
+  randomPick() {
+    const d = APP.createDraft, step = stepName(APP, d);
+    const items = listItems(APP, d, step);
+    if (!items.length) return;
+    const it = items[Math.floor(Math.random() * items.length)];
+    ACTIONS[{ species: "pickSpecies", class: "pickClass", background: "pickBackground" }[step]]({ dataset: { name: it.name } });
+    APP.info.add(step + ":" + it.name);
+    toast(`Picked ${it.name}`);
+  },
+  randomChoices() {
+    const d = APP.createDraft, step = stepName(APP, d);
+    if (step === "bgOpts") randomBonus(d);
+    const scope = step === "speciesOpts" ? "species" : "bg";
+    for (let i = 0; i < 4; i++) randomize(draftChoices(APP, d, scope), APP, d); // repeat: some choices appear only after others
+    d.classSkills = d.classSkills.filter(sk => !takenSkills(APP, d).includes(sk));
+    render(); toast("Filled in — change anything you like");
+  },
+  randomSkills() {
+    const d = APP.createDraft, taken = takenSkills(APP, d);
+    const { from, n } = classSkillOptions(APP, d);
+    const pool = from.filter(id => !taken.includes(id)).sort(() => Math.random() - 0.5);
+    d.classSkills = pool.slice(0, n); render();
+  },
+  suggestedArray() {
+    const d = APP.createDraft, sug = suggestedArray(APP, d.class);
+    if (sug) { d.base = { ...sug }; render(); toast(`Suggested ${d.class} scores placed`); }
+  },
+  randomAll() {
+    const d = APP.createDraft, L = APP.library, C = APP.campaign;
+    if (!d.name.trim()) d.name = randomName();
+    const any = list => list[Math.floor(Math.random() * list.length)];
+    const steps = ["species", "class", "background"];
+    for (const st of steps) { d.step = stepsFor(APP, d).indexOf(st); ACTIONS.randomPick(); }
+    for (let i = 0; i < 4; i++) { randomize(draftChoices(APP, d, "species"), APP, d); randomize(draftChoices(APP, d, "bg"), APP, d); }
+    randomBonus(d);
+    const sug = suggestedArray(APP, d.class); if (sug) d.base = { ...sug };
+    ACTIONS.randomSkills();
+    d.equipClass = "A"; d.equipBg = "A";
+    d.step = stepsFor(APP, d).length - 1;
+    render(); window.scrollTo(0, 0); toast("Random character ready — review it below");
+  },
   toggleSkill(el) {
     const d = APP.createDraft, id = el.dataset.id, i = d.classSkills.indexOf(id);
     if (i >= 0) d.classSkills.splice(i, 1); else d.classSkills.push(id);
     render();
   },
   finishCreate() {
-    const char = buildCharacterFromDraft(APP.createDraft, APP);
+    const d = APP.createDraft;
+    const char = buildCharacterFromDraft(d, APP);
+    const goldOnly = char.inventory.length === 0 && (char.coins.gp > 0);
     APP.char = store.normalize(char, APP.library);
     save();
     store.setActiveId(APP.char.id);
     APP.createDraft = null; APP.screen = "sheet"; APP.sheetTab = "stats"; APP.roll = null;
     if (needsFirstChoices(APP, APP.char)) { APP.lvl = newLevelDraft(APP.char, { fromCreation: true }); APP.screen = "levelup"; }
+    if (goldOnly && APP.screen === "sheet") { APP.sheetTab = "gear"; openModal({ type: "shop" }); }
+    else if (goldOnly) APP.shopAfterChoices = true;
     render(); window.scrollTo(0, 0);
-    toast(APP.screen === "levelup" ? "Now make your level 1 choices" : `${APP.char.name} is ready`);
+    toast(APP.screen === "levelup" ? "Now make your level 1 choices" : goldOnly ? "Spend your gold on starting gear" : `${APP.char.name} is ready`);
   },
 
   // sheet nav
@@ -678,6 +790,23 @@ const ACTIONS = {
   pickerAllClasses(el) { APP.pickerAllClasses = el.checked; render(); },
 
   // pickers
+  openShop() { APP.shopQuery = ""; APP.shopCat = "All"; openModal({ type: "shop" }); },
+  shopCat(el) { APP.shopCat = el.dataset.cat; render(); },
+  buyItem(el) {
+    const c = APP.char, L = APP.library, C = APP.campaign, name = el.dataset.name;
+    const row = shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing")).find(r => r.name === name);
+    if (!row) return;
+    const cost = Math.round(shopPrice(c, row) * 100);
+    const paid = pay(c.coins, cost);
+    if (!paid) { toast("Not enough money"); return; }
+    const before = { coins: { ...c.coins }, inv: c.inventory.map(i => ({ ...i })) };
+    c.coins = paid;
+    const same = c.inventory.find(i => i.name === name && !i.notes && !slotOf(c, i.id));
+    if (same && !row.magic) same.qty += 1;
+    else c.inventory.push(makeItem(name, { weapons: allWeapons(L, C), items: allItems(L, C) }, store.newId));
+    saveAndRender();
+    toast(`Bought ${name} for ${fmtPrice(cost / 100)}`, { action: "Undo", onAction: () => { c.coins = before.coins; c.inventory = before.inv; saveAndRender(); } });
+  },
   openPicker(el) { APP.pickerQuery = ""; APP.pickerLevel = null; openModal({ type: "picker", picker: el.dataset.picker }); },
   pickFrom(el) { addPicked(el.dataset.picker, el.dataset.name, false); },
   pickCustom(el) { addPicked(el.dataset.picker, APP.pickerQuery.trim(), true); },
@@ -999,8 +1128,9 @@ function applyLevelUp() {
   c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });
   save();
   APP.lvl = null; APP.screen = "sheet"; APP.sheetTab = "stats";
+  if (APP.shopAfterChoices) { APP.shopAfterChoices = false; APP.sheetTab = "gear"; openModal({ type: "shop" }); }
   render(); window.scrollTo(0, 0);
-  toast(d.fromCreation ? "Level 1 choices saved" : `${c.name} is now level ${c.level}!`);
+  toast(d.fromCreation ? (APP.sheetTab === "gear" ? "Now spend your gold on starting gear" : "Level 1 choices saved") : `${c.name} is now level ${c.level}!`);
 }
 
 // ---- drag and drop (laptop; phones use tap-then-tap)

@@ -27,7 +27,7 @@ export function normalize(c, library) {
     profsText: c.profsText || "", languages: c.languages || "", feats: c.feats || [],
     hp: { max: 1, cur: 1, temp: 0, ...(c.hp || {}) },
     ac: { base: 10, bonus: 0, shield: false, dexCap: null, armorName: "", override: null, ...(c.ac || {}) },
-    speed: Number(c.speed) || 30, initBonus: Number(c.initBonus) || 0,
+    speed: Number(c.speed) || 30, initBonus: Number(c.initBonus) || 0, size: c.size || "",
     hitDice: { total: c.level || 1, spent: 0, die: cls ? cls.hd : 8, ...(c.hitDice || {}) },
     deathSaves: { success: 0, fail: 0, ...(c.deathSaves || {}) },
     conditions: c.conditions || [], exhaustion: Number(c.exhaustion) || 0,

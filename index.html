@@ -43,11 +43,50 @@
 })();
 </script>
 <noscript><div class="empty"><h3>Turn on JavaScript</h3><p>Character Runner needs JavaScript to run.</p></div></noscript>
+<div id="update-bar" hidden role="status"><span>An update is ready.</span><button class="btn sm pri" type="button" id="update-go">Update now</button></div>
 <script>
+// Install button: browsers fire this once, possibly before the app code loads.
+window.__installPrompt = null;
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault(); window.__installPrompt = e;
+  window.dispatchEvent(new Event("cr-install-change"));
+});
+window.addEventListener("appinstalled", function () {
+  window.__installPrompt = null; window.dispatchEvent(new Event("cr-install-change"));
+});
+// Updates: a new release downloads whole in the background. If it was ready
+// when the app opened (or arrives in the first few seconds before you touch
+// anything), it's applied right away. Otherwise a bar offers "Update now".
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js").catch(() => {});
-  });
+  (function () {
+    var hadController = !!navigator.serviceWorker.controller, bootAt = Date.now(), touched = false, reloading = false;
+    ["pointerdown", "keydown"].forEach(function (t) { window.addEventListener(t, function () { touched = true; }, { once: true, capture: true }); });
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!hadController || reloading) return; reloading = true; location.reload();
+    });
+    function apply(reg) { if (reg.waiting) reg.waiting.postMessage("apply-update"); }
+    function offer(reg) {
+      if (!navigator.serviceWorker.controller) return; // first visit: nothing old to replace
+      if (!touched && Date.now() - bootAt < 5000) return apply(reg);
+      var bar = document.getElementById("update-bar");
+      bar.hidden = false;
+      document.getElementById("update-go").onclick = function () { this.disabled = true; this.textContent = "Updating…"; apply(reg); };
+    }
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("service-worker.js").then(function (reg) {
+        window.__swReg = reg;
+        if (reg.waiting) offer(reg);
+        reg.addEventListener("updatefound", function () {
+          var w = reg.installing; if (!w) return;
+          w.addEventListener("statechange", function () { if (w.state === "installed") offer(reg); });
+        });
+        var check = function () { reg.update().catch(function () {}); };
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) check(); });
+        window.addEventListener("online", check);
+        setInterval(check, 30 * 60 * 1000);
+      }).catch(function () {});
+    });
+  })();
 }
 </script>
 </body>

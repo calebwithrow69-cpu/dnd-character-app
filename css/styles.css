@@ -280,6 +280,9 @@ nav.tabs button[aria-current="page"] svg{stroke:var(--amber)}
 #toast .toast-act{font-weight:700;color:var(--amber);background:none;border:0;padding:4px 2px;min-height:32px}
 :root[data-theme="light"] #toast .toast-act{color:#F2A33D}
 
+#update-bar:not([hidden]){position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:8px 8px 8px 14px;box-shadow:0 6px 20px rgba(0,0,0,.35);width:max-content;max-width:92vw;font-size:.92rem}
+.installcard .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+
 /* ---- paper doll ---- */
 .doll{display:grid;grid-template-columns:1fr 1.05fr 1fr;gap:8px;
   grid-template-areas:"head fig neck" "cloak fig ring1" "armor fig ring2" "gloves fig belt" ". boots ." "main ranged off"}
@@ -369,3 +372,20 @@ b.lead{color:var(--ink);font-weight:600}
 .stickybar .btnrow .btn{flex:1}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- creation choices ---- */
+.choice + .choice{border-top:1px solid var(--line-soft);padding-top:14px}
+.choice-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:8px}
+.choice-head h3{font-size:1rem;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chipbtn{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:var(--radius-sm);padding:8px 12px;min-height:var(--tap);font-weight:600;font-size:.92rem;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1.2;text-align:left}
+.chipbtn span{font-weight:400;font-size:.74rem;color:var(--muted)}
+.chipbtn[aria-pressed="true"]{border-color:var(--amber);background:var(--amber-dim)}
+.chipbtn:disabled{opacity:.45}
+.shopitem .about{padding:2px 0 10px;font-size:.92rem}
+.shoprow .nm{display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;color:var(--ink);padding:0;min-height:var(--tap);justify-content:center;flex:1;min-width:0}
+.shoprow .nm > span:first-child{font-weight:600}
+.shoprow .btn{min-width:78px}
+.tag.green{border-color:var(--green);color:var(--green)}
+.panel-head .btnrow > .btn{flex:none}
+.wiztools{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}

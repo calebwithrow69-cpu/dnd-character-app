@@ -148,7 +148,7 @@ function statsTab(app, c, d) {
         ${chosen.length ? `<div class="grouph">${esc(group.label)}</div>` + chosen.map(n => `<button class="rowline rollable" data-a="showDetail" data-kind="classFeature" data-name="${esc(n)}" data-from="${esc(c.class)}"><span class="nm">${esc(n)}</span><span class="sub2">${ICONS.info}</span></button>`).join("") : ""}
         ${(c.masteries || []).length ? `<div class="rowline"><span class="nm">Weapon mastery</span><span class="sub2" style="text-align:right">${esc(c.masteries.join(", "))}</span></div>` : ""}
         ${c.level >= 11 && !(cls?.features || []).some(f => f.lv > 10) ? `<p class="sub2" style="padding:8px 0">Your rules data stops at level 10, so level ${c.level} features aren't listed.</p>` : ""}
-        <button class="rowline rollable" data-a="showDetail" data-kind="species" data-name="${esc(c.species)}"><span class="nm">${esc(c.species)} traits</span><span class="sub2">Species</span></button>
+        <button class="rowline rollable" data-a="showDetail" data-kind="species" data-name="${esc(c.species)}"><span class="nm">${esc(c.species)} traits</span><span class="sub2">${c.size ? esc(c.size) + " · " : ""}Species</span></button>
         <button class="rowline rollable" data-a="showDetail" data-kind="background" data-name="${esc(c.background)}"><span class="nm">${esc(c.background)}</span><span class="sub2">Background</span></button>
       </div></div>
 
@@ -329,7 +329,7 @@ function gearTab(app, c, d) {
         </div>
       </div></div>
 
-    <div class="panel" data-drop-bag="1"><div class="panel-head"><h2>Bag</h2><button class="btn sm" data-a="openPicker" data-picker="items">Add</button></div>
+    <div class="panel" data-drop-bag="1"><div class="panel-head"><h2>Bag</h2><span class="btnrow"><button class="btn sm" data-a="openShop">Shop</button><button class="btn sm" data-a="openPicker" data-picker="items">Add</button></span></div>
       <div class="panel-body flush">
       ${c.inventory.length ? c.inventory.map(it => {
         const k = slotOf(c, it.id);
@@ -342,7 +342,7 @@ function gearTab(app, c, d) {
       }).join("") : `<p class="muted small" style="padding:12px 0">Your bag is empty.</p>`}
       </div></div>
 
-    <div class="panel"><div class="panel-head"><h2>Coins</h2></div><div class="panel-body">
+    <div class="panel"><div class="panel-head"><h2>Coins</h2><button class="btn sm" data-a="openShop">Shop</button></div><div class="panel-body">
       <div class="grid3 grid6" style="grid-template-columns:repeat(5,1fr)">
         ${["pp", "gp", "ep", "sp", "cp"].map(k => `<div class="field"><label>${k.toUpperCase()}</label><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" style="padding:9px 6px"></div>`).join("")}
       </div></div></div>

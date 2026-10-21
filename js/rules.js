@@ -211,6 +211,23 @@ export function standardArray(primary) {
   return out;
 }
 
+// Suggested standard-array spread per class (2024 Player's Handbook, chapter 2).
+// Campaign file can override with campaign.suggestedArrays = { Fighter: { str: 15, ... } }.
+export const SUGGESTED_ARRAYS = {
+  Barbarian: { str: 15, dex: 13, con: 14, int: 10, wis: 12, cha: 8 },
+  Bard: { str: 8, dex: 14, con: 12, int: 13, wis: 10, cha: 15 },
+  Cleric: { str: 14, dex: 8, con: 13, int: 10, wis: 15, cha: 12 },
+  Druid: { str: 8, dex: 12, con: 14, int: 13, wis: 15, cha: 10 },
+  Fighter: { str: 15, dex: 14, con: 13, int: 8, wis: 10, cha: 12 },
+  Monk: { str: 12, dex: 15, con: 13, int: 10, wis: 14, cha: 8 },
+  Paladin: { str: 15, dex: 10, con: 13, int: 8, wis: 12, cha: 14 },
+  Ranger: { str: 12, dex: 15, con: 13, int: 8, wis: 14, cha: 10 },
+  Rogue: { str: 12, dex: 15, con: 13, int: 14, wis: 10, cha: 8 },
+  Sorcerer: { str: 10, dex: 13, con: 14, int: 8, wis: 12, cha: 15 },
+  Warlock: { str: 8, dex: 14, con: 13, int: 12, wis: 10, cha: 15 },
+  Wizard: { str: 8, dex: 12, con: 13, int: 15, wis: 14, cha: 10 }
+};
+
 export function roll4d6DropLowest() {
   const r = [rollDie(6), rollDie(6), rollDie(6), rollDie(6)].sort((a, b) => b - a);
   return r[0] + r[1] + r[2];
