@@ -1,4 +1,4 @@
-import { esc, topbar, formatText, searchBox } from "../ui.js";
+import { esc, topbar, formatText, searchBox, infoRow } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_BY_LABEL, SKILLS, parseList, skillIdByLabel, abilityMod, fmtMod,
@@ -82,8 +82,19 @@ function listFor(app, d, step) {
   return {
     items: enabledBackgrounds(L, C), selected: d.background, action: "pickBackground",
     sub: b => [parseList(b.skills).join(", "), b.feat].filter(Boolean).join(" · "),
-    about: b => formatText((b.desc || "") + "\n\n" + (b.effect || ""))
+    about: b => backgroundSummary(b) + formatText(b.desc || "")
   };
+}
+
+// Background at a glance: what you actually get, with the feat readable in place.
+export function backgroundSummary(b) {
+  const abil = parseList(b.abilities), skills = parseList(b.skills);
+  return `<dl class="summary">
+      ${abil.length ? `<dt>Ability scores</dt><dd>${esc(abil.join(", "))} <span class="sub2">(+2/+1 or +1 each — you pick on the scores step)</span></dd>` : ""}
+      ${skills.length ? `<dt>Skills</dt><dd>${esc(skills.join(", "))}</dd>` : ""}
+      ${b.tool ? `<dt>Tool</dt><dd>${esc(b.tool)}</dd>` : ""}
+      ${b.feat ? `<dt>Feat</dt><dd><button class="term" data-term="feat:${esc(b.feat.replace(/\s*\(.*$/, ""))}">${esc(b.feat)}</button> <span class="sub2">tap to read</span></dd>` : ""}
+    </dl>`;
 }
 
 export function renderWizardResults(app) {
@@ -94,15 +105,9 @@ export function renderWizardResults(app) {
   const items = cfg.items.filter(x => !q || x.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
   if (!items.length) return `<p class="muted small" style="padding:12px 0">Nothing matches “${esc(d.query)}”.</p>`;
   return items.map(it => {
-    const on = it.name === cfg.selected;
-    return `<div>
-      <button class="optcard" data-a="${cfg.action}" data-name="${esc(it.name)}" aria-pressed="${on}">
-        <span class="grow"><b>${esc(it.name)}</b><span>${esc(cfg.sub(it))}</span></span>
-        ${on ? `<span class="tag amber">Chosen</span>` : ""}
-      </button>
-      ${on ? `<div class="about"><div class="clip">${cfg.about(it)}</div>
-        <button class="btn sm" style="margin-top:8px" data-a="showDetail" data-kind="${step}" data-name="${esc(it.name)}">Read all of it</button></div>` : ""}
-    </div>`;
+    const on = it.name === cfg.selected, key = step + ":" + it.name, open = on || app.info.has(key);
+    return infoRow({ key, action: cfg.action, data: { name: it.name }, title: it.name, sub: esc(cfg.sub(it)), pressed: on, open,
+      detail: open ? cfg.about(it) : "", badge: on ? `<span class="tag amber">Chosen</span>` : "" });
   }).join("");
 }
 

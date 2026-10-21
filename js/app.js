@@ -1,16 +1,17 @@
 import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword } from "./data.js";
 import * as store from "./store.js";
-import { toast, platform } from "./ui.js";
+import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import {
   renderCreate, renderWizardResults, newDraft, buildCharacterFromDraft, validateStep, STEPS,
   finalAbilities, primaryAbility
 } from "./views/create.js";
-import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices } from "./views/sheet.js";
+import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { renderModal, renderRollCard } from "./views/modals.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult } from "./views/levelup.js";
 import { SLOTS, itemById, fits, fitsOk, slotOf, wearKind, attunedCount, makeItem } from "./gear.js";
 import { rollFormula, rollD20, describeGroups, spin } from "./dice.js";
+import { analyzeSpell, castDice } from "./spells.js";
 import {
   deriveCharacter, weaponNumbers, abilityMod, fmtMod, ABILITY_LABEL, SKILLS, slotRows,
   standardArray, roll4d6DropLowest, hpAverageGain, rollDie, ABILITIES
@@ -20,6 +21,7 @@ const LS_PREFS = "dnd-prefs-v1";
 const LS_INSTALL = "dnd-install-dismissed";
 
 const APP = {
+  info: new Set(),
   screen: "loading", library: null, campaign: null,
   char: null, sheetTab: "stats", createDraft: null, seedGandork: null,
   roll: null, history: [], diceFormula: "",
@@ -51,10 +53,11 @@ async function init() {
   try {
     const { library, campaign } = await loadData();
     APP.library = library; APP.campaign = campaign;
+    await rebuildGlossary();
   } catch (e) {
     if (e instanceof LockedError) {
       APP.lockErr = e; APP.screen = "locked";
-      if (!APP._eventsBound) { bindEvents(); bindDrag(); APP._eventsBound = true; }
+      if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); APP._eventsBound = true; }
       render(); setTimeout(() => document.getElementById("f-pass")?.focus(), 50);
       return;
     }
@@ -69,11 +72,11 @@ async function init() {
   if (saved) { APP.char = store.normalize(saved, APP.library); APP.screen = "sheet"; }
   else APP.screen = "roster";
 
-  if (!APP._eventsBound) { bindEvents(); bindDrag(); APP._eventsBound = true; }
+  if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); APP._eventsBound = true; }
   render();
 
   const recheck = (manual) => checkForUpdates({ library: APP.library, campaign: APP.campaign }, (fresh) => {
-    APP.library = fresh.library; APP.campaign = fresh.campaign; APP._rulesIndex = null;
+    APP.library = fresh.library; APP.campaign = fresh.campaign; APP._rulesIndex = null; rebuildGlossary();
     toast(fresh.changed.includes("campaign") ? "Your DM updated the campaign rules" : "Rules data updated");
     render();
   }, (err) => { APP.lockErr = err; APP.needsNewPassword = true; render(); }).then(() => { if (manual === true) toast(navigator.onLine ? "Checked — you're up to date" : "You're offline right now"); });
@@ -90,7 +93,24 @@ async function init() {
 }
 
 // ---------------- render ----------------
+const FOCUS_KEYS = ["itemField", "weaponField", "edit", "editAbility", "ac", "coin", "field", "itemNotes", "modal", "query", "draft", "draftAbility"];
+function focusSelector(el) {
+  if (!isTextish(el) && el?.tagName !== "SELECT") return null;
+  if (el.id) return "#" + CSS.escape(el.id);
+  for (const k of FOCUS_KEYS) if (el.dataset[k] != null) return `[data-${k.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}="${CSS.escape(el.dataset[k])}"]`;
+  return null;
+}
 function render() {
+  const ae = document.activeElement, fsel = focusSelector(ae);
+  const caret = fsel && isTextish(ae) ? [ae.selectionStart, ae.selectionEnd] : null;
+  pendingRender = false;
+  renderNow();
+  if (fsel) {
+    const el = document.querySelector(fsel);
+    if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); if (caret && el.setSelectionRange) try { el.setSelectionRange(caret[0], caret[1]); } catch (e) { } }
+  }
+}
+function renderNow() {
   const mb = modalRoot.querySelector(".modal-body"), rs = document.querySelector(".results");
   const keep = { modal: mb ? mb.scrollTop : 0, results: rs ? rs.scrollTop : 0, modalType: APP._lastModalType };
 
@@ -115,6 +135,7 @@ function render() {
     const nrs = modalRoot.querySelector(".results"); if (nrs) nrs.scrollTop = keep.results;
   }
   APP._lastModalType = type;
+  animateHp();
 }
 
 let persistAsked = false;
@@ -321,7 +342,7 @@ function onChange(e) {
     if (ds.ac === "armorName") c.ac.armorName = v;
     else if (ds.ac === "dexCap") c.ac.dexCap = v === "" ? null : Number(v);
     else c.ac[ds.ac] = Number(v) || 0;
-    saveAndRender(); return;
+    save(); afterFieldChange(el); return;
   }
   if (ds.itemField && APP.modal && APP.modal.type === "item") {
     const it = itemById(c, APP.modal.id), v = el.value, f = ds.itemField;
@@ -330,15 +351,15 @@ function onChange(e) {
     else if (f === "slot") { if (v === "none") it.slot = "none"; else it.slot = v; }
     else if (f === "armorType") { if (v) it.armor = { type: v }; else delete it.armor; }
     else it[f] = parseInt(v, 10) || 0;
-    recheckEquipped(); saveAndRender(); return;
+    recheckEquipped(); save(); afterFieldChange(el); return;
   }
   if (ds.weaponField && APP.modal && APP.modal.type === "item") {
     const w = itemById(c, APP.modal.id).weapon, f = ds.weaponField, v = el.value;
     w[f] = f === "magic" ? parseInt(v, 10) || 0 : f === "ability" ? (v || null) : v;
-    recheckEquipped(); saveAndRender(); return;
+    recheckEquipped(); save(); afterFieldChange(el); return;
   }
   if (ds.coin) { c.coins[ds.coin] = Math.max(0, parseInt(el.value, 10) || 0); save(); return; }
-  if (ds.editAbility) { c.abilities[ds.editAbility] = Math.max(1, Math.min(30, parseInt(el.value, 10) || 10)); saveAndRender(); return; }
+  if (ds.editAbility) { c.abilities[ds.editAbility] = Math.max(1, Math.min(30, parseInt(el.value, 10) || 10)); save(); afterFieldChange(el); return; }
   if (ds.edit) {
     const v = el.value;
     if (ds.edit === "name") c.name = v.trim() || c.name;
@@ -346,10 +367,38 @@ function onChange(e) {
     else if (ds.edit === "maxhp") { c.hp.max = Math.max(1, parseInt(v, 10) || c.hp.max); c.hp.cur = Math.min(c.hp.cur, c.hp.max); }
     else if (ds.edit === "speed" || ds.edit === "initBonus") c[ds.edit] = parseInt(v, 10) || 0;
     else c[ds.edit] = v;
-    saveAndRender(); return;
+    save(); afterFieldChange(el); return;
   }
   if (ds.modal && APP.modal) { APP.modal[ds.modal] = el.value; return; }
 }
+
+// After a typed field changes, redraw without destroying the box the person
+// is clicking into next (that swallowed their click and felt like a freeze).
+const isTextish = el => el && ((el.tagName === "INPUT" && !["checkbox", "radio", "button", "submit"].includes(el.type)) || el.tagName === "TEXTAREA");
+function afterFieldChange(el) {
+  if (modalRoot.contains(el)) {
+    if (isTextish(el)) {
+      renderBehind();
+      const h = modalRoot.querySelector(".modal-head h2");
+      if (h && APP.modal?.type === "item") { const it = itemById(APP.char, APP.modal.id); if (it) h.textContent = it.name; }
+    } else render();
+    return;
+  }
+  if (isTextish(el)) queueRender(); else render();
+}
+function renderBehind() {
+  if (APP.screen === "sheet" && APP.char) mount.innerHTML = renderSheet(APP);
+  rollRoot.innerHTML = APP.screen === "sheet" ? renderRollCard(APP) : "";
+}
+let pendingRender = false;
+function queueRender() { pendingRender = true; setTimeout(flushRender, 0); }
+function flushRender() {
+  if (!pendingRender) return;
+  const ae = document.activeElement;
+  if (isTextish(ae) && mount.contains(ae)) return; // still typing somewhere on the page; wait
+  pendingRender = false; render();
+}
+document.addEventListener("focusout", () => setTimeout(flushRender, 0));
 
 // ---------------- actions ----------------
 const ACTIONS = {
@@ -538,7 +587,7 @@ const ACTIONS = {
   openConditions() { openModal({ type: "conditions" }); },
   toggleCondition(el) {
     const list = APP.char.conditions, n = el.dataset.name, i = list.indexOf(n);
-    if (el.checked && i < 0) list.push(n); if (!el.checked && i >= 0) list.splice(i, 1);
+    if (i >= 0) list.splice(i, 1); else list.push(n);
     saveAndRender();
   },
   removeCondition(el) { APP.char.conditions = APP.char.conditions.filter(x => x !== el.dataset.name); saveAndRender(); },
@@ -606,14 +655,24 @@ const ACTIONS = {
     }
     if (sp && sp.conc) c.concentration = name;
     save(); closeModal();
-    toast(`Cast ${name}${lvl ? ` with a level ${lvl} slot` : ""}${sp && sp.conc ? " — concentrating" : ""}`);
+    const rolled = spellRoll(sp, lvl || sp?.level || 1);
+    if (!rolled) toast(`Cast ${name}${lvl ? ` with a level ${lvl} slot` : ""}${sp && sp.conc ? " — concentrating" : ""}`);
+    else if (sp && sp.conc) toast("Concentrating on " + name);
+  },
+  castCantrip(el) {
+    const sp = findByName(APP.library.spells, el.dataset.name);
+    if (!spellRoll(sp, 0)) toast(`Cast ${el.dataset.name}`);
   },
   addSpell(el) { APP.char.spellcasting.spells.push({ name: el.dataset.name, prepared: true, always: false }); saveAndRender(); },
   removeSpell(el) {
-    const c = APP.char;
-    c.spellcasting.spells = c.spellcasting.spells.filter(s => s.name !== el.dataset.name);
-    if (c.concentration === el.dataset.name) c.concentration = null;
+    const c = APP.char, name = el.dataset.name;
+    const i = c.spellcasting.spells.findIndex(s => s.name === name);
+    if (i < 0) return;
+    const [gone] = c.spellcasting.spells.splice(i, 1);
+    const wasConc = c.concentration === name;
+    if (wasConc) c.concentration = null;
     saveAndRender();
+    toast(`Removed ${name}`, { action: "Undo", onAction: () => { c.spellcasting.spells.splice(i, 0, gone); if (wasConc) c.concentration = name; saveAndRender(); } });
   },
   pickerLevel(el) { APP.pickerLevel = el.dataset.lv === "" ? null : +el.dataset.lv; render(); },
   pickerAllClasses(el) { APP.pickerAllClasses = el.checked; render(); },
@@ -637,7 +696,7 @@ const ACTIONS = {
     const slot = el.dataset.slot, c = APP.char;
     if (APP.selItem) {
       const it = itemById(c, APP.selItem), r = fits(it, slot, c);
-      if (r === true) equip(APP.selItem, slot); else toast(r);
+      if (r === true) { equip(APP.selItem, slot); flashSlot(slot); } else toast(r);
       return;
     }
     openModal({ type: "slot", slot });
@@ -746,6 +805,9 @@ function equip(id, slot) {
   if (it.attune && !it.attuned) toast(`${it.name} needs attunement to work — tap it to attune`);
   else if (bumped) toast(`Swapped out ${bumped.name}`);
 }
+function flashSlot(key) {
+  requestAnimationFrame(() => { const el = document.querySelector(`[data-drop-slot="${key}"]`); if (el) { el.classList.add("just-equipped"); setTimeout(() => el.classList.remove("just-equipped"), 700); } });
+}
 function unequip(id, quiet) {
   const eq = APP.char.equipment;
   Object.keys(eq).forEach(k => { if (eq[k] === id) delete eq[k]; });
@@ -770,6 +832,142 @@ async function tryUnlock(pw) {
   }
 }
 ACTIONS.enterNewPassword = () => { APP.screen = "locked"; render(); };
+
+// ---- Glossary + definition popover (tap anywhere; hover on laptops)
+async function rebuildGlossary() {
+  if (!APP.terms) {
+    try { const r = await fetch("data/terms.json"); APP.terms = r.ok ? (await r.json()).terms : []; } catch (e) { APP.terms = []; }
+  }
+  setGlossary([...(APP.library?.rules || []), ...(APP.campaign?.homebrew?.rules || []), ...APP.terms]);
+}
+const pop = () => document.getElementById("term-pop");
+function termContent(key) {
+  const i = key.indexOf(":");
+  const kind = i > 0 ? key.slice(0, i) : "rule", name = i > 0 ? key.slice(i + 1) : key;
+  if (kind === "rule" || kind === "condition" || kind === "mastery") {
+    const g = glossaryEntry(name);
+    return { title: g?.name || name, body: g ? formatText(g.text) : `<p class="muted">No definition in your rules data yet.</p>`, icon: kind === "condition" || /^(Blinded|Charmed|Deafened|Frightened|Grappled|Incapacitated|Invisible|Paralyzed|Petrified|Poisoned|Prone|Restrained|Stunned|Unconscious|Exhaustion)$/.test(name) ? conditionIcon(g?.name || name) : "" };
+  }
+  if (kind === "classFeature" || kind === "subclassFeature") {
+    const [from, nm] = name.includes("|") ? name.split("|") : [APP.char?.class, name];
+    const d = detailFor(APP, kind, nm, null, from);
+    return { title: d.title, body: d.body, icon: "" };
+  }
+  const d = detailFor(APP, kind, name);
+  return { title: d.title, body: d.body, icon: "" };
+}
+function showTerm(key, anchor, pinned) {
+  const el = pop(); if (!el) return;
+  const { title, body, icon } = termContent(key);
+  el.innerHTML = `<div class="pop-head">${icon}<b>${esc(title)}</b><button class="iconbtn" data-a="closeTerm" aria-label="Close" style="width:34px;height:34px">${ICONS.close}</button></div><div class="pop-body">${body}</div>`;
+  el.dataset.key = key; el.dataset.pinned = pinned ? "1" : "";
+  el.classList.add("show");
+  const r = anchor.getBoundingClientRect(), vw = innerWidth, vh = innerHeight;
+  const w = Math.min(360, vw - 24);
+  el.style.width = w + "px";
+  let left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), vw - w - 12);
+  el.style.left = left + "px";
+  const h = el.offsetHeight;
+  const below = r.bottom + 8, above = r.top - 8 - h;
+  el.style.top = (below + h < vh - 8 || above < 8 ? Math.min(below, vh - h - 8) : above) + "px";
+}
+function hideTerm() { const el = pop(); if (el) { el.classList.remove("show"); el.dataset.key = ""; } }
+function bindTerms() {
+  let hoverT = null, leaveT = null;
+  const fine = matchMedia("(hover:hover) and (pointer:fine)");
+  document.addEventListener("click", e => {
+    const t = e.target.closest("[data-term]");
+    if (t) { e.preventDefault(); e.stopPropagation(); showTerm(t.dataset.term, t, true); return; }
+    if (e.target.closest('[data-a="closeTerm"]')) { hideTerm(); return; }
+    if (!e.target.closest("#term-pop")) hideTerm();
+  }, true);
+  document.addEventListener("mouseover", e => {
+    if (!fine.matches) return;
+    const t = e.target.closest("[data-term]");
+    if (t) { clearTimeout(leaveT); clearTimeout(hoverT); hoverT = setTimeout(() => showTerm(t.dataset.term, t, false), 280); return; }
+    if (e.target.closest("#term-pop")) { clearTimeout(leaveT); return; }
+  });
+  document.addEventListener("mouseout", e => {
+    if (!fine.matches) return;
+    if (e.target.closest("[data-term], #term-pop")) {
+      clearTimeout(hoverT);
+      leaveT = setTimeout(() => { const el = pop(); if (el && !el.dataset.pinned && !el.matches(":hover")) hideTerm(); }, 220);
+    }
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") hideTerm(); });
+  // Scrolling closes a hover preview, but a definition you tapped open stays until you tap away.
+  window.addEventListener("scroll", () => { const el = pop(); if (el && !el.dataset.pinned && !el.matches(":hover")) hideTerm(); }, { passive: true });
+}
+ACTIONS.toggleInfo = (el) => {
+  const k = el.dataset.key;
+  if (APP.info.has(k)) APP.info.delete(k); else APP.info.add(k);
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+};
+
+// Roll what casting a spell actually rolls (attack/save + damage or healing).
+// Returns false when the text has nothing to roll.
+function spellRoll(sp, slotLevel) {
+  if (!sp) return false;
+  const c = APP.char, info = analyzeSpell(sp), d = deriveCharacter(c), si = d.spellInfo;
+  if (!si || (!info.attack && !info.save && !info.damage && !info.heal)) return false;
+  const opts = { charLevel: c.level, slotLevel, spellLevel: sp.level };
+  const parts = [];
+  let crit = false, altBits = [];
+  if (info.attack) {
+    const r = rollD20(si.attackBonus - c.exhaustion * 2);
+    crit = r.crit;
+    parts.push({ label: r.crit ? "Natural 20!" : r.fumble ? "Natural 1" : info.attack, total: r.total, bd: `[${r.first}] ${fmtMod(r.mod).replace("+", "+ ").replace("−", "− ")}`, crit: r.crit, fumble: r.fumble });
+    altBits.push(`Advantage <b>${r.adv}</b> · disadvantage <b>${r.dis}</b>`);
+  }
+  if (info.save) parts.push({ label: `${info.save} save`, total: si.dc, bd: `DC${info.half ? " · half damage on a success" : ""}` });
+  const fx = info.damage || info.heal;
+  if (fx) {
+    const dice = castDice(fx.dice, info, opts);
+    const mod = (fx.flat || 0) + (fx.addMod ? si.mod : 0);
+    const f = `${crit ? dice.replace(/^(\d+)/, n => 2 * n) : dice}${mod ? (mod > 0 ? "+" : "") + mod : ""}`;
+    const r = rollFormula(f);
+    if (r) parts.push({ label: info.heal ? "Healing" : `${crit ? "Crit damage" : "Damage"}${info.damage?.type ? " · " + info.damage.type : ""}`, total: Math.max(0, r.total), bd: describeGroups(r), crit });
+    if (slotLevel > sp.level && info.upcast) altBits.push(`upcast at level ${slotLevel}`);
+    if (sp.level === 0 && info.cantripScale && dice !== fx.dice) altBits.push(`${dice} at your level`);
+  }
+  showRoll(`${sp.name}${slotLevel ? ` · level ${slotLevel} slot` : sp.level === 0 ? " · cantrip" : ""}`, parts, altBits.join(" · "));
+  return true;
+}
+
+// Health feedback: trailing bar, floating number, shake on hits, and a red
+// screen edge when a character is below 10% (stronger at 0).
+function animateHp() {
+  const v = document.getElementById("vignette");
+  const c = APP.screen === "sheet" ? APP.char : null;
+  if (!c) { v && v.classList.remove("on", "dying"); APP._hpSeen = null; return; }
+  const frac = c.hp.cur / Math.max(1, c.hp.max);
+  if (v) { v.classList.toggle("on", frac < 0.10 && APP.prefs.vignette !== false); v.classList.toggle("dying", c.hp.cur <= 0); }
+  const seen = APP._hpSeen;
+  APP._hpSeen = { id: c.id, cur: c.hp.cur, max: c.hp.max };
+  if (!seen || seen.id !== c.id || seen.cur === c.hp.cur) return;
+  const diff = c.hp.cur - seen.cur;
+  const track = mount.querySelector(".hptrack"), ghost = mount.querySelector(".hpghost"), num = mount.querySelector(".hpnum");
+  if (!track) return;
+  const oldPct = Math.max(0, Math.min(100, seen.cur / Math.max(1, seen.max) * 100)), newPct = Math.max(0, Math.min(100, frac * 100));
+  const fill = mount.querySelector(".hpfill");
+  if (diff < 0) {
+    ghost.style.transition = "none"; ghost.style.width = oldPct + "%";
+    requestAnimationFrame(() => requestAnimationFrame(() => { ghost.style.transition = ""; ghost.style.width = newPct + "%"; }));
+    track.classList.add("hit"); setTimeout(() => track.classList.remove("hit"), 450);
+  } else {
+    fill.style.transition = "none"; fill.style.width = oldPct + "%";
+    requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.transition = ""; fill.style.width = newPct + "%"; }));
+    track.classList.add("heal"); setTimeout(() => track.classList.remove("heal"), 700);
+  }
+  if (num) {
+    const f = document.createElement("span");
+    f.className = "hpfloat " + (diff < 0 ? "dmg" : "gain");
+    f.textContent = (diff > 0 ? "+" : "−") + Math.abs(diff);
+    num.parentElement.style.position = "relative";
+    num.parentElement.appendChild(f);
+    setTimeout(() => f.remove(), 1100);
+  }
+}
 
 function refreshLevelResults() { const y = window.scrollY; render(); window.scrollTo(0, y); }
 
@@ -811,16 +1009,26 @@ function bindDrag() {
     const it = itemById(APP.char, id);
     el.classList.toggle("can-drop", !!it && fitsOk(it, el.dataset.dropSlot, APP.char));
   });
+  document.addEventListener("pointerdown", e => { APP._pressTarget = e.target; }, true);
   const clear = () => document.querySelectorAll(".can-drop,.drag-over").forEach(el => el.classList.remove("can-drop", "drag-over"));
   document.addEventListener("dragstart", e => {
     const el = e.target.closest && e.target.closest("[data-drag-item]");
     if (!el || !APP.char) return;
+    // +/- and fields never start a drag (the browser reports the row as the target, so check where the press began)
+    if (APP._pressTarget && APP._pressTarget.closest && APP._pressTarget.closest(".stepper, input, select, textarea, .infobtn")) { e.preventDefault(); return; }
     APP.dragId = el.dataset.dragItem;
     e.dataTransfer.setData("text/plain", APP.dragId);
     e.dataTransfer.effectAllowed = "move";
-    setTimeout(() => mark(APP.dragId), 0);
+    const it = itemById(APP.char, APP.dragId);
+    const ghost = document.createElement("div");
+    ghost.className = "drag-ghost"; ghost.textContent = it ? it.name : "";
+    document.body.appendChild(ghost);
+    try { e.dataTransfer.setDragImage(ghost, 16, 16); } catch (err) { }
+    setTimeout(() => ghost.remove(), 0);
+    mark(APP.dragId);
+    document.body.classList.add("dragging");
   });
-  document.addEventListener("dragend", () => { APP.dragId = null; clear(); });
+  document.addEventListener("dragend", () => { APP.dragId = null; clear(); document.body.classList.remove("dragging"); });
   document.addEventListener("dragover", e => {
     if (!APP.dragId) return;
     const slot = e.target.closest("[data-drop-slot]");
@@ -837,8 +1045,8 @@ function bindDrag() {
     const id = APP.dragId; APP.dragId = null;
     const slot = e.target.closest("[data-drop-slot]");
     const bag = e.target.closest("[data-drop-bag]");
-    e.preventDefault(); clear();
-    if (slot) equip(id, slot.dataset.dropSlot);
+    e.preventDefault(); clear(); document.body.classList.remove("dragging");
+    if (slot) { equip(id, slot.dataset.dropSlot); flashSlot(slot.dataset.dropSlot); }
     else if (bag && slotOf(APP.char, id)) { unequip(id); render(); toast("Moved to your bag"); }
   });
 }

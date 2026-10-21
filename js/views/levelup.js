@@ -1,5 +1,6 @@
 // Full-screen level-up, one decision per step (Baldur's Gate style).
-import { esc, topbar, formatText, searchBox } from "../ui.js";
+import { esc, topbar, formatText, searchBox, infoRow, glossaryEntry } from "../ui.js";
+import { detailFor, spellSub } from "./sheet.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, abilityMod, fmtMod, hpAverageGain, slotRows } from "../rules.js";
 import { findByName, enabledFeats, allWeapons, subclassesFor } from "../data.js";
 import { levelUpPlan, featEligible, optionPrereq, spellsFor } from "../progression.js";
@@ -57,18 +58,23 @@ function expertiseChoices(c) {
   return SKILLS.filter(s => c.skillProf.includes(s.id) && !c.skillExpertise.includes(s.id));
 }
 
-function pickList(items, chosen, action, { max, render, disabled }) {
+let APPREF = null; // set at render time so pickers can read which rows are expanded
+function pickList(items, chosen, action, { max, render, disabled, detail, kind = action }) {
   return items.map(it => {
     const on = chosen.includes(it.name);
     const off = disabled ? disabled(it) : null;
     const full = !on && max != null && chosen.length >= max;
-    return `<div><button class="optcard" data-a="${action}" data-name="${esc(it.name)}" aria-pressed="${on}" ${off || full ? "disabled" : ""}>
-        <span class="grow"><b>${esc(it.name)}</b><span>${render ? render(it, off) : ""}</span></span>
-        ${on ? `<span class="tag amber">Chosen</span>` : ""}</button></div>`;
+    const key = kind + ":" + it.name, open = !!APPREF?.info.has(key);
+    return infoRow({ key, action, data: { name: it.name }, title: it.name, sub: render ? render(it, off) : "", pressed: on,
+      disabled: !!(off || full), open, detail: open && detail ? detail(it) : "",
+      badge: on ? `<span class="tag amber">Chosen</span>` : "" });
   }).join("");
 }
+const featDetail = f => `${f.type ? `<p class="sub2" style="margin-bottom:8px">${esc(f.type)}</p>` : ""}${formatText(f.text)}`;
+const masteryDetail = w => `<p class="sub2" style="margin-bottom:8px">${esc([w.cat, w.kind, w.dice + " " + (w.dtype || ""), w.props].filter(Boolean).join(" · "))}</p>${formatText(glossaryEntry(w.mastery)?.text || "")}`;
 
 export function renderLevelResults(app) {
+  APPREF = app;
   const d = app.lvl, c = app.char, L = app.library;
   const p = plan(app), step = p.steps[d.step];
   const q = (d.query || "").trim().toLowerCase();
@@ -77,8 +83,8 @@ export function renderLevelResults(app) {
     const all = enabledFeats(L, app.campaign).filter(f => /^General|^Epic/i.test(f.type || "") && !c.feats.includes(f.name) && match(f));
     const okList = all.filter(f => featEligible(f, { ...c }, d.next).ok);
     const nope = all.filter(f => !featEligible(f, c, d.next).ok);
-    return pickList(okList, [d.feat], "lvlFeat", { render: f => esc((f.type || "").replace(/^General Feat\s*/, "").replace(/^\(|\)$/g, "") || "No prerequisite") })
-      + (nope.length ? `<div class="grouph">Not available yet (${nope.length})</div>` + pickList(nope, [], "lvlFeat", { disabled: f => featEligible(f, c, d.next).why, render: (f, w) => esc(w) }) : "");
+    return pickList(okList, [d.feat], "lvlFeat", { kind: "feat", detail: featDetail, render: f => esc((f.type || "").replace(/^General Feat\s*/, "").replace(/^\(|\)$/g, "") || "No prerequisite") })
+      + (nope.length ? `<div class="grouph">Not available yet (${nope.length}) — tap (i) to read them anyway</div>` + pickList(nope, [], "lvlFeat", { kind: "feat", detail: featDetail, disabled: f => featEligible(f, c, d.next).why, render: (f, w) => esc(w) }) : "");
   }
   if (step.id === "cantrips" || step.id === "spells") {
     const list = spellsFor(L, app.campaign, c, { cantrips: step.id === "cantrips", maxLevel: step.maxLevel || 0, all: d.showAll })
@@ -86,12 +92,13 @@ export function renderLevelResults(app) {
     const chosen = step.id === "cantrips" ? d.cantrips : d.spells;
     if (!list.length) return `<p class="muted small">No spells match.</p>`;
     return pickList(list.slice(0, 120), chosen, step.id === "cantrips" ? "lvlCantrip" : "lvlSpell",
-      { max: step.n, render: s => `${s.level ? "Level " + s.level : "Cantrip"} · ${esc(s.school || "")}${s.conc ? " · concentration" : ""}` });
+      { kind: "spell", max: step.n, render: s => esc(spellSub(s)), detail: s => detailFor(app, "spell", s.name).body });
   }
   return "";
 }
 
 export function renderLevelUp(app) {
+  APPREF = app;
   const d = app.lvl, c = app.char, L = app.library;
   const p = plan(app);
   if (d.step >= p.steps.length) d.step = p.steps.length - 1;
@@ -111,13 +118,15 @@ export function renderLevelUp(app) {
 
   else if (step.id === "subclass") {
     const subs = subclassesFor(L, c.class).slice().sort((a, b) => a.name.localeCompare(b.name));
-    body = `<p class="small muted">Your subclass shapes the rest of your ${esc(c.class)} levels.</p><div class="optlist">` + subs.map(s => {
-      const on = d.subclass === s.name;
-      const intro = (s.features || []).find(f => f.intro) || (s.features || [])[0];
-      const now = (s.features || []).filter(f => f.lv === d.next && !f.intro).map(f => f.name);
-      return `<div><button class="optcard" data-a="lvlSubclass" data-name="${esc(s.name)}" aria-pressed="${on}">
-          <span class="grow"><b>${esc(s.name)}</b><span>${esc(s.source || "")}${now.length ? " · gains " + esc(now.join(", ")) : ""}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
-        ${on && intro ? `<div class="about"><div class="clip">${formatText(intro.text)}</div></div>` : ""}</div>`;
+    body = `<p class="small muted">Your subclass shapes the rest of your ${esc(c.class)} levels. Tap (i) to read one before choosing.</p><div class="optlist">` + subs.map(sc => {
+      const intro = (sc.features || []).find(f => f.intro) || null;
+      const later = (sc.features || []).filter(f => !f.intro);
+      const now = later.filter(f => f.lv === d.next).map(f => f.name);
+      const key = "subclass:" + sc.name, open = app.info.has(key) || d.subclass === sc.name;
+      return infoRow({ key, action: "lvlSubclass", data: { name: sc.name }, title: sc.name,
+        sub: esc([sc.source, now.length ? "gains " + now.join(", ") : ""].filter(Boolean).join(" · ")), pressed: d.subclass === sc.name, open,
+        detail: open ? (intro ? formatText(intro.text) : "") + `<p class="lab" style="margin-top:10px">Features</p>` + later.map(f => `<p><button class="term" data-term="subclassFeature:${esc(sc.name)}|${esc(f.name)}">${esc(f.name)}</button> <span class="sub2">level ${f.lv}</span></p>`).join("") : "",
+        badge: d.subclass === sc.name ? `<span class="tag amber">Chosen</span>` : "" });
     }).join("") + `</div>`;
   }
 
@@ -144,11 +153,7 @@ export function renderLevelUp(app) {
 
   else if (step.id === "style") {
     const styles = enabledFeats(L, app.campaign).filter(f => /^Fighting Style Feat/i.test(f.type || "") && !c.feats.includes(f.name));
-    body = `<div class="optlist" style="margin-top:0">` + styles.map(f => {
-      const on = d.style === f.name;
-      return `<div><button class="optcard" data-a="lvlStyle" data-name="${esc(f.name)}" aria-pressed="${on}"><span class="grow"><b>${esc(f.name)}</b></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
-        ${on ? `<div class="about">${formatText(f.text)}</div>` : ""}</div>`;
-    }).join("") + `</div>`;
+    body = `<div class="optlist" style="margin-top:0">` + pickList(styles, [d.style], "lvlStyle", { kind: "feat", detail: featDetail, render: f => esc((f.text || "").split(/(?<=\.)\s/)[0].slice(0, 90)) }) + `</div>`;
   }
 
   else if (step.id === "expertise") {
@@ -165,7 +170,7 @@ export function renderLevelUp(app) {
     const have = c.masteries || [];
     const ws = allWeapons(L, app.campaign).filter(w => w.mastery && !have.includes(w.name)).sort((a, b) => a.name.localeCompare(b.name));
     body = `<p class="small muted">Mastery unlocks a weapon's special trick (shown on each). Pick ${step.n}. ${d.mastery.length}/${step.n} chosen.</p>
-      <div class="optlist">${pickList(ws, d.mastery, "lvlMastery", { max: step.n, render: w => `${esc(w.mastery)} · ${esc(w.cat || "")} ${esc(w.kind || "")}` })}</div>`;
+      <div class="optlist">${pickList(ws, d.mastery, "lvlMastery", { kind: "mastery", max: step.n, detail: masteryDetail, render: w => `${esc(w.mastery)} · ${esc(w.cat || "")} ${esc(w.kind || "")}` })}</div>`;
   }
 
   else if (step.id === "options") {
@@ -173,16 +178,16 @@ export function renderLevelUp(app) {
     const have = c.choices[g.key] || [];
     const picked = new Set([...have, ...d.options]);
     const opts = g.options.filter(o => !have.includes(o.name));
-    body = `<p class="small muted">Pick ${step.n}. ${d.options.length}/${step.n} chosen. Tap one to read it.</p>
+    body = `<p class="small muted">Pick ${step.n}. ${d.options.length}/${step.n} chosen. Tap (i) to read any of them, even locked ones.</p>
       <div class="optlist">${opts.map(o => {
         const pre = optionPrereq(o);
         const lockedLevel = pre.level > d.next;
         const missing = pre.needs.filter(n => !picked.has(n) && g.options.some(x => x.name === n));
         const off = lockedLevel ? `Needs level ${pre.level}` : missing.length ? `Needs ${missing.join(", ")}` : null;
-        const on = d.options.includes(o.name);
-        return `<div><button class="optcard" data-a="lvlOption" data-name="${esc(o.name)}" aria-pressed="${on}" ${off || (!on && d.options.length >= step.n) ? "disabled" : ""}>
-            <span class="grow"><b>${esc(o.name)}</b><span>${esc(off || pre.text || "No prerequisite")}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
-          ${on || d.open === o.name ? `<div class="about"><div class="clip">${formatText(o.text)}</div></div>` : ""}</div>`;
+        const on = d.options.includes(o.name), key = "option:" + o.name;
+        return infoRow({ key, action: "lvlOption", data: { name: o.name }, title: o.name, sub: esc(off || pre.text || "No prerequisite"),
+          pressed: on, disabled: !!(off || (!on && d.options.length >= step.n)), open: app.info.has(key) || on,
+          detail: app.info.has(key) || on ? formatText(o.text) : "", badge: on ? `<span class="tag amber">Chosen</span>` : "" });
       }).join("")}</div>`;
   }
 

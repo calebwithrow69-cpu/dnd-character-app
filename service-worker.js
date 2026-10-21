@@ -3,15 +3,15 @@
 //   so new code shows up on the next launch with no manual steps.
 // - Rules data (data/*.json): network first when online, cache when not.
 // - Google Fonts: cached the first time they load, so offline keeps the look.
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const SHELL = "shell-" + CACHE_VERSION;
 const FONTS = "fonts-v1";
 
 const SHELL_FILES = [
   "./", "index.html", "manifest.json", "css/styles.css",
-  "js/app.js", "js/data.js", "js/store.js", "js/rules.js", "js/dice.js", "js/ui.js", "js/gear.js", "js/progression.js", "js/crypt.js",
+  "js/app.js", "js/data.js", "js/store.js", "js/rules.js", "js/dice.js", "js/ui.js", "js/gear.js", "js/progression.js", "js/crypt.js", "js/spells.js",
   "js/views/roster.js", "js/views/create.js", "js/views/sheet.js", "js/views/modals.js", "js/views/levelup.js",
-  "data/library.enc.json", "data/campaign.json", "data/seed-gandork.json",
+  "data/library.enc.json", "data/campaign.json", "data/seed-gandork.json", "data/terms.json",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"
 ];
 

@@ -1,4 +1,4 @@
-import { esc, topbar, ICONS, searchBox, formatText } from "../ui.js";
+import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
@@ -33,10 +33,10 @@ export function renderSheet(app) {
   const dying = c.hp.cur <= 0;
 
   const chips = [
-    c.concentration ? `<span class="chip conc">Concentrating: ${esc(c.concentration)}<button data-a="endConc" aria-label="End concentration">${ICONS.close}</button></span>` : "",
-    ...c.conditions.map(x => `<span class="chip cond"><button class="linkbtn" style="min-height:0;text-decoration:none;color:inherit" data-a="showDetail" data-kind="condition" data-name="${esc(x)}">${esc(x)}</button><button data-a="removeCondition" data-name="${esc(x)}" aria-label="Remove ${esc(x)}">${ICONS.close}</button></span>`),
-    c.exhaustion > 0 ? `<span class="chip cond">Exhaustion ${c.exhaustion} (−${c.exhaustion * 2} to d20 tests)</span>` : "",
-    dying ? `<span class="chip cond">${c.deathSaves.fail >= 3 ? "Dead" : c.deathSaves.success >= 3 ? "Stable at 0 HP" : "Dying"}</span>` : ""
+    c.concentration ? `<span class="chip conc"><button class="chip-main" data-term="spell:${esc(c.concentration)}"><span class="sub2" style="color:inherit">Concentrating</span> ${esc(c.concentration)}</button><button class="chip-x" data-a="endConc" aria-label="End concentration">${ICONS.close}</button></span>` : "",
+    ...c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button><button class="chip-x" data-a="removeCondition" data-name="${esc(x)}" aria-label="Remove ${esc(x)}">${ICONS.close}</button></span>`),
+    c.exhaustion > 0 ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion} <span class="sub2" style="color:inherit">−${c.exhaustion * 2} to d20s</span></button></span>` : "",
+    dying ? `<span class="chip cond"><button class="chip-main" data-term="Death Saving Throw">${conditionIcon("Unconscious")}${c.deathSaves.fail >= 3 ? "Dead" : c.deathSaves.success >= 3 ? "Stable at 0 HP" : "Dying"}</button></span>` : ""
   ].join("");
 
   const meta = `Level ${c.level} ${c.species} ${c.class}${c.subclass ? " · " + c.subclass : ""}`;
@@ -56,17 +56,18 @@ export function renderSheet(app) {
           <div class="ac-box" title="Armor Class"><b>${d.ac}</b><span>AC</span></div>
           <div class="hpwrap">
             <div class="hptrack" role="img" aria-label="${c.hp.cur} of ${c.hp.max} hit points">
+              <div class="hpghost" style="width:${pct}%"></div>
               <div class="hpfill ${hpState}" style="width:${pct}%"></div>
               ${tempPct ? `<div class="hptemp" style="width:${tempPct}%"></div>` : ""}
             </div>
-            <div class="hptext"><b>${c.hp.cur}</b><span class="muted">/ ${c.hp.max} HP${c.hp.temp ? ` · +${c.hp.temp} temp` : ""}</span></div>
+            <div class="hptext"><b class="hpnum">${c.hp.cur}</b><span class="muted">/ ${c.hp.max} HP${c.hp.temp ? ` · +${c.hp.temp} temp` : ""}</span></div>
           </div>
         </div>
         <div class="quick">
-          <button data-a="rollInit"><b>${fmtMod(d.initiative)}</b><span>Initiative</span></button>
+          <button data-a="rollInit"><b>${fmtMod(d.initiative)}</b><span>Initiative · roll</span></button>
           <div><b>${c.speed}</b><span>Speed ft</span></div>
           <div><b>${fmtMod(d.prof)}</b><span>Proficiency</span></div>
-          <div><b>${d.passivePerception}</b><span>Passive</span></div>
+          <button data-term="Passive Perception"><b>${d.passivePerception}</b><span>Passive Perception</span></button>
         </div>
         ${chips ? `<div class="chips">${chips}</div>` : ""}
       </section>
@@ -169,7 +170,7 @@ function statsTab(app, c, d) {
       </div></div>
 
     <div class="panel"><div class="panel-head"><h2>Conditions</h2><button class="btn sm" data-a="openConditions">Change</button></div>
-      <div class="panel-body small">${c.conditions.length ? esc(c.conditions.join(", ")) : `<span class="muted">None</span>`}${c.exhaustion ? ` · Exhaustion ${c.exhaustion}` : ""}</div></div>
+      <div class="panel-body">${c.conditions.length || c.exhaustion ? `<div class="chips" style="margin:0">${c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button></span>`).join("")}${c.exhaustion ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion}</button></span>` : ""}</div><p class="sub2" style="margin-top:8px">Tap a condition to see what it does.</p>` : `<span class="muted small">None</span>`}</div></div>
 
     ${c.classFeatureNotes ? `<div class="panel"><div class="panel-head"><h2>Class notes</h2></div><div class="panel-body">
       <textarea class="f" data-field="classFeatureNotes" aria-label="Class notes">${esc(c.classFeatureNotes)}</textarea></div></div>` : ""}
@@ -225,7 +226,10 @@ function spellsTab(app, c, d) {
             ${lv > 0 && !s.always ? `<input type="checkbox" data-a="togglePrepared" data-name="${esc(s.name)}" ${s.prepared ? "checked" : ""} aria-label="Prepared: ${esc(s.name)}">` : `<span style="width:22px"></span>`}
             <button class="linkbtn" data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}">${esc(s.name)}</button> ${tags}
           </span>
-          ${lv > 0 && (s.prepared || s.always) && info ? `<button class="btn sm" data-a="openCast" data-name="${esc(s.name)}">Cast</button>` : ""}
+          <span class="row" style="gap:4px">
+            ${info && (lv === 0 || s.prepared || s.always) ? `<button class="btn sm ${lv === 0 ? "" : "pri"}" data-a="${lv === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
+            ${!s.always ? `<button class="iconbtn" style="width:36px;height:36px" data-a="removeSpell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}
+          </span>
         </div>`;
       }).join("")).join("") : `<p class="muted small" style="padding:12px 0">No spells yet. Tap “Add spells” to pick from your class list.</p>`}
       </div></div>`;
@@ -241,14 +245,18 @@ export function renderSpellResults(app) {
     && (app.pickerLevel == null || s.level === app.pickerLevel))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
   if (!list.length) return `<p class="muted small" style="padding:12px 0">No spells match.</p>`;
-  return list.slice(0, 80).map(s => {
-    const has = mine.includes(s.name);
-    return `<div class="rowline"><span class="nm"><button class="linkbtn" data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}">${esc(s.name)}</button>
-      <span class="sub2">${s.level === 0 ? "Cantrip" : "Lv " + s.level}</span></span>
-      <button class="btn sm ${has ? "ghost" : ""}" data-a="${has ? "removeSpell" : "addSpell"}" data-name="${esc(s.name)}">${has ? "Added ✓" : "Add"}</button></div>`;
-  }).join("") + (list.length > 80 ? `<p class="muted small" style="padding:10px 0">Showing 80 of ${list.length}. Search to narrow it down.</p>` : "");
+  return `<div class="optlist" style="margin-top:4px">` + list.slice(0, 80).map(s => {
+    const has = mine.includes(s.name), key = "spell:" + s.name;
+    return infoRow({ key, action: has ? "removeSpell" : "addSpell", data: { name: s.name }, title: s.name,
+      sub: esc(spellSub(s)), pressed: has, open: app.info.has(key),
+      detail: app.info.has(key) ? detailFor(app, "spell", s.name).body : "",
+      badge: `<span class="tag ${has ? "amber" : ""}">${has ? "Added ✓" : "+ Add"}</span>` });
+  }).join("") + `</div>` + (list.length > 80 ? `<p class="muted small" style="padding:10px 0">Showing 80 of ${list.length}. Search to narrow it down.</p>` : "");
 }
 function parseClasses(s) { return parseList(s.classes); }
+export function spellSub(s) {
+  return [s.level ? "Level " + s.level : "Cantrip", s.school, s.time, s.conc ? "Concentration" : "", s.ritual ? "Ritual" : ""].filter(Boolean).join(" · ");
+}
 
 // ---------------- Gear ----------------
 const FIGURE = `<svg class="figure" viewBox="0 0 120 220" aria-hidden="true">
@@ -295,7 +303,7 @@ function gearTab(app, c, d) {
         return `<div class="rowline">
           <span class="nm" style="flex-direction:column;align-items:flex-start;gap:1px">
             <span class="row" style="gap:6px"><button class="linkbtn" data-a="openItem" data-id="${it.id}">${esc(it.name)}</button>
-              ${k ? `<span class="tag amber">${esc(where(it.id))}</span>` : ""}${w.mastery && mastered(it) ? `<span class="tag">${esc(w.mastery)}</span>` : ""}</span>
+              ${k ? `<span class="tag amber">${esc(where(it.id))}</span>` : ""}${w.mastery && mastered(it) ? `<button class="tag term" style="text-decoration:none" data-term="${esc(w.mastery)}">${esc(w.mastery)}</button>` : ""}</span>
             <span class="sub2">${fmtMod(n.toHit)} to hit · ${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${esc(w.dtype || "")}</span>
             ${w.ammo ? `<span class="sub2" style="display:flex;align-items:center;gap:6px;margin-top:4px">${esc(w.ammo.name)}:
               <span class="stepper"><button data-a="ammoStep" data-id="${it.id}" data-n="-1" aria-label="Spend ammo">−</button><b>${w.ammo.cur}</b><button data-a="ammoStep" data-id="${it.id}" data-n="1" aria-label="Add ammo">+</button></span></span>` : ""}
@@ -357,13 +365,13 @@ export function renderGearResults(app, kind) {
   const list = source.filter(r => !q || r.x.name.toLowerCase().includes(q)).slice(0, 80);
   const custom = q && !source.some(r => r.x.name.toLowerCase() === q)
     ? `<div class="rowline"><span class="nm">Add “${esc(app.pickerQuery.trim())}” as your own</span><button class="btn sm pri" data-a="pickCustom" data-picker="${kind}">Add</button></div>` : "";
-  return custom + (list.map(({ x, sub, detail }) => {
-    const has = owned.includes(x.name);
-    return `<div class="rowline"><span class="nm" style="flex-direction:column;align-items:flex-start;gap:0">
-        <button class="linkbtn" data-a="showDetail" data-kind="${detail}" data-name="${esc(x.name)}">${esc(x.name)}</button>
-        <span class="sub2">${esc(sub)}</span></span>
-      <button class="btn sm ${has ? "ghost" : ""}" data-a="pickFrom" data-picker="${kind}" data-name="${esc(x.name)}" ${has ? "disabled" : ""}>${has ? "Added ✓" : "Add"}</button></div>`;
-  }).join("") || (custom ? "" : `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`));
+  return custom + (list.length ? `<div class="optlist" style="margin-top:4px">` + list.map(({ x, sub, detail }) => {
+    const has = owned.includes(x.name), key = detail + ":" + x.name;
+    return infoRow({ key, action: "pickFrom", data: { picker: kind, name: x.name }, title: x.name, sub: esc(sub),
+      pressed: has, disabled: has, open: app.info.has(key),
+      detail: app.info.has(key) ? detailFor(app, detail, x.name).body : "",
+      badge: `<span class="tag ${has ? "amber" : ""}">${has ? "Added ✓" : "+ Add"}</span>` });
+  }).join("") + `</div>` : (custom ? "" : `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`));
 }
 
 // ---------------- Dice ----------------

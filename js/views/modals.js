@@ -4,7 +4,7 @@ import {
 } from "../rules.js";
 import { findByName, subclassesFor, enabledSpecies, enabledBackgrounds, allItems, allWeapons } from "../data.js";
 import { SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, fitsOk, wearKind, attunedCount, armorTypeFromName } from "../gear.js";
-import { formatText } from "../ui.js";
+import { formatText, infoRow, conditionIcon, glossaryEntry } from "../ui.js";
 import { detailFor, renderSpellResults, renderGearResults } from "./sheet.js";
 import { getCredits } from "../dice.js";
 
@@ -136,16 +136,20 @@ export function renderModal(app) {
         `<p>This restores all hit points, all spell slots, all Hit Dice and all trackers, ends concentration, and lowers exhaustion by 1.</p>`,
         `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmLongRest">Long rest</button>`);
 
-    case "conditions":
+    case "conditions": {
+      const firstLine = n => { const g = glossaryEntry(n); return g ? esc(g.text.split(/(?<=\.)\s/)[0]).slice(0, 110) : ""; };
       return modalShell("Conditions",
-        `<div class="optlist" style="margin-top:0">${CONDITIONS.map(x => {
-          const on = c.conditions.includes(x);
-          return `<label class="optcard" aria-pressed="${on}"><input type="checkbox" data-a="toggleCondition" data-name="${x}" ${on ? "checked" : ""}>
-            <span class="grow"><b>${x}</b></span></label>`;
+        `<p class="small muted" style="margin-bottom:10px">Tap to turn a condition on or off. Tap (i) to read the full rule.</p>
+        <div class="condgrid">${CONDITIONS.map(x => {
+          const on = c.conditions.includes(x), key = "condition:" + x;
+          return infoRow({ key, action: "toggleCondition", data: { name: x }, title: x, sub: firstLine(x), pressed: on, open: app.info.has(key),
+            detail: app.info.has(key) ? formatText(glossaryEntry(x)?.text || "") : "",
+            badge: `${conditionIcon(x)}` });
         }).join("")}</div>
-        <div class="rowline" style="margin-top:12px"><span class="nm">Exhaustion</span>
+        <div class="rowline" style="margin-top:12px"><span class="nm">${conditionIcon("Exhaustion")} <button class="term" data-term="condition:Exhaustion">Exhaustion</button></span>
           <span class="stepper"><button data-a="exhStep" data-n="-1" aria-label="Less exhaustion">−</button><b>${c.exhaustion}</b><button data-a="exhStep" data-n="1" aria-label="More exhaustion">+</button></span></div>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
+    }
 
     case "resource": {
       const r = m.i != null ? c.resources[m.i] : { name: "", max: 2, reset: "long" };
