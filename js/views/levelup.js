@@ -4,6 +4,7 @@ import { detailFor, spellSub } from "./sheet.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, abilityMod, fmtMod, hpAverageGain, slotRows } from "../rules.js";
 import { findByName, enabledFeats, allWeapons, subclassesFor } from "../data.js";
 import { levelUpPlan, featEligible, optionPrereq, spellsFor } from "../progression.js";
+import { lineageSpells } from "../choices.js";
 
 export function newLevelDraft(char, { fromCreation = false } = {}) {
   return {
@@ -214,6 +215,8 @@ export function renderLevelUp(app) {
     if (d.options.length) lines.push([p.steps.find(s => s.id === "options")?.label || "Choices", d.options.join(", ")]);
     if (d.cantrips.length) lines.push(["Cantrips", d.cantrips.join(", ")]);
     if (d.spells.length) lines.push(["Spells", d.spells.join(", ")]);
+    const fromSpecies = lineageSpells(c, app.library, app.campaign).filter(x => x.level <= d.next && x.level > c.level && !(c.lineageGranted || []).includes(x.name));
+    if (fromSpecies.length) lines.push(["Species spells", fromSpecies.map(x => x.name).join(", ") + " (always prepared)"]);
     const oldSlots = slotRows(c.class, c.level).map(r => r.max).join("/"), newSlots = slotRows(c.class, d.next).map(r => r.max).join("/");
     if (!d.fromCreation && oldSlots !== newSlots) lines.push(["Spell slots", `${oldSlots || "none"} → ${newSlots}`]);
     const feats = p.features;

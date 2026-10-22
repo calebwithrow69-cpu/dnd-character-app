@@ -194,12 +194,21 @@ const slug = s => norm(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|
 
 // Spells a piece of text simply gives you ("You know the Thaumaturgy cantrip").
 export function grantedSpells(text, L) {
-  const names = new Set((L.spells || []).map(s => s.name.toLowerCase()));
+  const byLower = new Map((L.spells || []).map(s => [s.name.toLowerCase(), s.name]));
   const out = [];
-  const re = /(?:know|learn) the ([A-Z][\w' ]+?)(?:,? and (?:the )?([A-Z][\w' ]+?))? (?:cantrips?|spells?)\b/g;
+  const re = /(?:know|learn|always have) the ([a-z][\w'\/ ]+?)(?:,? and (?:the )?([a-z][\w'\/ ]+?))? (?:cantrips?|spells?)\b/gi;
   let m;
-  while ((m = re.exec(norm(text)))) [m[1], m[2]].filter(Boolean).forEach(n => { if (names.has(n.toLowerCase())) out.push(L.spells.find(s => s.name.toLowerCase() === n.toLowerCase()).name); });
+  while ((m = re.exec(norm(text)))) [m[1], m[2]].filter(Boolean).forEach(n => { const hit = spellName(n, byLower); if (hit && !out.includes(hit)) out.push(hit); });
   return out;
+}
+// A spell the text names. Unknown to the rules file? Keep it (title-cased) if it
+// looks like a name, so the player still sees it; the DM can add its text later.
+function spellName(raw, byLower) {
+  const n = norm(raw).replace(/^the\s+/i, "");
+  const hit = byLower.get(n.toLowerCase());
+  if (hit) return hit;
+  if (n.split(/\s+/).length > 4 || /\b(following|chosen|same|selected|that|this|a|an|one|two|your|its)\b/i.test(n)) return null;
+  return n.replace(/(^|[\s\/-])([a-z])/g, (x, a, b) => a + b.toUpperCase());
 }
 
 // Corrections stored with an entry: { drop:[labels], options:{ label: [{v,detail}] }, add:[defs] }
@@ -400,4 +409,60 @@ export function speciesBaseText(sp, L, C) {
   const fixed = Object.values(sp.choiceFix?.options || {}).flat().map(o => norm(o.detail || ""))
     .concat((sp.choiceFix?.add || []).flatMap(d => (d.options || []).map(o => norm(o.detail || "")))).join("\n");
   return String(sp.traits).split(/\n/).filter((l, i) => !optionLines.has(i) && !(norm(l) && fixed.includes(norm(l)))).join("\n");
+}
+
+// ---- lineage spells at character levels 3 and 5 ("Level 3: Faerie Fire  Level 5: Darkness")
+export function levelSpellsIn(detail, L) {
+  const spells = (L.spells || []).map(x => x.name).sort((a, b) => b.length - a.length);
+  const out = [];
+  for (const lv of [3, 5]) {
+    const m = new RegExp(`(?:^|\\s)(?:Level\\s*)?${lv}:\\s*([^\\n]+)`).exec(norm(detail).replace(/\s{2,}/g, "  "));
+    if (!m) continue;
+    const seg = m[1].split(/\s{2,}|\s+(?:Level\s*)?\d:/)[0].trim().toLowerCase();
+    const hit = spells.find(n => seg === n.toLowerCase() || seg.startsWith(n.toLowerCase()));
+    if (hit) out.push({ name: hit, level: lv });
+  }
+  return out;
+}
+// Older-format species: "Starting at 3rd level, you can cast the feather fall spell with this trait."
+export function speciesLevelSpells(sp, L, C) {
+  const byLower = new Map((L.spells || []).map(s => [s.name.toLowerCase(), s.name]));
+  const out = [];
+  const re = /Starting (?:at )?(3rd|5th) level, you can (?:also )?cast (?:the )?([a-z][\w'\/ ]+?)(?: spell)?(?: on yourself)?(?: with (?:this trait|it))?(?=[.,])/gi;
+  let m;
+  const text = norm(speciesBaseText(sp, L, C));
+  while ((m = re.exec(text))) {
+    const hit = spellName(m[2], byLower);
+    if (hit) out.push({ name: hit, level: m[1].startsWith("3") ? 3 : 5, source: sp.name });
+  }
+  return out;
+}
+export function lineageSpells(char, L, C) {
+  const sp = (L.species || []).find(x => x.name === char.species);
+  if (!sp) return [];
+  const out = speciesLevelSpells(sp, L, C);
+  for (const def of speciesChoices(sp, L, C)) {
+    if (def.kind !== "option") continue;
+    const picked = [].concat(char.choices?.[`${def.from}: ${def.label}`] || []);
+    for (const v of picked) {
+      const opt = (def.options || []).find(o => o.v === v);
+      levelSpellsIn(opt?.detail || "", L).forEach(x => out.push({ ...x, source: `${sp.name} (${v})` }));
+    }
+  }
+  return out;
+}
+// Add any lineage spell the character has reached. Each is added once, so a
+// player who removes one doesn't get it pushed back on them.
+export function syncLineageSpells(char, L, C) {
+  char.lineageGranted = char.lineageGranted || [];
+  const added = [];
+  for (const x of lineageSpells(char, L, C)) {
+    if (char.level < x.level || char.lineageGranted.includes(x.name)) continue;
+    char.lineageGranted.push(x.name);
+    if (!char.spellcasting.spells.some(s => s.name === x.name)) {
+      char.spellcasting.spells.push({ name: x.name, prepared: true, always: true, source: x.source });
+      added.push(x.name);
+    }
+  }
+  return added;
 }

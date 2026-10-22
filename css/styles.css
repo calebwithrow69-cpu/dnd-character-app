@@ -389,3 +389,17 @@ b.lead{color:var(--ink);font-weight:600}
 .tag.green{border-color:var(--green);color:var(--green)}
 .panel-head .btnrow > .btn{flex:none}
 .wiztools{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}
+
+/* ---- delete gauntlet ---- */
+.doombar{display:flex;gap:4px;margin-bottom:12px}
+.doombar span{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.doombar span.on{background:var(--red)}
+.doomfield{position:relative;height:170px;border:1px dashed var(--line);border-radius:var(--radius-sm);margin-top:10px;overflow:hidden}
+.doomfield [data-dodge]{position:absolute;left:40%;top:40%;transition:left .18s ease-out,top .18s ease-out;white-space:nowrap}
+.doomroll{font-size:2.6rem;font-weight:700;text-align:center;margin:8px 0 0}
+.doomhold{position:relative;overflow:hidden;min-height:56px;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.doomhold .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(0,0,0,.22)}
+.doomhold .lbl{position:relative}
+.lastwords{border-left:3px solid var(--red);padding:6px 0 6px 12px;font-size:1.05rem;font-style:italic}
+.lastwords .sub2{font-style:normal}
+@media (prefers-reduced-motion: reduce){.doomfield [data-dodge]{transition:none}}

@@ -21,23 +21,18 @@
     ],
     "species": [
       "Aasimar",
-      "Altmer",
       "Ardling",
       "Azurite",
       "Bugbear",
       "Bullywug",
       "Deepborn",
       "Dhampir",
-      "Argonian",
       "Dragonborn",
-      "Bosmer",
       "Dryad",
       "Duergar",
       "Dwarf",
-      "Breton",
       "Eladrin",
       "Elf",
-      "Dunmer",
       "Firbolg",
       "Genasi (Air)",
       "Genasi (Earth)",
@@ -46,18 +41,13 @@
       "Githyanki",
       "Githzerai",
       "Gnome",
-      "Imperial",
       "Goblin",
       "Goliath",
-      "Imga",
       "Half-Troll",
       "Halfling",
-      "Khajiit",
       "Hobgoblin",
       "Human",
-      "Maormer",
       "Kalashtar",
-      "Nord",
       "Kenku",
       "Kobold",
       "Leonin",
@@ -65,17 +55,14 @@
       "Locathah",
       "Minotaur",
       "Orc",
-      "Reachmen",
       "Ratfolk",
       "Satyr",
       "Shadar-Kai",
       "Shifter",
-      "Redguard",
       "Simian",
       "Tabaxi",
       "Tiefling",
       "Tiradhel",
-      "Orsimer",
       "Yuan-Ti"
     ],
     "backgrounds": [
@@ -308,5 +295,6 @@
         "text": "DC 12 Wisdom save or the target is restrained for 1 round. Usable 3/day."
       }
     ]
-  }
+  },
+  "disabledNote": "Elder Scrolls races (Altmer, Argonian, Bosmer, Breton, Dunmer, Imga, Imperial, Khajiit, Maormer, Nord, Orsimer, Reachmen, Redguard) are in the rules file but switched off here. Add a name back to enabled.species to allow it."
 }

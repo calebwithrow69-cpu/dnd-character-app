@@ -7,9 +7,9 @@ import {
   renderCreate, renderWizardResults, newDraft, buildCharacterFromDraft, validateStep, stepsFor, stepName, WHY,
   finalAbilities, primaryAbility, listItems, bgAbilities, classSkillOptions, takenSkills, suggestedArray
 } from "./views/create.js";
-import { draftChoices, randomize, optionsFor } from "./choices.js";
+import { draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
-import { renderModal, renderRollCard, renderShopResults, shopPrice } from "./views/modals.js";
+import { renderModal, renderRollCard, renderShopResults, shopPrice, DOOM_LAST_WORDS } from "./views/modals.js";
 import { shopStock, pay, fmtPrice } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult } from "./views/levelup.js";
 import { SLOTS, ARMOR, itemById, fits, fitsOk, slotOf, wearKind, attunedCount, makeItem } from "./gear.js";
@@ -60,7 +60,7 @@ async function init() {
   } catch (e) {
     if (e instanceof LockedError) {
       APP.lockErr = e; APP.screen = "locked";
-      if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); APP._eventsBound = true; }
+      if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindDoom(); APP._eventsBound = true; }
       render(); setTimeout(() => document.getElementById("f-pass")?.focus(), 50);
       return;
     }
@@ -75,7 +75,7 @@ async function init() {
   if (saved) { APP.char = store.normalize(saved, APP.library); APP.screen = "sheet"; }
   else APP.screen = "roster";
 
-  if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); APP._eventsBound = true; }
+  if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindDoom(); APP._eventsBound = true; }
   render();
 
   const recheck = (manual) => checkForUpdates({ library: APP.library, campaign: APP.campaign }, (fresh) => {
@@ -298,6 +298,56 @@ function onSubmit(e) {
   if (form.dataset.form === "unlock") tryUnlock(document.getElementById("f-pass").value);
 }
 
+// delete gauntlet helpers
+function doomDodge(el) {
+  const m = APP.modal;
+  if (!m || m.type !== "doom" || (m.dodges || 0) >= 4) return false;
+  m.dodges = (m.dodges || 0) + 1;
+  m.pos = `left:${8 + Math.random() * 64}%;top:${10 + Math.random() * 60}%`;
+  const b = modalRoot.querySelector("[data-dodge]");
+  if (b) { b.setAttribute("style", m.pos); b.textContent = m.dodges >= 4 ? "Fine. Delete." : "Delete"; }
+  const hint = b?.parentElement?.nextElementSibling;
+  if (hint) hint.textContent = ["It's fast.", "Missed.", "So close.", "It's getting tired.", "It gave up. Tap it."][Math.min(m.dodges, 4)];
+  return true;
+}
+function bindDoom() {
+  // laptop: the button runs from the mouse; phone: the first taps just make it jump
+  document.addEventListener("pointerover", e => { const b = e.target.closest?.("[data-dodge]"); if (b && e.pointerType === "mouse") doomDodge(b); });
+  document.addEventListener("pointerdown", e => {
+    const b = e.target.closest?.("[data-dodge]");
+    if (b && e.pointerType !== "mouse" && doomDodge(b)) { e.preventDefault(); e.stopPropagation(); APP._doomSwallow = Date.now(); }
+  }, true);
+  document.addEventListener("click", e => { if (APP._doomSwallow && Date.now() - APP._doomSwallow < 600 && e.target.closest?.("[data-dodge]")) { e.preventDefault(); e.stopPropagation(); APP._doomSwallow = 0; } }, true);
+  // hold-for-3-seconds
+  let t0 = 0, raf = 0;
+  const start = e => {
+    const b = e.target.closest?.("[data-hold='doom']"); if (!b || t0) return;
+    if (e.type === "keydown" && e.key !== " " && e.key !== "Enter") return;
+    e.preventDefault(); t0 = performance.now();
+    const tick = () => {
+      const p = Math.min(1, (performance.now() - t0) / 3000);
+      const f = b.querySelector(".fill"), l = b.querySelector(".lbl");
+      if (f) f.style.width = (p * 100) + "%";
+      if (l) l.textContent = p < 0.33 ? "Keep holding…" : p < 0.66 ? "They're begging…" : p < 1 ? "Almost…" : "Done";
+      if (p >= 1) { t0 = 0; APP.modal.stage = 6; APP.modal.words = DOOM_LAST_WORDS[Math.floor(Math.random() * DOOM_LAST_WORDS.length)]; render(); return; }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  };
+  const stop = () => {
+    if (!t0) return;
+    cancelAnimationFrame(raf);
+    const held = (performance.now() - t0) / 1000; t0 = 0;
+    if (APP.modal?.type === "doom" && APP.modal.stage === 5) {
+      APP.modal.flinch = `You let go after ${held.toFixed(1)} seconds. ${APP.char.name} felt that.`; render();
+    }
+  };
+  document.addEventListener("pointerdown", start);
+  document.addEventListener("keydown", start);
+  ["pointerup", "pointercancel", "keyup"].forEach(t => document.addEventListener(t, stop));
+  document.addEventListener("contextmenu", e => { if (e.target.closest?.("[data-hold]")) e.preventDefault(); });
+}
+
 function clearPicks(d, prefix) { Object.keys(d.picks || {}).forEach(k => { if (k.startsWith(prefix)) delete d.picks[k]; }); }
 // +2 to the background ability the class wants most, +1 to another
 function randomBonus(d) {
@@ -441,7 +491,9 @@ const ACTIONS = {
     const raw = store.getCharacter(el.dataset.id);
     if (!raw) return;
     APP.char = store.normalize(raw, APP.library);
+    const gained = syncLineageSpells(APP.char, APP.library, APP.campaign);
     save();
+    if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
     APP.sheetTab = "stats"; APP.roll = null;
     store.setActiveId(APP.char.id);
     APP.screen = "sheet"; render(); window.scrollTo(0, 0);
@@ -593,13 +645,36 @@ const ACTIONS = {
   backToRoster() { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
   sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; render(); window.scrollTo(0, 0); },
   openEdit() { openModal({ type: "edit" }); },
-  askDelete() { APP.modal.confirmDelete = true; render(); },
-  cancelDelete() { APP.modal.confirmDelete = false; render(); },
+  askDelete() { openModal({ type: "doom", stage: 0, dodges: 0 }); },
+  doomKeep() {
+    const lines = ["Wise.", "They'll remember this kindness.", "Good call.", "Phew.", "They pretended not to notice."];
+    APP.modal = { type: "edit" }; render(); toast(lines[Math.floor(Math.random() * lines.length)]);
+  },
+  doomNext() { const m = APP.modal; m.stage++; if (m.stage >= 6) m.words = DOOM_LAST_WORDS[Math.floor(Math.random() * DOOM_LAST_WORDS.length)]; render(); },
+  doomName() {
+    const m = APP.modal, typed = (modalRoot.querySelector("[data-doom-name]")?.value || "");
+    if (typed === APP.char.name) { m.typo = ""; m.stage = 3; render(); return; }
+    m.typo = !typed.trim() ? "You didn't type anything. Bold." : typed.toLowerCase() === APP.char.name.toLowerCase() ? "Capital letters count. They're sensitive about it." : "That's not even their name. Wow.";
+    render();
+  },
+  doomCatch(el) {
+    const m = APP.modal;
+    if ((m.dodges || 0) >= 4) { m.stage = 4; m.roll = null; render(); return; }
+    doomDodge(el);
+  },
+  doomRoll() {
+    const m = APP.modal, d = rollDie(20);
+    m.roll = d;
+    if (d === 1) { Object.assign(m, { stage: 0, dodges: 0, roll: null, pos: "" }); render(); toast(`Natural 1. ${APP.char.name} saw that. Back to the start.`); return; }
+    if (d === 20 || d >= 15) { m.stage = 5; m.flinch = ""; render(); toast(d === 20 ? "Natural 20. Ruthless." : `${d}. They're shaken.`); return; }
+    m.rollMsg = [`${d}. ${APP.char.name} is unimpressed.`, `${d}. They laughed at you a little.`, `${d}. Not even close.`, `${d}. Try sounding meaner.`][d % 4];
+    render();
+  },
   deleteChar() {
-    const name = APP.char.name;
-    store.deleteCharacter(APP.char.id);
+    const gone = JSON.parse(JSON.stringify(APP.char)), name = gone.name;
+    store.deleteCharacter(gone.id);
     APP.char = null; APP.modal = null; APP.screen = "roster"; render();
-    toast(`Deleted ${name}`);
+    toast(`${name} is gone`, { action: "Undo", onAction: () => { store.saveCharacter(gone); render(); toast(`All that, for nothing? ${name} is back.`); } });
   },
   exportOne() { exportChars([APP.char.id], APP.char.name); },
   toggleSaveProf(el) {
@@ -1125,6 +1200,8 @@ function applyLevelUp() {
   if (ids.has("cantrips") || ids.has("spells")) [...d.cantrips, ...d.spells].forEach(name => {
     if (!c.spellcasting.spells.some(s => s.name === name)) c.spellcasting.spells.push({ name, prepared: true, always: false });
   });
+  const lineage = syncLineageSpells(c, APP.library, APP.campaign);
+  if (lineage.length) log.push(`Species spells: ${lineage.join(", ")}`);
   c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });
   save();
   APP.lvl = null; APP.screen = "sheet"; APP.sheetTab = "stats";

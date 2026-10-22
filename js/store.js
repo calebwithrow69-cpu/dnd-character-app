@@ -61,6 +61,7 @@ export function normalize(c, library) {
   Object.keys(out.equipment).forEach(k => { if (!out.inventory.some(i => i.id === out.equipment[k])) delete out.equipment[k]; });
   out.masteries = c.masteries || [];
   out.choices = c.choices || {};
+  out.lineageGranted = c.lineageGranted || [];
   out.levelLog = c.levelLog || [];
   out.schema = 3;
   return out;

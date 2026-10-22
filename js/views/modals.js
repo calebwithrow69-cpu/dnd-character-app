@@ -45,6 +45,8 @@ export function renderModal(app) {
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
+    case "doom": return renderDoom(app, m);
+
     case "shop": {
       const cats = ["All", "Weapons", "Armor", "Gear", "Magic & potions"];
       const cat = app.shopCat || "All";
@@ -208,10 +210,7 @@ export function renderModal(app) {
           <div class="grid3">${ABILITIES.map(a => `<label class="rowline" style="border:0;cursor:pointer;justify-content:flex-start"><input type="checkbox" data-a="toggleSaveProf" data-ab="${a}" ${c.saveProf.includes(a) ? "checked" : ""}> ${ABILITY_LABEL[a].slice(0, 3)}</label>`).join("")}</div>
           <div class="panel" style="margin-top:10px"><div class="panel-body stack">
             <button class="btn block" data-a="exportOne">Save a backup of this character</button>
-            ${m.confirmDelete
-              ? `<p class="small" style="color:var(--red)">Delete ${esc(c.name)} from this device? This can't be undone unless you have a backup.</p>
-                 <div class="btnrow"><button class="btn" data-a="cancelDelete">Keep</button><button class="btn danger" data-a="deleteChar">Yes, delete</button></div>`
-              : `<button class="btn danger block" data-a="askDelete">Delete character</button>`}
+            <button class="btn danger block" data-a="askDelete">Delete character</button>
           </div></div>
         </div>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
@@ -309,4 +308,60 @@ function shopDetail(app, r) {
   }
   const it = allItems(L, C).find(x => x.name === r.name);
   return formatText(it?.text || "");
+}
+
+// ---- the delete gauntlet: each stage is worse than the last
+export const DOOM_LAST_WORDS = [
+  "Tell my horse… actually, I never had a horse. Get me a horse.",
+  "I still had 3 unspent Hit Point Dice.",
+  "You'll regret this when you roll a new character with 8 Constitution.",
+  "My inventory had a perfectly good rope in it.",
+  "I forgive you. I don't, but it sounds nice.",
+  "At least tell the DM I died heroically.",
+  "Somewhere, a d20 just rolled a 1 in my honor."
+];
+function renderDoom(app, m) {
+  const c = app.char, n = esc(c.name);
+  const keep = (label = `Keep ${n}`, big = true) => `<button class="btn ${big ? "pri" : ""}" data-a="doomKeep">${label}</button>`;
+  const steps = 7;
+  const bar = `<div class="doombar" aria-hidden="true">${Array.from({ length: steps }, (_, i) => `<span class="${i <= m.stage ? "on" : ""}"></span>`).join("")}</div>`;
+  let title, body, foot;
+  switch (m.stage) {
+    case 0:
+      title = `Delete ${c.name}?`;
+      body = `<p>This removes ${n} from this device. Without a backup file, they're gone for good.</p>`;
+      foot = `${keep("Keep", false)}<button class="btn danger" data-a="doomNext">Delete</button>`; break;
+    case 1:
+      title = "Are you sure?";
+      body = `<p>${n} has ${c.hp.max} hit points and at least as many feelings.</p><p class="sub2">The buttons moved. You'll want to read them.</p>`;
+      foot = `<button class="btn danger ghost" data-a="doomNext">Yes, I'm sure</button>${keep(`No, keep ${n}`)}`; break;
+    case 2:
+      title = "Prove it";
+      body = `<p>Type their full name, exactly. Capital letters count. If you can't remember it, that's honestly worse.</p>
+        <input class="f" data-doom-name autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${n}'s full name" style="margin-top:10px">
+        ${m.typo ? `<p class="small" style="color:var(--red);margin-top:6px">${esc(m.typo)}</p>` : ""}`;
+      foot = `${keep()}<button class="btn danger" data-a="doomName">That's their name</button>`; break;
+    case 3:
+      title = `${c.name} is hiding`;
+      body = `<p>Catch the delete button.</p>
+        <div class="doomfield"><button class="btn danger sm" data-dodge data-a="doomCatch" style="${m.pos || ""}">${m.dodges >= 4 ? "Fine. Delete." : "Delete"}</button></div>
+        <p class="sub2">${["It's fast.", "Missed.", "So close.", "It's getting tired.", "It gave up. Tap it."][Math.min(m.dodges || 0, 4)]}</p>`;
+      foot = keep(); break;
+    case 4:
+      title = "Roll for it";
+      body = `<p>Make a DC 15 Charisma (Intimidation) check to convince ${n} to leave.</p>
+        ${m.roll ? `<p class="doomroll num">${m.roll}</p><p class="small">${esc(m.rollMsg)}</p>` : ""}`;
+      foot = `${keep()}<button class="btn danger" data-a="doomRoll">${m.roll ? "Roll again" : "Roll a d20"}</button>`; break;
+    case 5:
+      title = "Hold to delete";
+      body = `<p>Press and hold the button for 3 full seconds. Letting go early hurts their feelings.</p>
+        <button class="btn danger block doomhold" data-hold="doom" style="margin-top:12px"><span class="fill"></span><span class="lbl">Hold me</span></button>
+        ${m.flinch ? `<p class="small" style="margin-top:8px">${esc(m.flinch)}</p>` : ""}`;
+      foot = keep(); break;
+    default:
+      title = "Last words";
+      body = `<blockquote class="lastwords">“${esc(m.words)}”<br><span class="sub2">— ${n}</span></blockquote>`;
+      foot = `<button class="btn danger ghost" data-a="deleteChar">Delete forever</button>${keep(`Okay fine, ${n} lives`)}`;
+  }
+  return modalShell(title, bar + body, foot);
 }

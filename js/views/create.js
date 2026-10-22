@@ -7,7 +7,7 @@ import {
 import { newId } from "../store.js";
 import {
   draftChoices, optionsFor, isAnswered, applyChoices, backgroundToolChoice, backgroundFeatNames,
-  bgSkillIds, bgAbilityIds, speciesBaseText, grantedSpells
+  bgSkillIds, bgAbilityIds, speciesBaseText, grantedSpells, syncLineageSpells
 } from "../choices.js";
 import { parseEquipment, resolveItem, fmtPrice } from "../equipment.js";
 import { makeItem, fitsOk, wearKind } from "../gear.js";
@@ -402,6 +402,7 @@ export function buildCharacterFromDraft(d, app) {
     char.coins.gp += Math.floor(opt.gp);
     char.coins.sp += Math.round((opt.gp % 1) * 10);
   }
+  syncLineageSpells(char, L, C); // starting above level 2
   autoEquip(char);
   if (char.inventory.some(i => i.armor && char.equipment.armor === i.id)) char.ac.armorName = char.inventory.find(i => i.id === char.equipment.armor).name;
   return char;
