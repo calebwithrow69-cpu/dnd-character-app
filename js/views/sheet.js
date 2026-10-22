@@ -143,7 +143,7 @@ function hotbar(app, c, d) {
         <button class="btn sm ${edit ? "pri" : ""}" data-a="toggleHotbarEdit" ${(c.hotbar || []).length ? "" : "disabled"}>${edit ? "Done" : "Edit"}</button>
       </span></div>
     <div class="panel-body">
-      ${(c.hotbar || []).length ? `<div class="hotbar">${slots}</div>` : `<p class="muted small" style="padding:4px 0">Add your go-to attacks, spells, items and abilities here for one-tap use. Tap “Add”, or the ⊕ next to any attack or spell.</p>`}
+      ${(c.hotbar || []).length ? `<div class="hotbar">${slots}</div>` : `<p class="muted small" style="padding:4px 0">Add your go-to attacks, spells, items and abilities here for one-tap use. Tap "Add", or the ⊕ next to any attack or spell.</p>`}
     </div></div>`;
 }
 
@@ -302,7 +302,7 @@ function spellsTab(app, c, d) {
             ${!s.always ? `<button class="iconbtn" style="width:36px;height:36px" data-a="removeSpell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}
           </span>
         </div>`;
-      }).join("")).join("") : `<p class="muted small" style="padding:12px 0">No spells yet. Tap “Add spells” to pick from your class list.</p>`}
+      }).join("")).join("") : `<p class="muted small" style="padding:12px 0">No spells yet. Tap "Add spells" to pick from your class list.</p>`}
       </div></div>`;
 }
 
@@ -453,7 +453,7 @@ export function renderGearResults(app, kind) {
   const owned = kind === "feats" ? app.char.feats : [];
   const list = source.filter(r => !q || r.x.name.toLowerCase().includes(q)).slice(0, 80);
   const custom = q && !source.some(r => r.x.name.toLowerCase() === q)
-    ? `<div class="rowline"><span class="nm">Add “${esc(app.pickerQuery.trim())}” as your own</span><button class="btn sm pri" data-a="pickCustom" data-picker="${kind}">Add</button></div>` : "";
+    ? `<div class="rowline"><span class="nm">Add "${esc(app.pickerQuery.trim())}" as your own</span><button class="btn sm pri" data-a="pickCustom" data-picker="${kind}">Add</button></div>` : "";
   return custom + (list.length ? `<div class="optlist" style="margin-top:4px">` + list.map(({ x, sub, detail }) => {
     const has = owned.includes(x.name), key = detail + ":" + x.name;
     return infoRow({ key, action: "pickFrom", data: { picker: kind, name: x.name }, title: x.name, sub: esc(sub),
@@ -484,25 +484,201 @@ function diceTab(app) {
       </div></div>`;
 }
 
-// ---------------- Rules ----------------
+// ---------------- Glossary / Rules browser ----------------
+const GLOSS_CATS = [
+  { id: "class", label: "Classes", icon: "⚔" },
+  { id: "species", label: "Species", icon: "☺" },
+  { id: "background", label: "Backgrounds", icon: "✎" },
+  { id: "feat", label: "Feats", icon: "★" },
+  { id: "spell", label: "Spells", icon: "✨" },
+  { id: "condition", label: "Conditions", icon: "☠" },
+  { id: "libItem", label: "Items", icon: "⌂" },
+  { id: "libWeapon", label: "Weapons", icon: "†" },
+  { id: "rule", label: "Rules", icon: "≡" }
+];
+
+const CONDITIONS = new Set(["Blinded","Charmed","Deafened","Exhaustion","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"]);
+
 function rulesTab(app) {
+  const q = (app.rulesQuery || "").trim();
+  const viewing = app.glossaryClass;
   return `<div class="panel"><div class="panel-body">
-      ${searchBox("rules", app.rulesQuery, "Search rules, spells, items, feats…")}
+      ${searchBox("rules", app.rulesQuery, "Search rules, spells, items, feats...")}
+      ${q ? "" : glossaryChips(app)}
       <div class="results" id="results-rules" style="max-height:none">${renderRulesResults(app)}</div>
     </div></div>`;
+}
+
+function glossaryChips(app) {
+  const cat = app.glossaryCat || "";
+  // If viewing a class/subclass detail, show a back button instead of chips
+  if (app.glossaryClass) return "";
+  return `<div class="gloss-chips">${GLOSS_CATS.map(c =>
+    `<button class="gloss-chip${cat === c.id ? " active" : ""}" data-a="glossaryCat" data-cat="${c.id}"><span class="gloss-icon">${c.icon}</span>${c.label}</button>`
+  ).join("")}</div>`;
+}
+
+function glossaryCatList(app) {
+  const L = app.library, C = app.campaign, cat = app.glossaryCat;
+  if (!cat) return "";
+  const row = (kind, name, sub, extra) =>
+    `<button class="rowline rollable" data-a="${extra || "showDetail"}" data-kind="${kind}" data-name="${esc(name)}"${extra ? ` data-class="${esc(name)}"` : ""}><span class="nm">${esc(name)}</span>${sub ? `<span class="sub2">${esc(sub)}</span>` : ""}</button>`;
+
+  if (cat === "class") return L.classes.map(c => {
+    const subs = subclassesFor(L, c.name);
+    return row("class", c.name, `${subs.length} subclass${subs.length !== 1 ? "es" : ""}`, "glossaryClassView");
+  }).join("");
+  if (cat === "species") return L.species.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => row("species", s.name)).join("");
+  if (cat === "background") return L.backgrounds.slice().sort((a, b) => a.name.localeCompare(b.name)).map(b => row("background", b.name)).join("");
+  if (cat === "feat") return enabledFeats(L, C).slice().sort((a, b) => a.name.localeCompare(b.name)).map(f => row("feat", f.name, f.type || "")).join("");
+  if (cat === "spell") return spellsByLevel(L, C);
+  if (cat === "condition") return L.rules.filter(r => CONDITIONS.has(r.name)).sort((a, b) => a.name.localeCompare(b.name)).map(r => row("condition", r.name)).join("");
+  if (cat === "libItem") return allItems(L, C).slice().sort((a, b) => a.name.localeCompare(b.name)).map(i => row("libItem", i.name, i.type || "")).join("");
+  if (cat === "libWeapon") return allWeapons(L, C).slice().sort((a, b) => a.name.localeCompare(b.name)).map(w => row("libWeapon", w.name, [w.cat, w.kind].filter(Boolean).join(" "))).join("");
+  if (cat === "rule") return L.rules.filter(r => !CONDITIONS.has(r.name)).sort((a, b) => a.name.localeCompare(b.name)).map(r => row("rule", r.name)).join("");
+  return "";
+}
+
+function spellsByLevel(L, C) {
+  const spells = enabledSpells(L, C).slice().sort((a, b) => (a.level || 0) - (b.level || 0) || a.name.localeCompare(b.name));
+  let html = "", lastLv = -1;
+  for (const s of spells) {
+    const lv = s.level || 0;
+    if (lv !== lastLv) { html += `<div class="grouph">${lv === 0 ? "Cantrips" : `Level ${lv}`}</div>`; lastLv = lv; }
+    html += `<button class="rowline rollable" data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"><span class="nm">${esc(s.name)}</span><span class="sub2">${esc(s.school || "")}</span></button>`;
+  }
+  return html;
+}
+
+function classDetailView(app) {
+  const L = app.library, name = app.glossaryClass;
+  const cls = findByName(L.classes, name);
+  if (!cls) return `<p class="muted">Class not found.</p>`;
+  const subs = subclassesFor(L, name);
+
+  // Parse the plaintext table into rows
+  const tableHtml = renderClassTable(cls.table);
+
+  // Group features by level
+  const byLv = {};
+  for (const f of cls.features) { (byLv[f.lv] || (byLv[f.lv] = [])).push(f); }
+  const levels = Object.keys(byLv).map(Number).sort((a, b) => a - b);
+
+  let html = `<button class="gloss-back" data-a="glossaryBack">← Classes</button>`;
+  html += `<h2 class="gloss-title">${esc(name)}</h2>`;
+  if (cls.desc) html += `<div class="gloss-desc">${formatText(cls.desc)}</div>`;
+
+  // Quick stats
+  html += `<dl class="kv">`;
+  if (cls.hd) html += `<dt>Hit Die</dt><dd>${esc(cls.hd)}</dd>`;
+  if (cls.primary) html += `<dt>Primary Ability</dt><dd>${esc(cls.primary)}</dd>`;
+  if (cls.saves) html += `<dt>Saving Throws</dt><dd>${esc(cls.saves)}</dd>`;
+  if (cls.armorProf) html += `<dt>Armor</dt><dd>${esc(cls.armorProf)}</dd>`;
+  if (cls.weaponProf) html += `<dt>Weapons</dt><dd>${esc(cls.weaponProf)}</dd>`;
+  html += `</dl>`;
+
+  // Progression table
+  html += `<div class="grouph">Progression</div>`;
+  html += `<div class="gloss-table-wrap">${tableHtml}</div>`;
+
+  // Features by level
+  html += `<div class="grouph">Features</div>`;
+  for (const lv of levels) {
+    html += `<div class="gloss-lv-header">Level ${lv}</div>`;
+    for (const f of byLv[lv]) {
+      html += `<button class="rowline rollable" data-a="showDetail" data-kind="classFeature" data-name="${esc(f.name)}" data-from="${esc(name)}"><span class="nm">${esc(f.name)}</span></button>`;
+    }
+  }
+
+  // Subclasses
+  if (subs.length) {
+    html += `<div class="grouph">Subclasses (${subs.length})</div>`;
+    for (const sc of subs.sort((a, b) => a.name.localeCompare(b.name))) {
+      html += `<button class="rowline rollable" data-a="glossarySubclass" data-name="${esc(sc.name)}" data-class="${esc(name)}"><span class="nm">${esc(sc.name)}</span><span class="sub2">${sc.features.length} feature${sc.features.length !== 1 ? "s" : ""}</span></button>`;
+    }
+  }
+
+  return html;
+}
+
+function subclassDetailView(app) {
+  const L = app.library, name = app.glossarySubclass, parentName = app.glossaryClass;
+  const sc = findByName(L.subclasses, name);
+  if (!sc) return `<p class="muted">Subclass not found.</p>`;
+
+  const byLv = {};
+  for (const f of sc.features) { (byLv[f.lv] || (byLv[f.lv] = [])).push(f); }
+  const levels = Object.keys(byLv).map(Number).sort((a, b) => a - b);
+
+  let html = `<button class="gloss-back" data-a="glossaryBackToClass" data-class="${esc(parentName)}">← ${esc(parentName)}</button>`;
+  html += `<h2 class="gloss-title">${esc(name)}</h2>`;
+  html += `<p class="sub2" style="margin-bottom:12px">${esc(parentName)} subclass</p>`;
+
+  for (const lv of levels) {
+    html += `<div class="gloss-lv-header">Level ${lv}</div>`;
+    for (const f of byLv[lv]) {
+      html += `<button class="rowline rollable" data-a="showDetail" data-kind="subclassFeature" data-name="${esc(f.name)}" data-from="${esc(name)}"><span class="nm">${esc(f.name)}</span></button>`;
+    }
+  }
+
+  return html;
+}
+
+function renderClassTable(tableStr) {
+  if (!tableStr) return "";
+  const lines = tableStr.split("\n").filter(l => l.trim());
+  if (!lines.length) return "";
+  // Parse whitespace-delimited columns by header positions
+  const header = lines[0];
+  // Find column boundaries from the header
+  const cols = [];
+  const re = /\S+(\s+\S+)*/g;
+  let m;
+  // Simple approach: split by 2+ spaces
+  const headerParts = header.split(/\s{2,}/);
+  let pos = 0;
+  const starts = [];
+  for (const part of headerParts) {
+    const idx = header.indexOf(part, pos);
+    starts.push(idx);
+    pos = idx + part.length;
+  }
+  let html = `<table class="gloss-table"><thead><tr>`;
+  for (const h of headerParts) html += `<th>${esc(h.trim())}</th>`;
+  html += `</tr></thead><tbody>`;
+  for (let r = 1; r < lines.length; r++) {
+    const line = lines[r];
+    html += `<tr>`;
+    for (let c = 0; c < starts.length; c++) {
+      const s = starts[c];
+      const e = c + 1 < starts.length ? starts[c + 1] : line.length;
+      const cell = (line.substring(s, e) || "").trim();
+      html += `<td>${esc(cell)}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table>`;
+  return html;
 }
 
 export function rulesIndex(app) {
   if (app._rulesIndex) return app._rulesIndex;
   const L = app.library, C = app.campaign;
   const idx = [];
-  L.rules.forEach(r => idx.push({ kind: "rule", label: "Rule", name: r.name }));
+  L.rules.forEach(r => idx.push({ kind: CONDITIONS.has(r.name) ? "condition" : "rule", label: CONDITIONS.has(r.name) ? "Condition" : "Rule", name: r.name }));
   enabledSpells(L, C).forEach(s => idx.push({ kind: "spell", label: s.level ? `Spell · Lv ${s.level}` : "Cantrip", name: s.name }));
   enabledFeats(L, C).forEach(f => idx.push({ kind: "feat", label: "Feat", name: f.name }));
   allItems(L, C).forEach(i => idx.push({ kind: "libItem", label: "Item", name: i.name }));
   allWeapons(L, C).forEach(w => idx.push({ kind: "libWeapon", label: "Weapon", name: w.name }));
   L.species.forEach(s => idx.push({ kind: "species", label: "Species", name: s.name }));
-  L.classes.forEach(s => idx.push({ kind: "class", label: "Class", name: s.name }));
+  L.classes.forEach(c => {
+    idx.push({ kind: "class", label: "Class", name: c.name });
+    c.features.forEach(f => idx.push({ kind: "classFeature", label: `${c.name} · Lv ${f.lv}`, name: f.name, from: c.name }));
+  });
+  L.subclasses.forEach(sc => {
+    idx.push({ kind: "subclass", label: `${sc.cls} subclass`, name: sc.name, from: sc.cls });
+    sc.features.forEach(f => idx.push({ kind: "subclassFeature", label: `${sc.name} · Lv ${f.lv}`, name: f.name, from: sc.name }));
+  });
   L.backgrounds.forEach(s => idx.push({ kind: "background", label: "Background", name: s.name }));
   app._rulesIndex = idx;
   return idx;
@@ -510,13 +686,23 @@ export function rulesIndex(app) {
 
 export function renderRulesResults(app) {
   const q = (app.rulesQuery || "").trim().toLowerCase();
-  const idx = rulesIndex(app);
-  const list = q ? idx.filter(x => x.name.toLowerCase().includes(q))
-    .sort((a, b) => (a.name.toLowerCase().startsWith(q) ? 0 : 1) - (b.name.toLowerCase().startsWith(q) ? 0 : 1) || a.name.localeCompare(b.name))
-    : idx.filter(x => x.kind === "rule");
-  if (!list.length) return `<p class="muted small" style="padding:12px 0">Nothing matches “${esc(app.rulesQuery)}”.</p>`;
-  return (q ? "" : `<div class="grouph">Rules glossary</div>`) + list.slice(0, 100).map(x =>
-    `<button class="rowline rollable" data-a="showDetail" data-kind="${x.kind}" data-name="${esc(x.name)}"><span class="nm">${esc(x.name)}</span><span class="sub2">${esc(x.label)}</span></button>`).join("");
+  // If searching, show search results across everything
+  if (q) {
+    const idx = rulesIndex(app);
+    const list = idx.filter(x => x.name.toLowerCase().includes(q))
+      .sort((a, b) => (a.name.toLowerCase().startsWith(q) ? 0 : 1) - (b.name.toLowerCase().startsWith(q) ? 0 : 1) || a.name.localeCompare(b.name));
+    if (!list.length) return `<p class="muted small" style="padding:12px 0">Nothing matches "${esc(app.rulesQuery)}".</p>`;
+    return list.slice(0, 100).map(x =>
+      `<button class="rowline rollable" data-a="showDetail" data-kind="${x.kind}" data-name="${esc(x.name)}"${x.from ? ` data-from="${esc(x.from)}"` : ""}><span class="nm">${esc(x.name)}</span><span class="sub2">${esc(x.label)}</span></button>`).join("");
+  }
+  // Subclass detail view
+  if (app.glossarySubclass) return subclassDetailView(app);
+  // Class detail view
+  if (app.glossaryClass) return classDetailView(app);
+  // Category listing
+  if (app.glossaryCat) return glossaryCatList(app);
+  // Default: show the category chips only (no list until a chip is tapped)
+  return `<p class="muted small" style="padding:12px 0">Tap a category above or search to browse the rules.</p>`;
 }
 
 // ---------------- Detail lookup (shared by every "tap to read") ----------------

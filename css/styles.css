@@ -407,11 +407,27 @@ b.lead{color:var(--ink);font-weight:600}
 /* ---- phone launch (QR + copy link) ---- */
 .phonelaunch{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
 .qrwrap{text-align:center;flex:none}
-.qrbox{width:150px;height:150px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px}
+.qrbox{width:200px;height:200px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
 .qrbox .qr{width:100%;height:100%;display:block;stroke:none}
 .qr rect{fill:#fff;stroke:none}
 .qr path{fill:#000;stroke:none}
 .phonelaunch [data-copy-src]{font-size:.85rem}
+
+/* ---- glossary browser ---- */
+.gloss-chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.gloss-chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:var(--radius-sm);padding:6px 10px;font-size:.84rem;font-weight:600;min-height:var(--tap);white-space:nowrap}
+.gloss-chip.active{border-color:var(--amber);background:var(--amber-dim);color:var(--ink)}
+.gloss-icon{font-size:1rem;line-height:1}
+.gloss-back{font-size:.88rem;font-weight:600;color:var(--amber);background:none;border:0;padding:8px 0;display:flex;align-items:center;gap:4px}
+.gloss-title{font-size:1.25rem;font-weight:700;margin:0 0 8px}
+.gloss-desc{font-size:.9rem;color:var(--muted);margin-bottom:12px;line-height:1.5}
+.gloss-desc p{margin:0 0 6px}
+.gloss-lv-header{font-size:.82rem;font-weight:700;color:var(--amber);padding:10px 0 2px;text-transform:uppercase;letter-spacing:.03em}
+.gloss-table-wrap{overflow-x:auto;margin:0 -16px;padding:0 16px}
+.gloss-table{width:100%;border-collapse:collapse;font-size:.78rem;white-space:nowrap}
+.gloss-table th{text-align:left;font-weight:700;padding:6px 10px 6px 0;border-bottom:2px solid var(--line);color:var(--muted);position:sticky;top:0;background:var(--panel)}
+.gloss-table td{padding:5px 10px 5px 0;border-bottom:1px solid var(--line)}
+.gloss-table tr:hover td{background:var(--panel2)}
 
 /* ---- hotbar ---- */
 .hotbar-panel .panel-head .btnrow .btn{flex:none}

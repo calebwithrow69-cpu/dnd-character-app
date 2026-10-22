@@ -176,8 +176,8 @@ function drawFormat(m, size, mask) {
   for (let i = 0; i <= 5; i++) m[8][i] = fbit(i);
   m[8][7] = fbit(6); m[8][8] = fbit(7); m[7][8] = fbit(8);
   for (let i = 9; i <= 14; i++) m[14 - i][8] = fbit(i);
-  for (let i = 0; i <= 7; i++) m[size - 1 - i][8] = fbit(i);
-  for (let i = 8; i <= 14; i++) m[8][size - 15 + i] = fbit(i);
+  for (let i = 0; i <= 6; i++) m[size - 1 - i][8] = fbit(i);
+  for (let i = 7; i <= 14; i++) m[8][size - 15 + i] = fbit(i);
 }
 // Standard four-rule penalty, to choose the least-noisy mask.
 function penalty(m, size) {

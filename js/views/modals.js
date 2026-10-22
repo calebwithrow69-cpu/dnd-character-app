@@ -101,7 +101,7 @@ export function renderModal(app) {
             </div>
             <div class="field"><label>Properties</label><input class="f" data-weapon-field="props" value="${esc(w.props || "")}" placeholder="e.g. Finesse, Light, Two-Handed"></div>`
           : `<div class="field"><label>Worn on</label>${sel("slot", it.slot || (kind || "none"), [["none", "Not worn — just carried"], ...WEAR_CHOICES.slice(1)])}</div>
-            ${kind === "armor" ? `<div class="field"><label>Armor type</label>${sel("armorType", atype, [["", "Choose…"], ...Object.entries(ARMOR).map(([n, a]) => [n, a.base == null ? "Clothing (no armor)" : `${n} — ${a.cat}, AC ${a.base}${a.dexCap == null ? " + Dex" : a.dexCap ? " + Dex (max 2)" : ""}`])])}</div>` : ""}
+            ${kind === "armor" ? `<div class="field"><label>Armor type</label>${sel("armorType", atype, [["", "Choose..."], ...Object.entries(ARMOR).map(([n, a]) => [n, a.base == null ? "Clothing (no armor)" : `${n} — ${a.cat}, AC ${a.base}${a.dexCap == null ? " + Dex" : a.dexCap ? " + Dex (max 2)" : ""}`])])}</div>` : ""}
             ${kind ? `<div class="grid3">
               ${kind === "armor" || kind === "shield" ? `<div class="field"><label>Magic +</label><input class="f num" type="number" inputmode="numeric" data-item-field="magic" value="${it.magic || 0}"></div>` : ""}
               <div class="field"><label>AC bonus</label><input class="f num" type="number" inputmode="numeric" data-item-field="acBonus" value="${it.acBonus || 0}"></div>
@@ -363,7 +363,7 @@ function shopDetail(app, r) {
 
 // ---- the delete gauntlet: each stage is worse than the last
 export const DOOM_LAST_WORDS = [
-  "Tell my horse… actually, I never had a horse. Get me a horse.",
+  "Tell my horse... actually, I never had a horse. Get me a horse.",
   "I still had 3 unspent Hit Point Dice.",
   "You'll regret this when you roll a new character with 8 Constitution.",
   "My inventory had a perfectly good rope in it.",
@@ -411,7 +411,7 @@ function renderDoom(app, m) {
       foot = keep(); break;
     default:
       title = "Last words";
-      body = `<blockquote class="lastwords">“${esc(m.words)}”<br><span class="sub2">— ${n}</span></blockquote>`;
+      body = `<blockquote class="lastwords">"${esc(m.words)}"<br><span class="sub2">— ${n}</span></blockquote>`;
       foot = `<button class="btn danger ghost" data-a="deleteChar">Delete forever</button>${keep(`Okay fine, ${n} lives`)}`;
   }
   return modalShell(title, bar + body, foot);

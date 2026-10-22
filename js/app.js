@@ -29,6 +29,7 @@ const APP = {
   char: null, sheetTab: "stats", createDraft: null, seedGandork: null,
   roll: null, history: [], diceFormula: "",
   modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "",
+  glossaryCat: "", glossaryClass: "", glossarySubclass: "",
   prefs: readPrefs(), installDismissed: readFlag(LS_INSTALL), persisted: false
 };
 window.APP = APP; // handy from the browser console
@@ -349,7 +350,7 @@ function bindDoom() {
       const p = Math.min(1, (performance.now() - t0) / 3000);
       const f = b.querySelector(".fill"), l = b.querySelector(".lbl");
       if (f) f.style.width = (p * 100) + "%";
-      if (l) l.textContent = p < 0.33 ? "Keep holding…" : p < 0.66 ? "They're begging…" : p < 1 ? "Almost…" : "Done";
+      if (l) l.textContent = p < 0.33 ? "Keep holding..." : p < 0.66 ? "They're begging..." : p < 1 ? "Almost..." : "Done";
       if (p >= 1) { t0 = 0; APP.modal.stage = 6; APP.modal.words = DOOM_LAST_WORDS[Math.floor(Math.random() * DOOM_LAST_WORDS.length)]; render(); return; }
       raf = requestAnimationFrame(tick);
     };
@@ -427,7 +428,7 @@ function onInput(e) {
   }
   if (ds.query === "shop") { APP.shopQuery = el.value; const r = document.getElementById("results-shop"); if (r) r.innerHTML = renderShopResults(APP); return; }
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
-  if (ds.query === "rules") { APP.rulesQuery = el.value; const r = document.getElementById("results-rules"); if (r) r.innerHTML = renderRulesResults(APP); return; }
+  if (ds.query === "rules") { APP.rulesQuery = el.value; if (el.value.trim()) { APP.glossaryClass = ""; APP.glossarySubclass = ""; } const r = document.getElementById("results-rules"); if (r) r.innerHTML = renderRulesResults(APP); return; }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
   if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
   if (ds.itemNotes != null && APP.char) { const it = APP.char.inventory[+ds.itemNotes]; if (it) { it.notes = el.value; save(); } return; }
@@ -678,7 +679,18 @@ const ACTIONS = {
 
   // sheet nav
   backToRoster() { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
-  sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; render(); window.scrollTo(0, 0); },
+  sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; if (el.dataset.tab !== "rules") { APP.glossaryCat = ""; APP.glossaryClass = ""; APP.glossarySubclass = ""; } render(); window.scrollTo(0, 0); },
+  glossaryCat(el) {
+    const cat = el.dataset.cat;
+    APP.glossaryCat = APP.glossaryCat === cat ? "" : cat;
+    APP.glossaryClass = ""; APP.glossarySubclass = ""; APP.rulesQuery = "";
+    APP._rulesIndex = null;
+    render();
+  },
+  glossaryClassView(el) { APP.glossaryClass = el.dataset.class || el.dataset.name; APP.glossarySubclass = ""; render(); window.scrollTo(0, 0); },
+  glossarySubclass(el) { APP.glossarySubclass = el.dataset.name; render(); window.scrollTo(0, 0); },
+  glossaryBack() { APP.glossaryClass = ""; APP.glossarySubclass = ""; render(); },
+  glossaryBackToClass(el) { APP.glossarySubclass = ""; render(); },
   openEdit() { openModal({ type: "edit" }); },
   askDelete() { openModal({ type: "doom", stage: 0, dodges: 0 }); },
   doomKeep() {
@@ -1044,7 +1056,7 @@ const ACTIONS = {
     const hit = rollD20(n.toHit - exh);
     const dmg = rollFormula(`${n.dice}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""}`);
     const extra = rollFormula(n.dice);
-    if (!dmg) { toast(`Can't read the damage dice “${n.dice}”`); return; }
+    if (!dmg) { toast(`Can't read the damage dice "${n.dice}"`); return; }
     const critTotal = dmg.total + (extra ? extra.total : 0);
     const modTxt = hit.mod ? ` ${hit.mod > 0 ? "+" : "−"} ${Math.abs(hit.mod)}` : "";
     const parts = [
