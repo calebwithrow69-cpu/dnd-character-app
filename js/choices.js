@@ -18,6 +18,8 @@ export const TOOLS = {
   instrument: ["Bagpipes", "Drum", "Dulcimer", "Flute", "Horn", "Lute", "Lyre", "Pan Flute", "Shawm", "Viol"],
   other: ["Disguise Kit", "Forgery Kit", "Herbalism Kit", "Navigator's Tools", "Poisoner's Kit", "Thieves' Tools"]
 };
+// 2024 Standard Languages (you know Common plus two of these).
+export const LANGUAGES = ["Common Sign Language", "Draconic", "Dwarvish", "Elvish", "Giant", "Gnomish", "Goblin", "Halfling", "Orc"];
 export const ALL_TOOLS = [...TOOLS.artisan, ...TOOLS.other, ...TOOLS.gaming, ...TOOLS.instrument];
 
 const NUM = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4 };
@@ -285,9 +287,19 @@ export function draftChoices(app, d, scope) {
       out.push(def);
       if (def.kind === "feat" && picks[def.id]) pushFeat(picks[def.id], `${def.id}>`);
     }
+  } else if (scope === "class") {
+    const cls = L.classes.find(c => c.name === d.class);
+    const t = norm(cls?.toolProf);
+    const m = /^Choose (one|two|three)(?: type| kind)?(?: of)? (.+)$/i.exec(t);
+    if (m) {
+      const parts = m[2].split(/\s+or\s+/i).map(toolListFor).filter(Boolean);
+      const opts = [...new Set(parts.flat())];
+      if (opts.length) out.push({ id: "cls:tool", from: cls.name, label: NUM[m[1].toLowerCase()] > 1 ? "Tool proficiencies" : "Tool proficiency", kind: "tool", n: NUM[m[1].toLowerCase()], options: toolOpts(opts) });
+    }
   } else {
     const bg = L.backgrounds.find(b => b.name === d.background);
     if (!bg) return out;
+    out.push({ id: "bg:lang", from: "Every character", label: "Languages", hint: "You know Common plus two more.", kind: "language", n: 2, options: LANGUAGES.map(v => ({ v, label: v })) });
     const tool = backgroundToolChoice(bg);
     if (tool?.options) out.push({ id: "bg:tool", from: bg.name, label: "Tool proficiency", kind: "tool", n: 1, options: tool.options });
     const feats = backgroundFeatNames(bg);
@@ -375,6 +387,7 @@ export function applyChoices(char, defs, picks, L, extraText = []) {
     const label = `${def.from}: ${def.label}`;
     switch (def.kind) {
       case "size": char.size = vals[0]; break;
+      case "language": char.languages = ["Common", ...vals].join(", "); break;
       case "skill": vals.forEach(v => add(char.skillProf, v)); break;
       case "tool": vals.forEach(v => add(tools, v)); break;
       case "skilltool": vals.forEach(v => SKILLS.some(s => s.id === v) ? add(char.skillProf, v) : add(tools, v)); break;

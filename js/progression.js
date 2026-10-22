@@ -1,7 +1,7 @@
 // Class progression: what a class gains at each level, read from the
-// class tables and feature lists in library.json. The sourcebook data
-// covers levels 1–10; past that, ability-score levels come from the 2024
-// rules below and spell counts are left open (no table data).
+// class tables and feature lists in library.json (levels 1–10 from the
+// sourcebook import, 11–20 from SRD 5.2). If a table row is missing, the
+// 2024 ability-score levels below are used and spell counts are left open.
 
 import { parseList, slotRows } from "./rules.js";
 
@@ -74,8 +74,8 @@ const METAMAGIC_AT = { 2: 2, 10: 2, 17: 2 };
 const ASI_EXTRA = { Fighter: [14], Rogue: [] };
 export function isAsiLevel(cls, level) {
   if (!cls) return false;
-  if (level <= 10 && hasTableRow(cls, level))
-    return (cls.features || []).some(f => f.lv === level && /Ability Score Improvement/i.test(f.name));
+  if (hasTableRow(cls, level))
+    return (cls.features || []).some(f => f.lv === level && /^(Ability Score Improvement|Epic Boon)$/i.test(f.name));
   return [12, 16, 19].includes(level) || (ASI_EXTRA[cls.name] || []).includes(level);
 }
 

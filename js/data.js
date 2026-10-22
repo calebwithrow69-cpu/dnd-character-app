@@ -54,26 +54,60 @@ async function openLibrary(text) {
 export async function unlockWithPassword(lockedErr, password) {
   const { data, key } = await decryptWithPassword(lockedErr.file, password.trim());
   write(LS_KEY, { salt: lockedErr.file.salt, key });
-  write(LS.library, data);
   setHash("library", fingerprint(lockedErr.text));
+  rememberGood(lockedErr.text);
   return data;
 }
 
 // Returns {library, campaign}: cache first (instant, offline-safe), else
 // network. Throws LockedError when the password is needed, or a network
 // error when there's no cache and no connection.
+// The rules are NOT kept readable in localStorage: they're big, and that
+// storage is shared with (and capped together with) everyone's characters.
+// The locked file sits in the offline cache instead and is opened at launch
+// with the key this device remembers (fast: no password stretching).
+async function cachedText(path) {
+  try {
+    if (!("caches" in window)) return null;
+    const hit = await caches.match(new URL(path, location.href).href, { ignoreSearch: true });
+    return hit ? await hit.text() : null;
+  } catch (e) { return null; }
+}
+// The last locked file this device managed to open. If the DM changes the
+// password, the new file can't be opened yet, so the app keeps running on
+// this one (and shows "enter the new password") instead of locking everyone out.
+const GOOD = "rules-good";
+async function rememberGood(text) {
+  try { if ("caches" in window) await (await caches.open(GOOD)).put("library", new Response(text)); } catch (e) { }
+}
+async function lastGood() {
+  try { const r = "caches" in window ? await (await caches.open(GOOD)).match("library") : null; return r ? await r.text() : null; } catch (e) { return null; }
+}
+
 export async function loadData() {
-  let library = read(LS.library), campaign = read(LS.campaign);
+  let library = null, campaign = read(LS.campaign), pendingLock = null;
   if (!campaign) {
     const t = await fetchText(PATH.campaign);
     campaign = JSON.parse(t); write(LS.campaign, campaign); setHash("campaign", fingerprint(t));
   }
   if (!library) {
-    const t = await fetchText(PATH.library);
-    library = await openLibrary(t);
-    write(LS.library, library); setHash("library", fingerprint(t));
+    const t = (await cachedText(PATH.library)) || await fetchText(PATH.library);
+    try {
+      library = await openLibrary(t);
+      setHash("library", fingerprint(t));
+      rememberGood(t);
+    } catch (e) {
+      if (!(e instanceof LockedError)) throw e;
+      const good = await lastGood();
+      if (good) { try { library = await openLibrary(good); } catch (e2) { } }
+      if (!library) library = read(LS.library); // readable copy kept by older versions
+      if (!library) throw e;
+      pendingLock = e;
+    }
   }
-  return { library, campaign };
+  // Drop the readable copy older versions kept, once the cached file opened fine.
+  if (!pendingLock) { try { localStorage.removeItem(LS.library); } catch (e) { } }
+  return { library, campaign, pendingLock };
 }
 
 // Background check. Calls onUpdate({library, campaign, changed}) when a
@@ -91,7 +125,8 @@ export async function checkForUpdates(current, onUpdate, onLocked) {
       let obj;
       try { obj = kind === "library" ? await openLibrary(text) : JSON.parse(text); }
       catch (e) { if (e instanceof LockedError && onLocked) onLocked(e); continue; }
-      write(LS[kind], obj); setHash(kind, fp);
+      if (kind !== "library") write(LS[kind], obj); else rememberGood(text);
+      setHash(kind, fp);
       if (old) changed.push(kind);
       next[kind] = obj;
     } catch (e) { /* offline or host unreachable — keep what we have */ }

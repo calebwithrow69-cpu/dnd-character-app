@@ -5,7 +5,7 @@ import { renderRoster, renderUnlock } from "./views/roster.js";
 import { promptInstall, downloadShortcut } from "./install.js";
 import {
   renderCreate, renderWizardResults, newDraft, buildCharacterFromDraft, validateStep, stepsFor, stepName, WHY,
-  finalAbilities, primaryAbility, listItems, bgAbilities, classSkillOptions, takenSkills, suggestedArray
+  finalAbilities, primaryAbility, listItems, bgAbilities, classSkillOptions, takenSkills, suggestedArray, gearChoices
 } from "./views/create.js";
 import { draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
@@ -54,8 +54,9 @@ async function init() {
   applyPrefs();
   window.__booted = true;
   try {
-    const { library, campaign } = await loadData();
+    const { library, campaign, pendingLock } = await loadData();
     APP.library = library; APP.campaign = campaign;
+    if (pendingLock) { APP.lockErr = pendingLock; APP.needsNewPassword = true; }
     await rebuildGlossary();
   } catch (e) {
     if (e instanceof LockedError) {
@@ -348,6 +349,9 @@ function bindDoom() {
   document.addEventListener("contextmenu", e => { if (e.target.closest?.("[data-hold]")) e.preventDefault(); });
 }
 
+function randomGear(d) {
+  for (const g of gearChoices(APP, d)) if (!g.fixed && !d.picks[g.id]) d.picks[g.id] = g.options[Math.floor(Math.random() * g.options.length)];
+}
 function clearPicks(d, prefix) { Object.keys(d.picks || {}).forEach(k => { if (k.startsWith(prefix)) delete d.picks[k]; }); }
 // +2 to the background ability the class wants most, +1 to another
 function randomBonus(d) {
@@ -412,6 +416,7 @@ function onInput(e) {
 
 function onChange(e) {
   const el = e.target, ds = el.dataset, c = APP.char;
+  if (ds.gearPick && APP.createDraft) { if (el.value) APP.createDraft.picks[ds.gearPick] = el.value; else delete APP.createDraft.picks[ds.gearPick]; render(); return; }
   if (ds.draft && APP.createDraft) { APP.createDraft[ds.draft] = el.value; if (ds.draft === "plus2" && APP.createDraft.plus1 === el.value) APP.createDraft.plus1 = ""; render(); return; }
   if (ds.draftAbility) { render(); return; }
   if (!c) return;
@@ -534,18 +539,18 @@ const ACTIONS = {
   },
   pickClass(el) {
     const d = APP.createDraft;
-    if (d.class !== el.dataset.name) { d.classSkills = []; d.subclass = ""; d.equipClass = "A"; }
+    if (d.class !== el.dataset.name) { d.classSkills = []; d.subclass = ""; d.equipClass = "A"; clearPicks(d, "cls:"); clearPicks(d, "gear:class"); }
     d.class = el.dataset.name; render();
   },
   pickBackground(el) {
     const d = APP.createDraft;
-    if (d.background !== el.dataset.name) { d.plus2 = ""; d.plus1 = ""; d.classSkills = []; d.equipBg = "A"; clearPicks(d, "bg:"); }
+    if (d.background !== el.dataset.name) { d.plus2 = ""; d.plus1 = ""; d.classSkills = []; d.equipBg = "A"; clearPicks(d, "bg:"); clearPicks(d, "gear:bg"); }
     d.background = el.dataset.name; render();
   },
   // a species/background/feat choice
   pick(el) {
     const d = APP.createDraft, id = el.dataset.id, v = el.dataset.v;
-    const def = [...draftChoices(APP, d, "species"), ...draftChoices(APP, d, "bg")].find(x => x.id === id);
+    const def = [...draftChoices(APP, d, "species"), ...draftChoices(APP, d, "bg"), ...draftChoices(APP, d, "class")].find(x => x.id === id);
     if (!def) return;
     const cur = [].concat(d.picks[id] || []);
     let next;
@@ -556,7 +561,7 @@ const ACTIONS = {
     if (next == null || (Array.isArray(next) && !next.length)) delete d.picks[id]; else d.picks[id] = next;
     // answers that depended on the old pick (a feat's own choices, a lineage's traits) no longer apply
     clearPicks(d, id + ">");
-    const defs = [...draftChoices(APP, d, "species"), ...draftChoices(APP, d, "bg")];
+    const defs = [...draftChoices(APP, d, "species"), ...draftChoices(APP, d, "bg"), ...draftChoices(APP, d, "class")];
     Object.keys(d.picks).forEach(k => {
       const dep = defs.find(x => x.id === k);
       if (!dep) { if (/^(sp|bg):/.test(k)) delete d.picks[k]; return; }
@@ -579,6 +584,7 @@ const ACTIONS = {
     render(); toast("Rolled 4d6, dropping the lowest die, for each score");
   },
   pickEquip(el) { APP.createDraft[el.dataset.which] = el.dataset.k; render(); },
+  randomGear() { randomGear(APP.createDraft); render(); },
   randomName() { APP.createDraft.name = randomName(); render(); },
   randomPick() {
     const d = APP.createDraft, step = stepName(APP, d);
@@ -598,7 +604,9 @@ const ACTIONS = {
     render(); toast("Filled in — change anything you like");
   },
   randomSkills() {
-    const d = APP.createDraft, taken = takenSkills(APP, d);
+    const d = APP.createDraft;
+    for (let i = 0; i < 2; i++) randomize(draftChoices(APP, d, "class"), APP, d);
+    const taken = takenSkills(APP, d);
     const { from, n } = classSkillOptions(APP, d);
     const pool = from.filter(id => !taken.includes(id)).sort(() => Math.random() - 0.5);
     d.classSkills = pool.slice(0, n); render();
@@ -617,7 +625,7 @@ const ACTIONS = {
     randomBonus(d);
     const sug = suggestedArray(APP, d.class); if (sug) d.base = { ...sug };
     ACTIONS.randomSkills();
-    d.equipClass = "A"; d.equipBg = "A";
+    d.equipClass = "A"; d.equipBg = "A"; randomGear(d);
     d.step = stepsFor(APP, d).length - 1;
     render(); window.scrollTo(0, 0); toast("Random character ready — review it below");
   },

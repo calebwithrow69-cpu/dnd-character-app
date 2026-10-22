@@ -236,6 +236,7 @@ export function renderModal(app) {
             <p class="muted">App updates install themselves: when one is ready the app reloads at launch, or shows an <b>Update now</b> bar if it's already open. Nothing to redownload.</p>
             <p>${esc(app.campaign.name || "Campaign")}: ${L.classes.length} classes, ${L.species.length} species, ${L.spells.length} spells, ${L.items.length} items.</p>
             <button class="btn block" data-a="checkUpdates">Check for updates now</button>
+            ${(L.credits || []).map(t => `<p class="sub2">${esc(t)}</p>`).join("")}
           </div></div>
         </div>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);

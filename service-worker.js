@@ -7,7 +7,7 @@
 // - Rules data (data/*.json): network first when online, cache when not.
 //   Those update live without a version bump.
 // - Google Fonts: cached the first time they load, so offline keeps the look.
-const CACHE_VERSION = "v7";
+const CACHE_VERSION = "v8";
 const SHELL = "shell-" + CACHE_VERSION;
 const FONTS = "fonts-v1";
 
@@ -32,7 +32,7 @@ self.addEventListener("message", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL && k !== FONTS).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL && k !== FONTS && k !== "rules-good").map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

@@ -7,7 +7,7 @@ import {
 import { newId } from "../store.js";
 import {
   draftChoices, optionsFor, isAnswered, applyChoices, backgroundToolChoice, backgroundFeatNames,
-  bgSkillIds, bgAbilityIds, speciesBaseText, grantedSpells, syncLineageSpells
+  bgSkillIds, bgAbilityIds, speciesBaseText, grantedSpells, syncLineageSpells, TOOLS
 } from "../choices.js";
 import { parseEquipment, resolveItem, fmtPrice } from "../equipment.js";
 import { makeItem, fitsOk, wearKind } from "../gear.js";
@@ -83,16 +83,16 @@ export function validateStep(step, d, app) {
   if (step === "skills") {
     const { from, n } = classSkillOptions(app, d);
     const avail = from.filter(id => !takenSkills(app, d).includes(id)).length;
-    return d.classSkills.length === Math.min(n, avail);
+    return d.classSkills.length === Math.min(n, avail) && choicesDone(app, d, "class");
   }
-  if (step === "equipment") return !!d.equipClass && !!d.equipBg;
+  if (step === "equipment") return !!d.equipClass && !!d.equipBg && gearChoices(app, d).every(g => g.fixed || d.picks[g.id]);
   return true;
 }
 export const WHY = {
   name: "Type a name to continue.", species: "Tap a species to continue.", speciesOpts: "Make each choice to continue.",
   class: "Tap a class to continue.", background: "Tap a background to continue.",
-  bgOpts: "Choose your ability bonuses and each option to continue.", skills: "Pick your class skills to continue.",
-  equipment: "Choose your starting gear."
+  bgOpts: "Choose your ability bonuses and each option to continue.", skills: "Pick your class skills (and tools) to continue.",
+  equipment: "Choose your starting gear, and pick each item marked “choose”."
 };
 
 // ---- option lists (the wizard re-renders only this part while searching)
@@ -215,10 +215,14 @@ function renderEquipGroup(app, d, which) {
   return `<div class="choice"><div class="choice-head"><h3>From your ${which === "class" ? "class" : "background"}</h3><span class="sub2">${esc(name)}</span></div>
     <div class="optlist">${opts.map(o => {
       const on = d[key] === o.key;
-      const list = o.items.map(i => `${i.qty > 1 ? i.qty + " × " : ""}${i.name}`).join(", ");
+      const gc = on ? gearChoices(app, d).filter(g => g.which === which) : [];
+      const list = o.items.map((i, k) => { const g = gc.find(x => x.index === k); const nm = g ? (g.fixed || d.picks[g.id] || i.name) : i.name; return `${i.qty > 1 ? i.qty + " × " : ""}${nm}`; }).join(", ");
       return `<button class="optcard" data-a="pickEquip" data-which="${key}" data-k="${o.key}" aria-pressed="${on}">
         <span class="grow"><b>${o.items.length ? `Option ${o.key}: gear + ${fmtPrice(o.gp)}` : `Option ${o.key}: ${fmtPrice(o.gp)} to spend`}</b>
-        <span>${esc(list || "Buy your own gear in the shop after you finish.")}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>`;
+        <span>${esc(list || "Buy your own gear in the shop after you finish.")}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
+        ${on ? gearChoices(app, d).filter(g => g.which === which && !g.fixed).map(g => `<div class="field gearpick"><label>Choose: ${esc(g.label)}</label>
+          <select class="f" data-gear-pick="${esc(g.id)}"><option value="">Choose…</option>
+          ${g.options.map(o => `<option value="${esc(o)}" ${d.picks[g.id] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`).join("") : ""}`;
     }).join("")}</div></div>`;
 }
 
@@ -277,7 +281,10 @@ export function renderCreate(app) {
     const choices = from.filter(id => !taken.includes(id));
     const need = Math.min(n, choices.length);
     tools = `<button class="btn sm" data-a="randomSkills">Pick for me</button>`;
-    content = `<p class="small muted">Pick <b>${need}</b> from your class. ${d.classSkills.length}/${need} chosen.</p>
+    const toolDefs = draftChoices(app, d, "class");
+    content = `${toolDefs.map(def => renderChoice(app, d, def)).join("")}
+      ${toolDefs.length ? `<div class="choice-head" style="margin-top:14px"><h3>Skills</h3></div>` : ""}
+      <p class="small muted">Pick <b>${need}</b> from your class. ${d.classSkills.length}/${need} chosen.</p>
       <div class="optlist">
         ${taken.map(id => `<div class="optcard locked" aria-pressed="true"><input type="checkbox" checked disabled>
           <span class="grow"><b>${esc(SKILLS.find(s => s.id === id).label)}</b><span>Already yours</span></span></div>`).join("")}
@@ -289,6 +296,7 @@ export function renderCreate(app) {
         }).join("")}
       </div>`;
   } else if (step === "equipment") {
+    if (gearChoices(app, d).some(g => !g.fixed)) tools = `<button class="btn sm" data-a="randomGear">Pick for me</button>`;
     content = `<div class="stack">${renderEquipGroup(app, d, "class")}${renderEquipGroup(app, d, "bg")}
       <p class="sub2">Gear goes straight into your inventory, and armor, shield and weapons are put on for you. Gold can be spent in the shop on your Gear tab.</p></div>`;
   } else if (step === "review") {
@@ -296,7 +304,7 @@ export function renderCreate(app) {
     const lvl = app.campaign.startingLevel || 1;
     const subs = subclassesFor(app.library, d.class);
     const skills = [...takenSkills(app, d), ...d.classSkills].map(id => SKILLS.find(s => s.id === id)?.label);
-    const picks = [...draftChoices(app, d, "species"), ...draftChoices(app, d, "bg")].filter(def => d.picks[def.id] && def.kind !== "skill")
+    const picks = [...draftChoices(app, d, "species"), ...draftChoices(app, d, "bg"), ...draftChoices(app, d, "class")].filter(def => d.picks[def.id] && def.kind !== "skill")
       .map(def => `${def.label}: ${[].concat(d.picks[def.id]).map(v => def.kind === "ability" ? ABILITY_LABEL[v] : (optionsFor(def, app, d).find(o => o.v === v)?.label || v)).join(", ")}`);
     content = `<dl class="kv">
         <dt>Name</dt><dd>${esc(d.name)}</dd>
@@ -326,6 +334,39 @@ export function renderCreate(app) {
       <button class="btn pri block" data-a="${step === "review" ? "finishCreate" : "nextStep"}" ${canNext ? "" : "disabled"}>
         ${step === "review" ? "Create character" : "Continue"}</button>
     </div></div>`;
+}
+
+// Items inside a gear package that need a pick: "Musical Instrument of your choice",
+// "Gaming Set (same as above)", "Holy Symbol", "Arcane Focus (Crystal or Wand)"…
+const CATEGORY = [[/musical instrument/i, TOOLS.instrument], [/artisan'?s tools/i, TOOLS.artisan], [/gaming set/i, TOOLS.gaming]];
+const expand = part => { for (const [re, list] of CATEGORY) if (re.test(part)) return list; return [part.trim()]; };
+export function gearChoice(line, sameAs) {
+  const n = String(line.name).replace(/[’]/g, "'").trim();
+  const same = /\(same as above\)|chosen for the tool proficiency above/i.test(n);
+  const base = n.replace(/\s*\((?:same as above|any)\)/i, "").replace(/\s+(?:of your choice|chosen for the tool proficiency above)$/i, "").trim();
+  if (same && sameAs) return { fixed: [].concat(sameAs)[0] };
+  if (/^holy symbol$/i.test(base)) return { label: "Holy Symbol", options: ["Amulet", "Emblem", "Reliquary"].map(t => `Holy Symbol (${t})`) };
+  const paren = /^(.+?)\s*\(([^)]+ or [^)]+)\)$/i.exec(base);
+  if (paren) return { label: paren[1], options: paren[2].split(/\s+or\s+/i).map(x => `${paren[1]} (${x.trim()[0].toUpperCase() + x.trim().slice(1)})`) };
+  const parts = base.split(/\s+or\s+/i);
+  const isCat = parts.some(p => CATEGORY.some(([re]) => re.test(p)));
+  if (parts.length > 1 || isCat) {
+    const options = [...new Set(parts.flatMap(expand))];
+    if (options.length > 1) return { label: base, options };
+  }
+  return null;
+}
+export function gearChoices(app, d) {
+  const out = [];
+  for (const [which, key, sameAs] of [["class", d.equipClass, d.picks["cls:tool"]], ["bg", d.equipBg, d.picks["bg:tool"] || backgroundToolChoice(findByName(app.library.backgrounds, d.background))?.fixed]]) {
+    const opt = equipOptions(app, which, d).find(o => o.key === key);
+    if (!opt) continue;
+    opt.items.forEach((line, i) => {
+      const g = gearChoice(line, sameAs);
+      if (g) out.push({ id: `gear:${which}:${key}:${i}`, which, index: i, ...g });
+    });
+  }
+  return out;
 }
 
 // Put on what the starting gear allows: armor, shield, then weapons.
@@ -367,7 +408,7 @@ export function buildCharacterFromDraft(d, app) {
     subclass: d.subclass || "", level, background: d.background,
     abilities, saveProf: saves,
     skillProf: [...new Set([...bgSkills(app, d), ...d.classSkills])], skillExpertise: [],
-    profsText: cls ? [cls.armorProf, cls.weaponProf, cls.toolProf, tool?.fixed].filter(Boolean).join(". ") : "",
+    profsText: cls ? [cls.armorProf, cls.weaponProf, /^choose/i.test(cls.toolProf || "") ? "" : cls.toolProf, tool?.fixed].filter(Boolean).join(". ") : "",
     languages: "Common", feats: bgFeat ? [bgFeat] : [],
     hp: { max: maxHp, cur: maxHp, temp: 0 },
     ac: { base: 10, bonus: 0, shield: false, dexCap: null, armorName: "", override: null },
@@ -382,7 +423,7 @@ export function buildCharacterFromDraft(d, app) {
   if (tool?.options && d.picks["bg:tool"]) char.profsText = [char.profsText, d.picks["bg:tool"]].filter(Boolean).join(". ");
 
   // Species/background/feat choices, plus spells the species and feats simply give you
-  const defs = [...draftChoices(app, d, "species"), ...draftChoices(app, d, "bg")].filter(x => x.id !== "bg:tool");
+  const defs = [...draftChoices(app, d, "species"), ...draftChoices(app, d, "bg"), ...draftChoices(app, d, "class")].filter(x => x.id !== "bg:tool");
   const featTexts = [...char.feats, ...defs.filter(x => x.kind === "feat").flatMap(x => [].concat(d.picks[x.id] || []))]
     .map(f => [L.feats.find(x => x.name === f.replace(/\s*\(.*$/, ""))?.text || "", f]);
   applyChoices(char, defs, d.picks, L, [[speciesBaseText(sp, L, C), d.species], ...featTexts]);
@@ -392,13 +433,16 @@ export function buildCharacterFromDraft(d, app) {
   for (const [which, key] of [["class", d.equipClass], ["bg", d.equipBg]]) {
     const opt = equipOptions(app, which, d).find(o => o.key === key);
     if (!opt) continue;
-    for (const line of opt.items) {
+    const picks = gearChoices(app, d).filter(g => g.which === which);
+    opt.items.forEach((line0, i) => {
+      const g = picks.find(x => x.index === i);
+      const line = g ? { ...line0, name: g.fixed || d.picks[g.id] || line0.name } : line0;
       const r = resolveItem(line, W, I);
       const it = makeItem(r.name, { weapons: W, items: I }, newId);
       it.qty = r.qty; if (r.note) it.notes = r.note;
       const same = char.inventory.find(x => x.name === it.name && !x.weapon === !it.weapon && !it.notes);
       if (same) same.qty += it.qty; else char.inventory.push(it);
-    }
+    });
     char.coins.gp += Math.floor(opt.gp);
     char.coins.sp += Math.round((opt.gp % 1) * 10);
   }
