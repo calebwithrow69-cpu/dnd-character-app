@@ -3,7 +3,7 @@ import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
 import { enabledSpells, allWeapons, allItems, enabledFeats, findByName, subclassesFor } from "../data.js";
-import { SLOTS, itemById, fitsOk, slotOf, weaponsOf, attunedCount } from "../gear.js";
+import { SLOTS, itemById, fitsOk, slotOf, weaponsOf, attunedCount, itemCategory, categoryRank, speciesLook } from "../gear.js";
 import { optionGroup, optionNames, levelUpPlan } from "../progression.js";
 
 const levelLabel = l => (Number(l) === 0 ? "Cantrip" : `Level ${l}`);
@@ -78,6 +78,75 @@ export function renderSheet(app) {
     </div></nav>`;
 }
 
+// ---- Attacks (shared by the Stats and Gear tabs) ----
+export function attacksPanel(app, c, d, { head = "Attacks" } = {}) {
+  const weapons = weaponsOf(c);
+  const where = id => { const k = slotOf(c, id); return k ? SLOTS.find(s => s.key === k).label : ""; };
+  const mastered = it => (c.masteries || []).some(m => m === it.name || m === it.weapon?.base);
+  return `<div class="panel"><div class="panel-head"><h2>${head}</h2></div>
+      <div class="panel-body flush">
+      ${weapons.length ? weapons.map(it => {
+    const n = weaponNumbers(it.weapon, c);
+    const w = it.weapon, k = slotOf(c, it.id);
+    return `<div class="rowline">
+          <span class="nm" style="flex-direction:column;align-items:flex-start;gap:1px">
+            <span class="row" style="gap:6px"><button class="linkbtn" data-a="openItem" data-id="${it.id}">${esc(it.name)}</button>
+              ${k ? `<span class="tag amber">${esc(where(it.id))}</span>` : ""}${w.mastery && mastered(it) ? `<button class="tag term" style="text-decoration:none" data-term="${esc(w.mastery)}">${esc(w.mastery)}</button>` : ""}</span>
+            <span class="sub2">${fmtMod(n.toHit)} to hit · ${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${esc(w.dtype || "")}</span>
+            ${w.ammo ? `<span class="sub2" style="display:flex;align-items:center;gap:6px;margin-top:4px">${esc(w.ammo.name)}:
+              <span class="stepper"><button data-a="ammoStep" data-id="${it.id}" data-n="-1" aria-label="Spend ammo">−</button><b>${w.ammo.cur}</b><button data-a="ammoStep" data-id="${it.id}" data-n="1" aria-label="Add ammo">+</button></span></span>` : ""}
+          </span>
+          <span class="row" style="gap:4px">
+            <button class="iconbtn" style="width:36px;height:36px" data-a="addHotbar" data-kind="attack" data-id="${it.id}" aria-label="Add ${esc(it.name)} to hotbar" title="Add to hotbar">${ICONS.plus}</button>
+            <button class="btn pri sm" data-a="attackRoll" data-id="${it.id}">Attack</button>
+          </span>
+        </div>`;
+  }).join("") : `<p class="muted small" style="padding:12px 0">No weapons in your bag yet.</p>`}
+      </div></div>`;
+}
+
+// ---- Hotbar: a customizable action bar (attacks, spells, items, abilities) ----
+const HOTBAR_MAX = 12;
+export function hotbarGlyph(app, c, h) {
+  if (h.kind === "attack" || (h.kind === "item" && itemById(c, h.id)?.weapon)) return ICONS.sword;
+  if (h.kind === "spell") return ICONS.bolt;
+  if (h.kind === "ability") return ICONS.spell;
+  const it = itemById(c, h.id);
+  return it ? itemGlyphIcon(it) : ICONS.flask;
+}
+function itemGlyphIcon(it) {
+  const cat = itemCategory(it);
+  return cat === "weapon" ? ICONS.sword : cat === "armor" ? ICONS.shield : cat === "shield" ? ICONS.shield
+    : cat === "potion" ? ICONS.flask : cat === "scroll" ? ICONS.scroll : cat === "ring" ? ICONS.ring
+    : cat === "focus" ? ICONS.bolt : ICONS.flask;
+}
+export function hotbarLabel(app, c, h) {
+  if (h.kind === "spell" || h.kind === "ability") return h.name;
+  const it = itemById(c, h.id);
+  return it ? it.name : "—";
+}
+function hotbar(app, c, d) {
+  const edit = app.hotbarEdit;
+  const slots = (c.hotbar || []).map((h, i) => {
+    const label = hotbarLabel(app, c, h);
+    const sub = h.kind === "attack" ? "Attack" : h.kind === "spell" ? "Cast" : h.kind === "ability" ? "Ability" : "Use";
+    return `<div class="hb-slot">
+      <button class="hb-btn" data-a="${edit ? "noop" : "hotbarUse"}" data-i="${i}" ${edit ? "disabled" : ""} aria-label="${esc(sub)} ${esc(label)}">
+        <span class="hb-ic">${hotbarGlyph(app, c, h)}</span><span class="hb-lbl">${esc(label)}</span><span class="hb-sub">${sub}</span>
+      </button>
+      ${edit ? `<button class="hb-x" data-a="removeHotbar" data-i="${i}" aria-label="Remove ${esc(label)} from hotbar">${ICONS.close}</button>` : ""}
+    </div>`;
+  }).join("");
+  return `<div class="panel hotbar-panel"><div class="panel-head"><h2>Hotbar</h2>
+      <span class="btnrow">
+        <button class="btn sm" data-a="openHotbarAdd">Add</button>
+        <button class="btn sm ${edit ? "pri" : ""}" data-a="toggleHotbarEdit" ${(c.hotbar || []).length ? "" : "disabled"}>${edit ? "Done" : "Edit"}</button>
+      </span></div>
+    <div class="panel-body">
+      ${(c.hotbar || []).length ? `<div class="hotbar">${slots}</div>` : `<p class="muted small" style="padding:4px 0">Add your go-to attacks, spells, items and abilities here for one-tap use. Tap “Add”, or the ⊕ next to any attack or spell.</p>`}
+    </div></div>`;
+}
+
 // ---------------- Stats ----------------
 function statsTab(app, c, d) {
   const dying = c.hp.cur <= 0;
@@ -95,6 +164,8 @@ function statsTab(app, c, d) {
   ].sort((a, b) => a.lv - b.lv);
 
   return `
+    ${hotbar(app, c, d)}
+    ${weaponsOf(c).length ? attacksPanel(app, c, d) : ""}
     <div class="panel"><div class="panel-head"><h2>Hit points</h2></div><div class="panel-body stack">
       <input class="f num" id="hp-amt" type="number" inputmode="numeric" min="0" placeholder="How much?" aria-label="Amount of damage or healing">
       <div class="grid3">
@@ -280,38 +351,29 @@ function slotTile(app, c, s) {
   </button>`;
 }
 
+function figureFor(c) {
+  const look = speciesLook(c.species, c.size);
+  const tf = `translate(60,118) scale(${(look.width * look.scale).toFixed(3)},${look.scale.toFixed(3)}) translate(-60,-118)`;
+  return `<svg class="figure" viewBox="0 0 120 220" aria-hidden="true" style="grid-area:fig;--fig-tint:hsl(${look.hue} ${look.sat}% 55%)">
+    <g transform="${tf}">
+      <circle cx="60" cy="26" r="${(17 * look.head).toFixed(1)}"/>
+      <path d="M38 52h44l10 62-11 3-7-40v66l8 66H68l-8-58-8 58H38l8-66V77l-7 40-11-3z"/>
+    </g></svg>`;
+}
+
 function gearTab(app, c, d) {
   const sel = app.selItem ? itemById(c, app.selItem) : null;
-  const weapons = weaponsOf(c);
   const ac = d.acInfo;
-  const where = id => { const k = slotOf(c, id); return k ? SLOTS.find(s => s.key === k).label : ""; };
-  const mastered = it => (c.masteries || []).some(m => m === it.name || m === it.weapon?.base);
   return `<div class="gear-grid"><div class="doll-col">
     <div class="panel"><div class="panel-head"><h2>Equipment</h2>
       <span class="sub2">${attunedCount(c)}/3 attuned</span></div>
       ${sel ? `<div class="selbar"><span>Tap a glowing slot to equip <b>${esc(sel.name)}</b></span><button class="btn sm" data-a="clearSel">Cancel</button></div>` : ""}
       <div class="panel-body">
-        <div class="doll">${FIGURE.replace('class="figure"', 'class="figure" style="grid-area:fig"')}${SLOTS.map(s => slotTile(app, c, s)).join("")}</div>
+        <div class="doll">${figureFor(c)}${SLOTS.map(s => slotTile(app, c, s)).join("")}</div>
         <p class="sub2" style="margin-top:10px">${matchMedia("(pointer:fine)").matches ? "Drag items between your bag and the slots, or click an item then a slot." : "Tap an item in your bag, then tap a glowing slot. Tap a slot to change it."}</p>
       </div></div></div><div class="gear-side">
 
-    <div class="panel"><div class="panel-head"><h2>Attacks</h2></div>
-      <div class="panel-body flush">
-      ${weapons.length ? weapons.map(it => {
-        const n = weaponNumbers(it.weapon, c);
-        const w = it.weapon, k = slotOf(c, it.id);
-        return `<div class="rowline">
-          <span class="nm" style="flex-direction:column;align-items:flex-start;gap:1px">
-            <span class="row" style="gap:6px"><button class="linkbtn" data-a="openItem" data-id="${it.id}">${esc(it.name)}</button>
-              ${k ? `<span class="tag amber">${esc(where(it.id))}</span>` : ""}${w.mastery && mastered(it) ? `<button class="tag term" style="text-decoration:none" data-term="${esc(w.mastery)}">${esc(w.mastery)}</button>` : ""}</span>
-            <span class="sub2">${fmtMod(n.toHit)} to hit · ${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${esc(w.dtype || "")}</span>
-            ${w.ammo ? `<span class="sub2" style="display:flex;align-items:center;gap:6px;margin-top:4px">${esc(w.ammo.name)}:
-              <span class="stepper"><button data-a="ammoStep" data-id="${it.id}" data-n="-1" aria-label="Spend ammo">−</button><b>${w.ammo.cur}</b><button data-a="ammoStep" data-id="${it.id}" data-n="1" aria-label="Add ammo">+</button></span></span>` : ""}
-          </span>
-          <button class="btn pri sm" data-a="attackRoll" data-id="${it.id}">Attack</button>
-        </div>`;
-      }).join("") : `<p class="muted small" style="padding:12px 0">No weapons in your bag yet.</p>`}
-      </div></div>
+    ${weaponsOf(c).length ? attacksPanel(app, c, d) : ""}
 
     <div class="panel"><div class="panel-head"><h2>Armor class ${d.ac}</h2>${ac.stealthDis ? `<span class="tag">Stealth disadvantage</span>` : ""}</div>
       <div class="panel-body stack">
@@ -329,23 +391,50 @@ function gearTab(app, c, d) {
         </div>
       </div></div>
 
-    <div class="panel" data-drop-bag="1"><div class="panel-head"><h2>Bag</h2><span class="btnrow"><button class="btn sm" data-a="openShop">Shop</button><button class="btn sm" data-a="openPicker" data-picker="items">Add</button></span></div>
-      <div class="panel-body flush">
-      ${c.inventory.length ? c.inventory.map(it => {
-        const k = slotOf(c, it.id);
-        return `<div class="rowline bagrow ${app.selItem === it.id ? "selected" : ""}" draggable="true" data-drag-item="${it.id}">
-          <button class="nm bagname" data-a="itemTap" data-id="${it.id}" ${it.qty ? "" : 'style="opacity:.5"'}>
-            <span>${esc(it.name)}</span>${k ? `<span class="tag amber">${esc(where(it.id))}</span>` : ""}${it.attuned ? `<span class="tag blue">Attuned</span>` : ""}
-          </button>
-          <span class="stepper"><button data-a="qtyStep" data-id="${it.id}" data-n="-1" aria-label="One fewer ${esc(it.name)}">−</button><b>${it.qty}</b><button data-a="qtyStep" data-id="${it.id}" data-n="1" aria-label="One more ${esc(it.name)}">+</button></span>
-        </div>`;
-      }).join("") : `<p class="muted small" style="padding:12px 0">Your bag is empty.</p>`}
-      </div></div>
+    ${bagGrid(app, c)}
 
     <div class="panel"><div class="panel-head"><h2>Coins</h2><button class="btn sm" data-a="openShop">Shop</button></div><div class="panel-body">
       <div class="grid3 grid6" style="grid-template-columns:repeat(5,1fr)">
         ${["pp", "gp", "ep", "sp", "cp"].map(k => `<div class="field"><label>${k.toUpperCase()}</label><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" style="padding:9px 6px"></div>`).join("")}
       </div></div></div>
+    </div></div>`;
+}
+
+// ---- the bag: a BG3-style icon grid, sortable, with right-click / long-press menus ----
+const CAT_GLYPH = { weapon: "sword", armor: "shield", shield: "shield", potion: "flask", scroll: "scroll", ring: "ring", wondrous: "spell", ammo: "bolt", focus: "bolt", tool: "gear", gear: "flask" };
+const SORTS = [["type", "Type"], ["name", "Name"], ["recent", "Recent"]];
+function sortedInventory(app, c) {
+  const inv = c.inventory.map((it, i) => ({ it, i }));
+  const mode = app.bagSort || "type";
+  if (mode === "name") inv.sort((a, b) => a.it.name.localeCompare(b.it.name));
+  else if (mode === "type") inv.sort((a, b) => categoryRank(itemCategory(a.it)) - categoryRank(itemCategory(b.it)) || a.it.name.localeCompare(b.it.name));
+  // "recent" keeps insertion order
+  return inv.map(x => x.it);
+}
+function bagGrid(app, c) {
+  const items = sortedInventory(app, c);
+  const where = id => { const k = slotOf(c, id); return k ? SLOTS.find(s => s.key === k).label : ""; };
+  return `<div class="panel" data-drop-bag="1"><div class="panel-head"><h2>Bag <span class="sub2">${c.inventory.length}</span></h2>
+      <span class="btnrow">
+        <select class="f sortsel" data-a="bagSort" aria-label="Sort bag">${SORTS.map(([v, l]) => `<option value="${v}" ${(app.bagSort || "type") === v ? "selected" : ""}>Sort: ${l}</option>`).join("")}</select>
+        <button class="btn sm" data-a="openShop">Shop</button><button class="btn sm" data-a="openPicker" data-picker="items">Add</button>
+      </span></div>
+    <div class="panel-body">
+      ${items.length ? `<div class="bag-grid">${items.map(it => {
+    const k = slotOf(c, it.id), cat = itemCategory(it);
+    return `<div class="bag-cell ${k ? "equipped" : ""} ${app.selItem === it.id ? "selected" : ""} ${it.qty ? "" : "empty"} cat-${cat}"
+        draggable="true" data-drag-item="${it.id}" data-a="itemCell" data-id="${it.id}"
+        data-ctx-item="${it.id}" tabindex="0" aria-label="${esc(it.name)}${k ? ", " + esc(where(it.id)) : ""}${it.attuned ? ", attuned" : ""}">
+        <span class="bag-ic">${ICONS[CAT_GLYPH[cat] || "flask"]}</span>
+        <span class="bag-nm">${esc(it.name)}</span>
+        ${(it.qty || 0) !== 1 ? `<span class="bag-qty">${it.qty}</span>` : ""}
+        ${k ? `<span class="bag-badge" title="${esc(where(it.id))}">●</span>` : ""}
+        ${it.attuned ? `<span class="bag-att" title="Attuned">◆</span>` : ""}
+        <button class="bag-menu" data-a="itemMenu" data-id="${it.id}" aria-label="${esc(it.name)} actions">${ICONS.grip}</button>
+      </div>`;
+  }).join("")}</div>
+      <p class="sub2" style="margin-top:8px">Tap an item for actions, or tap the ⋮ corner. ${matchMedia("(pointer:fine)").matches ? "Right-click or drag onto a slot." : "Press and hold for the menu."}</p>`
+      : `<p class="muted small" style="padding:12px 0">Your bag is empty.</p>`}
     </div></div>`;
 }
 

@@ -3,7 +3,7 @@ import {
   ABILITIES, ABILITY_LABEL, CONDITIONS, abilityMod, fmtMod, deriveCharacter, hpAverageGain, slotRows
 } from "../rules.js";
 import { findByName, subclassesFor, enabledSpecies, enabledBackgrounds, allItems, allWeapons } from "../data.js";
-import { SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, fitsOk, wearKind, attunedCount, armorTypeFromName } from "../gear.js";
+import { SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, fitsOk, wearKind, attunedCount, armorTypeFromName, weaponsOf, itemCategory } from "../gear.js";
 import { formatText, infoRow, conditionIcon, glossaryEntry } from "../ui.js";
 import { detailFor, renderSpellResults, renderGearResults } from "./sheet.js";
 import { getCredits } from "../dice.js";
@@ -118,6 +118,56 @@ export function renderModal(app) {
         `<button class="btn pri" data-a="closeModal">Done</button>`
       ].join("");
       return modalShell(it.name, body, foot);
+    }
+
+    case "itemMenu": {
+      const it = itemById(c, m.id);
+      if (!it) return "";
+      const kind = wearKind(it), k = slotOf(c, it.id);
+      const ref = findByName(allItems(app.library, app.campaign), it.name) || findByName(allWeapons(app.library, app.campaign), it.name);
+      const fitSlot = SLOTS.map(s => s.key).find(s => !c.equipment[s] && fitsOk(it, s, c)) || SLOTS.map(s => s.key).find(s => fitsOk(it, s, c));
+      const consumable = /potion|elixir|scroll|oil|ammunition|arrow|bolt|bullet|ration|food|dust|bead/i.test(it.name + " " + (it.type || ""));
+      const row = (a, data, label, extra = "") => `<button class="menu-row ${extra}" data-a="${a}" ${Object.entries(data).map(([kk, v]) => `data-${kk}="${esc(v)}"`).join(" ")}>${label}</button>`;
+      const items = [
+        it.weapon ? row("attackRoll", { id: it.id, close: "1" }, "⚔ Attack") : "",
+        k ? row("unequip", { id: it.id }, "✋ Take off") : (kind && fitSlot ? row("equipHere", { id: it.id, slot: fitSlot }, "🛡 Equip") : ""),
+        consumable ? row("useItem", { id: it.id }, "✓ Use one") : "",
+        it.attune ? row("ctxAttune", { id: it.id }, it.attuned ? "◇ End attunement" : "◆ Attune") : "",
+        row("addHotbar", { kind: it.weapon ? "attack" : "item", id: it.id, close: "1" }, "➕ Add to hotbar"),
+        `<div class="menu-row qtyrow"><span>Quantity</span><span class="stepper"><button data-a="qtyStep" data-id="${it.id}" data-n="-1" aria-label="One fewer">−</button><b>${it.qty}</b><button data-a="qtyStep" data-id="${it.id}" data-n="1" aria-label="One more">+</button></span></div>`,
+        row("openItemEdit", { id: it.id }, "✎ Edit details"),
+        row("removeItem", { id: it.id }, "🗑 Drop", "danger")
+      ].filter(Boolean).join("");
+      return modalShell(it.name, `${ref?.text ? `<p class="sub2" style="margin-bottom:10px">${esc((ref.text.split("\n")[0] || "").slice(0, 120))}</p>` : ""}<div class="menu-list">${items}</div>`,
+        `<button class="btn" data-a="closeModal">Close</button>`);
+    }
+
+    case "hotbarAdd": {
+      const weapons = weaponsOf(c);
+      const spells = (c.spellcasting.spells || []);
+      const feats = (c.feats || []);
+      const cls = findByName(app.library.classes, c.class);
+      const sub = c.subclass ? findByName(app.library.subclasses, c.subclass) : null;
+      const already = new Set((c.hotbar || []).map(h => h.kind + ":" + (h.id || h.name)));
+      const sect = (title, rows) => rows.length ? `<div class="grouph">${title}</div>${rows.join("")}` : "";
+      const addRow = (kind, idOrName, label, sub2) => {
+        const key = kind + ":" + idOrName, on = already.has(key);
+        const data = kind === "spell" || kind === "ability" ? `data-name="${esc(idOrName)}"` : `data-id="${esc(idOrName)}"`;
+        return `<div class="rowline"><span class="nm">${esc(label)}${sub2 ? ` <span class="sub2">${esc(sub2)}</span>` : ""}</span>
+          <button class="btn sm ${on ? "" : "pri"}" data-a="addHotbar" data-kind="${kind}" ${data} ${on ? "disabled" : ""}>${on ? "Added" : "Add"}</button></div>`;
+      };
+      const feRows = [...((cls?.features) || []), ...((sub?.features) || [])].filter(f => f.lv <= c.level && f.name && f.name !== "Subclass Feature" && !f.intro)
+        .map(f => addRow("ability", f.name, f.name, `Lv ${f.lv}`));
+      return modalShell("Add to hotbar",
+        `<div class="results">
+          ${sect("Attacks", weapons.map(w => addRow("attack", w.id, w.name, "weapon")))}
+          ${sect("Spells", spells.map(s => addRow("spell", s.name, s.name)))}
+          ${sect("Items", c.inventory.filter(i => !i.weapon).map(i => addRow("item", i.id, i.name)))}
+          ${sect("Class & subclass abilities", feRows)}
+          ${sect("Feats", feats.map(f => addRow("ability", f, f)))}
+          ${!weapons.length && !spells.length && !c.inventory.length ? `<p class="muted small" style="padding:12px 0">Nothing to add yet.</p>` : ""}
+        </div>`,
+        `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
     case "slot": {

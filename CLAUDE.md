@@ -14,7 +14,9 @@ Characters live only in each player's browser storage; the repo holds the app an
 ## Layout
 - `js/rules.js` math and tables · `js/gear.js` slots/armor/AC · `js/progression.js` level-up plan from class tables (levels 1–10 from the book import, 11–20 from SRD 5.2)
 - `js/data.js` loading, unlocking, update checks (file fingerprint, no version bumps needed). The readable rules are never kept in localStorage (shared quota with characters); the locked file lives in the offline cache and is opened at launch with the remembered key · `js/store.js` characters, migrations, backups
-- `js/choices.js` reads species/background/feat choices out of rules text; entries that read wrong get a `choiceFix` in the rules file ({drop, options, add, when}) · `js/equipment.js` starting-gear packages, prices, coins · `js/install.js` install button / desktop shortcut
+- `js/choices.js` reads species/background/feat choices out of rules text; entries that read wrong get a `choiceFix` in the rules file ({drop, options, add, when}) · `js/equipment.js` starting-gear packages, prices, coins
+- `js/install.js` install button / desktop shortcut / phone launch (QR + copy link) · `js/qr.js` self-contained QR generator (byte mode, picks best mask). Note: the sandbox's cv2 5.0.0 and zbar can't decode QR at all — verify qr.js by matching an independent reference matrix + RS syndromes, not by local decode. Real phone cameras read it.
+- Combat/inventory: attacks + a per-character `hotbar` (attacks/spells/items/abilities) live on the Stats tab; the bag is an icon grid (`itemCategory`/`speciesLook` in gear.js) with sort + a right-click/long-press action menu (`itemMenu` modal, `bindContext` in app.js)
 - `js/views/*` screens · `js/app.js` events and actions · `service-worker.js` offline cache
 - **Bump `CACHE_VERSION` on every code or style change** (and list new files in `SHELL_FILES`). Players only get new code when it changes; the page then applies it at launch or via the "Update now" bar. Rules/campaign JSON updates live without a bump.
 

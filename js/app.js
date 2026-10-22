@@ -2,7 +2,7 @@ import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedErro
 import * as store from "./store.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
-import { promptInstall, downloadShortcut } from "./install.js";
+import { promptInstall, downloadShortcut, appUrl } from "./install.js";
 import {
   renderCreate, renderWizardResults, newDraft, buildCharacterFromDraft, validateStep, stepsFor, stepName, WHY,
   finalAbilities, primaryAbility, listItems, bgAbilities, classSkillOptions, takenSkills, suggestedArray, gearChoices
@@ -61,7 +61,7 @@ async function init() {
   } catch (e) {
     if (e instanceof LockedError) {
       APP.lockErr = e; APP.screen = "locked";
-      if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindDoom(); APP._eventsBound = true; }
+      if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindDoom(); bindContext(); APP._eventsBound = true; }
       render(); setTimeout(() => document.getElementById("f-pass")?.focus(), 50);
       return;
     }
@@ -76,7 +76,7 @@ async function init() {
   if (saved) { APP.char = store.normalize(saved, APP.library); APP.screen = "sheet"; }
   else APP.screen = "roster";
 
-  if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindDoom(); APP._eventsBound = true; }
+  if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindDoom(); bindContext(); APP._eventsBound = true; }
   render();
 
   const recheck = (manual) => checkForUpdates({ library: APP.library, campaign: APP.campaign }, (fresh) => {
@@ -311,6 +311,26 @@ function doomDodge(el) {
   if (hint) hint.textContent = ["It's fast.", "Missed.", "So close.", "It's getting tired.", "It gave up. Tap it."][Math.min(m.dodges, 4)];
   return true;
 }
+// Right-click (desktop) and long-press (touch) on a bag cell open its action menu.
+function bindContext() {
+  document.addEventListener("contextmenu", e => {
+    const el = e.target.closest && e.target.closest("[data-ctx-item]");
+    if (el) { e.preventDefault(); openModal({ type: "itemMenu", id: el.dataset.ctxItem }); }
+  });
+  let t = 0, startEl = null;
+  document.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse") return;
+    const el = e.target.closest && e.target.closest("[data-ctx-item]");
+    if (!el || (e.target.closest && e.target.closest(".bag-menu"))) return;
+    startEl = el; APP._lpFired = false;
+    t = setTimeout(() => { APP._lpFired = true; try { navigator.vibrate && navigator.vibrate(12); } catch (x) {} openModal({ type: "itemMenu", id: el.dataset.ctxItem }); }, 450);
+  }, true);
+  const cancel = () => { if (t) { clearTimeout(t); t = 0; } startEl = null; };
+  ["pointerup", "pointermove", "pointercancel"].forEach(ev => document.addEventListener(ev, cancel, true));
+  // swallow the click that follows a long-press so it doesn't also open the menu
+  document.addEventListener("click", e => { if (APP._lpFired) { APP._lpFired = false; const el = e.target.closest && e.target.closest("[data-a=itemCell]"); if (el) { e.preventDefault(); e.stopPropagation(); } } }, true);
+}
+
 function bindDoom() {
   // laptop: the button runs from the mouse; phone: the first taps just make it jump
   document.addEventListener("pointerover", e => { const b = e.target.closest?.("[data-dodge]"); if (b && e.pointerType === "mouse") doomDodge(b); });
@@ -416,6 +436,8 @@ function onInput(e) {
 
 function onChange(e) {
   const el = e.target, ds = el.dataset, c = APP.char;
+  // a <select> that names an action (e.g. Sort) runs it on change
+  if (el.tagName === "SELECT" && ds.a && ACTIONS[ds.a]) { ACTIONS[ds.a](el); return; }
   if (ds.gearPick && APP.createDraft) { if (el.value) APP.createDraft.picks[ds.gearPick] = el.value; else delete APP.createDraft.picks[ds.gearPick]; render(); return; }
   if (ds.draft && APP.createDraft) { APP.createDraft[ds.draft] = el.value; if (ds.draft === "plus2" && APP.createDraft.plus1 === el.value) APP.createDraft.plus1 = ""; render(); return; }
   if (ds.draftAbility) { render(); return; }
@@ -510,6 +532,11 @@ const ACTIONS = {
     render();
   },
   downloadShortcut() { const n = downloadShortcut(); toast(`Saved "${n}" — move it to your Desktop`); },
+  async copyLink() {
+    const url = appUrl();
+    try { await navigator.clipboard.writeText(url); toast("Link copied — text it to your phone"); }
+    catch (e) { const el = mount.querySelector("[data-copy-src]"); if (el) { el.select(); try { document.execCommand("copy"); toast("Link copied"); } catch (e2) { toast("Select the link and copy it"); } } }
+  },
   dismissInstall() { APP.installDismissed = true; try { localStorage.setItem(LS_INSTALL, "1"); } catch (e) { } render(); },
   openSettings() { openModal({ type: "settings" }); },
   importPrompt() { importPrompt(); },
@@ -900,7 +927,7 @@ const ACTIONS = {
   itemTap(el) {
     const c = APP.char, id = el.dataset.id, it = itemById(c, id);
     if (!it) return;
-    if (APP.selItem === id || !SLOTS.some(s => fitsOk(it, s.key, c))) { APP.selItem = null; openModal({ type: "item", id }); return; }
+    if (APP.selItem === id || !SLOTS.some(s => fitsOk(it, s.key, c))) { APP.selItem = null; openModal({ type: "itemMenu", id }); return; }
     APP.selItem = id; render();
   },
   clearSel() { APP.selItem = null; render(); },
@@ -916,6 +943,72 @@ const ACTIONS = {
   equipHere(el) { equip(el.dataset.id, el.dataset.slot); closeModal(); },
   unequip(el) { unequip(el.dataset.id); if (APP.modal && APP.modal.type === "slot") closeModal(); else render(); },
   openItem(el) { openModal({ type: "item", id: el.dataset.id }); },
+  openItemEdit(el) { openModal({ type: "item", id: el.dataset.id }); },
+  // left-tap: select-to-equip if it fits a slot, else open its details (BG3: right-click/long-press/⋮ = menu)
+  itemCell(el) {
+    const c = APP.char, id = el.dataset.id, it = itemById(c, id);
+    if (!it) return;
+    if (APP.selItem === id || !SLOTS.some(s => fitsOk(it, s.key, c))) { APP.selItem = null; openModal({ type: "itemMenu", id }); return; }
+    APP.selItem = id; render();
+  },
+  itemMenu(el) { openModal({ type: "itemMenu", id: el.dataset.id }); },
+  bagSort(el) { APP.bagSort = el.value; render(); },
+  noop() {},
+  useItem(el) {
+    const c = APP.char, it = itemById(c, el.dataset.id);
+    if (!it) return;
+    if ((it.qty || 0) <= 0) { toast(`No ${it.name} left`); return; }
+    it.qty -= 1;
+    closeModal(); saveAndRender();
+    toast(`Used ${it.name}${it.qty === 0 ? " — last one" : ` · ${it.qty} left`}`, it.qty === 0 ? {} : undefined);
+  },
+  ctxAttune(el) {
+    const c = APP.char, it = itemById(c, el.dataset.id);
+    if (!it) return;
+    if (!it.attuned && attunedCount(c) >= 3) { toast("You can attune to 3 items at most — end one first"); return; }
+    it.attuned = !it.attuned; closeModal(); saveAndRender();
+  },
+  // hotbar
+  openHotbarAdd() { openModal({ type: "hotbarAdd" }); },
+  toggleHotbarEdit() { APP.hotbarEdit = !APP.hotbarEdit; render(); },
+  addHotbar(el) {
+    const c = APP.char, kind = el.dataset.kind;
+    const entry = (kind === "spell" || kind === "ability") ? { kind, name: el.dataset.name } : { kind, id: el.dataset.id };
+    c.hotbar = c.hotbar || [];
+    const key = kind + ":" + (entry.id || entry.name);
+    if (c.hotbar.some(h => h.kind + ":" + (h.id || h.name) === key)) { toast("Already on your hotbar"); return; }
+    if (c.hotbar.length >= 12) { toast("Hotbar is full (12). Remove one first."); return; }
+    c.hotbar.push(entry);
+    save();
+    if (el.dataset.close) { closeModal(); }
+    render();
+    toast(`Added ${entry.name || itemById(c, entry.id)?.name || "to hotbar"}`);
+  },
+  removeHotbar(el) {
+    const c = APP.char, i = +el.dataset.i;
+    c.hotbar.splice(i, 1);
+    if (!c.hotbar.length) APP.hotbarEdit = false;
+    saveAndRender();
+  },
+  hotbarUse(el) {
+    const c = APP.char, h = (c.hotbar || [])[+el.dataset.i];
+    if (!h) return;
+    if (h.kind === "attack") { ACTIONS.attackRoll({ dataset: { id: h.id } }); return; }
+    if (h.kind === "spell") {
+      const sp = findByName(APP.library.spells, h.name);
+      if (sp && sp.level === 0) { ACTIONS.castCantrip({ dataset: { name: h.name } }); }
+      else { openModal({ type: "cast", name: h.name }); }
+      return;
+    }
+    if (h.kind === "item") {
+      const it = itemById(c, h.id);
+      if (!it) return;
+      if (it.weapon) { ACTIONS.attackRoll({ dataset: { id: h.id } }); return; }
+      openModal({ type: "itemMenu", id: h.id });
+      return;
+    }
+    if (h.kind === "ability") { openModal({ type: "detail", kind: "classFeature", name: h.name, from: c.class }); }
+  },
   removeItem(el) {
     const c = APP.char, id = el.dataset.id;
     unequip(id, true);
@@ -939,7 +1032,9 @@ const ACTIONS = {
 
   // attacks
   attackRoll(el) {
-    const c = APP.char, it = itemById(c, el.dataset.id), w = it.weapon;
+    if (el.dataset && el.dataset.close && APP.modal) closeModal();
+    const c = APP.char, it = itemById(c, el.dataset.id); if (!it || !it.weapon) return;
+    const w = it.weapon;
     if (w.ammo) {
       if (w.ammo.cur <= 0) { toast(`Out of ${w.ammo.name}`); return; }
       w.ammo.cur -= 1; save();
@@ -1230,7 +1325,7 @@ function bindDrag() {
     const el = e.target.closest && e.target.closest("[data-drag-item]");
     if (!el || !APP.char) return;
     // +/- and fields never start a drag (the browser reports the row as the target, so check where the press began)
-    if (APP._pressTarget && APP._pressTarget.closest && APP._pressTarget.closest(".stepper, input, select, textarea, .infobtn")) { e.preventDefault(); return; }
+    if (APP._pressTarget && APP._pressTarget.closest && APP._pressTarget.closest(".stepper, input, select, textarea, .infobtn, .bag-menu")) { e.preventDefault(); return; }
     APP.dragId = el.dataset.dragItem;
     e.dataTransfer.setData("text/plain", APP.dragId);
     e.dataTransfer.effectAllowed = "move";

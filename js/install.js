@@ -2,9 +2,27 @@
 // allows it, a downloadable desktop shortcut where it doesn't (Opera, Firefox,
 // Safari on Mac), and plain steps on iPhone, where Apple allows nothing else.
 import { esc, platform } from "./ui.js";
+import { qrSvg } from "./qr.js";
 
 export function appUrl() {
   return location.origin + location.pathname.replace(/index\.html$/, "");
+}
+
+// "Open on your phone": a scannable code (on a big screen) plus a copy-link
+// that works anywhere. Lives in Settings and on the roster install card.
+export function phoneLaunch(app) {
+  const url = appUrl();
+  const i = installInfo();
+  let qr = "";
+  try { if (!i.ios && !i.android) qr = `<div class="qrbox">${qrSvg(url)}</div>`; } catch (e) { qr = ""; }
+  return `<div class="phonelaunch">
+    ${qr ? `<div class="qrwrap">${qr}<p class="sub2">Point your phone camera at this, open the link, then use “${i.ios ? "Add to Home Screen" : "Install"}”.</p></div>` : ""}
+    <div class="stack" style="flex:1;min-width:0">
+      <p class="small">Open this on your phone: scan the code${qr ? "" : " on a computer"}, or copy the link and text it to yourself.</p>
+      <div class="field"><input class="f" readonly value="${esc(url)}" data-copy-src aria-label="App link" onclick="this.select()"></div>
+      <button class="btn pri block" data-a="copyLink">Copy link</button>
+    </div>
+  </div>`;
 }
 
 export function installInfo() {
@@ -74,7 +92,8 @@ export function installCard(app, { inSettings = false } = {}) {
       <div class="btnrow"><button class="btn pri" data-a="downloadShortcut">Download desktop shortcut</button></div>
       <p class="small muted" style="margin-top:6px">Move the downloaded file to your Desktop. It opens in your normal browser.</p>`;
   }
-  if (inSettings) return body + after;
-  return `<div class="callout installcard"><h3>Make it one tap to open</h3>${body}${after}
+  const phone = `<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><h3 style="font-size:.95rem;margin:0 0 8px">Open on your phone</h3>${phoneLaunch(app)}</div>`;
+  if (inSettings) return body + after + phone;
+  return `<div class="callout installcard"><h3>Make it one tap to open</h3>${body}${after}${phone}
     <button class="btn sm ghost" style="margin-top:8px" data-a="dismissInstall">Not now</button></div>`;
 }

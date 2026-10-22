@@ -62,6 +62,12 @@ export function normalize(c, library) {
   out.masteries = c.masteries || [];
   out.choices = c.choices || {};
   out.lineageGranted = c.lineageGranted || [];
+  out.hotbar = Array.isArray(c.hotbar) ? c.hotbar : [];
+  // drop hotbar entries whose target is gone
+  out.hotbar = out.hotbar.filter(h => h && (
+    h.kind === "spell" ? out.spellcasting.spells.some(s => s.name === h.name)
+    : (h.kind === "attack" || h.kind === "item") ? out.inventory.some(i => i.id === h.id)
+    : h.kind === "ability" ? true : false));
   out.levelLog = c.levelLog || [];
   out.schema = 3;
   return out;

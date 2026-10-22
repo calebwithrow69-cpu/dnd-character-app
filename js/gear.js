@@ -186,3 +186,37 @@ export function makeItem(name, { weapons = [], items = [] } = {}, newId) {
   if (plus) it.weapon ? (it.weapon.magic = +(plus[1] || plus[2])) : (it.magic = +(plus[1] || plus[2]));
   return it;
 }
+
+// ---- item categories, for the inventory grid's icons and sorting ----
+// Returns one of: weapon, armor, shield, potion, scroll, ring, wondrous, ammo, focus, tool, gear
+export function itemCategory(it) {
+  if (!it) return "gear";
+  if (it.weapon) return "weapon";
+  const n = (it.name || "").toLowerCase(), t = (it.type || "").toLowerCase();
+  if (/\bshield\b/.test(n)) return "shield";
+  if (it.armor || armorTypeFromName(it.name) || /\barmor\b|\bmail\b|breastplate|plate\b/.test(n)) return "armor";
+  if (/potion|elixir|oil of|philter/.test(n) || /potion/.test(t)) return "potion";
+  if (/scroll|spellbook|\bbook\b|\btome\b/.test(n)) return "scroll";
+  if (/\bring\b/.test(n)) return "ring";
+  if (/amulet|necklace|periapt|cloak|cape|boots|gloves|gauntlets|bracers|belt|helm|\bhat\b|circlet|crown|goggles|\bmask\b|wondrous/.test(n) || /wondrous/.test(t)) return "wondrous";
+  if (/arrow|bolt|bullet|needle|dart\b|ammunition/.test(n)) return "ammo";
+  if (/focus|holy symbol|wand\b|\brod\b|\bstaff\b|orb|crystal|sprig|totem/.test(n)) return "focus";
+  if (/tools|supplies|utensils|kit\b|set\b|instrument|bagpipes|drum|flute|lute|lyre|horn|viol/.test(n)) return "tool";
+  return "gear";
+}
+const CAT_ORDER = ["weapon", "armor", "shield", "ammo", "focus", "potion", "scroll", "ring", "wondrous", "tool", "gear"];
+export const categoryRank = c => { const i = CAT_ORDER.indexOf(c); return i < 0 ? 99 : i; };
+
+// A subtle per-species tint + build for the paper-doll figure.
+// Keyed off size and a hash of the species name, so each race reads a little
+// different (color + width + head size) without anything cartoonish.
+export function speciesLook(species, size) {
+  let h = 0; for (const ch of String(species || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const hue = h % 360;
+  const small = /small/i.test(size || "");
+  const large = /large|huge/i.test(size || "");
+  const scale = large ? 1.12 : small ? 0.82 : 1;
+  const width = 1 + ((h >> 3) % 5 - 2) * 0.04;      // ±8% torso width
+  const head = 1 + ((h >> 6) % 5 - 2) * 0.05;        // ±10% head
+  return { hue, scale, width, head, sat: 20 + (h >> 9) % 18 };
+}

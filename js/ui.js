@@ -120,7 +120,15 @@ export const ICONS = {
   edit: svg('<path d="M4 20h4L19 9l-4-4L4 16v4z"/>'),
   search: svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'),
   close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
-  info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>')
+  info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
+  sword: svg('<path d="M14.5 4L20 4l0 5.5L9 20.5 6 20l-.5-3z"/><path d="M5 15l-2 2 3 3 2-2"/>'),
+  bolt: svg('<path d="M13 2L4 14h6l-1 8 9-12h-6z" class="fill"/>'),
+  flask: svg('<path d="M9 3h6M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3"/>'),
+  shield: svg('<path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/>'),
+  ring: svg('<circle cx="12" cy="14" r="6"/><path d="M9 7l3-4 3 4"/>'),
+  scroll: svg('<path d="M6 4h10a2 2 0 012 2v12a2 2 0 002 2H8a2 2 0 01-2-2V4zM6 4a2 2 0 00-2 2v2h4"/>'),
+  plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  grip: svg('<circle cx="9" cy="6" r="1.4" class="fill"/><circle cx="15" cy="6" r="1.4" class="fill"/><circle cx="9" cy="12" r="1.4" class="fill"/><circle cx="15" cy="12" r="1.4" class="fill"/><circle cx="9" cy="18" r="1.4" class="fill"/><circle cx="15" cy="18" r="1.4" class="fill"/>')
 };
 
 // Top bar. `actions` = [{a, icon, label}] buttons on the right.
