@@ -3,7 +3,7 @@ import {
   ABILITIES, ABILITY_LABEL, CONDITIONS, abilityMod, fmtMod, deriveCharacter, hpAverageGain, slotRows
 } from "../rules.js";
 import { findByName, subclassesFor, enabledSpecies, enabledBackgrounds, allItems, allWeapons } from "../data.js";
-import { SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, fitsOk, wearKind, attunedCount, armorTypeFromName, weaponsOf, itemCategory } from "../gear.js";
+import { SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, slotsOf, fitsOk, wearKind, attunedCount, armorTypeFromName, weaponsOf, itemCategory } from "../gear.js";
 import { formatText, infoRow, conditionIcon, glossaryEntry } from "../ui.js";
 import { detailFor, renderSpellResults, renderGearResults } from "./sheet.js";
 import { getCredits } from "../dice.js";
@@ -182,9 +182,9 @@ export function renderModal(app) {
         <div class="optlist" style="margin-top:4px">${options.map(it => {
           const k = slotOf(c, it.id);
           return `<button class="optcard" data-a="equipHere" data-id="${it.id}" data-slot="${m.slot}"><span class="grow"><b>${esc(it.name)}</b>
-            <span>${k ? "Move from " + esc(SLOTS.find(s => s.key === k).label.toLowerCase()) : it.attune && !it.attuned ? "Needs attunement" : "Equip"}</span></span></button>`;
+            <span>${k ? ((it.qty || 1) > slotsOf(c, it.id).length ? "Equip another (" + (slotsOf(c, it.id).length + 1) + " of " + (it.qty || 1) + ")" : "Move from " + esc(SLOTS.find(s => s.key === k).label.toLowerCase())) : it.attune && !it.attuned ? "Needs attunement" : "Equip"}</span></span></button>`;
         }).join("") || `<p class="muted small">Nothing in your bag fits here. Add items from the Bag section, or tap an item there and set what it's worn on.</p>`}</div>`;
-      return modalShell(label, body, `${cur ? `<button class="btn" data-a="unequip" data-id="${cur.id}">Take off</button>` : ""}<button class="btn pri" data-a="closeModal">Done</button>`);
+      return modalShell(label, body, `${cur ? `<button class="btn" data-a="unequip" data-id="${cur.id}" data-slot="${m.slot}">Take off</button>` : ""}<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
     case "shortRest": {
@@ -275,10 +275,14 @@ export function renderModal(app) {
 
     case "hp": {
       const hp = c.hp;
+      const res = app.hpRes || "normal";
       return modalShell("Hit points",
         `<div class="stack">
           <div class="hpreadout"><b class="num">${hp.cur}</b><span class="muted"> / ${hp.max} HP${hp.temp ? ` &middot; +${hp.temp} temp` : ""}</span></div>
           <input class="f num" id="hp-amt" type="number" inputmode="numeric" min="0" placeholder="How much?" aria-label="Amount of damage or healing">
+          <div><p class="lab">Damage taken as</p><div class="seg" role="group" aria-label="Resistance">
+            ${[["normal", "Normal"], ["resist", "Resistant (half)"], ["vuln", "Vulnerable (x2)"]].map(([v, l]) => `<button data-a="hpRes" data-v="${v}" aria-pressed="${res === v}">${l}</button>`).join("")}</div>
+            <div id="hp-preview" class="small muted" style="min-height:1.3em;margin-top:4px"></div></div>
           <div class="gloss-chips" style="margin:0">${[1, 5, 10, 20].map(n => `<button class="gloss-chip" data-a="hpQuick" data-n="${n}">+${n}</button>`).join("")}<button class="gloss-chip" data-a="hpQuick" data-n="0">Clear</button></div>
           <div class="grid3">
             <button class="btn" data-a="hpApply" data-mode="damage" style="border-color:var(--red);color:var(--red)">Damage</button>
@@ -287,7 +291,7 @@ export function renderModal(app) {
           </div>
           ${hp.cur <= 0 ? `<p class="small muted">At 0 HP, damage adds a death-save failure and healing brings you back up. Death saves are on the Stats tab.</p>` : ""}
         </div>`,
-        `<button class="btn" data-a="closeModal">Cancel</button>`);
+        "").replace('class="modal-back"', 'class="modal-back top"');
     }
 
     case "slots":

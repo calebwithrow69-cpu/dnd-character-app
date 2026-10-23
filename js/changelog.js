@@ -2,11 +2,34 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.1",
+    date: "2026-10-23",
+    stage: "Pre-build",
+    blurb: "Tester build. HP, gear and bug-fix update.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Resistance and vulnerability in the HP box: enter 10, pick Resistant, tap Damage, and 5 is taken. Vulnerable doubles it. A preview shows the result.",
+          "Your character figure on the Gear tab now shows what you wear: one marker per slot (head, neck, back, body, hands, rings, belt, feet, main hand, ranged, off hand). Fancier art per item comes later.",
+          "The Cloak slot is now called Back and also takes a backpack."
+        ]
+      },
+      {
+        title: "Fixed",
+        items: [
+          "The HP box now opens at the top of the screen, so the phone number pad no longer covers the buttons.",
+          "A stack of identical items (like 2 daggers) can now fill more than one slot, one copy each, instead of moving the single copy around."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.0",
     date: "2026-10-23",

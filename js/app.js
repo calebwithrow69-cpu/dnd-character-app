@@ -14,7 +14,7 @@ import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults,
 import { renderModal, renderRollCard, renderShopResults, shopPrice, DOOM_LAST_WORDS } from "./views/modals.js";
 import { shopStock, pay, fmtPrice } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult } from "./views/levelup.js";
-import { SLOTS, ARMOR, itemById, fits, fitsOk, slotOf, wearKind, attunedCount, makeItem } from "./gear.js";
+import { SLOTS, ARMOR, itemById, fits, fitsOk, slotOf, slotsOf, wearKind, attunedCount, makeItem } from "./gear.js";
 import { rollFormula, rollD20, describeGroups, spin } from "./dice.js";
 import { analyzeSpell, castDice } from "./spells.js";
 import {
@@ -226,11 +226,27 @@ const PREF_TOGGLES = {
 };
 
 // ---------------- HP ----------------
+function hpDamageFor(amt) {
+  const r = APP.hpRes;
+  return r === "resist" ? Math.floor(amt / 2) : r === "vuln" ? amt * 2 : amt;
+}
+function updateHpPreview() {
+  const p = document.getElementById("hp-preview"), input = document.getElementById("hp-amt");
+  if (!p || !input) return;
+  const amt = parseInt(input.value, 10);
+  p.textContent = amt > 0 && APP.hpRes && APP.hpRes !== "normal" ? `Damage taken: ${amt} becomes ${hpDamageFor(amt)}` : "";
+}
 function applyHp(mode) {
   const input = document.getElementById("hp-amt");
-  const amt = parseInt(input && input.value, 10);
+  let amt = parseInt(input && input.value, 10);
   if (!amt || amt < 0) { toast("Type an amount first"); input && input.focus(); return; }
   const c = APP.char, hp = c.hp;
+  if (mode === "damage" && APP.hpRes && APP.hpRes !== "normal") {
+    const taken = hpDamageFor(amt);
+    if (taken <= 0) { toast(`Resistance cut ${amt} to 0 damage`); if (APP.modal && APP.modal.type === "hp") closeModal(); return; }
+    toast(`${APP.hpRes === "resist" ? "Resisted" : "Vulnerable"}: ${amt} became ${taken}`);
+    amt = taken;
+  }
   if (mode === "damage") {
     if (hp.cur <= 0) {
       if (amt >= hp.max) { c.deathSaves.fail = 3; toast("Massive damage — that's death"); }
@@ -453,6 +469,7 @@ function onInput(e) {
   const el = e.target, ds = el.dataset;
   if (el.id === "f-name" && APP.createDraft) { APP.createDraft.name = el.value; refreshWizardChrome(); return; }
   if (el.id === "f-formula") { APP.diceFormula = el.value; return; }
+  if (el.id === "hp-amt") { updateHpPreview(); return; }
   if (ds.prefRange) {
     APP.prefs[ds.prefRange] = parseInt(el.value, 10) || 0; savePrefs(); setVolume(APP.prefs.vol);
     const h = el.closest(".setrow") && el.closest(".setrow").querySelector(".sethint");
@@ -603,13 +620,19 @@ const ACTIONS = {
   exportAll() { exportChars(null, "backup"); APP.prefs.lastBackup = Date.now(); savePrefs(); },
   setTheme(el) { APP.prefs.theme = el.dataset.v; savePrefs(); applyPrefs(); render(); },
   setSize(el) { APP.prefs.size = el.dataset.v; savePrefs(); applyPrefs(); render(); },
-  openHp() { openModal({ type: "hp" }); },
+  openHp() { APP.hpRes = "normal"; openModal({ type: "hp" }); },
+  hpRes(el) {
+    APP.hpRes = el.dataset.v;
+    el.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === el ? "true" : "false"));
+    updateHpPreview();
+  },
   hpQuick(el) {
     const input = document.getElementById("hp-amt");
     if (!input) return;
     const n = parseInt(el.dataset.n, 10) || 0;
     input.value = n === 0 ? "" : String((parseInt(input.value, 10) || 0) + n);
     input.focus({ preventScroll: true });
+    updateHpPreview();
   },
   openChangelog() { openModal({ type: "changelog" }); },
   togglePref(el) {
@@ -1051,7 +1074,7 @@ const ACTIONS = {
     openModal({ type: "slot", slot });
   },
   equipHere(el) { equip(el.dataset.id, el.dataset.slot); closeModal(); },
-  unequip(el) { unequip(el.dataset.id); if (APP.modal && APP.modal.type === "slot") closeModal(); else render(); },
+  unequip(el) { unequip(el.dataset.id, false, el.dataset.slot); if (APP.modal && APP.modal.type === "slot") closeModal(); else render(); },
   openItem(el) { openModal({ type: "item", id: el.dataset.id }); },
   openItemEdit(el) { openModal({ type: "item", id: el.dataset.id }); },
   // left-tap: select-to-equip if it fits a slot, else open its details (BG3: right-click/long-press/⋮ = menu)
@@ -1207,32 +1230,47 @@ function addPicked(kind, name, custom) {
 
 function toggleIn(list, v) { const i = list.indexOf(v); if (i >= 0) list.splice(i, 1); else list.push(v); }
 
-function equip(id, slot) {
+function equip(id, slot, from) {
   const c = APP.char, it = itemById(c, id);
   const r = fits(it, slot, c);
   if (r !== true) { toast(r); return; }
   const eq = c.equipment;
-  Object.keys(eq).forEach(k => { if (eq[k] === id) delete eq[k]; });
+  if (eq[slot] === id) { APP.selItem = null; render(); return; }
+  // A stack (qty 2 daggers) can fill several slots, one copy each. With no spare copy left, or when
+  // dragging out of a slot, equipping moves the item instead.
+  const used = slotsOf(c, id), spare = (it.qty || 1) > used.length;
+  let added = false;
+  if (from && eq[from] === id) delete eq[from];
+  else if (used.length && spare) added = true;
+  else if (used.length > 1) { toast(`All ${used.length} ${it.name} are already in use. Take one off first.`); return; }
+  else used.forEach(k => delete eq[k]);
   const bumped = eq[slot] && eq[slot] !== id ? itemById(c, eq[slot]) : null;
   eq[slot] = id;
+  if (added) toast(`Using another ${it.name} (${used.length + 1} of ${it.qty || 1})`);
   if (slot === "main" && /two-handed/i.test(it.weapon?.props || "") && eq.off) { toast("Off hand emptied — that weapon needs both hands"); delete eq.off; }
   if (wearKind(it) === "shield") c.ac.shield = false;
   APP.selItem = null;
   save(); render();
   if (it.attune && !it.attuned) toast(`${it.name} needs attunement to work — tap it to attune`);
   else if (bumped) toast(`Swapped out ${bumped.name}`);
+  flashSlot(slot);
 }
 function flashSlot(key) {
-  requestAnimationFrame(() => { const el = document.querySelector(`[data-drop-slot="${key}"]`); if (el) { el.classList.add("just-equipped"); setTimeout(() => el.classList.remove("just-equipped"), 700); } });
+  requestAnimationFrame(() => { const el = document.querySelector(`[data-drop-slot="${key}"]`); if (el) { el.classList.add("just-equipped"); setTimeout(() => el.classList.remove("just-equipped"), 700); }
+    const w = document.querySelector(`g[data-worn="${key}"]`); if (w) { w.classList.add("pop"); setTimeout(() => w.classList.remove("pop"), 700); } });
 }
-function unequip(id, quiet) {
+function unequip(id, quiet, slot) {
   const eq = APP.char.equipment;
-  Object.keys(eq).forEach(k => { if (eq[k] === id) delete eq[k]; });
+  if (slot && eq[slot] === id) delete eq[slot];
+  else Object.keys(eq).forEach(k => { if (eq[k] === id) delete eq[k]; });
   if (!quiet) save();
 }
 function recheckEquipped() {
   const c = APP.char;
   Object.entries(c.equipment).forEach(([k, id]) => { const it = itemById(c, id); if (!it || !fitsOk(it, k, c)) delete c.equipment[k]; });
+  // fewer copies than slots (qty lowered): drop the extras
+  const seen = {};
+  Object.keys(c.equipment).forEach(k => { const id = c.equipment[k], it = itemById(c, id); seen[id] = (seen[id] || 0) + 1; if (it && seen[id] > (it.qty || 1)) delete c.equipment[k]; });
 }
 
 async function tryUnlock(pw) {
@@ -1437,6 +1475,7 @@ function bindDrag() {
     // +/- and fields never start a drag (the browser reports the row as the target, so check where the press began)
     if (APP._pressTarget && APP._pressTarget.closest && APP._pressTarget.closest(".stepper, input, select, textarea, .infobtn, .bag-menu")) { e.preventDefault(); return; }
     APP.dragId = el.dataset.dragItem;
+    APP.dragFrom = el.dataset.dropSlot || null;
     e.dataTransfer.setData("text/plain", APP.dragId);
     e.dataTransfer.effectAllowed = "move";
     const it = itemById(APP.char, APP.dragId);
@@ -1462,12 +1501,12 @@ function bindDrag() {
   });
   document.addEventListener("drop", e => {
     if (!APP.dragId) return;
-    const id = APP.dragId; APP.dragId = null;
+    const id = APP.dragId, from = APP.dragFrom; APP.dragId = null; APP.dragFrom = null;
     const slot = e.target.closest("[data-drop-slot]");
     const bag = e.target.closest("[data-drop-bag]");
     e.preventDefault(); clear(); document.body.classList.remove("dragging");
-    if (slot) { equip(id, slot.dataset.dropSlot); flashSlot(slot.dataset.dropSlot); }
-    else if (bag && slotOf(APP.char, id)) { unequip(id); render(); toast("Moved to your bag"); }
+    if (slot) { equip(id, slot.dataset.dropSlot, from); }
+    else if (bag && slotOf(APP.char, id)) { unequip(id, false, from); render(); toast("Moved to your bag"); }
   });
 }
 

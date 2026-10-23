@@ -3,7 +3,7 @@ import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
 import { enabledSpells, allWeapons, allItems, enabledFeats, findByName, subclassesFor } from "../data.js";
-import { SLOTS, itemById, fitsOk, slotOf, weaponsOf, attunedCount, itemCategory, categoryRank, speciesLook } from "../gear.js";
+import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, weaponsOf, attunedCount, itemCategory, categoryRank, speciesLook } from "../gear.js";
 import { optionGroup, optionNames, levelUpPlan } from "../progression.js";
 
 const levelLabel = l => (Number(l) === 0 ? "Cantrip" : `Level ${l}`);
@@ -82,7 +82,7 @@ export function renderSheet(app) {
 // ---- Attacks (shared by the Stats and Gear tabs) ----
 export function attacksPanel(app, c, d, { head = "Attacks" } = {}) {
   const weapons = weaponsOf(c);
-  const where = id => { const k = slotOf(c, id); return k ? SLOTS.find(s => s.key === k).label : ""; };
+  const where = id => slotsOf(c, id).map(k => SLOTS.find(s => s.key === k).label).join(" + ");
   const mastered = it => (c.masteries || []).some(m => m === it.name || m === it.weapon?.base);
   return `<div class="panel"><div class="panel-head"><h2>${head}</h2></div>
       <div class="panel-body flush">
@@ -346,13 +346,43 @@ function slotTile(app, c, s) {
   </button>`;
 }
 
+// One simple marker per equipment slot, drawn on the figure when the slot is filled.
+// Later each can become real art per item (studded leather, plate, ...).
+const WORN = {
+  head: '<path class="worn" d="M43 26a17 17 0 0134 0z"/><path class="worn line" d="M41 27h38"/>',
+  neck: '<path class="worn line" d="M51 52q9 13 18 0"/><circle class="worn" cx="60" cy="63" r="3.4"/>',
+  armor: '<path class="worn" d="M46 53h28v58H46z"/><path class="worn line" d="M60 55v54"/>',
+  gloves: '<circle class="worn" cx="31" cy="117" r="6"/><circle class="worn" cx="89" cy="117" r="6"/>',
+  ring1: '<circle class="worn line" cx="29" cy="127" r="3.2"/>',
+  ring2: '<circle class="worn line" cx="91" cy="127" r="3.2"/>',
+  belt: '<path class="worn" d="M46 100h28v7H46z"/><rect class="worn" x="57" y="99" width="6" height="9"/>',
+  boots: '<path class="worn" d="M34 201h19v10H32z"/><path class="worn" d="M67 201h19l2 10H67z"/>',
+  main: '<path class="worn line" d="M98 70v44M92 114h12M98 114v9"/>',
+  ranged: '<path class="worn line" d="M108 72q14 38 0 76M108 72v76"/>'
+};
+function wornMarks(c) {
+  const eq = c.equipment || {};
+  const has = k => !!itemById(c, eq[k]);
+  let behind = "", front = "";
+  if (has("cloak")) behind += '<g data-worn="cloak"><path class="worn soft" d="M36 52h48l14 98H22z"/></g>';
+  Object.keys(WORN).forEach(k => { if (has(k)) front += `<g data-worn="${k}">${WORN[k]}</g>`; });
+  if (has("off")) {
+    const shield = wearKind(itemById(c, eq.off)) === "shield";
+    front += `<g data-worn="off">${shield ? '<path class="worn" d="M6 98h22v19c0 8-6 13-11 16-5-3-11-8-11-16z"/>' : '<path class="worn line" d="M17 86v36M12 118h10"/>'}</g>`;
+  }
+  return { behind, front };
+}
+
 function figureFor(c) {
   const look = speciesLook(c.species, c.size);
   const tf = `translate(60,118) scale(${(look.width * look.scale).toFixed(3)},${look.scale.toFixed(3)}) translate(-60,-118)`;
+  const w = wornMarks(c);
   return `<svg class="figure" viewBox="0 0 120 220" aria-hidden="true" style="grid-area:fig;--fig-tint:hsl(${look.hue} ${look.sat}% 55%)">
     <g transform="${tf}">
+      ${w.behind}
       <circle cx="60" cy="26" r="${(17 * look.head).toFixed(1)}"/>
       <path d="M38 52h44l10 62-11 3-7-40v66l8 66H68l-8-58-8 58H38l8-66V77l-7 40-11-3z"/>
+      ${w.front}
     </g></svg>`;
 }
 
@@ -408,7 +438,7 @@ function sortedInventory(app, c) {
 }
 function bagGrid(app, c) {
   const items = sortedInventory(app, c);
-  const where = id => { const k = slotOf(c, id); return k ? SLOTS.find(s => s.key === k).label : ""; };
+  const where = id => slotsOf(c, id).map(k => SLOTS.find(s => s.key === k).label).join(" + ");
   return `<div class="panel" data-drop-bag="1"><div class="panel-head"><h2>Bag <span class="sub2">${c.inventory.length}</span></h2>
       <span class="btnrow">
         <select class="f sortsel" data-a="bagSort" aria-label="Sort bag">${SORTS.map(([v, l]) => `<option value="${v}" ${(app.bagSort || "type") === v ? "selected" : ""}>Sort: ${l}</option>`).join("")}</select>

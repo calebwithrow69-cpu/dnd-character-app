@@ -33,20 +33,20 @@ export function armorTypeFromName(name) {
 }
 
 export const SLOTS = [
-  { key: "head", label: "Head" }, { key: "neck", label: "Neck" }, { key: "cloak", label: "Cloak" },
+  { key: "head", label: "Head" }, { key: "neck", label: "Neck" }, { key: "cloak", label: "Back" },
   { key: "armor", label: "Armor" }, { key: "ring1", label: "Ring" }, { key: "ring2", label: "Ring" },
   { key: "gloves", label: "Hands" }, { key: "belt", label: "Belt" }, { key: "boots", label: "Feet" },
   { key: "main", label: "Main hand" }, { key: "ranged", label: "Ranged" }, { key: "off", label: "Off hand" }
 ];
 export const WEAR_CHOICES = [
-  ["", "Not worn"], ["head", "Head"], ["neck", "Neck"], ["cloak", "Cloak"], ["armor", "Armor / body"],
+  ["", "Not worn"], ["head", "Head"], ["neck", "Neck"], ["cloak", "Back (cloak or pack)"], ["armor", "Armor / body"],
   ["gloves", "Hands / wrists"], ["belt", "Belt"], ["boots", "Feet"], ["ring", "Ring"], ["shield", "Shield"]
 ];
 
 const WEAR_PATTERNS = [
   [/\bring of\b|\bring\b(?! mail)/i, "ring"],
   [/amulet|necklace|periapt|medallion|pendant|talisman|brooch|scarab/i, "neck"],
-  [/cloak|cape|mantle/i, "cloak"],
+  [/cloak|cape|mantle|\bbackpack\b|rucksack|knapsack/i, "cloak"],
   [/helm|\bhat\b|\bcap\b|circlet|crown|headband|diadem|goggles|\bmask\b|eyes of/i, "head"],
   [/gloves|gauntlets|bracers|bracelet/i, "gloves"],
   [/\bbelt\b|girdle|\bsash\b/i, "belt"],
@@ -82,7 +82,7 @@ export function fits(item, slotKey, char) {
       if (k === "shield") return true;
       if (k === "weapon") return isTwoHanded(item) ? "Two-handed weapons go in the main hand" : true;
       return "Shields or one-handed weapons only";
-    default: return k === slotKey || `Doesn't go on your ${slotKey}`;
+    default: return k === slotKey || `Doesn't go on your ${((SLOTS.find(s => s.key === slotKey) || {}).label || slotKey).toLowerCase()}`;
   }
 }
 export const fitsOk = (item, slot, char) => fits(item, slot, char) === true;
@@ -93,6 +93,11 @@ export function itemById(char, id) {
 export function slotOf(char, id) {
   const eq = char.equipment || {};
   return Object.keys(eq).find(k => eq[k] === id) || null;
+}
+// Every slot this item is in (a stack of 2 daggers can fill 2 slots).
+export function slotsOf(char, id) {
+  const eq = char.equipment || {};
+  return Object.keys(eq).filter(k => eq[k] === id);
 }
 export function attunedCount(char) {
   return (char.inventory || []).filter(i => i.attuned).length;

@@ -602,3 +602,17 @@ button.hpwrap{display:block;text-align:left;color:inherit;border-radius:var(--ra
 :root[data-font="plain"]{--display:system-ui,-apple-system,"Segoe UI",sans-serif;--sans:system-ui,-apple-system,"Segoe UI",sans-serif}
 :root[data-tap="big"]{--tap:54px}
 :root[data-motion="reduced"] *,:root[data-motion="reduced"] *::before,:root[data-motion="reduced"] *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+
+
+/* ============================================================
+   HP box at the top (so the number pad never covers it) + worn marks
+   ============================================================ */
+.modal-back.top{align-items:flex-start;padding-top:env(safe-area-inset-top,0px)}
+.modal-back.top .modal{border-radius:0 0 14px 14px;border:1px solid var(--frame);border-top:0;max-height:min(88vh,100%);animation:dropIn .2s ease-out}
+@keyframes dropIn{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+.worn{fill:color-mix(in srgb,var(--amber) 50%,transparent);stroke:var(--amber);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.worn.line{fill:none;stroke-width:3}
+.worn.soft{fill:color-mix(in srgb,var(--amber) 24%,transparent);stroke-dasharray:4 3}
+g[data-worn]{transform-box:fill-box;transform-origin:center}
+g[data-worn].pop{animation:wornIn .45s cubic-bezier(.3,.9,.3,1.4)}
+@keyframes wornIn{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
