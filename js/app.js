@@ -4,6 +4,8 @@ import { feedback, sfx, setSfxEnabled, setHaptics, setVolume } from "./sfx.js";
 import { VERSION } from "./changelog.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault } from "./views/species.js";
+import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
+import { applyPatch, loadPatch } from "./dm.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
@@ -78,7 +80,7 @@ async function init() {
   window.__booted = true;
   try {
     const { library, campaign, pendingLock } = await loadData();
-    APP.library = library; APP.campaign = campaign;
+    APP.rawLibrary = library; APP.rawCampaign = campaign; setRules();
     loadPortraits().then(() => { if (APP.screen === "create") spRefresh(); });
     if (pendingLock) { APP.lockErr = pendingLock; APP.needsNewPassword = true; }
     await rebuildGlossary();
@@ -109,8 +111,8 @@ async function init() {
   if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindDoom(); bindContext(); APP._eventsBound = true; }
   render();
 
-  const recheck = (manual) => checkForUpdates({ library: APP.library, campaign: APP.campaign }, (fresh) => {
-    APP.library = fresh.library; APP.campaign = fresh.campaign; APP._rulesIndex = null; rebuildGlossary();
+  const recheck = (manual) => checkForUpdates({ library: APP.rawLibrary, campaign: APP.rawCampaign }, (fresh) => {
+    APP.rawLibrary = fresh.library; APP.rawCampaign = fresh.campaign; setRules(); rebuildGlossary();
     toast(fresh.changed.includes("campaign") ? "Your DM updated the campaign rules" : "Rules data updated");
     render();
   }, (err) => { APP.lockErr = err; APP.needsNewPassword = true; render(); }).then(() => { if (manual === true) toast(navigator.onLine ? "Checked — you're up to date" : "You're offline right now"); });
@@ -136,6 +138,11 @@ function focusSelector(el) {
   for (const k of FOCUS_KEYS) if (el.dataset[k] != null) return `[data-${k.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}="${CSS.escape(el.dataset[k])}"]`;
   return null;
 }
+// The rules everyone gets, plus this device's DM edits (if any) on top.
+function setRules() {
+  const r = applyPatch(APP.rawLibrary, APP.rawCampaign, loadPatch());
+  APP.library = r.library; APP.campaign = r.campaign; APP._rulesIndex = null;
+}
 function render() {
   const ae = document.activeElement, fsel = focusSelector(ae);
   const caret = fsel && isTextish(ae) ? [ae.selectionStart, ae.selectionEnd] : null;
@@ -152,6 +159,7 @@ function renderNow() {
 
   if (APP.screen === "locked") { mount.innerHTML = renderUnlock(APP); modalRoot.innerHTML = ""; rollRoot.innerHTML = ""; return; }
   if (APP.screen === "roster") mount.innerHTML = renderRoster(APP);
+  else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
   else if (APP.screen === "create") mount.innerHTML = renderCreate(APP);
   else if (APP.screen === "sheet" && APP.char) mount.innerHTML = renderSheet(APP);
   else if (APP.screen === "levelup" && APP.char && APP.lvl) mount.innerHTML = renderLevelUp(APP);
@@ -489,6 +497,8 @@ function onInput(e) {
     if (h) h.textContent = APP.prefs.vol + "%";
     return;
   }
+  if (ds.query === "dmq" && APP.dm) { APP.dm.q = el.value; const l = document.getElementById("dm-list"); if (l) l.innerHTML = dmListHtml(APP); return; }
+  if (el.id === "f-dmpin" && el.value.length === 4) { ACTIONS.dmPinGo(); return; }
   if (ds.setSearch) {
     const q = el.value.trim().toLowerCase();
     let any = false;
@@ -532,6 +542,7 @@ function onChange(e) {
       err => toast(err.message || "Couldn't use that image"));
     return;
   }
+  if (ds.dmFile != null && el.files && el.files[0]) { ACTIONS.dmImportFile(el.files[0]); el.value = ""; return; }
   // a <select> that names an action (e.g. Sort) runs it on change
   if (el.tagName === "SELECT" && ds.a && ACTIONS[ds.a]) { ACTIONS[ds.a](el); return; }
   if (ds.gearPick && APP.createDraft) { if (el.value) APP.createDraft.picks[ds.gearPick] = el.value; else delete APP.createDraft.picks[ds.gearPick]; render(); return; }
@@ -1546,4 +1557,5 @@ function bindDrag() {
   });
 }
 
+Object.assign(ACTIONS, dmActions(APP, { render, toast, setRules: () => { setRules(); rebuildGlossary(); } }));
 init();

@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.2";
+export const VERSION = "0.1.3";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.3",
+    date: "2026-10-23",
+    stage: "Pre-build",
+    blurb: "DM editor.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "DM editor on the main menu (PIN protected): edit or add species, classes, subclasses, backgrounds, feats, spells, weapons, items and rules.",
+          "Every new entry starts from a template shaped like the real data, so it fits the game.",
+          "Export your changes, then fold them into the locked rules so every player gets them in one update."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.2",
     date: "2026-10-23",

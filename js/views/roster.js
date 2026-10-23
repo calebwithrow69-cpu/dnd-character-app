@@ -1,3 +1,4 @@
+import { dmPinPanel } from "./dm.js";
 import { esc, topbar, empty } from "../ui.js";
 import { installCard } from "../install.js";
 import { listCharacters } from "../store.js";
@@ -25,6 +26,8 @@ export function renderRoster(app) {
       <div class="stack" style="margin-top:14px">
         <button class="btn pri block" data-a="newChar">New character</button>
         <button class="btn block" data-a="importPrompt">Restore from a backup file</button>
+        <button class="btn ghost block" data-a="dmAsk">DM editor</button>
+        ${dmPinPanel(app)}
         ${seedAvailable ? `<button class="btn ghost block" data-a="importGandork">Add the sample character (Gandork)</button>` : ""}
       </div>
     </main>`;

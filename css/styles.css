@@ -675,3 +675,8 @@ g[data-worn].pop{animation:wornIn .45s cubic-bezier(.3,.9,.3,1.4)}
 .flag.act{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
 .sp-trait .about{margin:0 0 12px;border-top:0;padding-top:0}
 .sp-note{margin-top:14px}
+
+/* DM editor */
+.dm-f{margin:0 0 12px}.dm-f>label.small{display:block;margin-bottom:4px}
+.dm-ta{width:100%;min-height:72px;resize:vertical;line-height:1.45}.dm-ta.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12.5px;white-space:pre;overflow-x:auto}
+.dm-hint{margin-top:4px}.dm-row{padding:12px;margin:0 0 10px}.dm-chk{display:flex;gap:8px;align-items:center}
