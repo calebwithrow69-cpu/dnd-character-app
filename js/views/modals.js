@@ -8,6 +8,7 @@ import { formatText, infoRow, conditionIcon, glossaryEntry } from "../ui.js";
 import { detailFor, renderSpellResults, renderGearResults } from "./sheet.js";
 import { getCredits } from "../dice.js";
 import { installCard } from "../install.js";
+import { renderSettingsModal, renderChangelogModal } from "./settings.js";
 import { shopStock, walletCp, fmtPrice } from "../equipment.js";
 
 export function renderModal(app) {
@@ -266,32 +267,27 @@ export function renderModal(app) {
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
-    case "settings": {
-      const theme = app.prefs.theme || "auto", size = app.prefs.size || "normal";
-      const L = app.library;
-      return modalShell("Settings",
+    case "settings":
+      return renderSettingsModal(app);
+
+    case "changelog":
+      return renderChangelogModal(app);
+
+    case "hp": {
+      const hp = c.hp;
+      return modalShell("Hit points",
         `<div class="stack">
-          <div><p class="lab">Theme</p><div class="seg">
-            ${["auto", "light", "dark"].map(t => `<button data-a="setTheme" data-v="${t}" aria-pressed="${theme === t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div></div>
-          <div><p class="lab">Text size</p><div class="seg">
-            ${[["normal", "Normal"], ["large", "Large"], ["xl", "Extra large"]].map(([v, l]) => `<button data-a="setSize" data-v="${v}" aria-pressed="${size === v}">${l}</button>`).join("")}</div></div>
-          <div><p class="lab">Button sounds and buzz</p><div class="seg">
-            ${[["on", "On"], ["off", "Off"]].map(([v, l]) => `<button data-a="setSfx" data-v="${v}" aria-pressed="${(app.prefs.sfx || "on") === v}">${l}</button>`).join("")}</div></div>
-          <div class="panel"><div class="panel-head"><h2>Open with one tap</h2></div><div class="panel-body">${installCard(app, { inSettings: true })}</div></div>
-          <div class="panel"><div class="panel-head"><h2>Backups</h2></div><div class="panel-body stack">
-            <p class="small muted">Characters live only on this device. Save a backup file now and then — send it to yourself or keep it in Files.</p>
-            <button class="btn block" data-a="exportAll">Save a backup of all characters</button>
-            <button class="btn block" data-a="importPrompt">Restore from a backup file</button>
-            <p class="sub2">${app.persisted ? "This browser has agreed to keep your data." : "Tip: installing the app to your home screen keeps your data safest."}</p>
-          </div></div>
-          <div class="panel"><div class="panel-head"><h2>Rules data</h2></div><div class="panel-body stack small">
-            <p class="muted">App updates install themselves: when one is ready the app reloads at launch, or shows an <b>Update now</b> bar if it's already open. Nothing to redownload.</p>
-            <p>${esc(app.campaign.name || "Campaign")}: ${L.classes.length} classes, ${L.species.length} species, ${L.spells.length} spells, ${L.items.length} items.</p>
-            <button class="btn block" data-a="checkUpdates">Check for updates now</button>
-            ${(L.credits || []).map(t => `<p class="sub2">${esc(t)}</p>`).join("")}
-          </div></div>
+          <div class="hpreadout"><b class="num">${hp.cur}</b><span class="muted"> / ${hp.max} HP${hp.temp ? ` &middot; +${hp.temp} temp` : ""}</span></div>
+          <input class="f num" id="hp-amt" type="number" inputmode="numeric" min="0" placeholder="How much?" aria-label="Amount of damage or healing">
+          <div class="gloss-chips" style="margin:0">${[1, 5, 10, 20].map(n => `<button class="gloss-chip" data-a="hpQuick" data-n="${n}">+${n}</button>`).join("")}<button class="gloss-chip" data-a="hpQuick" data-n="0">Clear</button></div>
+          <div class="grid3">
+            <button class="btn" data-a="hpApply" data-mode="damage" style="border-color:var(--red);color:var(--red)">Damage</button>
+            <button class="btn" data-a="hpApply" data-mode="heal" style="border-color:var(--green);color:var(--green)">Heal</button>
+            <button class="btn" data-a="hpApply" data-mode="temp" style="border-color:var(--blue);color:var(--blue)">Temp HP</button>
+          </div>
+          ${hp.cur <= 0 ? `<p class="small muted">At 0 HP, damage adds a death-save failure and healing brings you back up. Death saves are on the Stats tab.</p>` : ""}
         </div>`,
-        `<button class="btn pri" data-a="closeModal">Done</button>`);
+        `<button class="btn" data-a="closeModal">Cancel</button>`);
     }
 
     case "slots":

@@ -6,14 +6,19 @@ let ctx = null;
 let enabled = true;
 let last = 0;
 let noiseBuf = null;
+let master = null;
+let haptics = true;
+let volume = 0.7;
 
 export function setSfxEnabled(v) { enabled = !!v; }
+export function setHaptics(v) { haptics = !!v; }
+export function setVolume(pct) { volume = Math.max(0, Math.min(100, +pct)) / 100; if (master) master.gain.value = volume; }
 
 function audio() {
   if (!ctx) {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return null;
-    try { ctx = new C(); } catch (e) { return null; }
+    try { ctx = new C(); master = ctx.createGain(); master.gain.value = volume; master.connect(ctx.destination); } catch (e) { return null; }
   }
   if (ctx.state === "suspended") { try { ctx.resume(); } catch (e) { } }
   return ctx;
@@ -28,7 +33,7 @@ function tone(c, o) {
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(v, t0 + 0.008);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  osc.connect(g); g.connect(c.destination);
+  osc.connect(g); g.connect(master);
   osc.start(t0); osc.stop(t0 + d + 0.03);
 }
 
@@ -44,7 +49,7 @@ function noise(c, o) {
   f.type = "bandpass"; f.frequency.value = o.f || 3000; f.Q.value = 0.8;
   g.gain.setValueAtTime(v, t0);
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
-  src.connect(f); f.connect(g); g.connect(c.destination);
+  src.connect(f); f.connect(g); g.connect(master);
   src.start(t0); src.stop(t0 + d + 0.02);
 }
 
@@ -100,7 +105,7 @@ export function feedback(el) {
   if (el.disabled || el.getAttribute("aria-disabled") === "true") return;
   const kind = kindFor(el);
   sfx(kind);
-  if (enabled && navigator.vibrate) { try { navigator.vibrate(kind === "warn" ? [10, 30, 10] : 6); } catch (e) { } }
+  if (haptics && navigator.vibrate) { try { navigator.vibrate(kind === "warn" ? [10, 30, 10] : 6); } catch (e) { } }
   if (el.matches(".btn, .iconbtn, .gloss-chip, .seg button")) {
     el.classList.remove("fx-pulse");
     void el.offsetWidth;

@@ -29,6 +29,7 @@ export function renderSheet(app) {
 
   const pct = Math.max(0, Math.min(100, (c.hp.cur / Math.max(1, c.hp.max)) * 100));
   const hpState = c.hp.cur <= c.hp.max * 0.25 ? "low" : c.hp.cur <= c.hp.max * 0.6 ? "mid" : "";
+  const hpLook = c.hp.cur <= 0 ? "down" : c.hp.cur <= c.hp.max * 0.1 ? "crit" : c.hp.cur <= c.hp.max * 0.25 ? "low" : c.hp.cur <= c.hp.max * 0.6 ? "mid" : "ok";
   const tempPct = c.hp.temp ? Math.min(100 - pct, (c.hp.temp / Math.max(1, c.hp.max)) * 100) : 0;
   const dying = c.hp.cur <= 0;
 
@@ -54,14 +55,14 @@ export function renderSheet(app) {
       <section class="status" aria-label="Status">
         <div class="gaugerow">
           <div class="ac-box" title="Armor Class"><b>${d.ac}</b><span>AC</span></div>
-          <div class="hpwrap">
-            <div class="hptrack" role="img" aria-label="${c.hp.cur} of ${c.hp.max} hit points">
-              <div class="hpghost" style="width:${pct}%"></div>
-              <div class="hpfill ${hpState}" style="width:${pct}%"></div>
-              ${tempPct ? `<div class="hptemp" style="width:${tempPct}%"></div>` : ""}
-            </div>
-            <div class="hptext"><b class="hpnum">${c.hp.cur}</b><span class="muted">/ ${c.hp.max} HP${c.hp.temp ? ` · +${c.hp.temp} temp` : ""}</span></div>
-          </div>
+          <button class="hpwrap hpbtn" data-a="openHp" aria-label="Hit points ${c.hp.cur} of ${c.hp.max}${c.hp.temp ? ", " + c.hp.temp + " temporary" : ""}. Tap to change.">
+            <span class="hptrack hp-${hpLook}" style="--hp:${(pct / 100).toFixed(3)}">
+              <span class="hpghost" style="width:${pct}%"></span>
+              <span class="hpfill ${hpState}" style="width:${pct}%"></span>
+              ${tempPct ? `<span class="hptemp" style="width:${tempPct}%"></span>` : ""}
+            </span>
+            <span class="hptext"><b class="hpnum">${c.hp.cur}</b><span class="muted">/ ${c.hp.max} HP${c.hp.temp ? ` · +${c.hp.temp} temp` : ""}</span><span class="hpedit">${ICONS.edit}Change</span></span>
+          </button>
         </div>
         <div class="quick">
           <button data-a="rollInit"><b>${fmtMod(d.initiative)}</b><span>Initiative · roll</span></button>
@@ -166,13 +167,7 @@ function statsTab(app, c, d) {
   return `
     ${hotbar(app, c, d)}
     ${weaponsOf(c).length ? attacksPanel(app, c, d) : ""}
-    <div class="panel"><div class="panel-head"><h2>Hit points</h2></div><div class="panel-body stack">
-      <input class="f num" id="hp-amt" type="number" inputmode="numeric" min="0" placeholder="How much?" aria-label="Amount of damage or healing">
-      <div class="grid3">
-        <button class="btn" data-a="hpApply" data-mode="damage" style="border-color:var(--red);color:var(--red)">Damage</button>
-        <button class="btn" data-a="hpApply" data-mode="heal" style="border-color:var(--green);color:var(--green)">Heal</button>
-        <button class="btn" data-a="hpApply" data-mode="temp" style="border-color:var(--blue);color:var(--blue)">Temp HP</button>
-      </div>
+    <div class="panel"><div class="panel-head"><h2>Rest${dying ? " and death saves" : ""}</h2></div><div class="panel-body stack">
       <div class="btnrow">
         <button class="btn" data-a="openShortRest">Short rest</button>
         <button class="btn" data-a="openLongRest">Long rest</button>

@@ -1,6 +1,7 @@
 import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword } from "./data.js";
 import * as store from "./store.js";
-import { feedback, sfx, setSfxEnabled } from "./sfx.js";
+import { feedback, sfx, setSfxEnabled, setHaptics, setVolume } from "./sfx.js";
+import { VERSION } from "./changelog.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
@@ -31,6 +32,7 @@ const APP = {
   roll: null, history: [], diceFormula: "",
   modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "",
   glossaryCat: "", glossaryClass: "", glossarySubclass: "",
+  setOpen: new Set(["appearance", "feel"]),
   prefs: readPrefs(), installDismissed: readFlag(LS_INSTALL), persisted: false
 };
 window.APP = APP; // handy from the browser console
@@ -42,8 +44,24 @@ const rollRoot = document.getElementById("roll-root");
 function readPrefs() { try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch (e) { return {}; } }
 function readFlag(k) { try { return localStorage.getItem(k) === "1"; } catch (e) { return false; } }
 function savePrefs() { try { localStorage.setItem(LS_PREFS, JSON.stringify(APP.prefs)); } catch (e) { } }
+let wakeLock = null;
+async function syncWake() {
+  try {
+    if (APP.prefs.wake && "wakeLock" in navigator && !document.hidden) {
+      if (!wakeLock) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); }
+    } else if (wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
+  } catch (e) { wakeLock = null; }
+}
 function applyPrefs() {
   const root = document.documentElement;
+  const setAttr = (n, on, v) => { if (on) root.setAttribute(n, v); else root.removeAttribute(n); };
+  setAttr("data-contrast", APP.prefs.contrast === "high", "high");
+  setAttr("data-font", APP.prefs.font === "plain", "plain");
+  setAttr("data-motion", APP.prefs.motion === "reduced", "reduced");
+  setAttr("data-tap", !!APP.prefs.bigtap, "big");
+  setHaptics(APP.prefs.haptics !== "off");
+  setVolume(APP.prefs.vol == null ? 70 : APP.prefs.vol);
+  syncWake();
   const t = APP.prefs.theme;
   if (t === "light" || t === "dark") root.setAttribute("data-theme", t); else root.removeAttribute("data-theme");
   if (APP.prefs.size && APP.prefs.size !== "normal") root.setAttribute("data-size", APP.prefs.size); else root.removeAttribute("data-size");
@@ -72,6 +90,12 @@ async function init() {
     return;
   }
 
+  if (APP.prefs.seenVersion !== VERSION) {
+    const first = !APP.prefs.seenVersion;
+    APP.prefs.seenVersion = VERSION; savePrefs();
+    if (!first) setTimeout(() => toast("Updated to " + VERSION + ". See Settings > What's new."), 800);
+  }
+
   fetch("data/seed-gandork.json").then(r => (r.ok ? r.json() : null)).then(d => { APP.seedGandork = d; if (APP.screen === "roster") render(); }).catch(() => { });
 
   const activeId = store.getActiveId();
@@ -92,7 +116,8 @@ async function init() {
     APP._listening = true;
     window.addEventListener("online", () => APP.recheck());
     window.addEventListener("cr-install-change", () => render());
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) APP.recheck(); else save(); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) { APP.recheck(); syncWake(); } else save(); });
+    document.addEventListener("toggle", e => { const t = e.target; if (t && t.matches && t.matches("details.setsec")) { if (t.open) APP.setOpen.add(t.dataset.sec); else APP.setOpen.delete(t.dataset.sec); } }, true);
     window.addEventListener("pagehide", save);
   }
   recheck();
@@ -161,6 +186,7 @@ function openModal(m) {
   render();
   const first = modalRoot.querySelector("input[type=search], input.f:not([type=number])");
   if (first && (m.type === "picker")) setTimeout(() => first.focus({ preventScroll: true }), 30);
+  if (m.type === "hp") setTimeout(() => document.getElementById("hp-amt")?.focus({ preventScroll: true }), 60);
 }
 function closeModal() {
   if (!APP.modal) return;
@@ -188,6 +214,16 @@ function d20Test(title, mod) {
     `With advantage <b>${r.adv}</b> · with disadvantage <b>${r.dis}</b> <span class="sub2">(second die ${r.second})</span>${exh ? ` · includes −${exh} exhaustion` : ""}`);
   return r;
 }
+
+// ---------------- settings toggles ----------------
+const PREF_TOGGLES = {
+  sfx: { get: p => (p.sfx || "on") === "on", set: (p, v) => { p.sfx = v ? "on" : "off"; } },
+  haptics: { get: p => p.haptics !== "off", set: (p, v) => { p.haptics = v ? "on" : "off"; } },
+  wake: { get: p => !!p.wake, set: (p, v) => { p.wake = v; } },
+  vignette: { get: p => p.vignette !== false, set: (p, v) => { p.vignette = v; } },
+  contrast: { get: p => p.contrast === "high", set: (p, v) => { p.contrast = v ? "high" : "normal"; } },
+  bigtap: { get: p => !!p.bigtap, set: (p, v) => { p.bigtap = v; } }
+};
 
 // ---------------- HP ----------------
 function applyHp(mode) {
@@ -221,7 +257,7 @@ function applyHp(mode) {
     if (amt < hp.temp) toast("Temp HP don't stack — kept the higher amount");
   }
   if (input) input.value = "";
-  saveAndRender();
+  if (APP.modal && APP.modal.type === "hp") { save(); closeModal(); } else saveAndRender();
 }
 
 // ---------------- backups ----------------
@@ -290,6 +326,7 @@ function onClick(e) {
   if (APP._suppressClick && el.dataset.hold === "egg") { APP._suppressClick = false; return; }
   const a = el.dataset.a;
   if (a === "closeModalBackdrop" && e.target !== el) return;
+  if (APP.prefs.wake && !wakeLock) syncWake();
   if (a !== "closeModalBackdrop") feedback(el);
   const fn = ACTIONS[a];
   if (fn) fn(el, e);
@@ -416,6 +453,25 @@ function onInput(e) {
   const el = e.target, ds = el.dataset;
   if (el.id === "f-name" && APP.createDraft) { APP.createDraft.name = el.value; refreshWizardChrome(); return; }
   if (el.id === "f-formula") { APP.diceFormula = el.value; return; }
+  if (ds.prefRange) {
+    APP.prefs[ds.prefRange] = parseInt(el.value, 10) || 0; savePrefs(); setVolume(APP.prefs.vol);
+    const h = el.closest(".setrow") && el.closest(".setrow").querySelector(".sethint");
+    if (h) h.textContent = APP.prefs.vol + "%";
+    return;
+  }
+  if (ds.setSearch) {
+    const q = el.value.trim().toLowerCase();
+    let any = false;
+    document.querySelectorAll(".setsec").forEach(sec => {
+      let n = 0;
+      sec.querySelectorAll(".setrow").forEach(r => { const hit = !q || (r.dataset.s || "").includes(q); r.classList.toggle("hide", !hit); if (hit) n++; });
+      sec.classList.toggle("hide", n === 0);
+      if (q && n) sec.open = true;
+      if (n) any = true;
+    });
+    const em = document.getElementById("set-empty"); if (em) em.classList.toggle("hide", any || !q);
+    return;
+  }
   if (ds.draftAbility && APP.createDraft) {
     const v = parseInt(el.value, 10);
     if (!isNaN(v)) APP.createDraft.base[ds.draftAbility] = Math.max(1, Math.min(30, v));
@@ -525,7 +581,7 @@ const ACTIONS = {
     const gained = syncLineageSpells(APP.char, APP.library, APP.campaign);
     save();
     if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
-    APP.sheetTab = "stats"; APP.roll = null;
+    APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null;
     store.setActiveId(APP.char.id);
     APP.screen = "sheet"; render(); window.scrollTo(0, 0);
   },
@@ -544,10 +600,48 @@ const ACTIONS = {
   dismissInstall() { APP.installDismissed = true; try { localStorage.setItem(LS_INSTALL, "1"); } catch (e) { } render(); },
   openSettings() { openModal({ type: "settings" }); },
   importPrompt() { importPrompt(); },
-  exportAll() { exportChars(null, "backup"); },
+  exportAll() { exportChars(null, "backup"); APP.prefs.lastBackup = Date.now(); savePrefs(); },
   setTheme(el) { APP.prefs.theme = el.dataset.v; savePrefs(); applyPrefs(); render(); },
   setSize(el) { APP.prefs.size = el.dataset.v; savePrefs(); applyPrefs(); render(); },
-  setSfx(el) { APP.prefs.sfx = el.dataset.v; savePrefs(); applyPrefs(); if (el.dataset.v !== "off") sfx("confirm"); render(); },
+  openHp() { openModal({ type: "hp" }); },
+  hpQuick(el) {
+    const input = document.getElementById("hp-amt");
+    if (!input) return;
+    const n = parseInt(el.dataset.n, 10) || 0;
+    input.value = n === 0 ? "" : String((parseInt(input.value, 10) || 0) + n);
+    input.focus({ preventScroll: true });
+  },
+  openChangelog() { openModal({ type: "changelog" }); },
+  togglePref(el) {
+    const t = PREF_TOGGLES[el.dataset.k];
+    if (!t) return;
+    const v = !t.get(APP.prefs);
+    t.set(APP.prefs, v); savePrefs(); applyPrefs();
+    el.setAttribute("aria-checked", v ? "true" : "false");
+    if (el.dataset.k === "sfx") {
+      document.querySelectorAll('[data-pref-range="vol"], [data-a="testSound"]').forEach(x => { x.disabled = !v; });
+      if (v) sfx("confirm");
+    }
+    if (el.dataset.k === "haptics" && v) { try { navigator.vibrate(30); } catch (e) { } }
+    if (el.dataset.k === "vignette" || el.dataset.k === "contrast" || el.dataset.k === "bigtap") render();
+  },
+  setPrefV(el) {
+    APP.prefs[el.dataset.k] = el.dataset.v; savePrefs(); applyPrefs();
+    el.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === el ? "true" : "false"));
+    if (el.dataset.k === "startTab") toast("Characters will open on " + el.textContent);
+  },
+  testSound() { sfx("confirm"); sfx("dice"); },
+  resetPrefs() {
+    if (!window.confirm("Put every setting back to its default? Your characters are not touched.")) return;
+    APP.prefs = { seenVersion: APP.prefs.seenVersion, lastBackup: APP.prefs.lastBackup };
+    savePrefs(); applyPrefs(); render(); toast("Settings reset");
+  },
+  clearOffline() {
+    if (!window.confirm("Clear the offline copy of the app and reload? Your characters stay. You will enter the group password again.")) return;
+    const done = () => location.reload();
+    const regs = navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(rs => Promise.all(rs.map(r => r.unregister()))) : Promise.resolve();
+    Promise.resolve(regs).then(() => (window.caches ? caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))) : null)).then(done, done);
+  },
   checkUpdates() { APP.recheck && APP.recheck(true); },
 
   // modal plumbing
@@ -727,7 +821,7 @@ const ACTIONS = {
     APP.char = null; APP.modal = null; APP.screen = "roster"; render();
     toast(`${name} is gone`, { action: "Undo", onAction: () => { store.saveCharacter(gone); render(); toast(`All that, for nothing? ${name} is back.`); } });
   },
-  exportOne() { exportChars([APP.char.id], APP.char.name); },
+  exportOne() { exportChars([APP.char.id], APP.char.name); APP.prefs.lastBackup = Date.now(); savePrefs(); },
   toggleSaveProf(el) {
     const a = el.dataset.ab, list = APP.char.saveProf, i = list.indexOf(a);
     if (el.checked && i < 0) list.push(a); if (!el.checked && i >= 0) list.splice(i, 1);
