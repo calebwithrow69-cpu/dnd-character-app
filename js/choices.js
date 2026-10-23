@@ -9,6 +9,7 @@
 // `choiceFix` in the rules file to correct what's read: see applyFix().
 
 import { SKILLS, ABILITY_LABEL, ABILITY_BY_LABEL, parseList, skillIdByLabel } from "./rules.js";
+import { traitLevel } from "./species.js";
 
 export const TOOLS = {
   artisan: ["Alchemist's Supplies", "Brewer's Supplies", "Calligrapher's Supplies", "Carpenter's Tools", "Cartographer's Tools",
@@ -284,6 +285,9 @@ export function draftChoices(app, d, scope) {
     const sp = L.species.find(s => s.name === d.species);
     for (const def of speciesChoices(sp, L, C)) {
       if (!whenOk(def, picks)) continue;
+      // Choices that belong to a later level are made at that level. The spellcasting-ability
+      // pick is the exception: the rules text has you choose it when you select the species.
+      if (def.kind !== "ability" && traitLevel(sp, def.trait) > 1) continue;
       out.push(def);
       if (def.kind === "feat" && picks[def.id]) pushFeat(picks[def.id], `${def.id}>`);
     }

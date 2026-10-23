@@ -2,11 +2,36 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.1";
+export const VERSION = "0.1.2";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.2",
+    date: "2026-10-23",
+    stage: "Pre-build",
+    blurb: "Tester build. A new way to pick your species.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Species picker redone: portrait cards you tap open. Sort by A to Z, Source or Favorites first, filter by source, and search by name. Star a species to keep it near the top.",
+          "Add your own image to any species (Add image inside the card). It is shrunk and kept on this device only, and it is included when you make a full backup.",
+          "Everything a species gives you is on its card, each ability tagged Passive (always on) or Active (an action or limited uses). Tap an ability to read the book text.",
+          "Choices are now big tap-able tiles inside the card (dragon color, elf lineage, skills and so on), with the full rules text for your pick right under them.",
+          "Choices that belong to a later level (like the Aasimar transformation at level 3) are no longer asked at character creation; the abilities show a Level tag."
+        ]
+      },
+      {
+        title: "Good to know",
+        items: [
+          "The Passive/Active tags and usage lines are the app's reading of the text and can be wrong for oddly written species. The ability text itself is word for word from the rules file.",
+          "Tapping a species card also picks it. Tap it again to fold it up; your pick stays."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.1",
     date: "2026-10-23",

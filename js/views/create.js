@@ -11,6 +11,7 @@ import {
 } from "../choices.js";
 import { parseEquipment, resolveItem, fmtPrice } from "../equipment.js";
 import { makeItem, fitsOk, wearKind } from "../gear.js";
+import { renderCodex, renderSpeciesControls } from "./species.js";
 
 const STEP_TITLE = {
   name: "Name your character", species: "Choose a species", speciesOpts: "Species choices", class: "Choose a class",
@@ -29,7 +30,7 @@ export function newDraft() {
 
 // Steps depend on the picks: "Species choices" only shows when the species asks for any.
 export function stepsFor(app, d) {
-  return ["name", "species", draftChoices(app, d, "species").length ? "speciesOpts" : null,
+  return ["name", "species",
     "class", "background", "bgOpts", "abilities", "skills", "equipment", "review"].filter(Boolean);
 }
 export const stepName = (app, d) => stepsFor(app, d)[d.step] || "review";
@@ -72,7 +73,7 @@ const choicesDone = (app, d, scope) => draftChoices(app, d, scope).every(def => 
 
 export function validateStep(step, d, app) {
   if (step === "name") return d.name.trim().length > 0;
-  if (step === "species") return !!d.species;
+  if (step === "species") return !!d.species && choicesDone(app, d, "species");
   if (step === "speciesOpts") return choicesDone(app, d, "species");
   if (step === "class") return !!d.class;
   if (step === "background") return !!d.background;
@@ -89,7 +90,7 @@ export function validateStep(step, d, app) {
   return true;
 }
 export const WHY = {
-  name: "Type a name to continue.", species: "Tap a species to continue.", speciesOpts: "Make each choice to continue.",
+  name: "Type a name to continue.", species: "Open a species and make each of its choices to continue.", speciesOpts: "Make each choice to continue.",
   class: "Tap a class to continue.", background: "Tap a background to continue.",
   bgOpts: "Choose your ability bonuses and each option to continue.", skills: "Pick your class skills (and tools) to continue.",
   equipment: "Choose your starting gear, and pick each item marked “choose”."
@@ -134,6 +135,7 @@ export function renderWizardResults(app) {
   const step = stepName(app, d);
   const cfg = listFor(app, d, step);
   const q = (d.query || "").trim().toLowerCase();
+  if (step === "species") return renderCodex(app, () => draftChoices(app, d, "species").map(def => renderTileChoice(app, d, def)).join(""));
   const items = cfg.items.filter(x => !q || x.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
   if (!items.length) return `<p class="muted small" style="padding:12px 0">Nothing matches “${esc(d.query)}”.</p>`;
   return items.map(it => {
@@ -180,6 +182,26 @@ export function renderChoice(app, d, def) {
   }).join("")}</div></div>`;
 }
 const firstLine = t => { const s = String(t || "").split("\n")[0]; return s.length > 90 ? s.slice(0, 88) + "…" : s; };
+
+// Choices as tiles (used by the species picker): name, one line of what it does,
+// and the full rules text for whatever is picked, shown right under the tiles.
+export function renderTileChoice(app, d, def) {
+  const opts = optionsFor(def, app, d);
+  const cur = [].concat(d.picks[def.id] || []);
+  const full = cur.length >= def.n;
+  const head = `<div class="choice-head"><h3>${esc(def.label)}</h3>
+      <span class="sub2">${esc(def.trait && def.trait !== def.label ? def.trait + " · " : "")}${def.n > 1 ? `pick ${def.n} (${cur.length}/${def.n})` : "pick one"}</span></div>
+      ${def.hint && def.kind !== "text" ? `<p class="small muted">${esc(def.hint)}</p>` : ""}`;
+  if (def.kind === "text") return renderChoice(app, d, def);
+  if (!opts.length) return renderChoice(app, d, def);
+  const picked = opts.filter(o => cur.includes(o.v));
+  return `<div class="choice tiles">${head}<div class="tilegrid">${opts.map(o => {
+    const on = cur.includes(o.v), sub = o.sub || firstLine(o.detail);
+    return `<button class="tile" data-a="pick" data-id="${esc(def.id)}" data-v="${esc(o.v)}" aria-pressed="${on}" ${!on && full && def.n > 1 ? "disabled" : ""}>
+      <span class="grow"><b>${esc(o.label || o.v)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span>${on ? `<span class="tick" aria-hidden="true">&#10003;</span>` : ""}</button>`;
+  }).join("")}</div>
+    ${picked.map(o => { const det = choiceDetail(app, o); return det ? `<div class="about tile-about"><p class="sub2"><b>${esc(o.label || o.v)}</b></p>${det}</div>` : ""; }).join("")}</div>`;
+}
 
 function renderBonus(app, d) {
   const opts = bgAbilities(app, d);
@@ -243,8 +265,9 @@ export function renderCreate(app) {
   } else if (step === "species" || step === "class" || step === "background") {
     const count = listFor(app, d, step).items.length;
     tools = `<button class="btn sm" data-a="randomPick">Surprise me</button>`;
-    content = `${count > 8 ? searchBox("wizard", d.query, `Search ${count} options`) : ""}
-      <div class="optlist" id="wizard-results">${renderWizardResults(app)}</div>`;
+    if (step === "species" && draftChoices(app, d, "species").length) tools += ` <button class="btn sm" data-a="randomChoices">Pick my choices</button>`;
+    content = `${step === "species" ? renderSpeciesControls(app) : ""}${count > 8 ? searchBox("wizard", d.query, `Search ${count} options`) : ""}
+      <div class="${step === "species" ? "sp-list" : "optlist"}" id="wizard-results">${renderWizardResults(app)}</div>`;
   } else if (step === "speciesOpts" || step === "bgOpts") {
     const scope = step === "speciesOpts" ? "species" : "bg";
     const defs = draftChoices(app, d, scope);

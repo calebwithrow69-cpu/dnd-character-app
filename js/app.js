@@ -2,6 +2,8 @@ import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedErro
 import * as store from "./store.js";
 import { feedback, sfx, setSfxEnabled, setHaptics, setVolume } from "./sfx.js";
 import { VERSION } from "./changelog.js";
+import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
+import { spUiDefault } from "./views/species.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
@@ -26,7 +28,7 @@ const LS_PREFS = "dnd-prefs-v1";
 const LS_INSTALL = "dnd-install-dismissed";
 
 const APP = {
-  info: new Set(),
+  info: new Set(), spUi: spUiDefault(),
   screen: "loading", library: null, campaign: null,
   char: null, sheetTab: "stats", createDraft: null, seedGandork: null,
   roll: null, history: [], diceFormula: "",
@@ -77,6 +79,7 @@ async function init() {
   try {
     const { library, campaign, pendingLock } = await loadData();
     APP.library = library; APP.campaign = campaign;
+    loadPortraits().then(() => { if (APP.screen === "create") spRefresh(); });
     if (pendingLock) { APP.lockErr = pendingLock; APP.needsNewPassword = true; }
     await rebuildGlossary();
   } catch (e) {
@@ -303,14 +306,23 @@ function importPrompt() {
     const f = input.files && input.files[0];
     if (!f) return;
     try {
-      const chars = store.parseImport(await f.text());
+      const text = await f.text();
+      const chars = store.parseImport(text);
       chars.forEach(c => store.saveCharacter(store.normalize(c, APP.library)));
-      toast(`Restored ${chars.length} character${chars.length === 1 ? "" : "s"}`);
+      const pics = await importPortraits(store.parsePortraits(text));
+      toast(`Restored ${chars.length} character${chars.length === 1 ? "" : "s"}${pics ? ` and ${pics} portrait${pics === 1 ? "" : "s"}` : ""}`);
       APP.modal = null; APP.screen = "roster"; APP.char = null; store.setActiveId(null);
       render();
     } catch (e) { toast(e.message || "Couldn't read that file"); }
   };
   input.click();
+}
+
+// Redraw just the species list (keeps your place on the page) and the Next button
+function spRefresh() {
+  const r = document.getElementById("wizard-results");
+  if (r && APP.createDraft) r.innerHTML = renderWizardResults(APP);
+  if (APP.createDraft) refreshWizardChrome();
 }
 
 // ---------------- events ----------------
@@ -339,6 +351,7 @@ function bindEvents() {
 function onClick(e) {
   const el = e.target.closest("[data-a]");
   if (!el) return;
+  if (el.tagName === "SELECT") return; // a dropdown acts when its value changes, not when it is tapped open
   if (APP._suppressClick && el.dataset.hold === "egg") { APP._suppressClick = false; return; }
   const a = el.dataset.a;
   if (a === "closeModalBackdrop" && e.target !== el) return;
@@ -513,6 +526,12 @@ function onInput(e) {
 
 function onChange(e) {
   const el = e.target, ds = el.dataset, c = APP.char;
+  if (ds.spFile != null && el.files && el.files[0]) {
+    const f = el.files[0], name = ds.spFile;
+    savePortrait(name, f).then(saved => { spRefresh(); toast(saved ? `Image saved for ${name}` : `Showing for now, but this browser would not save it`); },
+      err => toast(err.message || "Couldn't use that image"));
+    return;
+  }
   // a <select> that names an action (e.g. Sort) runs it on change
   if (el.tagName === "SELECT" && ds.a && ACTIONS[ds.a]) { ACTIONS[ds.a](el); return; }
   if (ds.gearPick && APP.createDraft) { if (el.value) APP.createDraft.picks[ds.gearPick] = el.value; else delete APP.createDraft.picks[ds.gearPick]; render(); return; }
@@ -656,7 +675,7 @@ const ACTIONS = {
   testSound() { sfx("confirm"); sfx("dice"); },
   resetPrefs() {
     if (!window.confirm("Put every setting back to its default? Your characters are not touched.")) return;
-    APP.prefs = { seenVersion: APP.prefs.seenVersion, lastBackup: APP.prefs.lastBackup };
+    APP.prefs = { seenVersion: APP.prefs.seenVersion, lastBackup: APP.prefs.lastBackup, favSpecies: APP.prefs.favSpecies };
     savePrefs(); applyPrefs(); render(); toast("Settings reset");
   },
   clearOffline() {
@@ -686,6 +705,22 @@ const ACTIONS = {
     if (d.species !== el.dataset.name) clearPicks(d, "sp:");
     d.species = el.dataset.name; render();
   },
+  // Species picker: tapping a card reads it and picks it; tapping it again folds it up (the pick stays)
+  openSpecies(el) {
+    const d = APP.createDraft, name = el.dataset.name, u = APP.spUi;
+    if (d.species !== name) { clearPicks(d, "sp:"); d.species = name; u.open = name; }
+    else u.open = u.open === name ? null : name;
+    spRefresh();
+  },
+  spTrait(el) { const t = APP.spUi.traits, k = el.dataset.key; if (t.has(k)) t.delete(k); else t.add(k); spRefresh(); },
+  spSort(el) { APP.spUi.sort = el.value; spRefresh(); },
+  spSource(el) { APP.spUi.source = el.value; spRefresh(); },
+  spFav(el) {
+    const n = el.dataset.name, f = new Set(APP.prefs.favSpecies || []);
+    if (f.has(n)) f.delete(n); else f.add(n);
+    APP.prefs.favSpecies = [...f]; savePrefs(); spRefresh();
+  },
+  async spPortraitClear(el) { await removePortrait(el.dataset.name); spRefresh(); },
   pickClass(el) {
     const d = APP.createDraft;
     if (d.class !== el.dataset.name) { d.classSkills = []; d.subclass = ""; d.equipClass = "A"; clearPicks(d, "cls:"); clearPicks(d, "gear:class"); }
@@ -740,6 +775,7 @@ const ACTIONS = {
     const items = listItems(APP, d, step);
     if (!items.length) return;
     const it = items[Math.floor(Math.random() * items.length)];
+    if (step === "species") APP.spUi.open = it.name;
     ACTIONS[{ species: "pickSpecies", class: "pickClass", background: "pickBackground" }[step]]({ dataset: { name: it.name } });
     APP.info.add(step + ":" + it.name);
     toast(`Picked ${it.name}`);
@@ -747,7 +783,7 @@ const ACTIONS = {
   randomChoices() {
     const d = APP.createDraft, step = stepName(APP, d);
     if (step === "bgOpts") randomBonus(d);
-    const scope = step === "speciesOpts" ? "species" : "bg";
+    const scope = step === "bgOpts" ? "bg" : "species";
     for (let i = 0; i < 4; i++) randomize(draftChoices(APP, d, scope), APP, d); // repeat: some choices appear only after others
     d.classSkills = d.classSkills.filter(sk => !takenSkills(APP, d).includes(sk));
     render(); toast("Filled in — change anything you like");

@@ -1,3 +1,5 @@
+import { allPortraits } from "./portraits.js";
+
 // Character roster: lives in this device's localStorage only.
 // Backups are plain JSON files the player saves wherever they like.
 
@@ -108,7 +110,13 @@ export async function requestPersistence() {
 export function backupPayload(ids) {
   const roster = readRoster();
   const chars = (ids || Object.keys(roster)).map(id => roster[id]).filter(Boolean);
-  return { app: "character-runner", kind: "backup", version: 1, exportedAt: new Date().toISOString(), characters: chars };
+  const out = { app: "character-runner", kind: "backup", version: 1, exportedAt: new Date().toISOString(), characters: chars };
+  const pics = ids ? {} : allPortraits(); // a full backup carries the species portraits too
+  if (Object.keys(pics).length) out.portraits = pics;
+  return out;
+}
+export function parsePortraits(text) {
+  try { const d = JSON.parse(text); return d && d.portraits && typeof d.portraits === "object" ? d.portraits : {}; } catch (e) { return {}; }
 }
 
 // Accepts a backup file, a single exported character, or a bare array.
