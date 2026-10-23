@@ -1,5 +1,6 @@
 import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword } from "./data.js";
 import * as store from "./store.js";
+import { feedback, sfx, setSfxEnabled } from "./sfx.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
@@ -46,8 +47,9 @@ function applyPrefs() {
   const t = APP.prefs.theme;
   if (t === "light" || t === "dark") root.setAttribute("data-theme", t); else root.removeAttribute("data-theme");
   if (APP.prefs.size && APP.prefs.size !== "normal") root.setAttribute("data-size", APP.prefs.size); else root.removeAttribute("data-size");
+  setSfxEnabled(APP.prefs.sfx !== "off");
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = getComputedStyle(root).getPropertyValue("--panel").trim() || "#10151B";
+  if (meta) meta.content = getComputedStyle(root).getPropertyValue("--panel").trim() || "#1E1816";
 }
 
 // ---------------- boot ----------------
@@ -288,6 +290,7 @@ function onClick(e) {
   if (APP._suppressClick && el.dataset.hold === "egg") { APP._suppressClick = false; return; }
   const a = el.dataset.a;
   if (a === "closeModalBackdrop" && e.target !== el) return;
+  if (a !== "closeModalBackdrop") feedback(el);
   const fn = ACTIONS[a];
   if (fn) fn(el, e);
 }
@@ -544,6 +547,7 @@ const ACTIONS = {
   exportAll() { exportChars(null, "backup"); },
   setTheme(el) { APP.prefs.theme = el.dataset.v; savePrefs(); applyPrefs(); render(); },
   setSize(el) { APP.prefs.size = el.dataset.v; savePrefs(); applyPrefs(); render(); },
+  setSfx(el) { APP.prefs.sfx = el.dataset.v; savePrefs(); applyPrefs(); if (el.dataset.v !== "off") sfx("confirm"); render(); },
   checkUpdates() { APP.recheck && APP.recheck(true); },
 
   // modal plumbing

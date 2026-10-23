@@ -275,6 +275,8 @@ export function renderModal(app) {
             ${["auto", "light", "dark"].map(t => `<button data-a="setTheme" data-v="${t}" aria-pressed="${theme === t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div></div>
           <div><p class="lab">Text size</p><div class="seg">
             ${[["normal", "Normal"], ["large", "Large"], ["xl", "Extra large"]].map(([v, l]) => `<button data-a="setSize" data-v="${v}" aria-pressed="${size === v}">${l}</button>`).join("")}</div></div>
+          <div><p class="lab">Button sounds and buzz</p><div class="seg">
+            ${[["on", "On"], ["off", "Off"]].map(([v, l]) => `<button data-a="setSfx" data-v="${v}" aria-pressed="${(app.prefs.sfx || "on") === v}">${l}</button>`).join("")}</div></div>
           <div class="panel"><div class="panel-head"><h2>Open with one tap</h2></div><div class="panel-body">${installCard(app, { inSettings: true })}</div></div>
           <div class="panel"><div class="panel-head"><h2>Backups</h2></div><div class="panel-body stack">
             <p class="small muted">Characters live only on this device. Save a backup file now and then — send it to yourself or keep it in Files.</p>
