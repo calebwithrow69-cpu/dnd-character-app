@@ -1,0 +1,35 @@
+# Character Runner — notes for Claude sessions
+
+Offline-first D&D 2024 character sheet (static PWA on GitHub Pages, no build step, no accounts).
+Characters live only in each player's browser storage; the repo holds the app and the rules data.
+
+## The rules data is password-locked
+- `data/library.enc.json` is the only copy of the rules in the repo (AES-GCM, key from the group password via PBKDF2). Book text must never be committed readable.
+- `data/library.json` (readable) is gitignored. Never `git add -f` it. Before committing, `git grep -I "Celestial Resistance"` should find nothing.
+- The password is never stored in the repo, in memory files, or in any file. Ask the user for it each session.
+- To edit rules: `CR_PASSWORD=<from user> node tools/crypt.mjs unlock` → edit `data/library.json` → `CR_PASSWORD=<same> node tools/crypt.mjs lock` → commit only the `.enc.json`.
+- Locking with the same password keeps the salt, so players' devices update silently. A new password makes every device ask once.
+- `data/campaign.json` (DM allowlist + homebrew) and `data/seed-gandork.json` are the user's own content and stay readable.
+
+## Layout
+- `js/rules.js` math and tables · `js/gear.js` slots/armor/AC · `js/progression.js` level-up plan from class tables (levels 1–10 from the book import, 11–20 from SRD 5.2)
+- `js/data.js` loading, unlocking, update checks (file fingerprint, no version bumps needed). The readable rules are never kept in localStorage (shared quota with characters); the locked file lives in the offline cache and is opened at launch with the remembered key · `js/store.js` characters, migrations, backups
+- `js/choices.js` reads species/background/feat choices out of rules text; entries that read wrong get a `choiceFix` in the rules file ({drop, options, add, when}) · `js/equipment.js` starting-gear packages, prices, coins
+- `js/install.js` install button / desktop shortcut / phone launch (QR + copy link) · `js/qr.js` self-contained QR generator (byte mode, picks best mask). Note: the sandbox's cv2 5.0.0 and zbar can't decode QR at all — verify qr.js by matching an independent reference matrix + RS syndromes, not by local decode. Real phone cameras read it.
+- Combat/inventory: attacks + a per-character `hotbar` (attacks/spells/items/abilities) live on the Character > Combat tab; the bag is an icon grid (`itemCategory`/`speciesLook` in gear.js) with sort + a right-click/long-press action menu (`itemMenu` modal, `bindContext` in app.js)
+- `js/species.js` splits a species' rules text into facts and abilities (nothing reworded; Passive/Active/Level tags are the app's reading; an entry can carry `traitFix: {"Trait": {kind, usage, level}}`) · `js/portraits.js` user-uploaded species images in IndexedDB (shrunk, never in the repo, included in full backups) · `js/views/species.js` the species picker
+- `js/dm.js` DM editor data layer (PIN hash, local patch in `dnd-dm-v1`, per-kind SCHEMA + TEMPLATES, `applyPatch`) · `js/views/dm.js` editor screen/actions · `tools/apply-dm.mjs <changes.json>` folds an exported patch into the unlocked `library.json` + `campaign.json` enabled lists, then lock and commit. The PIN (checked by hash) is a deterrent only; the group password is the real lock. Never write the PIN or password into a file.
+- `js/creation.js` shared creation model (chapters, draft + sessionStorage persistence, validation, dependency pruning, `buildCharacter`, random generation) · `js/views/create.js` the chapter flow (Class, Species, Background, Ability Scores incl. background bonus, Skills and Gear, Name and Finish; "View progress" sheet) · `js/views/codex.js` the one portrait-list pattern used for Class, Species and Background (Trait = always on, Ability = action/limited use)
+- Character tab: `js/views/character.js` (Combat/Rolls/Features/Tools/Notes) · `js/combat.js` builds the Combat tiles from attacks, spells, features, species traits and feats (cost = the app's reading of the rules text; `block` = why it's greyed) · `js/hpbar.js` the canvas HP vial (keeps its own animation state across redraws; `applyHp` runs the hit/heal/shield effects) · hit sounds are `assets/sfx/*.mp3` played by `playSample` in `js/sfx.js`
+- `js/subtone.js` gives each subclass a tone (hue, sigil, texture, short flourish) read from its name/text/class; a subclass entry can set `tone: "fire"` to override · `js/views/subclass.js` the full-screen subclass page + list rows for the level-up subclass step
+- `js/shield.js` draws the AC shield by tier (cloth <=10, leather 11-12, wood 13-14, steel 15-17, banded 18-19, mithral 20-22, radiant 23+); sheet header (`.vitals`: wax-seal level + HP vial + shield) is in `js/views/sheet.js`; laptop layout (>=1100px: tab rail via `.sheetview`, classic sheet in `.cl-*` columns) is the last block of `css/styles.css`.
+- `js/weights.js` item weights (SRD 5.2 table, lb) + carried total; unknown items show a dash. `featBase`/`findFeat` in data.js match feats saved as "Name (option)". `askRemove` -> `confirmRemove` is the generic "Are you sure?" for removing spells/feats. Redraws mark unchanged views/modals `.still` so entrance animations only play once.
+- Sheet styles: `js/views/classic.js` is the Classic sheet (default, one page like the printed 2024 sheet); the tabbed Character tab (`character.js`) is the Advanced sheet; `APP.prefs.sheetStyle`. `js/pdf.js` `buildTemplateSheetPdf` writes onto the official 2024 sheet: its page images live in `library.sheetTemplate` inside the locked rules file (never commit them readable); coordinates are pixels on a 921x1183 picture of each page.
+- `js/views/*` screens · `js/app.js` events and actions · `service-worker.js` offline cache
+- **Bump `CACHE_VERSION` on every code or style change** (and list new files in `SHELL_FILES`). Players only get new code when it changes; the page then applies it at launch or via the "Update now" bar. Rules/campaign JSON updates live without a bump.
+
+## SRD 5.2
+- `tools/srd-import.mjs <5e-database/src/2024/en>` merges the 2024 SRD (from github.com/5e-bits/5e-database) into `data/library.json`: adds only what's missing, rebuilds the 12 SRD subclasses' features, adds class levels 11–20. Content is CC-BY-4.0: the credit is stored in `library.credits` and shown in Settings — keep it.
+
+## Before pushing
+- `node --check` every JS file; test in a real browser (Playwright, Chromium at `/opt/pw-browsers/chromium`) on phone (390×844) and laptop widths.

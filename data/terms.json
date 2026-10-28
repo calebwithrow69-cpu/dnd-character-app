@@ -1,0 +1,191 @@
+{
+  "_comment": "Short plain-English summaries of common D&D 2024 rules terms, written for this app (not book text). Book glossary entries in the locked rules file take priority over these.",
+  "terms": [
+    {
+      "name": "Reaction",
+      "text": "An instant response to a trigger, like an Opportunity Attack or the Shield spell. You get one Reaction per round, and it comes back at the start of your turn."
+    },
+    {
+      "name": "Disadvantage",
+      "text": "Roll two d20s and use the lower one. If something gives you Advantage and something else gives Disadvantage on the same roll, they cancel out and you roll one d20."
+    },
+    {
+      "name": "Saving Throw",
+      "aliases": [
+        "Save"
+      ],
+      "text": "A d20 roll to resist or avoid an effect: d20 + the ability modifier the effect names, plus your Proficiency Bonus if you're proficient in that save. Meet or beat the DC to succeed."
+    },
+    {
+      "name": "Temporary Hit Points",
+      "text": "A buffer that soaks up damage before your real Hit Points. They don't stack: if you gain more, keep whichever amount is higher. They can't be healed, and they go away when you finish a Long Rest."
+    },
+    {
+      "name": "Long Rest",
+      "text": "At least 8 hours of downtime, mostly sleeping. You regain all Hit Points and all spent Hit Point Dice, get your spell slots and most features back, and lower Exhaustion by 1. One Long Rest per 24 hours."
+    },
+    {
+      "name": "Short Rest",
+      "text": "At least 1 hour of downtime. You can spend Hit Point Dice to heal: roll each one, add your Constitution modifier, and regain that many Hit Points. Some features recharge on a Short Rest."
+    },
+    {
+      "name": "Difficult Terrain",
+      "text": "Every foot you move costs 1 extra foot. Rubble, thick brush, deep snow and other creatures' spaces are common examples."
+    },
+    {
+      "name": "Proficiency Bonus",
+      "text": "A bonus that grows with your level, from +2 at level 1 to +6 at level 17. You add it to attacks, checks and saves you're proficient in, and to your spell save DC."
+    },
+    {
+      "name": "Hit Point Dice",
+      "aliases": [
+        "Hit Dice",
+        "Hit Die"
+      ],
+      "text": "You have one per level; the die size depends on your class. Spend them during a Short Rest to heal. A Long Rest gives all spent ones back."
+    },
+    {
+      "name": "Heroic Inspiration",
+      "text": "A reward you can spend to reroll any one die you just rolled; you must use the new roll. You can hold only one at a time."
+    },
+    {
+      "name": "Opportunity Attack",
+      "text": "When a creature you can see leaves your reach, you can use your Reaction to make one melee attack against it. Taking the Disengage action avoids provoking one."
+    },
+    {
+      "name": "Resistance",
+      "text": "You take half damage (rounded down) from that damage type."
+    },
+    {
+      "name": "Vulnerability",
+      "text": "You take double damage from that damage type."
+    },
+    {
+      "name": "Immunity",
+      "text": "You take no damage from that damage type, or the named condition can't affect you."
+    },
+    {
+      "name": "Critical Hit",
+      "text": "A natural 20 on an attack roll always hits, and you roll the attack's damage dice twice. Modifiers are added only once."
+    },
+    {
+      "name": "Initiative",
+      "text": "At the start of combat everyone rolls a Dexterity check (d20 + Dexterity modifier + any bonuses). Turns go from highest to lowest."
+    },
+    {
+      "name": "Spell Save DC",
+      "text": "8 + your spellcasting ability modifier + your Proficiency Bonus. Creatures targeted by your spells roll their saves against this number."
+    },
+    {
+      "name": "Spell Attack",
+      "text": "d20 + your spellcasting ability modifier + your Proficiency Bonus, compared against the target's Armor Class."
+    },
+    {
+      "name": "Ritual",
+      "text": "A spell with the Ritual tag can be cast without spending a spell slot if you take 10 extra minutes to cast it. You need it prepared."
+    },
+    {
+      "name": "Darkvision",
+      "text": "Within range, you see in Dim Light as if it were Bright Light, and in Darkness as if it were Dim Light. In darkness you see only shades of gray."
+    },
+    {
+      "name": "Dim Light",
+      "text": "Lightly obscured: you have Disadvantage on Wisdom (Perception) checks that rely on sight."
+    },
+    {
+      "name": "Darkness",
+      "text": "Heavily obscured: you're effectively Blinded when trying to see something there."
+    },
+    {
+      "name": "Half Cover",
+      "text": "+2 to AC and Dexterity saving throws, from an obstacle blocking at least half of you."
+    },
+    {
+      "name": "Three-Quarters Cover",
+      "text": "+5 to AC and Dexterity saving throws, from an obstacle blocking about three-quarters of you."
+    },
+    {
+      "name": "Total Cover",
+      "text": "You can't be targeted directly by attacks or spells."
+    },
+    {
+      "name": "Speed",
+      "text": "How far you can move on your turn, in feet. You can split movement before and after your action."
+    },
+    {
+      "name": "Hit Points",
+      "text": "How much damage you can take. At 0 Hit Points you fall Unconscious and start making death saving throws."
+    },
+    {
+      "name": "Death Saving Throw",
+      "aliases": [
+        "Death Save"
+      ],
+      "text": "At 0 Hit Points, roll a d20 at the start of each turn: 10 or higher is a success, 9 or lower a failure. Three successes and you're stable; three failures and you die. A 1 counts as two failures; a 20 brings you back with 1 Hit Point."
+    },
+    {
+      "name": "Dash",
+      "text": "Action: gain extra movement equal to your Speed this turn."
+    },
+    {
+      "name": "Disengage",
+      "text": "Action: your movement doesn't provoke Opportunity Attacks for the rest of the turn."
+    },
+    {
+      "name": "Dodge",
+      "text": "Action: until your next turn, attacks against you have Disadvantage and you have Advantage on Dexterity saves, unless you're Incapacitated or your Speed is 0."
+    },
+    {
+      "name": "Help",
+      "text": "Action: give an ally Advantage on their next check, or on their next attack against a creature next to you."
+    },
+    {
+      "name": "Hide",
+      "text": "Action: while heavily obscured or behind cover, make a DC 15 Dexterity (Stealth) check. On a success you have the Invisible condition until you're found or give yourself away."
+    },
+    {
+      "name": "Ready",
+      "text": "Action: pick a trigger and an action; when the trigger happens before your next turn, you can use your Reaction to do it."
+    },
+    {
+      "name": "Magic",
+      "text": "Action: cast a spell or use a magic item or feature that takes a Magic action."
+    },
+    {
+      "name": "Cleave",
+      "text": "Weapon mastery. When you hit a creature with a melee attack, you can attack a second creature within 5 feet of it that's also in your reach. Don't add your ability modifier to that second hit's damage unless it's negative. Once per turn."
+    },
+    {
+      "name": "Graze",
+      "text": "Weapon mastery. If your attack misses, the target still takes damage equal to the ability modifier you used for the attack."
+    },
+    {
+      "name": "Nick",
+      "text": "Weapon mastery. The extra attack from the Light property can be made as part of the Attack action instead of using a Bonus Action. Once per turn."
+    },
+    {
+      "name": "Push",
+      "text": "Weapon mastery. On a hit, you can push a Large or smaller target up to 10 feet straight away from you."
+    },
+    {
+      "name": "Sap",
+      "text": "Weapon mastery. On a hit, the target has Disadvantage on its next attack roll before the start of your next turn."
+    },
+    {
+      "name": "Slow",
+      "text": "Weapon mastery. On a hit that deals damage, the target's Speed drops by 10 feet until the start of your next turn. Doesn't stack."
+    },
+    {
+      "name": "Topple",
+      "text": "Weapon mastery. On a hit, the target makes a Constitution save (DC 8 + the attack's ability modifier + your Proficiency Bonus) or falls Prone."
+    },
+    {
+      "name": "Vex",
+      "text": "Weapon mastery. On a hit that deals damage, you have Advantage on your next attack roll against that creature before the end of your next turn."
+    },
+    {
+      "name": "Passive Perception",
+      "text": "10 + your Wisdom (Perception) bonus. The DM compares it against hidden things, like a lurking creature or a trap, to see whether you notice them without rolling."
+    }
+  ]
+}
