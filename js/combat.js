@@ -8,7 +8,7 @@ import { optionNames, optionGroup } from "./progression.js";
 import { parseSpecies, classifyText } from "./species.js";
 
 export const COSTS = ["Action", "Bonus", "Reaction", "Passive"];
-export const COST_LABEL = { Action: "Action", Bonus: "Bonus Action", Reaction: "Reaction", Passive: "Always on", Other: "Other" };
+export const COST_LABEL = { Action: "Action", Bonus: "Bonus Action", Reaction: "Reaction", Passive: "Passive", Other: "Other" };
 const DOWN = ["Incapacitated", "Stunned", "Paralyzed", "Unconscious", "Petrified"];
 
 // Which kind of action a block of rules text uses: the earliest mention wins.
@@ -52,7 +52,7 @@ export function buildCombat(app, c, d) {
     const heavy = /heavy/i.test(w.props || "");
     let block = turnBlock(c, turn, "Action", true);
     if (!block && w.ammo && w.ammo.cur <= 0) block = `Out of ${w.ammo.name}.`;
-    add({ id: "w:" + it.id, name: it.name, cost: "Action", src: "Attack", kind: "Ability", block,
+    add({ id: "w:" + it.id, name: it.name, cost: "Action", src: "Attack", type: "attack", kind: "Ability", block,
       note: heavy && c.feats.includes("Great Weapon Master") && app.gwm ? "+PB" : "",
       act: { a: "attackRoll", id: it.id }, detail: { kind: "weapon", name: it.name }, weaponId: it.id,
       res: w.ammo ? { cur: w.ammo.cur, max: null, label: w.ammo.name } : null });
@@ -70,7 +70,7 @@ export function buildCombat(app, c, d) {
     if (!block && ref.level > 0 && !s.prepared && !s.always) block = "Not prepared. Tick it in the Spells tab to prepare it.";
     if (!block && ref.level > 0 && info && !free(ref.level)) block = "No spell slots remaining.";
     if (!block && ref.level > 0 && !info) block = "Your class doesn't give you spell slots.";
-    add({ id: "s:" + s.name, name: s.name, cost, src: ref.level ? "Spell " + ref.level : "Cantrip", kind: "Ability", block,
+    add({ id: "s:" + s.name, name: s.name, cost, src: ref.level ? "Spell " + ref.level : "Cantrip", type: "spell", level: ref.level || 0, kind: "Ability", block,
       act: { a: ref.level === 0 ? "castCantrip" : "openCast", name: s.name }, detail: { kind: "spell", name: s.name },
       conc: !!ref.conc, spell: true });
   });
@@ -87,7 +87,7 @@ export function buildCombat(app, c, d) {
     const cost = costOfText(f.text), res = resFor(f.name);
     let block = turnBlock(c, turn, cost, false);
     if (!block && res && res.cur <= 0) block = `No uses left. Back on a ${res.reset === "short" ? "short or long" : "long"} rest.`;
-    add({ id: "f:" + f.from + ":" + f.name, name: f.name, cost, src: f.from + " " + f.lv, kind: cost === "Passive" ? "Trait" : "Ability",
+    add({ id: "f:" + f.from + ":" + f.name, name: f.name, cost, src: f.from + " " + f.lv, type: "feature", lv: f.lv, kind: cost === "Passive" ? "Trait" : "Ability",
       block, res, detail: { kind: f.kind, name: f.name, from: f.from }, resIdx: res ? res.i : null,
       act: res ? { a: "useRes", i: res.i } : null });
   });
@@ -98,7 +98,7 @@ export function buildCombat(app, c, d) {
     const cost = t.kind === "active" ? costOfText(t.body) : "Passive", res = resFor(t.name);
     let block = turnBlock(c, turn, cost, false);
     if (!block && res && res.cur <= 0) block = `No uses left. Back on a ${res.reset === "short" ? "short or long" : "long"} rest.`;
-    add({ id: "t:" + t.name, name: t.name, cost, src: c.species, kind: cost === "Passive" ? "Trait" : "Ability", block, res,
+    add({ id: "t:" + t.name, name: t.name, cost, src: c.species, type: "feature", kind: cost === "Passive" ? "Trait" : "Ability", block, res,
       text: t.body, act: res ? { a: "useRes", i: res.i } : null });
   });
 
@@ -115,12 +115,12 @@ export function buildCombat(app, c, d) {
       const cost = costOfText(p), res = resFor(m[1]);
       let block = turnBlock(c, turn, cost, false);
       if (!block && res && res.cur <= 0) block = "No uses left.";
-      add({ id: "ft:" + name + ":" + m[1], name: m[1], cost, src: name, kind: cost === "Passive" ? "Trait" : "Ability", block, res,
+      add({ id: "ft:" + name + ":" + m[1], name: m[1], cost, src: name, type: "feature", kind: cost === "Passive" ? "Trait" : "Ability", block, res,
         text: p.slice(m[0].length), act: res ? { a: "useRes", i: res.i } : null });
     });
     if (!any) {
       const cost = costOfText(f.text);
-      add({ id: "ft:" + name, name, cost, src: "Feat", kind: cost === "Passive" ? "Trait" : "Ability", block: turnBlock(c, turn, cost, false),
+      add({ id: "ft:" + name, name, cost, src: "Feat", type: "feature", kind: cost === "Passive" ? "Trait" : "Ability", block: turnBlock(c, turn, cost, false),
         detail: { kind: "feat", name } });
     }
   });

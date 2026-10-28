@@ -58,7 +58,8 @@ export function renderSettingsModal(app) {
     sw("wake", "Keep screen awake", HAS_WAKE ? "Stops your phone sleeping while the app is open at the table." : "Not supported on this browser.", !!p.wake && HAS_WAKE, { disabled: !HAS_WAKE, kw: "sleep screen on" }) +
     sw("vignette", "Red edge glow at low HP", "The screen edges pulse red when you are nearly down.", p.vignette !== false, { kw: "vignette danger" }) +
     choice("sheetStyle", "Character sheet", "Classic follows the printed 2024 sheet on one page. Advanced adds Combat, Rolls, Tools and more.", [["classic", "Classic"], ["advanced", "Advanced"]], p.sheetStyle || "classic", { kw: "sheet layout classic advanced beginner" }) +
-    choice("startTab", "Open characters on", "Which tab shows first.", [["stats", "Character"], ["spells", "Spells"], ["gear", "Gear"], ["rules", "Rules"]], p.startTab || "stats", { kw: "default start tab" });
+    choice("startTab", "Open characters on", "Which tab shows first.", [["stats", "Character"], ["spells", "Spells"], ["gear", "Gear"], ["rules", "Rules"]], p.startTab || "stats", { kw: "default start tab" }) +
+    choice("rollfx", "Roll animation", "The full-screen dice roll. Crits only plays it for a natural 1 or 20.", [["full", "Full"], ["crits", "Crits only"], ["off", "Off"]], p.rollfx || "full", { kw: "dice animation effects natural 20 natural 1 reduce motion" });
 
   const access =
     choice("motion", "Animations", "Auto follows your device's reduce-motion setting.", [["auto", "Auto"], ["reduced", "Reduced"]], p.motion || "auto", { kw: "motion reduce animation" }) +

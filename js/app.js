@@ -4,6 +4,8 @@ import { feedback, sfx, setSfxEnabled, setHaptics, setVolume, preloadSamples } f
 import { mountHp, unmountHp, applyHp as hpFx } from "./hpbar.js";
 import { findTile } from "./views/character.js";
 import { turnBlock } from "./combat.js";
+import { playRollStage } from "./rollstage.js";
+import { playShow, healingFormula, SOURCES } from "./play.js";
 import { VERSION } from "./changelog.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
@@ -47,7 +49,7 @@ const LS_INSTALL = "dnd-install-dismissed";
 const APP = {
   info: new Set(), spUi: spUiDefault(), featUi: featUiDefault(),
   screen: "loading", library: null, campaign: null,
-  char: null, sheetTab: "stats", charSub: "combat", combatFilter: "All", combatSort: "avail", featFilter: "All", featSort: "level",
+  char: null, sheetTab: "stats", charSub: "play", combatFilter: "All", combatSort: "avail", featFilter: "All", featSort: "level",
   turn: { on: false, round: 0, spent: {} }, gwm: false, concPrompt: null, createDraft: null, seedGandork: null,
   roll: null, history: [], diceFormula: "",
   modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "",
@@ -74,7 +76,7 @@ async function syncWake() {
 }
 function applyPrefs() {
   const root = document.documentElement;
-  APP.turn.on = !!APP.prefs.turns;
+  APP.turn.on = APP.prefs.turns !== false;
   const setAttr = (n, on, v) => { if (on) root.setAttribute(n, v); else root.removeAttribute(n); };
   setAttr("data-contrast", APP.prefs.contrast === "high", "high");
   setAttr("data-font", APP.prefs.font === "plain", "plain");
@@ -271,6 +273,7 @@ function showRoll(title, parts, alt) {
   APP.roll = { title, parts, alt };
   pushHistory(title, parts.map(p => (parts.length > 1 ? p.label + " " : "") + p.total).join(" · "));
   render();
+  try { playRollStage(title, parts, APP.prefs.rollfx || "full"); } catch (e) { /* the roll card still shows */ }
 }
 function d20Test(title, mod) {
   const exh = APP.char ? APP.char.exhaustion * 2 : 0;
@@ -290,10 +293,50 @@ const PREF_TOGGLES = {
   vignette: { get: p => p.vignette !== false, set: (p, v) => { p.vignette = v; } },
   contrast: { get: p => p.contrast === "high", set: (p, v) => { p.contrast = v ? "high" : "normal"; } },
   bigtap: { get: p => !!p.bigtap, set: (p, v) => { p.bigtap = v; } },
-  turns: { get: p => !!p.turns, set: (p, v) => { p.turns = v; } },
+  turns: { get: p => p.turns !== false, set: (p, v) => { p.turns = v; } },
   concprompt: { get: p => !!p.concprompt, set: (p, v) => { p.concprompt = v; if (!v) APP.concPrompt = null; } },
   gwm: { get: () => !!APP.gwm, set: (p, v) => { APP.gwm = v; } }
 };
+
+// ---------------- play mode helpers ----------------
+function markSpent(e) {
+  if (APP.turn.on && ["Action", "Bonus", "Reaction"].includes(e.cost) && e.act?.a !== "attackRoll") APP.turn.spent[e.cost] = true;
+}
+function useEntry(e) {
+  if (e.type === "std") {
+    markSpent(e);
+    toast(`${e.name}: ${e.cost === "Bonus" ? "Bonus Action" : e.cost} used`);
+    render(); return;
+  }
+  markSpent(e);
+  if (e.type === "item") {
+    const it = (APP.char.inventory || []).find(x => x.id === e.itemId);
+    const f = it && healingFormula(it.name);
+    if (it && f) {
+      it.qty = Math.max(0, (it.qty || 0) - 1);
+      const r = rollFormula(f);
+      save();
+      showRoll(it.name, [{ label: "Healing", total: r.total, bd: `${f} [${r.rolls.join(", ")}]` }]);
+      return;
+    }
+  }
+  if (e.act && ACTIONS[e.act.a]) {
+    if (e.act.a === "useRes") { ACTIONS.useRes({ dataset: { i: e.act.i } }); toast(`Used ${e.name}`); render(); }
+    else ACTIONS[e.act.a]({ dataset: { id: e.act.id, name: e.act.name, close: "1" } });
+  } else { toast(`Used ${e.name}`); render(); }
+}
+function doToggle(e) {
+  const c = APP.char;
+  c.active = c.active || [];
+  const i = c.active.findIndex(a => a.id === e.id);
+  if (i >= 0) { c.active.splice(i, 1); toast(`${e.name} off`); saveAndRender(); return true; }
+  if (e.block) { toast(e.block); return false; }
+  markSpent(e);
+  c.active.push({ id: e.id, name: e.name, src: e.src });
+  queuePop("fx:" + e.id);
+  toast(`${e.name} on`); saveAndRender();
+  return true;
+}
 
 // ---------------- HP ----------------
 function hpDamageFor(amt) {
@@ -679,7 +722,7 @@ const ACTIONS = {
     const gained = syncLineageSpells(APP.char, APP.library, APP.campaign);
     save();
     if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
-    APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null; APP.turn.round = 0; APP.turn.spent = {}; APP.concPrompt = null; APP.charSub = "combat"; preloadSamples();
+    APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null; APP.turn.round = 0; APP.turn.spent = {}; APP.concPrompt = null; APP.charSub = "play"; preloadSamples();
     store.setActiveId(APP.char.id); APP.prefs.lastChar = APP.char.id; savePrefs();
     APP.screen = "sheet"; render(); window.scrollTo(0, 0);
   },
@@ -722,26 +765,39 @@ const ACTIONS = {
     const c = APP.char, d = deriveCharacter(c), e = findTile(APP, c, d, APP.modal && APP.modal.id);
     if (!e) return;
     if (e.block) { toast(e.block); return; }
-    if (APP.turn.on && ["Action", "Bonus", "Reaction"].includes(e.cost) && e.act?.a !== "attackRoll") APP.turn.spent[e.cost] = true;
-    if (e.act?.a === "openCast") { ACTIONS.openCast({ dataset: { name: e.act.name } }); return; }
+    if (e.act?.a === "openCast") { markSpent(e); ACTIONS.openCast({ dataset: { name: e.act.name } }); return; }
     closeModal();
-    if (e.act && ACTIONS[e.act.a]) {
-      if (e.act.a === "useRes") { ACTIONS.useRes({ dataset: { i: e.act.i } }); toast(`Used ${e.name}`); render(); }
-      else ACTIONS[e.act.a]({ dataset: { id: e.act.id, name: e.act.name, close: "1" } });
-    } else { toast(`Used ${e.name}`); render(); }
+    useEntry(e);
   },
   toggleActive() {
     const c = APP.char, d = deriveCharacter(c), e = findTile(APP, c, d, APP.modal && APP.modal.id);
     if (!e) return;
-    c.active = c.active || [];
-    const i = c.active.findIndex(a => a.id === e.id);
-    if (i >= 0) { c.active.splice(i, 1); closeModal(); toast(`${e.name} off`); saveAndRender(); return; }
-    if (e.block) { toast(e.block); return; }
-    if (APP.turn.on && ["Action", "Bonus", "Reaction"].includes(e.cost)) APP.turn.spent[e.cost] = true;
-    c.active.push({ id: e.id, name: e.name, src: e.src });
-    queuePop("fx:" + e.id);
-    closeModal(); toast(`${e.name} on`); saveAndRender();
+    if (doToggle(e)) closeModal();
   },
+  playUse(el) {
+    const c = APP.char, d = deriveCharacter(c), e = findTile(APP, c, d, el.dataset.id);
+    if (!e) return;
+    if (e.block && !(c.active || []).some(a => a.id === e.id)) {
+      toast(e.block);
+      const row = document.querySelector(`[data-row="${CSS.escape(el.dataset.id)}"]`);
+      if (row) { row.classList.remove("nope"); void row.offsetWidth; row.classList.add("nope"); }
+      return;
+    }
+    if (e.kind === "Ability" && !e.act && e.type === "feature" && e.cost !== "Passive") { doToggle(e); return; }
+    useEntry(e);
+  },
+  playToggle(el) {
+    const c = APP.char, d = deriveCharacter(c), e = findTile(APP, c, d, el.dataset.id);
+    if (e) doToggle(e);
+  },
+  playShow(el) {
+    const cur = playShow(APP), k = el.dataset.k, next = { ...cur, [k]: !cur[k] };
+    if (!SOURCES.some(([x]) => next[x])) { toast("Keep at least one source on"); return; }
+    APP.prefs.playShow = next; savePrefs(); render();
+  },
+  playFilter(el) { APP.playFilter = el.dataset.k; render(); },
+  playLv(el) { APP.playLv = +el.dataset.lv; render(); },
+  playPassive() { APP.playPassive = !APP.playPassive; render(); },
   endActive(el) { APP.char.active = (APP.char.active || []).filter(a => a.id !== el.dataset.id); saveAndRender(); },
   openHp() { APP.hpRes = "normal"; openModal({ type: "hp" }); },
   hpRes(el) {

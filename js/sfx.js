@@ -11,6 +11,7 @@ let haptics = true;
 let volume = 0.7;
 
 export function setSfxEnabled(v) { enabled = !!v; }
+export function buzz(pattern) { if (haptics && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) { } } }
 export function setHaptics(v) { haptics = !!v; }
 export function setVolume(pct) { volume = Math.max(0, Math.min(100, +pct)) / 100; if (master) master.gain.value = volume; }
 
@@ -75,6 +76,21 @@ const SOUNDS = {
   dice: c => {
     for (let i = 0; i < 5; i++) noise(c, { t: i * 0.045 + Math.random() * 0.02, d: 0.03, v: 0.05, f: 1500 + Math.random() * 2500 });
     tone(c, { f: 260, f2: 200, t: 0.2, d: 0.08, type: "triangle", v: 0.05 });
+  },
+  // roll stage: a tick while the die tumbles, a thump when it lands
+  rtick: c => { tone(c, { f: 700 + Math.random() * 500, d: 0.03, type: "square", v: 0.02 }); },
+  rland: c => { tone(c, { f: 150, f2: 60, d: 0.16, type: "sine", v: 0.16 }); noise(c, { d: 0.06, v: 0.05, f: 900 }); },
+  rchip: c => { tone(c, { f: 520 + Math.random() * 200, d: 0.05, type: "triangle", v: 0.04 }); },
+  rdone: c => { tone(c, { f: 440, d: 0.08, v: 0.05 }); tone(c, { f: 660, t: 0.07, d: 0.12, v: 0.05 }); },
+  nat20: c => {
+    [523, 659, 784, 1047, 1319].forEach((f, i) => tone(c, { f, t: i * 0.09, d: 0.5, v: 0.07, type: "triangle" }));
+    tone(c, { f: 130, f2: 60, d: 0.9, type: "sine", v: 0.2 }); noise(c, { d: 0.18, v: 0.05, f: 6000 });
+    [1568, 2093].forEach((f, i) => tone(c, { f, t: 0.45 + i * 0.12, d: 0.9, v: 0.03 }));
+  },
+  nat1: c => {
+    tone(c, { f: 110, f2: 38, d: 1, type: "sawtooth", v: 0.16 }); tone(c, { f: 77, f2: 30, t: 0.05, d: 1.2, type: "square", v: 0.08 });
+    noise(c, { d: 0.2, v: 0.18, f: 3000 }); noise(c, { t: 0.12, d: 0.2, v: 0.14, f: 500 });
+    [392, 370, 349, 311].forEach((f, i) => tone(c, { f, f2: f * 0.94, t: 0.3 + i * 0.16, d: 0.3, type: "sawtooth", v: 0.04 }));
   }
 };
 
@@ -106,7 +122,7 @@ export function playSample(name, gain) {
 export function sfx(kind) {
   if (!enabled) return;
   const now = performance.now();
-  if (now - last < 35) return;
+  if (now - last < 35 && !/^(r|nat)/.test(kind)) return;
   last = now;
   const c = audio();
   if (!c) return;

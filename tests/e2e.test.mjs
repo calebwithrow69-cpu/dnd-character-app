@@ -196,6 +196,50 @@ await check("random character builds and lands on a sheet", async () => {
   noErrs(p); await p.context().close();
 });
 
+await check("Play Mode: first sub-tab, groups, dimmed buttons, standard actions, roll stage (phone + laptop)", async () => {
+  for (const [w, h, o] of [[390, 844, { touch: true }], [1280, 800, {}]]) {
+    const p = await open(w, h, o); await openSample(p); await clickA(p, "setPrefV");
+    const first = await p.locator('[data-a="charSub"]').first().textContent();
+    assert(/Play Mode/.test(first), "Play Mode is not the first sub-tab: " + first);
+    assert(await p.locator(".prow").count() > 0, "no rows in Play Mode");
+    assert(await p.locator(".prow .p-ic svg").count() > 0, "rows have no icons");
+    assert(await p.locator(".pgrp").count() > 0, "no groups");
+    // standard actions are opt-in
+    assert(await p.locator('[data-row="std:dodge"]').count() === 0, "standard actions shown by default");
+    await p.locator('[data-a="playShow"][data-k="std"]').click(); await p.waitForTimeout(250);
+    for (const id of ["std:dodge", "std:influence", "std:oa"]) assert(await p.locator('[data-row="' + id + '"]').count() === 1, "missing " + id);
+    // spend the Action: Dodge dims, Opportunity Attack (Reaction) does not
+    await p.locator('[data-a="playUse"][data-id="std:dodge"]').click(); await p.waitForTimeout(250);
+    assert(await p.locator('.tpip.action.used').count() === 1, "Action pip not spent");
+    assert(await p.locator('[data-row="std:help"] .p-go.dim').count() === 1, "Help did not dim after the Action was spent");
+    assert(await p.locator('[data-row="std:oa"] .p-go.dim').count() === 0, "Opportunity Attack dimmed with Reaction free");
+    await p.locator('[data-a="playUse"][data-id="std:oa"]').click(); await p.waitForTimeout(250);
+    assert(await p.locator('[data-row="std:oa"] .p-go.dim').count() === 1, "Reaction did not dim after use");
+    assert(await p.locator('.p-go.dim[aria-disabled="true"]').count() > 0, "dim buttons are not aria-disabled");
+    // next turn restores them
+    await clickA(p, "turnNext"); await p.waitForTimeout(250);
+    assert(await p.locator('[data-row="std:help"] .p-go.dim').count() === 0, "Help still dim after Next turn");
+    // sources: cannot switch every one off
+    assert(await hscroll(p) <= 0, "hscroll in Play Mode (" + w + ")");
+    noErrs(p); await p.context().close();
+  }
+});
+
+await check("roll stage: natural 20 and natural 1 effects play and clear (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  await p.locator('[data-a="charSub"][data-sub="rolls"]').click(); await p.waitForTimeout(300);
+  for (const [val, cls] of [[20, "c20"], [1, "c1"]]) {
+    await p.evaluate(v => { crypto.getRandomValues = a => { a[0] = v - 1; return a; }; }, val);
+    await p.locator('[data-a="rollSkill"], [data-a="rollAbility"], [data-a="rollSave"]').first().click({ timeout: 4000 });
+    await p.waitForTimeout(1800);
+    const on = await p.evaluate(c => { const r = document.getElementById("rstage"); return !!r && !r.hidden && r.classList.contains(c); }, cls);
+    assert(on, "roll stage did not show " + cls);
+    await p.keyboard.press("Escape"); await p.waitForTimeout(500);
+    await p.keyboard.press("Escape"); await p.waitForTimeout(300);
+  }
+  noErrs(p); await p.context().close();
+});
+
 await check("Starry Form: turn on shows an Active chip, survives reload, long rest clears it (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
   const tile = p.locator('[data-a="openTile"][data-id*="Starry Form"]').first();
@@ -240,6 +284,7 @@ await check("level 20: dialog says max level, no 'Level up to 21'", async () => 
 
 await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again removes", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
+  if (await p.locator('[data-a="charSub"][data-sub="combat"]').count()) { await p.locator('[data-a="charSub"][data-sub="combat"]').click(); await p.waitForTimeout(300); }
   const bm = p.locator('[data-a="toggleHotbar"]').first();
   assert(await bm.getAttribute("aria-pressed") === "false", "starts pressed");
   await bm.click(); await p.waitForTimeout(80);
@@ -247,6 +292,7 @@ await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again rem
   await p.waitForTimeout(700);
   assert(await p.locator('[data-a="toggleHotbar"][aria-pressed="true"]').count() === 1, "button did not fill");
   await clickA(p, "setPrefV");
+  await p.locator('[data-a="charSub"][data-sub="combat"]').click(); await p.waitForTimeout(300);
   assert(await p.locator(".hb-slot").count() === 1, "hotbar slot missing");
   await clickA(p, "openHotbarAdd");
   const on = p.locator('#modal-root [data-a="toggleHotbar"][aria-pressed="true"]');

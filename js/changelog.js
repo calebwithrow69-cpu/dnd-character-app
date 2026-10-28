@@ -2,11 +2,33 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.5";
+export const VERSION = "0.1.6";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.6",
+    date: "2026-10-28",
+    stage: "Pre-build",
+    blurb: "Play Mode.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Play Mode, the first sub-tab on the Advanced sheet: one list of attacks, spells, features and items grouped by Action, Bonus Action, Reaction, Other and Passive. Each row has an icon in its action's colour. Buttons dim when you have no action, reaction or spell slot left; tap a dimmed button to see why.",
+          "A Show row with checkboxes for Features, Attacks, Spells, Items and Standard actions (Dodge, Dash, Disengage, Help, Hide, Influence, Ready, Search, Study, Utilize, Grapple, Shove, Opportunity Attack and more). Standard actions are off by default.",
+          "Level progression strip, shown while Features is checked. Tap a level to see what it gives.",
+          "Full-screen dice roll with special effects for a natural 20 and a natural 1. Settings > Roll animation: Full, Crits only or Off. It calms down if your device asks to reduce motion.",
+          "The turn tracker is now on by default. Healing and Superior Healing style potions roll their healing when used from Play Mode."
+        ]
+      },
+      {
+        title: "Changed",
+        items: ["\"Always on\" is now \"Passive\" in the Combat tab."]
+      }
+    ]
+  },
   {
     v: "0.1.5",
     date: "2026-10-28",

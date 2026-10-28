@@ -1,16 +1,18 @@
 // The Character tab: Combat / Rolls / Features / Tools / Notes.
-import { esc, ICONS, conditionIcon, formatText, activeChips } from "../ui.js";
+import { esc, ICONS, conditionIcon, formatText, activeChips, turnBar } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, ABILITY_SHORT, fmtMod } from "../rules.js";
 import { findByName, subclassesFor } from "../data.js";
 import { optionNames, optionGroup } from "../progression.js";
 import { buildCombat, sortCombat, COSTS, COST_LABEL } from "../combat.js";
 import { hotbar, diceTab, needsFirstChoices } from "./sheet.js";
+import { playTab } from "./play.js";
+import { playEntries } from "../play.js";
 
-export const SUBTABS = [["combat", "Combat"], ["rolls", "Rolls"], ["features", "Features"], ["tools", "Tools"], ["notes", "Notes"]];
+export const SUBTABS = [["play", "Play Mode"], ["combat", "Combat"], ["rolls", "Rolls"], ["features", "Features"], ["tools", "Tools"], ["notes", "Notes"]];
 
 export function characterBody(app, c, d) {
-  const sub = SUBTABS.some(s => s[0] === app.charSub) ? app.charSub : "combat";
-  const body = sub === "combat" ? combatTab(app, c, d) : sub === "rolls" ? rollsTab(app, c, d)
+  const sub = SUBTABS.some(s => s[0] === app.charSub) ? app.charSub : "play";
+  const body = sub === "play" ? playTab(app, c, d) : sub === "combat" ? combatTab(app, c, d) : sub === "rolls" ? rollsTab(app, c, d)
     : sub === "features" ? featuresTab(app, c, d) : sub === "tools" ? toolsTab(app, c, d) : notesTab(app, c, d);
   return `<div class="viewswap"><span class="sub2">Advanced sheet</span><button class="linkbtn" data-a="setPrefV" data-k="sheetStyle" data-v="classic">Switch to the classic sheet</button></div><div class="subtabs seg" role="group" aria-label="Character sections">
       ${SUBTABS.map(([id, label]) => `<button data-a="charSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}
@@ -27,14 +29,6 @@ function tileIcon(e) {
 // ---------------- Combat ----------------
 export function combatEntries(app, c, d) {
   return buildCombat(app, c, d);
-}
-
-function turnBar(app) {
-  const t = app.turn;
-  const pip = (k, label) => `<button class="tpip ${t.spent[k] ? "used" : ""}" data-a="turnPip" data-k="${k}" aria-pressed="${!!t.spent[k]}" aria-label="${label} ${t.spent[k] ? "used" : "available"}"><i></i>${label}</button>`;
-  return `<div class="turnbar"><div class="tround">${t.round ? `Round <b>${t.round}</b>` : "Not in combat"}</div>
-    <div class="tpips">${pip("Action", "Action")}${pip("Bonus", "Bonus")}${pip("Reaction", "Reaction")}</div>
-    <div class="btnrow">${t.round ? `<button class="btn sm pri" data-a="turnNext">Next turn</button><button class="btn sm" data-a="turnEnd">End</button>` : `<button class="btn sm pri" data-a="turnNext">Start combat</button>`}</div></div>`;
 }
 
 function combatTab(app, c, d) {
@@ -71,7 +65,7 @@ function combatTab(app, c, d) {
     ${shown.length ? `<div class="ctiles">${shown.map(tile).join("")}</div>` : `<p class="muted small" style="padding:14px 0">Nothing here for ${f === "All" ? "this character" : COST_LABEL[f].toLowerCase()} yet.</p>`}
     <p class="sub2" style="margin-top:12px">Greyed tiles can't be used right now; tap one to see why and read it. Action types are the app's reading of the rules text.</p>
     <div class="filterstrip" role="group" aria-label="Filter by action type">
-      ${["All", ...COSTS].map(k => `<button data-a="combatFilter" data-k="${k}" aria-pressed="${f === k}">${k === "Bonus" ? "Bonus" : k === "Passive" ? "Always on" : k}<span>${count(k)}</span></button>`).join("")}
+      ${["All", ...COSTS].map(k => `<button data-a="combatFilter" data-k="${k}" aria-pressed="${f === k}">${k === "Bonus" ? "Bonus" : k === "Passive" ? "Passive" : k}<span>${count(k)}</span></button>`).join("")}
     </div>`;
 }
 
@@ -184,7 +178,7 @@ function notesTab(app, c) {
 }
 
 export function findTile(app, c, d, id) {
-  return combatEntries(app, c, d).find(x => x.id === id) || null;
+  return playEntries(app, c, d).find(x => x.id === id) || null;
 }
 
 export function concBanner(app) {

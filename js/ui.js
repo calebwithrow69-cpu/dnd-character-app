@@ -171,6 +171,9 @@ export const ICONS = {
   ring: svg('<circle cx="12" cy="14" r="6"/><path d="M9 7l3-4 3 4"/>'),
   scroll: svg('<path d="M6 4h10a2 2 0 012 2v12a2 2 0 002 2H8a2 2 0 01-2-2V4zM6 4a2 2 0 00-2 2v2h4"/>'),
   plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  star: svg('<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5l-5.4 3 1.2-6L3.3 9.3l6.1-.7z"/>'),
+  flag: svg('<path d="M6 21V4M6 5h11l-2 4 2 4H6"/>'),
+  power: svg('<path d="M12 3v8M6.3 6.7a8 8 0 1011.4 0"/>'),
   grip: svg('<circle cx="9" cy="6" r="1.4" class="fill"/><circle cx="15" cy="6" r="1.4" class="fill"/><circle cx="9" cy="12" r="1.4" class="fill"/><circle cx="15" cy="12" r="1.4" class="fill"/><circle cx="9" cy="18" r="1.4" class="fill"/><circle cx="15" cy="18" r="1.4" class="fill"/>')
 };
 
@@ -222,4 +225,14 @@ export function hotbarToggle(c, kind, ref, name, withLabel) {
   const key = kind + ":" + ref, on = (c.hotbar || []).some(h => h.kind + ":" + (h.id || h.name) === key);
   const data = (kind === "spell" || kind === "ability") ? `data-name="${esc(ref)}"` : `data-id="${esc(ref)}"`;
   return `<button class="${withLabel ? "btn sm" : "iconbtn"} bm ${on ? "on" : ""}" data-a="toggleHotbar" data-kind="${kind}" ${data} data-pop="bm:${esc(key)}" aria-pressed="${on}" aria-label="${on ? "Remove " : "Add "}${esc(name)}${on ? " from" : " to"} hotbar" title="${on ? "On your hotbar (tap to remove)" : "Add to hotbar"}">${BM_ICON}${withLabel ? `<span>${on ? "On hotbar" : "Add"}</span>` : ""}</button>`;
+}
+
+
+// Action / Bonus Action / Reaction tracker used on the Combat and Play Mode tabs.
+export function turnBar(app) {
+  const t = app.turn;
+  const pip = (k, label) => `<button class="tpip ${k.toLowerCase()} ${t.spent[k] ? "used" : ""}" data-a="turnPip" data-k="${k}" aria-pressed="${!!t.spent[k]}" aria-label="${label} ${t.spent[k] ? "used" : "available"}"><i></i>${label}</button>`;
+  return `<div class="turnbar"><div class="tround">${t.round ? `Round <b>${t.round}</b>` : "Not in combat"}</div>
+    <div class="tpips">${pip("Action", "Action")}${pip("Bonus", "Bonus")}${pip("Reaction", "Reaction")}</div>
+    <div class="btnrow">${t.round ? `<button class="btn sm pri" data-a="turnNext">Next turn</button><button class="btn sm" data-a="turnEnd">End</button>` : `<button class="btn sm pri" data-a="turnNext">Start combat</button>`}</div></div>`;
 }
