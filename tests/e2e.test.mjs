@@ -196,6 +196,27 @@ await check("random character builds and lands on a sheet", async () => {
   noErrs(p); await p.context().close();
 });
 
+await check("Starry Form: turn on shows an Active chip, survives reload, long rest clears it (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  const tile = p.locator('[data-a="openTile"][data-id*="Starry Form"]').first();
+  assert(await tile.count() === 1, "no Starry Form tile on the Combat tab");
+  await tile.click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="toggleActive"]').click(); await p.waitForTimeout(400);
+  assert(await p.locator(".chip.fx").count() >= 1, "no Active chip after turning on");
+  assert(await hscroll(p) <= 0, "hscroll with chip");
+  await p.reload(); await p.waitForSelector("#home-book", { timeout: 15000 });
+  await clickA(p, "goRoster"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openHp"]');
+  assert(await p.locator(".chip.fx").count() >= 1, "Active chip lost after reload");
+  await p.locator('[data-a="endActive"]').first().click(); await p.waitForTimeout(300);
+  assert(await p.locator(".chip.fx").count() === 0, "chip x did not turn it off");
+  await p.locator('[data-a="openTile"][data-id*="Starry Form"]').first().click();
+  await p.locator('[data-a="toggleActive"]').click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="charSub"][data-sub="tools"]').click(); await p.waitForTimeout(300);
+  await clickA(p, "openLongRest"); await clickA(p, "confirmLongRest"); await p.waitForTimeout(400);
+  assert(await p.locator(".chip.fx").count() === 0, "long rest did not clear it");
+  noErrs(p); await p.context().close();
+});
+
 await check("characters survive a reload", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
   await p.reload(); await p.waitForSelector("#home-book", { timeout: 15000 }); await clickA(p, "goRoster");

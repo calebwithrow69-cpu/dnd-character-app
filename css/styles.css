@@ -147,6 +147,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--amber);flex:none;
 .chip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;font-size:.84rem;background:var(--panel);min-height:34px;overflow:hidden;max-width:100%}
 .chip.conc{border-color:var(--blue);color:var(--blue)}
 .chip.cond{border-color:var(--red);color:var(--red)}
+.chip.fx{border-color:var(--green);color:var(--green)}
 
 
 
@@ -348,7 +349,7 @@ b.lead{color:var(--ink);font-weight:600}
 /* ---- conditions ---- */
 .cicon{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .cicon .fill{fill:currentColor;stroke:none}
-.chip.cond,.chip.conc{padding:0;gap:0}
+.chip.cond,.chip.conc,.chip.fx{padding:0;gap:0}
 .chip .chip-main{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 10px;font:inherit;color:inherit;background:none;border:0;min-height:34px;white-space:nowrap;width:auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .chip .chip-x{width:32px;height:34px;flex:none;display:grid;place-items:center;border:0;border-left:1px solid currentColor;border-radius:0;background:none;color:inherit;opacity:.8}
 .chip .chip-x svg{width:13px;height:13px}
@@ -794,6 +795,8 @@ g[data-worn].pop{animation:wornIn .45s cubic-bezier(.3,.9,.3,1.4)}
 .ctile.bonus::before{background:var(--green)}
 .ctile.reaction::before{background:var(--blue)}
 .ctile:active{transform:scale(.98)}
+.ctile.fxon{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
+.ctile.fxon .ct-cost{color:var(--green);font-weight:700}
 .ct-ic{width:20px;height:20px;color:var(--muted)}
 .ct-ic svg{width:20px;height:20px}
 .ct-nm{font-family:var(--display);font-weight:700;font-size:.92rem;line-height:1.15}

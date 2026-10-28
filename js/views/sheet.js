@@ -1,4 +1,4 @@
-import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow } from "../ui.js";
+import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, activeChips } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
@@ -38,6 +38,7 @@ export function renderSheet(app) {
   const dying = c.hp.cur <= 0;
 
   const chips = [
+    activeChips(c, true),
     c.concentration ? `<span class="chip conc"><button class="chip-main" data-term="spell:${esc(c.concentration)}"><span class="sub2" style="color:inherit">Concentrating</span> ${esc(c.concentration)}</button><button class="chip-x" data-a="endConc" aria-label="End concentration">${ICONS.close}</button></span>` : "",
     ...c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button><button class="chip-x" data-a="removeCondition" data-name="${esc(x)}" aria-label="Remove ${esc(x)}">${ICONS.close}</button></span>`),
     c.exhaustion > 0 ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion} <span class="sub2" style="color:inherit">−${c.exhaustion * 2} to d20s</span></button></span>` : "",

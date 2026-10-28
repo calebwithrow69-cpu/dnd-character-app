@@ -717,6 +717,18 @@ const ACTIONS = {
       else ACTIONS[e.act.a]({ dataset: { id: e.act.id, name: e.act.name, close: "1" } });
     } else { toast(`Used ${e.name}`); render(); }
   },
+  toggleActive() {
+    const c = APP.char, d = deriveCharacter(c), e = findTile(APP, c, d, APP.modal && APP.modal.id);
+    if (!e) return;
+    c.active = c.active || [];
+    const i = c.active.findIndex(a => a.id === e.id);
+    if (i >= 0) { c.active.splice(i, 1); closeModal(); toast(`${e.name} off`); saveAndRender(); return; }
+    if (e.block) { toast(e.block); return; }
+    if (APP.turn.on && ["Action", "Bonus", "Reaction"].includes(e.cost)) APP.turn.spent[e.cost] = true;
+    c.active.push({ id: e.id, name: e.name, src: e.src });
+    closeModal(); toast(`${e.name} on`); saveAndRender();
+  },
+  endActive(el) { APP.char.active = (APP.char.active || []).filter(a => a.id !== el.dataset.id); saveAndRender(); },
   openHp() { APP.hpRes = "normal"; openModal({ type: "hp" }); },
   hpRes(el) {
     APP.hpRes = el.dataset.v;
@@ -994,6 +1006,7 @@ const ACTIONS = {
     const c = APP.char;
     slotRows(c.class, c.level).filter(r => r.pact).forEach(r => { c.spellcasting.slotsUsed[r.level - 1] = 0; });
     c.resources.forEach(r => { if (r.reset === "short") r.used = 0; });
+    c.active = [];
     save(); closeModal();
     toast("Short rest done" + (c.class === "Warlock" ? " — pact slots back" : ""));
   },
@@ -1007,6 +1020,7 @@ const ACTIONS = {
     c.deathSaves = { success: 0, fail: 0 };
     c.exhaustion = Math.max(0, c.exhaustion - 1);
     c.concentration = null;
+    c.active = [];
     save(); closeModal();
     toast("Long rest: everything restored");
   },

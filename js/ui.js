@@ -210,3 +210,8 @@ export function platform() {
   const standalone = window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
   return { ios, android, inApp, standalone, desktop: !ios && !android };
 }
+
+// "Turned on" abilities (Starry Form, Rage...) as chips. The player marks them; the app does not apply their effects.
+export function activeChips(c, withEnd) {
+  return (c.active || []).map(a => `<span class="chip fx"><button class="chip-main" data-a="openTile" data-id="${esc(a.id)}"><span class="sub2" style="color:inherit">Active</span> ${esc(a.name)}</button>${withEnd ? `<button class="chip-x" data-a="endActive" data-id="${esc(a.id)}" aria-label="Turn off ${esc(a.name)}">${ICONS.close}</button>` : ""}</span>`).join("");
+}

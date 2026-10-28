@@ -48,10 +48,12 @@ export function renderModal(app) {
       const text = e.detail ? detailFor(app, e.detail.kind, e.detail.name, null, e.detail.from).body : formatText(e.text || "");
       const verb = e.src === "Attack" ? "Attack" : e.spell ? (e.src === "Cantrip" ? "Cast" : "Cast...") : e.res ? "Use (spend 1)" : "Use";
       const usable = e.cost !== "Passive" && (e.act || ["Action", "Bonus", "Reaction"].includes(e.cost));
-      const body = `<div class="tilehead"><span class="tag amber">${COST_LABEL[e.cost]}</span><span class="tag">${esc(e.src)}</span>${e.conc ? `<span class="tag blue">Concentration</span>` : ""}${e.res && e.res.max != null ? `<span class="tag">${e.res.cur}/${e.res.max} left</span>` : ""}</div>
+      const isOn = (c.active || []).some(a => a.id === e.id);
+      const canToggle = e.cost !== "Passive" && !e.spell && e.src !== "Attack";
+      const body = `<div class="tilehead"><span class="tag amber">${COST_LABEL[e.cost]}</span><span class="tag">${esc(e.src)}</span>${e.conc ? `<span class="tag blue">Concentration</span>` : ""}${isOn ? `<span class="tag green">Active</span>` : ""}${e.res && e.res.max != null ? `<span class="tag">${e.res.cur}/${e.res.max} left</span>` : ""}</div>
         ${e.block ? `<div class="tilewhy" role="note"><b>Can't use this right now</b><span>${esc(e.block)}</span></div>` : ""}
-        ${text}${e.cost !== "Passive" && !e.detail ? `<p class="sub2" style="margin-top:10px">The action type is the app's reading of the text above.</p>` : ""}`;
-      return modalShell(e.name, body, `<button class="btn" data-a="closeModal">Done</button>${usable ? `<button class="btn pri" data-a="tileUse" ${e.block ? "disabled" : ""}>${verb}</button>` : ""}`);
+        ${text}${e.cost !== "Passive" && !e.detail ? `<p class="sub2" style="margin-top:10px">The action type is the app's reading of the text above.</p>` : ""}${canToggle ? `<p class="sub2" style="margin-top:10px">Turn on shows it as an Active chip on your sheet until you turn it off or take a rest. The app does not apply its effects for you.</p>` : ""}`;
+      return modalShell(e.name, body, `<button class="btn" data-a="closeModal">Done</button>${canToggle ? `<button class="btn" data-a="toggleActive" ${!isOn && e.block ? "disabled" : ""}>${isOn ? "Turn off" : "Turn on"}</button>` : ""}${usable ? `<button class="btn pri" data-a="tileUse" ${e.block ? "disabled" : ""}>${verb}</button>` : ""}`);
     }
 
     case "picker": {

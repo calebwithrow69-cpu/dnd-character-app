@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.4";
+export const VERSION = "0.1.5";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.5",
+    date: "2026-10-28",
+    stage: "Pre-build",
+    blurb: "Active abilities.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Turn on an ability (Starry Form, Rage and so on) from its detail on the Combat tab. It shows as an Active chip on your sheet until you turn it off or take a rest. The app only tracks that it is on; it does not apply its effects for you yet."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.4",
     date: "2026-10-27",

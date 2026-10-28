@@ -33,7 +33,7 @@ export function normalize(c, library) {
     speed: Number(c.speed) || 30, initBonus: Number(c.initBonus) || 0, size: c.size || "",
     hitDice: { total: c.level || 1, spent: 0, die: cls ? cls.hd : 8, ...(c.hitDice || {}) },
     deathSaves: { success: 0, fail: 0, ...(c.deathSaves || {}) },
-    conditions: c.conditions || [], exhaustion: Number(c.exhaustion) || 0,
+    conditions: c.conditions || [], active: Array.isArray(c.active) ? c.active.filter(a => a && a.id && a.name) : [], exhaustion: Number(c.exhaustion) || 0,
     concentration: c.concentration || null,
     spellcasting: {
       slotsUsed: Array(10).fill(0),

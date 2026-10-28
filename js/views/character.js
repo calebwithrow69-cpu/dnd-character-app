@@ -1,5 +1,5 @@
 // The Character tab: Combat / Rolls / Features / Tools / Notes.
-import { esc, ICONS, conditionIcon, formatText } from "../ui.js";
+import { esc, ICONS, conditionIcon, formatText, activeChips } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, ABILITY_SHORT, fmtMod } from "../rules.js";
 import { findByName, subclassesFor } from "../data.js";
 import { optionNames, optionGroup } from "../progression.js";
@@ -48,11 +48,12 @@ function combatTab(app, c, d) {
   const gwm = c.feats.includes("Great Weapon Master");
   const heavy = all.some(e => e.weaponId && /heavy/i.test((c.inventory.find(i => i.id === e.weaponId)?.weapon?.props) || ""));
 
-  const tile = e => `<button class="ctile ${e.block ? "off" : ""} ${e.cost.toLowerCase()}" data-a="openTile" data-id="${esc(e.id)}" aria-label="${esc(e.name)}, ${COST_LABEL[e.cost]}${e.block ? ", unavailable: " + esc(e.block) : ""}">
+  const onIds = new Set((c.active || []).map(a => a.id));
+  const tile = e => `<button class="ctile ${e.block ? "off" : ""} ${onIds.has(e.id) ? "fxon" : ""} ${e.cost.toLowerCase()}" data-a="openTile" data-id="${esc(e.id)}" aria-label="${esc(e.name)}, ${COST_LABEL[e.cost]}${e.block ? ", unavailable: " + esc(e.block) : ""}">
       <span class="ct-ic">${tileIcon(e)}</span>
       <span class="ct-nm">${esc(e.name)}</span>
       <span class="ct-sub">${e.res ? (e.res.max != null ? `${e.res.cur}/${e.res.max} left` : `${e.res.cur} ${esc(e.res.label)}`) : esc(e.src)}${e.note ? ` · ${e.note}` : ""}</span>
-      <span class="ct-cost">${e.block ? "Unavailable" : COST_LABEL[e.cost]}</span>
+      <span class="ct-cost">${onIds.has(e.id) ? "Active" : e.block ? "Unavailable" : COST_LABEL[e.cost]}</span>
     </button>`;
 
   return `
@@ -150,7 +151,7 @@ function toolsTab(app, c, d) {
     </div></div>
     ${trackersPanel(c)}
     <div class="panel"><div class="panel-head"><h2>Conditions</h2><button class="btn sm" data-a="openConditions">Change</button></div>
-      <div class="panel-body">${c.conditions.length || c.exhaustion ? `<div class="chips" style="margin:0">${c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button></span>`).join("")}${c.exhaustion ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion}</button></span>` : ""}</div><p class="sub2" style="margin-top:8px">Tap a condition to see what it does.</p>` : `<span class="muted small">None</span>`}</div></div>
+      <div class="panel-body">${c.conditions.length || c.exhaustion || (c.active || []).length ? `<div class="chips" style="margin:0">${activeChips(c, true)}${c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button></span>`).join("")}${c.exhaustion ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion}</button></span>` : ""}</div><p class="sub2" style="margin-top:8px">Tap a condition to see what it does.</p>` : `<span class="muted small">None</span>`}</div></div>
     <h2 class="toolh">Dice tray</h2>
     ${diceTab(app)}`;
 }
