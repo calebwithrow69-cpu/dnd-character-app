@@ -43,6 +43,7 @@ export function normalize(c, library) {
     resources: (c.resources || []).map(r => ({ reset: "long", used: 0, max: 1, ...r })),
     inventory: c.inventory || [],
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0, ...(c.coins || {}) },
+    wielded: typeof c.wielded === "string" ? c.wielded : "", furyChoice: c.furyChoice === "Potent Spellcasting" ? "Potent Spellcasting" : "",
     classFeatureNotes: c.classFeatureNotes || "", notes: c.notes || "",
     alignment: c.alignment || "", appearance: c.appearance || "", backstory: c.backstory || ""
   };

@@ -2,11 +2,30 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.6";
+export const VERSION = "0.1.7";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.7",
+    date: "2026-10-28",
+    stage: "Pre-build",
+    blurb: "Play Mode redesign and interactive rolls.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Play Mode now follows the laptop design: sections rail, list with a one-line summary under every ability (to-hit, damage or save DC, range), a detail panel and a roll log. Phones get the same list in one column.",
+          "Only the weapon in your hand can attack. Swap weapon is a Bonus Action that picks a different one from your bag. Items shows only things you can use now.",
+          "Feats are their own group. A feat with several benefits (Lucky, War Caster) opens into a submenu of its abilities. Lucky now tracks Luck Points.",
+          "Rolls wait for a tap. A switch in the corner picks Disadvantage, Normal or Advantage and rolls two dice. After the attack you roll damage with a second tap.",
+          "Add-ons appear on the roll screen and can be ignored: Lucky advantage before a d20, Primal Strike (+1d8, once per turn) after a weapon hit, Chalice on healing spells while Starry Form is on, and a Luminous Arrow attack for Starry Form.",
+          "Keyboard shortcuts for laptops (/ search, J and K move, Enter use, N next turn, 1 2 3 spend Action, Bonus Action, Reaction). Settings > Keyboard shortcuts turns them off."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.6",
     date: "2026-10-28",

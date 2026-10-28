@@ -88,7 +88,7 @@ export function buildCombat(app, c, d) {
     let block = turnBlock(c, turn, cost, false);
     if (!block && res && res.cur <= 0) block = `No uses left. Back on a ${res.reset === "short" ? "short or long" : "long"} rest.`;
     add({ id: "f:" + f.from + ":" + f.name, name: f.name, cost, src: f.from + " " + f.lv, type: "feature", lv: f.lv, kind: cost === "Passive" ? "Trait" : "Ability",
-      block, res, detail: { kind: f.kind, name: f.name, from: f.from }, resIdx: res ? res.i : null,
+      block, res, text: f.text, detail: { kind: f.kind, name: f.name, from: f.from }, resIdx: res ? res.i : null,
       act: res ? { a: "useRes", i: res.i } : null });
   });
 

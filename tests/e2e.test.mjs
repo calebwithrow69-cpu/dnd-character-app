@@ -46,6 +46,7 @@ const URL_ = "http://localhost:" + server.address().port + "/";
 // ---- tiny harness ----
 const results = [];
 const check = async (name, fn) => {
+  if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
   try { await fn(); results.push([true, name]); console.log("PASS", name); }
   catch (e) { results.push([false, name]); console.log("FAIL", name, "-", String(e.message || e).split("\n")[0]); }
 };
@@ -157,9 +158,13 @@ await check("level-up menu opens (laptop)", async () => {
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
 });
 
-await check("rolling a skill shows a result card", async () => {
+await check("rolling a skill: stage waits for a tap, then the result card stays", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
-  await p.locator('[data-a="rollSkill"]').first().click(); await p.waitForTimeout(500);
+  await p.locator('[data-a="rollSkill"]').first().click(); await p.waitForTimeout(400);
+  assert(await p.locator("#rstage:not([hidden]) .rs-main").isVisible(), "stage is not waiting for a tap");
+  assert(await p.locator("#roll-root *").count() === 0, "result shown before the roll");
+  await p.locator(".rs-main").click(); await p.waitForTimeout(2600);
+  await p.locator(".rs-done").click(); await p.waitForTimeout(400);
   assert(await p.locator("#roll-root *").count() > 0, "no roll card"); noErrs(p); await p.context().close();
 });
 
@@ -201,8 +206,8 @@ await check("Play Mode: first sub-tab, groups, dimmed buttons, standard actions,
     const p = await open(w, h, o); await openSample(p); await clickA(p, "setPrefV");
     const first = await p.locator('[data-a="charSub"]').first().textContent();
     assert(/Play Mode/.test(first), "Play Mode is not the first sub-tab: " + first);
-    assert(await p.locator(".prow").count() > 0, "no rows in Play Mode");
-    assert(await p.locator(".prow .p-ic svg").count() > 0, "rows have no icons");
+    assert(await p.locator(".row").count() > 0, "no rows in Play Mode");
+    assert(await p.locator(".row .r-ic svg").count() > 0, "rows have no icons");
     assert(await p.locator(".pgrp").count() > 0, "no groups");
     // standard actions are opt-in
     assert(await p.locator('[data-row="std:dodge"]').count() === 0, "standard actions shown by default");
@@ -210,38 +215,101 @@ await check("Play Mode: first sub-tab, groups, dimmed buttons, standard actions,
     for (const id of ["std:dodge", "std:influence", "std:oa"]) assert(await p.locator('[data-row="' + id + '"]').count() === 1, "missing " + id);
     // spend the Action: Dodge dims, Opportunity Attack (Reaction) does not
     await p.locator('[data-a="playUse"][data-id="std:dodge"]').click(); await p.waitForTimeout(250);
-    assert(await p.locator('.tpip.action.used').count() === 1, "Action pip not spent");
-    assert(await p.locator('[data-row="std:help"] .p-go.dim').count() === 1, "Help did not dim after the Action was spent");
-    assert(await p.locator('[data-row="std:oa"] .p-go.dim').count() === 0, "Opportunity Attack dimmed with Reaction free");
+    assert(await p.locator('.tk[data-k="Action"][aria-pressed="true"]').count() === 1, "Action not spent");
+    assert(await p.locator('[data-row="std:help"] .r-go.dim').count() === 1, "Help did not dim after the Action was spent");
+    assert(await p.locator('[data-row="std:oa"] .r-go.dim').count() === 0, "Opportunity Attack dimmed with Reaction free");
     await p.locator('[data-a="playUse"][data-id="std:oa"]').click(); await p.waitForTimeout(250);
-    assert(await p.locator('[data-row="std:oa"] .p-go.dim').count() === 1, "Reaction did not dim after use");
-    assert(await p.locator('.p-go.dim[aria-disabled="true"]').count() > 0, "dim buttons are not aria-disabled");
+    assert(await p.locator('[data-row="std:oa"] .r-go.dim').count() === 1, "Reaction did not dim after use");
+    assert(await p.locator('.r-go.dim[aria-disabled="true"]').count() > 0, "dim buttons are not aria-disabled");
     // next turn restores them
     await clickA(p, "turnNext"); await p.waitForTimeout(250);
-    assert(await p.locator('[data-row="std:help"] .p-go.dim').count() === 0, "Help still dim after Next turn");
+    assert(await p.locator('[data-row="std:help"] .r-go.dim').count() === 0, "Help still dim after Next turn");
     // sources: cannot switch every one off
     assert(await hscroll(p) <= 0, "hscroll in Play Mode (" + w + ")");
     noErrs(p); await p.context().close();
   }
 });
 
-await check("roll stage: natural 20 and natural 1 effects play and clear (phone)", async () => {
+await check("roll stage: nat 20 / nat 1 effects, advantage and disadvantage, Lucky, Primal Strike (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
   await p.locator('[data-a="charSub"][data-sub="rolls"]').click(); await p.waitForTimeout(300);
+  const seq = async list => p.evaluate(l => { window.__q = l.slice(); crypto.getRandomValues = a => { a[0] = (window.__q.length ? window.__q.shift() : 10) - 1; return a; }; }, list);
+  const start = async () => { await p.locator('[data-a="rollSkill"], [data-a="rollAbility"], [data-a="rollSave"]').first().click({ timeout: 4000 }); await p.waitForTimeout(300); };
+  const close = async () => { await p.locator(".rs-done").click(); await p.waitForTimeout(400); };
   for (const [val, cls] of [[20, "c20"], [1, "c1"]]) {
-    await p.evaluate(v => { crypto.getRandomValues = a => { a[0] = v - 1; return a; }; }, val);
-    await p.locator('[data-a="rollSkill"], [data-a="rollAbility"], [data-a="rollSave"]').first().click({ timeout: 4000 });
-    await p.waitForTimeout(1800);
-    const on = await p.evaluate(c => { const r = document.getElementById("rstage"); return !!r && !r.hidden && r.classList.contains(c); }, cls);
-    assert(on, "roll stage did not show " + cls);
-    await p.keyboard.press("Escape"); await p.waitForTimeout(500);
-    await p.keyboard.press("Escape"); await p.waitForTimeout(300);
+    await seq([val]); await start(); await p.locator(".rs-main").click(); await p.waitForTimeout(2200);
+    assert(await p.evaluate(c => document.getElementById("rstage").classList.contains(c), cls), "roll stage did not show " + cls);
+    await close();
   }
+  await seq([4, 15]); await start();
+  await p.locator('.rs-adv [data-m="adv"]').click(); await p.waitForTimeout(150);
+  assert(await p.locator(".rs-d2").isVisible(), "second die not shown for advantage");
+  await p.locator(".rs-main").click(); await p.waitForTimeout(2400);
+  assert(await p.locator(".rs-die.lose").count() === 1, "advantage did not drop one die");
+  assert(/^15\b/.test(await p.locator(".rs-line").innerText()), "advantage did not keep the higher die");
+  await close();
+  await seq([4, 15]); await start();
+  await p.locator('.rs-adv [data-m="dis"]').click(); await p.locator(".rs-main").click(); await p.waitForTimeout(2400);
+  assert(/^4\b/.test(await p.locator(".rs-line").innerText()), "disadvantage did not keep the lower die");
+  await close();
+  await seq([9, 15]); await start();
+  assert(await p.locator('.rs-opts [data-id="lucky"]').count() === 1, "no Lucky option before the roll");
+  await p.locator('.rs-opts [data-id="lucky"]').click(); await p.locator(".rs-main").click(); await p.waitForTimeout(2400);
+  assert(await p.locator(".rs-die.lose").count() === 1, "Lucky did not give advantage");
+  await close();
+  noErrs(p); await p.context().close();
+});
+
+await check("attack: tap to roll, damage on a second tap, Primal Strike offered after and can be ignored (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  await p.evaluate(() => { crypto.getRandomValues = a => { a[0] = 9; return a; }; });
+  await p.locator('.row.t-attack [data-a="playUse"]').first().click(); await p.waitForTimeout(400);
+  assert(await p.locator(".rs-main").isVisible(), "attack did not wait for a tap");
+  await p.locator(".rs-main").click(); await p.waitForTimeout(2200);
+  assert(/damage/i.test(await p.locator(".rs-main").innerText()), "no damage roll step after the attack");
+  assert(await p.locator('.rs-opts [data-id="primal"]').count() === 0, "rider offered before damage");
+  await p.locator(".rs-main").click(); await p.waitForTimeout(1500);
+  assert(await p.locator('.rs-opts [data-id="primal"]').count() === 1, "Primal Strike not offered after damage");
+  await p.locator('.rs-opts [data-id="primal"]').click(); await p.waitForTimeout(1200);
+  assert(await p.locator(".rs-opts [data-id=primal]").isDisabled(), "Primal Strike can be added twice");
+  await p.locator(".rs-done").click(); await p.waitForTimeout(400);
+  assert(await p.locator("#roll-root *").count() > 0, "no roll card after closing");
+  noErrs(p); await p.context().close();
+});
+
+await check("attack: you can skip the add-ons and close the screen (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  await p.locator('.row.t-attack [data-a="playUse"]').first().click(); await p.waitForTimeout(300);
+  await p.locator(".rs-main").click(); await p.waitForTimeout(2200);
+  await p.locator(".rs-done").click(); await p.waitForTimeout(300);
+  assert(await p.locator("#rstage:not([hidden])").count() === 0, "stage did not close");
+  noErrs(p); await p.context().close();
+});
+
+await check("Play Mode: only the weapon in hand attacks; Swap weapon is a Bonus Action; feats are one group with a submenu (laptop)", async () => {
+  const p = await open(1280, 800, {}); await openSample(p); await clickA(p, "setPrefV");
+  assert(await p.locator('.pm-list .row.t-attack:not([data-row="x:swap"]) ').count() === 1, "more than one weapon attack row");
+  assert(await p.locator('[data-row="x:swap"][data-cost="Bonus"]').count() === 1, "no Swap weapon bonus action");
+  await p.locator('[data-a="playUse"][data-id="x:swap"]').click(); await p.waitForTimeout(300);
+  assert(await p.locator('[data-a="swapTo"]').count() >= 2, "swap list is empty");
+  await p.locator('[data-a="swapTo"]:not([disabled])').first().click(); await p.waitForTimeout(400);
+  assert(await p.locator('.tk[data-k="Bonus"][aria-pressed="true"]').count() === 1, "swap did not spend the Bonus Action");
+  assert(await p.locator('#pg-Feat').count() === 1, "no Feats group");
+  assert(await p.locator('[data-row="feat:Lucky"]').count() === 1, "Lucky is not a feat row");
+  await p.locator('[data-a="playFeat"][data-id="feat:Lucky"]').click(); await p.waitForTimeout(300);
+  assert(await p.locator(".kids .row").count() >= 2, "feat submenu did not open");
+  assert((await p.locator('.pm-list .row.t-attack .sm').first().innerText()).match(/to hit/), "no to-hit detail under the attack");
+  // keyboard shortcuts on, then off in settings
+  assert(await p.locator(".pm-keys").count() === 1, "shortcut bar missing");
+  await p.keyboard.press("2"); await p.waitForTimeout(200);
+  assert(await p.locator('.tk[data-k="Bonus"][aria-pressed="false"]').count() === 1, "key 2 did not toggle Bonus Action");
+  await p.evaluate(() => document.querySelector('[data-a="togglePref"][data-k="keys"]'));
   noErrs(p); await p.context().close();
 });
 
 await check("Starry Form: turn on shows an Active chip, survives reload, long rest clears it (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  await p.locator('[data-a="charSub"][data-sub="combat"]').click(); await p.waitForTimeout(300);
   const tile = p.locator('[data-a="openTile"][data-id*="Starry Form"]').first();
   assert(await tile.count() === 1, "no Starry Form tile on the Combat tab");
   await tile.click(); await p.waitForTimeout(300);
@@ -253,6 +321,7 @@ await check("Starry Form: turn on shows an Active chip, survives reload, long re
   assert(await p.locator(".chip.fx").count() >= 1, "Active chip lost after reload");
   await p.locator('[data-a="endActive"]').first().click(); await p.waitForTimeout(300);
   assert(await p.locator(".chip.fx").count() === 0, "chip x did not turn it off");
+  await p.locator('[data-a="charSub"][data-sub="combat"]').click(); await p.waitForTimeout(300);
   await p.locator('[data-a="openTile"][data-id*="Starry Form"]').first().click();
   await p.locator('[data-a="toggleActive"]').click(); await p.waitForTimeout(300);
   await p.locator('[data-a="charSub"][data-sub="tools"]').click(); await p.waitForTimeout(300);

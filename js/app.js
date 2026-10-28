@@ -4,8 +4,9 @@ import { feedback, sfx, setSfxEnabled, setHaptics, setVolume, preloadSamples } f
 import { mountHp, unmountHp, applyHp as hpFx } from "./hpbar.js";
 import { findTile } from "./views/character.js";
 import { turnBlock } from "./combat.js";
-import { playRollStage } from "./rollstage.js";
-import { playShow, healingFormula, SOURCES } from "./play.js";
+import { playRollStage, startRoll, rollStageOpen } from "./rollstage.js";
+import { playShow, healingFormula, SOURCES, wieldedId, playEntries } from "./play.js";
+import { ridersFor } from "./riders.js";
 import { VERSION } from "./changelog.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
@@ -50,7 +51,7 @@ const APP = {
   info: new Set(), spUi: spUiDefault(), featUi: featUiDefault(),
   screen: "loading", library: null, campaign: null,
   char: null, sheetTab: "stats", charSub: "play", combatFilter: "All", combatSort: "avail", featFilter: "All", featSort: "level",
-  turn: { on: false, round: 0, spent: {} }, gwm: false, concPrompt: null, createDraft: null, seedGandork: null,
+  turn: { on: false, round: 0, spent: {}, once: {} }, gwm: false, concPrompt: null, createDraft: null, seedGandork: null,
   roll: null, history: [], diceFormula: "",
   modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "",
   glossaryCat: "", glossaryClass: "", glossarySubclass: "",
@@ -275,14 +276,28 @@ function showRoll(title, parts, alt) {
   render();
   try { playRollStage(title, parts, APP.prefs.rollfx || "full"); } catch (e) { /* the roll card still shows */ }
 }
+// Every interactive roll goes through here: the stage waits for a tap, lets you pick
+// advantage or disadvantage, then offers add-ons (Lucky, Primal Strike...) you can ignore.
+function commitRoll(title, parts, alt) {
+  APP.roll = { title, parts, alt };
+  pushHistory(title, parts.map(p => (parts.length > 1 ? p.label + " " : "") + p.total).join(" \u00b7 "));
+  render();
+}
+function rollSpec(spec, hooks = {}) {
+  const c = APP.char;
+  startRoll(spec, {
+    mode: APP.prefs.rollfx || "full",
+    commit: (parts, alt) => commitRoll(spec.title, parts, alt),
+    spend: name => { const r = c.resources.find(x => x.name === name); if (r && r.max - r.used > 0) { r.used += 1; save(); } },
+    markOnce: id => { APP.turn.once = APP.turn.once || {}; APP.turn.once[id] = true; },
+    onceUsed: id => !!(APP.turn.once && APP.turn.once[id]),
+    onRoll: hooks.onRoll
+  });
+}
 function d20Test(title, mod) {
-  const exh = APP.char ? APP.char.exhaustion * 2 : 0;
-  const eff = mod - exh;
-  const r = rollD20(eff);
-  const modTxt = eff ? ` ${eff > 0 ? "+" : "−"} ${Math.abs(eff)}` : "";
-  showRoll(title, [{ label: r.crit ? "Natural 20!" : r.fumble ? "Natural 1" : "Result", total: r.total, bd: `[${r.first}]${modTxt}`, crit: r.crit, fumble: r.fumble }],
-    `With advantage <b>${r.adv}</b> · with disadvantage <b>${r.dis}</b> <span class="sub2">(second die ${r.second})</span>${exh ? ` · includes −${exh} exhaustion` : ""}`);
-  return r;
+  const c = APP.char, d = deriveCharacter(c);
+  const exh = c.exhaustion * 2;
+  rollSpec({ title, d20: { mod: mod - exh, label: "Result" }, riders: ridersFor(APP, c, d, { kind: "check" }), notes: exh ? `includes \u2212${exh} exhaustion` : "" });
 }
 
 // ---------------- settings toggles ----------------
@@ -294,6 +309,7 @@ const PREF_TOGGLES = {
   contrast: { get: p => p.contrast === "high", set: (p, v) => { p.contrast = v ? "high" : "normal"; } },
   bigtap: { get: p => !!p.bigtap, set: (p, v) => { p.bigtap = v; } },
   turns: { get: p => p.turns !== false, set: (p, v) => { p.turns = v; } },
+  keys: { get: p => p.keys !== false, set: (p, v) => { p.keys = v; } },
   concprompt: { get: p => !!p.concprompt, set: (p, v) => { p.concprompt = v; if (!v) APP.concPrompt = null; } },
   gwm: { get: () => !!APP.gwm, set: (p, v) => { APP.gwm = v; } }
 };
@@ -466,6 +482,7 @@ function bindEvents() {
   document.addEventListener("change", onChange);
   document.addEventListener("input", onInput);
   document.addEventListener("submit", onSubmit);
+  document.addEventListener("keydown", playKeys);
   document.addEventListener("scroll", e => { const t = e.target; if (t && t.classList && t.classList.contains("scscroll")) t.classList.toggle("past", t.scrollTop > 150); }, true);
   document.addEventListener("keydown", e => { if (e.key === "Escape" && APP.progressOpen) { APP.progressOpen = false; render(); } else if (e.key === "Escape" && APP.featUi && APP.featUi.open) { APP.featUi.open = null; render(); } else if (e.key === "Escape" && APP.modal) closeModal(); });
   window.addEventListener("popstate", () => {
@@ -564,9 +581,31 @@ function refreshWizardChrome() {
   saveDraft(d);
 }
 
+// Play Mode keyboard shortcuts (laptop). Settings > Keyboard shortcuts turns them off.
+function playKeys(e) {
+  if (APP.screen !== "sheet" || APP.prefs.keys === false || APP.modal || rollStageOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+  if ((APP.prefs.sheetStyle || "classic") !== "advanced" || APP.sheetTab !== "stats" || APP.charSub !== "play") return;
+  const t = e.target, typing = t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+  if (typing) { if (e.key === "Escape" && t.id === "pm-q") { t.blur(); } return; }
+  const k = e.key;
+  const ids = () => [...document.querySelectorAll(".pm-list [data-row]")].map(r => r.dataset.row);
+  if (k === "/") { e.preventDefault(); const q = document.getElementById("pm-q"); if (q) q.focus(); return; }
+  if (k === "j" || k === "k") {
+    const list = ids(); if (!list.length) return;
+    const cur = document.querySelector(".pm-list .row.sel"), i = cur ? list.indexOf(cur.dataset.row) : -1;
+    APP.playSel = list[Math.max(0, Math.min(list.length - 1, i + (k === "j" ? 1 : -1)))]; e.preventDefault(); render();
+    const row = document.querySelector(".pm-list .row.sel"); if (row) row.scrollIntoView({ block: "nearest" }); return;
+  }
+  if (k === "Enter" && t && !/^(BUTTON|A)$/.test(t.tagName)) {
+    const cur = document.querySelector(".pm-list .row.sel"); if (cur) { e.preventDefault(); ACTIONS.playUse({ dataset: { id: cur.dataset.row } }); } return;
+  }
+  if (k === "n") { ACTIONS.turnNext(); return; }
+  if (k === "1" || k === "2" || k === "3") { ACTIONS.turnPip({ dataset: { k: { 1: "Action", 2: "Bonus", 3: "Reaction" }[k] } }); }
+}
 function onInput(e) {
   const el = e.target, ds = el.dataset;
   if (el.id === "f-name" && APP.createDraft) { APP.createDraft.name = el.value; refreshWizardChrome(); return; }
+  if (el.id === "pm-q") { APP.playQ = el.value; render(); return; }
   if (el.id === "f-formula") { APP.diceFormula = el.value; return; }
   if (el.id === "hp-amt") { updateHpPreview(); return; }
   if (ds.prefRange) {
@@ -750,8 +789,8 @@ const ACTIONS = {
   featFilter(el) { APP.featFilter = el.dataset.k; render(); },
   featSort(el) { APP.featSort = el.value; render(); },
   turnPip(el) { const s = APP.turn.spent, k = el.dataset.k; if (s[k]) delete s[k]; else s[k] = true; render(); },
-  turnNext() { APP.turn.round += 1; APP.turn.spent = {}; render(); },
-  turnEnd() { APP.turn.round = 0; APP.turn.spent = {}; render(); },
+  turnNext() { APP.turn.round += 1; APP.turn.spent = {}; APP.turn.once = {}; render(); },
+  turnEnd() { APP.turn.round = 0; APP.turn.spent = {}; APP.turn.once = {}; render(); },
   toggleInsp() { APP.char.inspiration = !APP.char.inspiration; saveAndRender(); toast(APP.char.inspiration ? "Heroic Inspiration gained" : "Heroic Inspiration spent"); },
   concKeep() { APP.concPrompt = null; render(); },
   concLose() { APP.char.concentration = null; APP.concPrompt = null; saveAndRender(); toast("Concentration ended"); },
@@ -796,6 +835,18 @@ const ACTIONS = {
     APP.prefs.playShow = next; savePrefs(); render();
   },
   playFilter(el) { APP.playFilter = el.dataset.k; render(); },
+  playSel(el) {
+    const id = el.dataset.id;
+    if (matchMedia("(min-width:1100px)").matches) { APP.playSel = id; render(); return; }
+    if (/^feat:/.test(id)) { ACTIONS.playFeat({ dataset: { id } }); return; }
+    openModal({ type: "tile", id });
+  },
+  playFeat(el) {
+    const s = new Set(APP.playFeatOpen || []); if (s.has(el.dataset.id)) s.delete(el.dataset.id); else s.add(el.dataset.id);
+    APP.playFeatOpen = [...s]; render();
+  },
+  playJump(el) { const g = document.getElementById("pg-" + el.dataset.g); if (g) g.scrollIntoView({ behavior: "smooth", block: "start" }); },
+  playClear() { APP.playQ = ""; APP.playFilter = "All"; render(); },
   playLv(el) { APP.playLv = +el.dataset.lv; render(); },
   playPassive() { APP.playPassive = !APP.playPassive; render(); },
   endActive(el) { APP.char.active = (APP.char.active || []).filter(a => a.id !== el.dataset.id); saveAndRender(); },
@@ -1420,33 +1471,32 @@ const ACTIONS = {
   attackRoll(el) {
     if (el.dataset && el.dataset.close && APP.modal) closeModal();
     const c = APP.char, it = itemById(c, el.dataset.id); if (!it || !it.weapon) return;
-    const w = it.weapon;
-    if (w.ammo) {
-      if (w.ammo.cur <= 0) { toast(`Out of ${w.ammo.name}`); return; }
-      w.ammo.cur -= 1; save();
-    }
-    const n = weaponNumbers(w, c);
-    const exh = c.exhaustion * 2;
-    const hit = rollD20(n.toHit - exh);
-    const pb = APP.gwm && c.feats.includes("Great Weapon Master") && /heavy/i.test(w.props || "") ? deriveCharacter(c).prof : 0;
-    if (APP.turn.on && APP.turn.spent.Action !== true) APP.turn.spent.Action = "attack";
-    const dmg = rollFormula(`${n.dice}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""}${pb ? "+" + pb : ""}`);
-    const extra = rollFormula(n.dice);
-    if (!dmg) { toast(`Can't read the damage dice "${n.dice}"`); return; }
-    const critTotal = dmg.total + (extra ? extra.total : 0);
-    const modTxt = hit.mod ? ` ${hit.mod > 0 ? "+" : "−"} ${Math.abs(hit.mod)}` : "";
-    const parts = [
-      { label: hit.crit ? "Natural 20!" : hit.fumble ? "Natural 1" : "To hit", total: hit.total, bd: `[${hit.first}]${modTxt}`, crit: hit.crit, fumble: hit.fumble },
-      hit.crit
-        ? { label: "Crit damage", total: Math.max(0, critTotal), bd: describeGroups(dmg) + (extra ? " + " + describeGroups(extra) : ""), crit: true }
-        : { label: `Damage${w.dtype ? " · " + w.dtype : ""}`, total: Math.max(0, dmg.total), bd: describeGroups(dmg) }
-    ];
-    const gwmTxt = pb ? ` \u00b7 includes +${pb} Heavy Weapon Mastery on a hit` : "";
-    const mastery = w.mastery && (c.masteries || []).includes(it.name) ? ` · mastery: <b>${w.mastery}</b>` : "";
-    showRoll(`${it.name} attack${w.ammo ? ` · ${w.ammo.cur} ${w.ammo.name} left` : ""}`, parts,
-      `Advantage to hit <b>${hit.adv}</b> · disadvantage <b>${hit.dis}</b>${hit.crit ? "" : ` · if it's a crit: <b>${Math.max(0, critTotal)}</b> damage`}${gwmTxt}${mastery}`);
+    const w = it.weapon, d = deriveCharacter(c);
+    if (w.ammo && w.ammo.cur <= 0) { toast(`Out of ${w.ammo.name}`); return; }
+    const n = weaponNumbers(w, c), exh = c.exhaustion * 2;
+    const pb = APP.gwm && c.feats.includes("Great Weapon Master") && /heavy/i.test(w.props || "") ? d.prof : 0;
+    const mastery = w.mastery && (c.masteries || []).includes(it.name) ? `mastery: ${w.mastery}` : "";
+    rollSpec({
+      title: `${it.name} attack${w.ammo ? ` \u00b7 ${w.ammo.cur - 1} ${w.ammo.name} left` : ""}`,
+      d20: { mod: n.toHit - exh, label: "To hit" },
+      dmg: { dice: n.dice, mod: n.dmgMod + pb, type: w.dtype || "", label: "Damage" },
+      riders: ridersFor(APP, c, d, { kind: "weapon" }),
+      notes: [pb ? `includes +${pb} Heavy Weapon Mastery on a hit` : "", mastery].filter(Boolean).join(" \u00b7 ")
+    }, { onRoll: () => { if (w.ammo && w.ammo.cur > 0) w.ammo.cur -= 1; if (APP.turn.on && APP.turn.spent.Action !== true) APP.turn.spent.Action = "attack"; save(); } });
   },
-
+  starryArrow() {
+    const c = APP.char, d = deriveCharacter(c), si = d.spellInfo; if (!si) return;
+    rollSpec({ title: "Luminous Arrow", d20: { mod: si.attackBonus - c.exhaustion * 2, label: "Ranged spell attack" },
+      dmg: { dice: c.level >= 10 ? "2d8" : "1d8", mod: si.mod, type: "radiant", label: "Damage" }, riders: ridersFor(APP, c, d, { kind: "spell", cantrip: false }), notes: "Starry Form: Archer" },
+    { onRoll: () => { if (APP.turn.on) APP.turn.spent.Bonus = true; save(); } });
+  },
+  openSwap() { openModal({ type: "swap" }); },
+  swapTo(el) {
+    const c = APP.char, it = itemById(c, el.dataset.id); if (!it) return;
+    c.wielded = it.id;
+    if (APP.turn.on) APP.turn.spent.Bonus = true;
+    closeModal(); saveAndRender(); toast(`${it.name} in hand`);
+  },
   // dice tab
   quickRoll(el) {
     const sides = +el.dataset.sides, count = +(el.dataset.count || 1);
@@ -1623,26 +1673,21 @@ function spellRoll(sp, slotLevel) {
   const c = APP.char, info = analyzeSpell(sp), d = deriveCharacter(c), si = d.spellInfo;
   if (!si || (!info.attack && !info.save && !info.damage && !info.heal)) return false;
   const opts = { charLevel: c.level, slotLevel, spellLevel: sp.level };
-  const parts = [];
-  let crit = false, altBits = [];
-  if (info.attack) {
-    const r = rollD20(si.attackBonus - c.exhaustion * 2);
-    crit = r.crit;
-    parts.push({ label: r.crit ? "Natural 20!" : r.fumble ? "Natural 1" : info.attack, total: r.total, bd: `[${r.first}] ${fmtMod(r.mod).replace("+", "+ ").replace("−", "− ")}`, crit: r.crit, fumble: r.fumble });
-    altBits.push(`Advantage <b>${r.adv}</b> · disadvantage <b>${r.dis}</b>`);
-  }
-  if (info.save) parts.push({ label: `${info.save} save`, total: si.dc, bd: `DC${info.half ? " · half damage on a success" : ""}` });
+  const spec = { title: `${sp.name}${slotLevel ? ` \u00b7 level ${slotLevel} slot` : sp.level === 0 ? " \u00b7 cantrip" : ""}`, d20: null, info: [], dmg: null };
+  const altBits = [];
+  if (info.attack) spec.d20 = { mod: si.attackBonus - c.exhaustion * 2, label: info.attack };
+  if (info.save) spec.info.push({ label: `${info.save} save`, total: si.dc, bd: `DC${info.half ? " \u00b7 half damage on a success" : ""}` });
   const fx = info.damage || info.heal;
   if (fx) {
     const dice = castDice(fx.dice, info, opts);
-    const mod = (fx.flat || 0) + (fx.addMod ? si.mod : 0);
-    const f = `${crit ? dice.replace(/^(\d+)/, n => 2 * n) : dice}${mod ? (mod > 0 ? "+" : "") + mod : ""}`;
-    const r = rollFormula(f);
-    if (r) parts.push({ label: info.heal ? "Healing" : `${crit ? "Crit damage" : "Damage"}${info.damage?.type ? " · " + info.damage.type : ""}`, total: Math.max(0, r.total), bd: describeGroups(r), crit });
+    spec.dmg = { dice, mod: (fx.flat || 0) + (fx.addMod ? si.mod : 0), type: info.damage ? info.damage.type || "" : "", label: info.heal ? "Healing" : "Damage" };
     if (slotLevel > sp.level && info.upcast) altBits.push(`upcast at level ${slotLevel}`);
     if (sp.level === 0 && info.cantripScale && dice !== fx.dice) altBits.push(`${dice} at your level`);
   }
-  showRoll(`${sp.name}${slotLevel ? ` · level ${slotLevel} slot` : sp.level === 0 ? " · cantrip" : ""}`, parts, altBits.join(" · "));
+  spec.riders = ridersFor(APP, c, d, { kind: "spell", cantrip: sp.level === 0, heal: !!info.heal });
+  if (!spec.d20) spec.riders.pre = [];
+  spec.notes = altBits.join(" \u00b7 ");
+  rollSpec(spec);
   return true;
 }
 

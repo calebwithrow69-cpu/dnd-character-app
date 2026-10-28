@@ -3,12 +3,15 @@
 // has. Builds on combat.js so the costs, blocks and resources stay in one place.
 // The standard-action wording below is a short summary, not rules text.
 import { buildCombat, turnBlock } from "./combat.js";
-import { itemCategory } from "./gear.js";
-import { findByName } from "./data.js";
+import { itemCategory, weaponsOf, itemById } from "./gear.js";
+import { findByName, findFeat } from "./data.js";
 import { optionNames, optionGroup } from "./progression.js";
+import { weaponNumbers, fmtMod } from "./rules.js";
+import { analyzeSpell, castDice } from "./spells.js";
+import { ensureLuck, starryOn } from "./riders.js";
 
-export const SOURCES = [["feature", "Features"], ["attack", "Attacks"], ["spell", "Spells"], ["item", "Items"], ["std", "Standard actions"]];
-export const DEFAULT_SHOW = { feature: true, attack: true, spell: true, item: true, std: false };
+export const SOURCES = [["feature", "Class features"], ["feat", "Feats"], ["attack", "Attacks"], ["spell", "Spells"], ["item", "Items"], ["std", "Standard actions"]];
+export const DEFAULT_SHOW = { feature: true, feat: true, attack: true, spell: true, item: true, std: false };
 
 export function playShow(app) {
   const s = (app.prefs && app.prefs.playShow) || {};
@@ -42,20 +45,128 @@ export function healingFormula(name) {
   return m ? POTION_ROLL[(m[1] || "").trim().toLowerCase()] : null;
 }
 
+// The weapon in your hand: the one you chose with Swap weapon, else the main-hand
+// weapon, else the first one in the bag. Only that weapon can be attacked with here.
+export function wieldedId(c) {
+  const ws = weaponsOf(c);
+  if (c.wielded && ws.some(w => w.id === c.wielded)) return c.wielded;
+  const main = c.equipment && c.equipment.main;
+  if (main && ws.some(w => w.id === main)) return main;
+  return ws.length ? ws[0].id : "";
+}
+
+// First sentence of a rules text, for the line under a name.
+export function gist(text, max = 118) {
+  const t = String(text || "").replace(/\*\*|__|#+ /g, "").replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  const m = /^(.{30,}?[.!?])(\s|$)/.exec(t);
+  const one = m ? m[1] : t;
+  return one.length > max ? one.slice(0, max - 1).replace(/\s+\S*$/, "") + "\u2026" : one;
+}
+
+function weaponRange(w) {
+  const p = String((w && w.props) || "");
+  const r = /Range\s*\(?\s*(\d+)\s*\/\s*(\d+)/i.exec(p) || /Thrown\s*\(\s*(\d+)\s*\/\s*(\d+)/i.exec(p);
+  if (r) return `Range ${r[1]}/${r[2]} ft`;
+  if (w && w.kind === "Ranged") return "Ranged";
+  return /\breach\b/i.test(p) ? "Reach 10 ft" : "Reach 5 ft";
+}
+
+function subOf(app, c, d, e) {
+  if (e.type === "attack" && e.weaponId) {
+    const it = itemById(c, e.weaponId), w = it && it.weapon;
+    if (!w) return "";
+    const n = weaponNumbers(w, c);
+    return `${fmtMod(n.toHit)} to hit \u00b7 ${n.dice}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${String(w.dtype || "").toLowerCase()} \u00b7 ${weaponRange(w)}`.replace(/\s+\u00b7/g, " \u00b7");
+  }
+  if (e.type === "spell") {
+    const ref = findByName(app.library.spells, e.name), si = d.spellInfo;
+    if (!ref) return "";
+    const a = analyzeSpell(ref), bits = [];
+    if (si && a.attack) bits.push(`${fmtMod(si.attackBonus)} ${a.attack.toLowerCase()}`);
+    if (si && a.save) bits.push(`${a.save.slice(0, 3)} save DC ${si.dc}`);
+    const fx = a.damage || a.heal;
+    if (fx) {
+      const dice = castDice(fx.dice, a, { charLevel: c.level, slotLevel: ref.level, spellLevel: ref.level });
+      const mod = (fx.flat || 0) + (fx.addMod && si ? si.mod : 0);
+      bits.push(a.heal ? `Heals ${dice}${mod ? "+" + mod : ""}` : `${dice}${mod ? "+" + mod : ""} ${String(fx.type || "").toLowerCase()}`.trim());
+    }
+    if (!bits.length) return gist(ref.text, 90);
+    if (ref.range) bits.push(String(ref.range).replace(/ feet?/i, " ft"));
+    return bits.join(" \u00b7 ");
+  }
+  if (e.type === "item") { const f = healingFormula(e.name); return f ? `Heals ${f}` : gist(e.text); }
+  if (e.type === "std") return gist(e.text);
+  if (e.sub) return e.sub;
+  if (e.text) return gist(e.text);
+  if (e.detail && e.detail.kind) {
+    const L = app.library;
+    if (e.detail.kind === "feat") { const f = findFeat(L.feats, e.detail.name); return f ? gist(f.text) : ""; }
+  }
+  return "";
+}
+
+const USABLE_ITEM = it => { const cat = itemCategory(it); return cat === "potion" || cat === "scroll" || /\bwand\b/i.test(it.name || ""); };
+
 export function playEntries(app, c, d) {
-  const out = buildCombat(app, c, d).map(e => ({ ...e, type: e.type || "feature" }));
-  const turn = app.turn;
-  (c.inventory || []).forEach(it => {
-    const cat = itemCategory(it);
-    if (cat !== "potion" && cat !== "scroll") return;
-    const cost = cat === "potion" ? "Bonus" : "Action", qty = it.qty || 0;
-    let block = turnBlock(c, turn, cost, false);
-    if (!block && qty <= 0) block = "None left.";
-    out.push({ id: "i:" + it.id, name: it.name, cost, src: cat === "potion" ? "Potion" : "Scroll", type: "item", kind: "Ability", block,
-      res: { cur: qty, max: null, label: "left" }, text: it.notes || (cat === "potion" ? "Drinking a potion takes a Bonus Action." : "Reading a scroll takes the action its spell needs."),
-      act: { a: "useItem", id: it.id }, itemId: it.id });
+  ensureLuck(c);
+  const turn = app.turn, wid = wieldedId(c), out = [];
+  const raw = buildCombat(app, c, d);
+  const featKids = new Map();
+  const luckI = (c.resources || []).findIndex(r => r.name === "Luck Points");
+  raw.forEach(e0 => {
+    const e = { ...e0, type: e0.type || "feature" };
+    if (e.type === "attack" && e.weaponId && e.weaponId !== wid) return;
+    if (/^ft:/.test(e.id)) {
+      const fname = e.src === "Feat" ? e.name : e.src;
+      if (e.src !== "Feat" && luckI >= 0 && fname === "Lucky" && /^(Luck Points|Advantage|Disadvantage)$/.test(e.name)) {
+        const r = c.resources[luckI];
+        e.res = { i: luckI, cur: r.max - r.used, max: r.max, reset: "long" }; e.act = { a: "useRes", i: luckI };
+        e.cost = e.name === "Luck Points" ? "Other" : e.cost === "Passive" ? "Other" : e.cost;
+        e.block = r.max - r.used <= 0 ? "No Luck Points left. They come back on a long rest." : "";
+      }
+      if (!featKids.has(fname)) featKids.set(fname, []);
+      if (e.src !== "Feat") { e.sub = subOf(app, c, d, e); featKids.get(fname).push(e); }
+      return;
+    }
+    e.sub = subOf(app, c, d, e);
+    out.push(e);
   });
-  STD.forEach(s => out.push({ id: "std:" + s.id, name: s.name, cost: s.cost, src: "Standard", type: "std", kind: "Ability", block: turnBlock(c, turn, s.cost, false), text: s.text, act: null }));
+  const L = app.library;
+  featKids.forEach((kids, name) => {
+    const f = findFeat(L.feats, name);
+    out.push({ id: "feat:" + name, name, cost: "Feat", src: "Feat", type: "feat", kind: "Trait", block: "", kids,
+      sub: kids.length ? `${kids.length} abilit${kids.length === 1 ? "y" : "ies"}` : gist(f && f.text),
+      detail: { kind: "feat", name }, text: f ? f.text : "" });
+  });
+  // Swap weapon and the Starry Form arrow
+  const ws = weaponsOf(c);
+  if (ws.length) {
+    const cur = ws.find(w => w.id === wid);
+    out.push({ id: "x:swap", name: "Swap weapon", cost: "Bonus", src: "Attack", type: "attack", kind: "Ability",
+      block: turnBlock(c, turn, "Bonus", false) || (ws.length < 2 ? "No other weapon in your bag." : ""),
+      act: { a: "openSwap" }, sub: `In hand: ${cur ? cur.name : "nothing"}`,
+      text: "Draw a different weapon from your bag as a Bonus Action. You can only attack with the weapon in your hand." });
+  }
+  const si = d.spellInfo;
+  if (si && starryOn(c)) {
+    const dice = c.level >= 10 ? "2d8" : "1d8";
+    out.push({ id: "x:archer", name: "Luminous Arrow", cost: "Bonus", src: "Starry Form", type: "attack", kind: "Ability",
+      block: turnBlock(c, turn, "Bonus", false), act: { a: "starryArrow" },
+      sub: `${fmtMod(si.attackBonus)} ranged spell attack \u00b7 ${dice}${si.mod ? "+" + si.mod : ""} radiant \u00b7 60 ft`,
+      text: "Archer constellation: make a ranged spell attack. On a hit it deals radiant damage." });
+  }
+  (c.inventory || []).forEach(it => {
+    if (!USABLE_ITEM(it)) return;
+    const cat = itemCategory(it), qty = it.qty || 0;
+    if (qty <= 0) return;
+    const cost = cat === "potion" ? "Bonus" : "Action";
+    out.push({ id: "i:" + it.id, name: it.name, cost, src: cat === "potion" ? "Potion" : cat === "scroll" ? "Scroll" : "Wand", type: "item", kind: "Ability",
+      block: turnBlock(c, turn, cost, false), res: { cur: qty, max: null, label: "left" },
+      text: it.notes || (cat === "potion" ? "Drinking a potion takes a Bonus Action." : "Uses the action its spell needs."), act: { a: "useItem", id: it.id }, itemId: it.id,
+      sub: healingFormula(it.name) ? `Heals ${healingFormula(it.name)}` : gist(it.notes) });
+  });
+  STD.forEach(s => out.push({ id: "std:" + s.id, name: s.name, cost: s.cost, src: "Standard", type: "std", kind: "Ability", block: turnBlock(c, turn, s.cost, false), text: s.text, act: null, sub: gist(s.text) }));
   return out;
 }
 

@@ -59,7 +59,8 @@ export function renderSettingsModal(app) {
     sw("vignette", "Red edge glow at low HP", "The screen edges pulse red when you are nearly down.", p.vignette !== false, { kw: "vignette danger" }) +
     choice("sheetStyle", "Character sheet", "Classic follows the printed 2024 sheet on one page. Advanced adds Combat, Rolls, Tools and more.", [["classic", "Classic"], ["advanced", "Advanced"]], p.sheetStyle || "classic", { kw: "sheet layout classic advanced beginner" }) +
     choice("startTab", "Open characters on", "Which tab shows first.", [["stats", "Character"], ["spells", "Spells"], ["gear", "Gear"], ["rules", "Rules"]], p.startTab || "stats", { kw: "default start tab" }) +
-    choice("rollfx", "Roll animation", "The full-screen dice roll. Crits only plays it for a natural 1 or 20.", [["full", "Full"], ["crits", "Crits only"], ["off", "Off"]], p.rollfx || "full", { kw: "dice animation effects natural 20 natural 1 reduce motion" });
+    choice("rollfx", "Roll animation", "The full-screen dice roll. Crits only skips the tumble but keeps the natural 1 and 20 effects. Off keeps the screen but drops the motion.", [["full", "Full"], ["crits", "Crits only"], ["off", "Off"]], p.rollfx || "full", { kw: "dice animation effects natural 20 natural 1 reduce motion" }) +
+    sw("keys", "Keyboard shortcuts", "Play Mode on a laptop: / search, J and K move, Enter uses, N next turn, 1 2 3 mark Action, Bonus Action and Reaction. Also shows the shortcut bar.", p.keys !== false, { kw: "keyboard keys hotkeys shortcuts buttons controls" });
 
   const access =
     choice("motion", "Animations", "Auto follows your device's reduce-motion setting.", [["auto", "Auto"], ["reduced", "Reduced"]], p.motion || "auto", { kw: "motion reduce animation" }) +

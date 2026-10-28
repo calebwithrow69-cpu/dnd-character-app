@@ -17,6 +17,8 @@ import { customValid, loadCustom } from "../custombg.js";
 import { shopStock, walletCp, fmtPrice } from "../equipment.js";
 import { findTile } from "./character.js";
 import { COST_LABEL } from "../combat.js";
+import { wieldedId } from "../play.js";
+import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
 
 export function renderModal(app) {
@@ -54,6 +56,16 @@ export function renderModal(app) {
         ${e.block ? `<div class="tilewhy" role="note"><b>Can't use this right now</b><span>${esc(e.block)}</span></div>` : ""}
         ${text}${e.cost !== "Passive" && !e.detail ? `<p class="sub2" style="margin-top:10px">The action type is the app's reading of the text above.</p>` : ""}${canToggle ? `<p class="sub2" style="margin-top:10px">Turn on shows it as an Active chip on your sheet until you turn it off or take a rest. The app does not apply its effects for you.</p>` : ""}`;
       return modalShell(e.name, body, `<button class="btn" data-a="closeModal">Done</button>${canToggle ? `<button class="btn" data-a="toggleActive" ${!isOn && e.block ? "disabled" : ""}>${isOn ? "Turn off" : "Turn on"}</button>` : ""}${usable ? `<button class="btn pri" data-a="tileUse" ${e.block ? "disabled" : ""}>${verb}</button>` : ""}`);
+    }
+
+    case "swap": {
+      const ws = weaponsOf(c), cur = wieldedId(c);
+      const rows = ws.map(it => {
+        const w = it.weapon, n = weaponNumbers(w, c);
+        return `<button class="optcard" data-a="swapTo" data-id="${esc(it.id)}" ${it.id === cur ? "disabled" : ""}>
+          <span class="grow"><b>${esc(it.name)}${it.id === cur ? " (in hand)" : ""}</b><span>${fmtMod(n.toHit)} to hit \u00b7 ${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${esc(String(w.dtype || "").toLowerCase())}</span></span></button>`;
+      }).join("");
+      return modalShell("Swap weapon", `<p class="sub2" style="margin-bottom:8px">Drawing a weapon takes a Bonus Action. You can only attack with the weapon in your hand.</p><div class="optlist" style="margin-top:0">${rows}</div>`, `<button class="btn" data-a="closeModal">Cancel</button>`);
     }
 
     case "picker": {

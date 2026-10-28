@@ -178,7 +178,8 @@ function notesTab(app, c) {
 }
 
 export function findTile(app, c, d, id) {
-  return playEntries(app, c, d).find(x => x.id === id) || null;
+  const all = playEntries(app, c, d).flatMap(e => [e, ...(e.kids || [])]);
+  return all.find(x => x.id === id) || buildCombat(app, c, d).find(x => x.id === id) || null;
 }
 
 export function concBanner(app) {
