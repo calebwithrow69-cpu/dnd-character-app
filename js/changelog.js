@@ -16,7 +16,15 @@ export const CHANGELOG = [
       {
         title: "New",
         items: [
-          "Turn on an ability (Starry Form, Rage and so on) from its detail on the Combat tab. It shows as an Active chip on your sheet until you turn it off or take a rest. The app only tracks that it is on; it does not apply its effects for you yet."
+          "Turn on an ability (Starry Form, Rage and so on) from its detail on the Combat tab. It shows as an Active chip on your sheet until you turn it off or take a rest. The app only tracks that it is on; it does not apply its effects for you yet.",
+          "Hotbar buttons are now bookmarks: tap to add (the bookmark fills with a pop and the new slot appears), tap again to remove. The same small pop plays when you prepare a spell, favorite something in the picker or turn an ability on."
+        ]
+      },
+      {
+        title: "Fixed",
+        items: [
+          "The XP bar and the numbers now agree. The bar always showed progress through your current level (25,000 XP at level 7 is 2,000 of 11,000, so 18%) while the text showed the total; the dialog and sheet now say which is which.",
+          "At level 20 the level dialog no longer offers to level up to 21."
         ]
       }
     ]

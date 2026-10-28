@@ -1,4 +1,4 @@
-import { esc, modalShell, searchBox, ICONS } from "../ui.js";
+import { esc, modalShell, searchBox, ICONS, hotbarToggle } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, CONDITIONS, abilityMod, fmtMod, deriveCharacter, hpAverageGain, slotRows
 } from "../rules.js";
@@ -193,7 +193,7 @@ export function renderModal(app) {
         const key = kind + ":" + idOrName, on = already.has(key);
         const data = kind === "spell" || kind === "ability" ? `data-name="${esc(idOrName)}"` : `data-id="${esc(idOrName)}"`;
         return `<div class="rowline"><span class="nm">${esc(label)}${sub2 ? ` <span class="sub2">${esc(sub2)}</span>` : ""}</span>
-          <button class="btn sm ${on ? "" : "pri"}" data-a="addHotbar" data-kind="${kind}" ${data} ${on ? "disabled" : ""}>${on ? "Added" : "Add"}</button></div>`;
+          ${hotbarToggle(c, kind, idOrName, label, true)}</div>`;
       };
       const feRows = [...((cls?.features) || []), ...((sub?.features) || [])].filter(f => f.lv <= c.level && f.name && f.name !== "Subclass Feature" && !f.intro)
         .map(f => addRow("ability", f.name, f.name, `Lv ${f.lv}`));
@@ -429,15 +429,17 @@ function renderCustomBg(app) {
 }
 
 function renderLevelMenu(app) {
-  const c = app.char, next = c.level + 1, need = xpForLevel(next), have = c.xp || 0, mode = c.levelMode || "xp";
+  const c = app.char;
+  if (c.level >= 20) return modalShell("Max level", `<p>${esc(c.name)} is level 20, the highest level. There is nothing left to level up to.</p>`, `<button class="btn pri" data-a="closeModal">Done</button>`);
+  const next = c.level + 1, need = xpForLevel(next), have = c.xp || 0, mode = c.levelMode || "xp";
   const enough = have >= need, pct = Math.max(0, Math.min(100, Math.round((have - xpForLevel(c.level)) / Math.max(1, need - xpForLevel(c.level)) * 100)));
   const n = v => Number(v).toLocaleString();
   const body = `<div class="seg" role="group" aria-label="How do you level up?">
       <button data-a="lvlMode" data-v="xp" aria-pressed="${mode === "xp"}">Experience points</button>
       <button data-a="lvlMode" data-v="milestone" aria-pressed="${mode === "milestone"}">Milestone</button></div>
-    ${mode === "xp" ? `<p style="margin-top:12px"><b class="num">${n(have)}</b> XP now. Level ${next} needs <b class="num">${n(need)}</b>.</p>
+    ${mode === "xp" ? `<p style="margin-top:12px"><b class="num">${n(have)}</b> XP in total. Level ${next} starts at <b class="num">${n(need)}</b>.</p>
       <div class="hpbar" style="height:10px;margin:8px 0;border-radius:5px;background:var(--panel2);overflow:hidden"><div style="height:100%;width:${enough ? 100 : pct}%;background:var(--amber)"></div></div>
-      <p class="sub2">${enough ? `You have enough XP for level ${next}.` : `${n(need - have)} XP to go.`}</p>
+      <p class="sub2">${enough ? `You have enough XP for level ${next}.` : `The bar is your progress through level ${c.level}: ${n(Math.max(0, have - xpForLevel(c.level)))} of ${n(need - xpForLevel(c.level))} XP. ${n(need - have)} to go.`}</p>
       <div class="field" style="margin-top:12px"><label>Add the XP you just earned</label>
         <div style="display:flex;gap:8px"><input class="f" id="xp-add" type="number" inputmode="numeric" min="0" placeholder="e.g. 450" style="flex:1" aria-label="XP to add"><button class="btn" data-a="addXp">Add</button></div></div>
       <div class="field"><label>Or set your total XP</label>

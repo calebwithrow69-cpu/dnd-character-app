@@ -166,6 +166,17 @@ function setRules() {
   APP.campaign = r.campaign; APP._rulesIndex = null;
   syncCustom(APP.library);
 }
+// One-shot "pop" feedback: an action queues keys, the next draw plays the animation on [data-pop=key] once.
+function queuePop(...keys) { APP._pop = (APP._pop || []).concat(keys); }
+function applyPops() {
+  const keys = APP._pop; APP._pop = null;
+  if (!keys || !keys.length) return;
+  document.querySelectorAll("[data-pop]").forEach(el => {
+    if (!keys.includes(el.dataset.pop)) return;
+    el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+    el.addEventListener("animationend", () => el.classList.remove("pop"), { once: true });
+  });
+}
 function render() {
   const ae = document.activeElement, fsel = focusSelector(ae);
   const caret = fsel && isTextish(ae) ? [ae.selectionStart, ae.selectionEnd] : null;
@@ -219,6 +230,7 @@ function renderNow() {
   }
   APP._lastModalType = type;
   animateHp();
+  applyPops();
 }
 
 let persistAsked = false;
@@ -382,6 +394,7 @@ function spRefresh() {
   const r = document.getElementById("wizard-results");
   if (r && APP.createDraft) r.innerHTML = renderWizardResults(APP);
   if (APP.createDraft) refreshWizardChrome();
+  applyPops();
 }
 
 // The moment a major choice is committed: scale + amber glow + sparks + chime + buzz (about 1.2s).
@@ -726,6 +739,7 @@ const ACTIONS = {
     if (e.block) { toast(e.block); return; }
     if (APP.turn.on && ["Action", "Bonus", "Reaction"].includes(e.cost)) APP.turn.spent[e.cost] = true;
     c.active.push({ id: e.id, name: e.name, src: e.src });
+    queuePop("fx:" + e.id);
     closeModal(); toast(`${e.name} on`); saveAndRender();
   },
   endActive(el) { APP.char.active = (APP.char.active || []).filter(a => a.id !== el.dataset.id); saveAndRender(); },
@@ -842,7 +856,7 @@ const ACTIONS = {
   cxFilter(el) { APP.spUi.k[el.dataset.kind].filter = el.value; spRefresh(); },
   cxFav(el) {
     const key = favKey(el.dataset.kind), n = el.dataset.name, f = new Set(APP.prefs[key] || []);
-    if (f.has(n)) f.delete(n); else f.add(n);
+    if (f.has(n)) f.delete(n); else { f.add(n); queuePop("fav:" + el.dataset.kind + ":" + n); }
     APP.prefs[key] = [...f]; savePrefs(); spRefresh();
   },
   async cxPortraitClear(el) { await removePortrait(el.dataset.name); spRefresh(); },
@@ -1031,7 +1045,7 @@ const ACTIONS = {
   lvlMode(el) { APP.char.levelMode = el.dataset.v; save(); render(); },
   addXp() { const v = Math.floor(Number(document.getElementById("xp-add")?.value)); if (!(v > 0)) { toast("Type how much XP to add"); return; } APP.char.xp = (APP.char.xp || 0) + v; save(); render(); toast(`+${v} XP`); },
   setXp() { const v = Math.floor(Number(document.getElementById("xp-set")?.value)); if (!(v >= 0)) return; APP.char.xp = v; save(); render(); },
-  startLevelUp() { closeModal(); ACTIONS.openLevelUp(); },
+  startLevelUp() { closeModal(); if ((APP.char.level || 1) >= 20) { toast("Already level 20"); return; } ACTIONS.openLevelUp(); },
   openLevelUp() { APP.lvl = newLevelDraft(APP.char); APP.screen = "levelup"; APP.roll = null; render(); window.scrollTo(0, 0); },
   startFirstChoices() { APP.lvl = newLevelDraft(APP.char, { fromCreation: true }); APP.screen = "levelup"; render(); window.scrollTo(0, 0); },
   lvlCancel() { APP.lvl = null; APP.screen = "sheet"; render(); window.scrollTo(0, 0); },
@@ -1167,7 +1181,7 @@ const ACTIONS = {
     used[lvl - 1] = Math.max(0, Math.min(max, (used[lvl - 1] || 0) + (i < avail ? 1 : -1)));
     saveAndRender();
   },
-  togglePrepared(el) { const s = APP.char.spellcasting.spells.find(x => x.name === el.dataset.name); if (s) s.prepared = el.checked; saveAndRender(); },
+  togglePrepared(el) { const s = APP.char.spellcasting.spells.find(x => x.name === el.dataset.name); if (s) s.prepared = el.checked; if (el.checked) queuePop("prep:" + el.dataset.name); saveAndRender(); },
   openCast(el) { openModal({ type: "cast", name: el.dataset.name }); },
   castWith(el) {
     const c = APP.char, lvl = +el.dataset.lvl, name = APP.modal.name;
@@ -1286,9 +1300,19 @@ const ACTIONS = {
     if (c.hotbar.length >= 12) { toast("Hotbar is full (12). Remove one first."); return; }
     c.hotbar.push(entry);
     save();
+    queuePop("bm:" + key, "hb:" + key);
     if (el.dataset.close) { closeModal(); }
     render();
     toast(`Added ${entry.name || itemById(c, entry.id)?.name || "to hotbar"}`);
+  },
+  toggleHotbar(el) {
+    const c = APP.char, kind = el.dataset.kind;
+    const key = kind + ":" + ((kind === "spell" || kind === "ability") ? el.dataset.name : el.dataset.id);
+    const i = (c.hotbar || []).findIndex(h => h.kind + ":" + (h.id || h.name) === key);
+    if (i < 0) { ACTIONS.addHotbar(el); return; }
+    c.hotbar.splice(i, 1);
+    if (!c.hotbar.length) APP.hotbarEdit = false;
+    saveAndRender(); toast("Removed from hotbar");
   },
   removeHotbar(el) {
     const c = APP.char, i = +el.dataset.i;

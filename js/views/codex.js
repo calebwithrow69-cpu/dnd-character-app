@@ -112,7 +112,7 @@ export function renderCodexList(app, cfg) {
           ${on ? `<span class="tag amber">Chosen</span>` : ""}
           <span class="chev">${I.chev}</span>
         </button>
-        <button class="sp-fav" data-a="cxFav" data-kind="${cfg.kind}" data-name="${esc(o.name)}" aria-pressed="${isFav}" aria-label="${isFav ? "Remove " + esc(o.name) + " from favorites" : "Add " + esc(o.name) + " to favorites"}">${I.star}</button>
+        <button class="sp-fav" data-pop="fav:${cfg.kind}:${esc(o.name)}" data-a="cxFav" data-kind="${cfg.kind}" data-name="${esc(o.name)}" aria-pressed="${isFav}" aria-label="${isFav ? "Remove " + esc(o.name) + " from favorites" : "Add " + esc(o.name) + " to favorites"}">${I.star}</button>
       </div>
       ${open ? detail(app, cfg, o, cfg.chosen ? cfg.chosen() : "") : ""}
     </div>`;

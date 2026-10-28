@@ -217,6 +217,47 @@ await check("Starry Form: turn on shows an Active chip, survives reload, long re
   noErrs(p); await p.context().close();
 });
 
+await check("XP dialog: bar and words agree (25,000 XP at level 7 = 2,000 of 11,000 = 18%)", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p);
+  await clickA(p, "openLevelMenu"); await p.fill("#xp-set", "25000"); await clickA(p, "setXp");
+  const pct = await p.evaluate(() => { const b = document.querySelector("#modal-root .hpbar > div"); return Math.round(b.getBoundingClientRect().width / b.parentElement.getBoundingClientRect().width * 100); });
+  assert(pct >= 17 && pct <= 19, "bar is " + pct + "%");
+  const txt = await p.locator("#modal-root").innerText();
+  assert(txt.includes("2,000 of 11,000"), "dialog text does not state the band: " + txt.replace(/\s+/g, " ").slice(0, 200));
+  assert(await p.locator('[data-a="startLevelUp"]').isDisabled(), "level up should be disabled below 34,000");
+  noErrs(p); await p.context().close();
+});
+
+await check("level 20: dialog says max level, no 'Level up to 21'", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p);
+  await p.context().addInitScript(() => { try { const r = JSON.parse(localStorage.getItem("dnd-roster-v1") || "{}"); if (r.gandork) { r.gandork.level = 20; r.gandork.xp = 355000; localStorage.setItem("dnd-roster-v1", JSON.stringify(r)); } } catch (e) { } });
+  await p.goto(URL_); await p.waitForSelector("#home-book"); await clickA(p, "goRoster"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openHp"]');
+  await clickA(p, "openLevelMenu");
+  assert(await p.locator('[data-a="startLevelUp"]').count() === 0, "still offers a level up at 20");
+  assert((await p.locator("#modal-root").innerText()).includes("highest level"), "no max-level message");
+  noErrs(p); await p.context().close();
+});
+
+await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again removes", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p);
+  const bm = p.locator('[data-a="toggleHotbar"]').first();
+  assert(await bm.getAttribute("aria-pressed") === "false", "starts pressed");
+  await bm.click(); await p.waitForTimeout(80);
+  assert(await p.locator('.bm.pop').count() >= 1, "no pop animation class after adding");
+  await p.waitForTimeout(700);
+  assert(await p.locator('[data-a="toggleHotbar"][aria-pressed="true"]').count() === 1, "button did not fill");
+  await clickA(p, "setPrefV");
+  assert(await p.locator(".hb-slot").count() === 1, "hotbar slot missing");
+  await clickA(p, "openHotbarAdd");
+  const on = p.locator('#modal-root [data-a="toggleHotbar"][aria-pressed="true"]');
+  assert(await on.count() === 1, "modal row does not show On hotbar");
+  assert(/on hotbar/i.test(await on.innerText()), "label");
+  await on.click(); await p.waitForTimeout(300);
+  await clickA(p, "closeModal");
+  assert(await p.locator(".hb-slot").count() === 0, "slot not removed by toggling off");
+  assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+});
+
 await check("characters survive a reload", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
   await p.reload(); await p.waitForSelector("#home-book", { timeout: 15000 }); await clickA(p, "goRoster");

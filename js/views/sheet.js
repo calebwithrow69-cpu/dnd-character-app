@@ -1,4 +1,4 @@
-import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, activeChips } from "../ui.js";
+import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, activeChips, hotbarToggle } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
@@ -71,7 +71,7 @@ export function renderSheet(app) {
           </button>
           <button class="shieldbtn tier-${armorTier(d.ac).key}" data-a="openAc" aria-label="Armor class ${d.ac}, ${armorTier(d.ac).name}. Tap to see and change the bonuses.">${shieldSvg(d.ac)}<b>${d.ac}</b><span>AC</span></button>
         </div>
-        <p class="xpline">${c.level >= 20 ? "Max level" : `${(c.xp || 0).toLocaleString()} / ${xpForLevel(c.level + 1).toLocaleString()} XP`}</p>
+        <p class="xpline">${c.level >= 20 ? "Max level" : `${(c.xp || 0).toLocaleString()} XP \u00b7 ${xpReady ? "ready for level " + (c.level + 1) : (xpForLevel(c.level + 1) - (c.xp || 0)).toLocaleString() + " to level " + (c.level + 1)}`}</p>
         <div class="quick">
           <button data-a="rollInit"><b>${fmtMod(d.initiative)}</b><span>Initiative · roll</span></button>
           <div><b>${c.speed}</b><span>Speed ft</span></div>
@@ -107,7 +107,7 @@ export function attacksPanel(app, c, d, { head = "Attacks" } = {}) {
               <span class="stepper"><button data-a="ammoStep" data-id="${it.id}" data-n="-1" aria-label="Spend ammo">−</button><b>${w.ammo.cur}</b><button data-a="ammoStep" data-id="${it.id}" data-n="1" aria-label="Add ammo">+</button></span></span>` : ""}
           </span>
           <span class="row" style="gap:4px">
-            <button class="iconbtn" style="width:36px;height:36px" data-a="addHotbar" data-kind="attack" data-id="${it.id}" aria-label="Add ${esc(it.name)} to hotbar" title="Add to hotbar">${ICONS.plus}</button>
+            ${hotbarToggle(c, "attack", it.id, it.name, false)}
             <button class="btn pri sm" data-a="attackRoll" data-id="${it.id}">Attack</button>
           </span>
         </div>`;
@@ -140,7 +140,7 @@ export function hotbar(app, c, d) {
   const slots = (c.hotbar || []).map((h, i) => {
     const label = hotbarLabel(app, c, h);
     const sub = h.kind === "attack" ? "Attack" : h.kind === "spell" ? "Cast" : h.kind === "ability" ? "Ability" : "Use";
-    return `<div class="hb-slot">
+    return `<div class="hb-slot" data-pop="hb:${esc(h.kind + ":" + (h.id || h.name))}">
       <button class="hb-btn" data-a="${edit ? "noop" : "hotbarUse"}" data-i="${i}" ${edit ? "disabled" : ""} aria-label="${esc(sub)} ${esc(label)}">
         <span class="hb-ic">${hotbarGlyph(app, c, h)}</span><span class="hb-lbl">${esc(label)}</span><span class="hb-sub">${sub}</span>
       </button>
@@ -198,7 +198,7 @@ function spellsTab(app, c, d) {
           <button class="sp2-main-btn" data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"><span class="gl" aria-hidden="true">${esc((r?.school || s.name)[0])}</span>
             <span class="t"><b>${esc(s.name)}${s.always ? " ✦" : ""}</b><span>${esc(sub)}</span>${tag ? `<em class="tg">${tag}</em>` : ""}</span></button>
           <span class="sp2-act">
-            ${lv > 0 && !s.always ? `<label class="prep" title="Prepared"><input type="checkbox" data-a="togglePrepared" data-name="${esc(s.name)}" ${s.prepared ? "checked" : ""} aria-label="Prepared: ${esc(s.name)}"><span>Prep</span></label>` : ""}
+            ${lv > 0 && !s.always ? `<label class="prep" data-pop="prep:${esc(s.name)}" title="Prepared"><input type="checkbox" data-a="togglePrepared" data-name="${esc(s.name)}" ${s.prepared ? "checked" : ""} aria-label="Prepared: ${esc(s.name)}"><span>Prep</span></label>` : ""}
             ${info && (lv === 0 || s.prepared || s.always) ? `<button class="btn sm ${lv === 0 ? "" : "pri"}" data-a="${lv === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
             ${!s.always ? `<button class="iconbtn sp2-x" data-a="askRemove" data-do="removeSpell" data-what="spell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}
           </span></div>`;

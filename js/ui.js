@@ -213,5 +213,13 @@ export function platform() {
 
 // "Turned on" abilities (Starry Form, Rage...) as chips. The player marks them; the app does not apply their effects.
 export function activeChips(c, withEnd) {
-  return (c.active || []).map(a => `<span class="chip fx"><button class="chip-main" data-a="openTile" data-id="${esc(a.id)}"><span class="sub2" style="color:inherit">Active</span> ${esc(a.name)}</button>${withEnd ? `<button class="chip-x" data-a="endActive" data-id="${esc(a.id)}" aria-label="Turn off ${esc(a.name)}">${ICONS.close}</button>` : ""}</span>`).join("");
+  return (c.active || []).map(a => `<span class="chip fx" data-pop="fx:${esc(a.id)}"><button class="chip-main" data-a="openTile" data-id="${esc(a.id)}"><span class="sub2" style="color:inherit">Active</span> ${esc(a.name)}</button>${withEnd ? `<button class="chip-x" data-a="endActive" data-id="${esc(a.id)}" aria-label="Turn off ${esc(a.name)}">${ICONS.close}</button>` : ""}</span>`).join("");
+}
+
+// Bookmark-style toggle for the hotbar: outline when off, filled with a pop when on.
+const BM_ICON = '<svg class="bmi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10a1 1 0 011 1V21l-6-4.2L6 21V4.5a1 1 0 011-1z"/></svg>';
+export function hotbarToggle(c, kind, ref, name, withLabel) {
+  const key = kind + ":" + ref, on = (c.hotbar || []).some(h => h.kind + ":" + (h.id || h.name) === key);
+  const data = (kind === "spell" || kind === "ability") ? `data-name="${esc(ref)}"` : `data-id="${esc(ref)}"`;
+  return `<button class="${withLabel ? "btn sm" : "iconbtn"} bm ${on ? "on" : ""}" data-a="toggleHotbar" data-kind="${kind}" ${data} data-pop="bm:${esc(key)}" aria-pressed="${on}" aria-label="${on ? "Remove " : "Add "}${esc(name)}${on ? " from" : " to"} hotbar" title="${on ? "On your hotbar (tap to remove)" : "Add to hotbar"}">${BM_ICON}${withLabel ? `<span>${on ? "On hotbar" : "Add"}</span>` : ""}</button>`;
 }
