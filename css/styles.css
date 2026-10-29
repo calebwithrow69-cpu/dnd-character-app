@@ -284,7 +284,12 @@ nav.tabs button[aria-current="page"] svg{stroke:var(--amber)}
 #toast .toast-act{font-weight:700;color:var(--amber);background:none;border:0;padding:4px 2px;min-height:32px}
 :root[data-theme="light"] #toast .toast-act{color:#F2A33D}
 
-#update-bar:not([hidden]){position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:8px 8px 8px 14px;box-shadow:0 6px 20px rgba(0,0,0,.35);width:max-content;max-width:92vw;font-size:.92rem}
+#update-bar:not([hidden]){--ub:calc(48px + env(safe-area-inset-top,0px));position:fixed;left:0;right:0;top:0;height:var(--ub);padding:env(safe-area-inset-top,0px) 12px 0;box-sizing:border-box;z-index:90;display:flex;align-items:center;justify-content:center;gap:12px;background:var(--panel);border-bottom:1px solid var(--amber);box-shadow:0 4px 14px rgba(0,0,0,.3);font-size:.92rem}
+/* Surprise me / open rows scroll to just below the sticky header */
+.sp-row{scroll-margin-top:72px}
+/* while the bar is showing, push the page and the sticky headers below it so it never covers them */
+body:has(#update-bar:not([hidden])){padding-top:calc(48px + env(safe-area-inset-top,0px))}
+body:has(#update-bar:not([hidden])) .topbar{top:calc(48px + env(safe-area-inset-top,0px))}
 .installcard .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 
 /* ---- paper doll ---- */

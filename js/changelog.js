@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.8";
+export const VERSION = "0.1.9";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.9",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Creation fixes.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "Surprise me now scrolls the chosen class, species or background into view.",
+          "You can no longer continue past the cantrips step without picking them all. A Randomize cantrips button fills them in.",
+          "The Update now bar no longer covers the page header while it is showing."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.8",
     date: "2026-10-29",

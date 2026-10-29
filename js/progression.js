@@ -171,6 +171,7 @@ export function stepValidFor(c, d, step) {
     case "expertise": return d.expertise.length === Math.min(step.n, expertiseOptions(c).length);
     case "mastery": return d.mastery.length === step.n;
     case "options": return d.options.length === step.n;
-    default: return true; // spells/cantrips: picking fewer is allowed
+    case "cantrips": return step.n == null || d.cantrips.length >= step.n; // must learn them all (the Randomize button fills them)
+    default: return true; // spells: picking fewer is allowed
   }
 }

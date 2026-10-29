@@ -41,7 +41,7 @@ export function hpGain(c, d) {
 export function stepValid(app, step) { return stepValidFor(app.char, app.lvl, step); }
 const why = {
   gains: "", hp: "Roll the die or take the average.", subclass: "Pick a subclass.", asi: "Choose your increase or a feat.",
-  style: "Pick a fighting style.", expertise: "Pick your expertise skills.", mastery: "Pick your weapons.", options: "Make your picks."
+  style: "Pick a fighting style.", cantrips: "Pick all your cantrips, or press Randomize.", expertise: "Pick your expertise skills.", mastery: "Pick your weapons.", options: "Make your picks."
 };
 
 const expertiseChoices = expertiseOptions;
@@ -233,6 +233,7 @@ export function levelBody(app) {
         ? `Your rules data has no table for level ${d.next}, so pick as many as your class allows.`
         : step.id === "cantrips" ? `Learn ${step.n} new cantrip${step.n === 1 ? "" : "s"}.` : `You can prepare ${step.n} more spell${step.n === 1 ? "" : "s"}, up to level ${step.maxLevel}.`}
         ${chosen.length}${step.n != null ? "/" + step.n : ""} chosen. You can also add spells later on the Spells tab.</p>
+      ${step.id === "cantrips" && step.n != null ? `<button class="btn sm" data-a="lvlRandomCantrips">Randomize cantrips</button>` : ""}
       <div style="margin-top:10px">${searchBox("lvl", d.query, "Search spells")}</div>
       <label class="rowline" style="cursor:pointer"><span class="nm small">Include other classes' spells</span><input type="checkbox" data-a="lvlShowAll" ${d.showAll ? "checked" : ""}></label>
       <div class="optlist" id="lvl-results">${renderLevelResults(app)}</div>`;

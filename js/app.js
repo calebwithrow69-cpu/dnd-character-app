@@ -35,7 +35,7 @@ import { shopStock, pay, fmtPrice } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
 import { syncCustom, loadCustom, saveCustom, blankCustom, customValid } from "./custombg.js";
 import { featAbilityIncrease, applyFeat, featHp, ASI_FEAT } from "./featfx.js";
-import { stepValidFor } from "./progression.js";
+import { stepValidFor, spellsFor } from "./progression.js";
 import { downloadSheetPdf } from "./pdf.js";
 import { featUiDefault } from "./views/feats.js";
 import { SLOTS, ARMOR, itemById, fits, fitsOk, slotOf, slotsOf, wearKind, attunedCount, makeItem } from "./gear.js";
@@ -1017,6 +1017,7 @@ const ACTIONS = {
     const it = items[Math.floor(Math.random() * items.length)];
     APP.spUi.k[kind].open = it.name;
     ACTIONS.cxChoose({ dataset: { kind, name: it.name } });
+    requestAnimationFrame(() => { const r = mount.querySelector(".sp-row.open") || mount.querySelector(".sp-row.sel"); if (r) r.scrollIntoView({ block: "start", behavior: "smooth" }); });
   },
   randomChoices() {
     const d = APP.createDraft, kind = chapterId(d);
@@ -1238,6 +1239,14 @@ const ACTIONS = {
   lvlOption(el) { toggleIn(APP.lvl.options, el.dataset.name); render(); },
   lvlCantrip(el) { toggleIn(APP.lvl.cantrips, el.dataset.name); refreshLevelResults(); },
   lvlSpell(el) { toggleIn(APP.lvl.spells, el.dataset.name); refreshLevelResults(); },
+  lvlRandomCantrips() {
+    const d = APP.lvl, p = levelPlan(APP), step = p.steps[d.step];
+    if (!step || step.id !== "cantrips" || step.n == null) return;
+    const have = d.cantrips.slice(0, step.n);
+    const list = spellsFor(APP.library, APP.campaign, APP.char, { cantrips: true, maxLevel: 0, all: false }).filter(s => !have.includes(s.name)).sort(() => Math.random() - 0.5);
+    d.cantrips = have.concat(list.slice(0, step.n - have.length).map(s => s.name));
+    render();
+  },
   lvlShowAll(el) { APP.lvl.showAll = el.checked; render(); },
   lvlConfirm() { applyLevelUp(); },
 
