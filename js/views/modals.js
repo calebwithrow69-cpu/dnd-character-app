@@ -16,6 +16,7 @@ import { enabledFeats } from "../data.js";
 import { customValid, loadCustom } from "../custombg.js";
 import { shopStock, walletCp, fmtPrice } from "../equipment.js";
 import { findTile } from "./character.js";
+import { hpParts, FX_TARGETS } from "../effects.js";
 import { COST_LABEL } from "../combat.js";
 import { wieldedId } from "../play.js";
 import { weaponNumbers } from "../rules.js";
@@ -292,6 +293,18 @@ export function renderModal(app) {
          <button class="btn pri" data-a="saveResource">Save</button>`);
     }
 
+    case "breakdown": {
+      const d = deriveCharacter(c), sg = n => (n > 0 ? "+" : "") + n;
+      const block = (title, total, parts) => `<h3 class="bd-h"><span>${title}</span><b>${total}</b></h3><div class="bd">${parts.map(([n, v]) => `<div class="rowline"><span class="nm">${esc(n)}</span><b>${typeof v === "number" ? sg(v) : esc(v)}</b></div>`).join("")}</div>`;
+      const dex = Math.floor((c.abilities.dex - 10) / 2);
+      return modalShell("How your numbers are worked out",
+        block("Hit point maximum", hpParts(c).total, hpParts(c).parts) +
+        block("Armor Class", d.ac, d.acInfo.parts) +
+        block("Speed", d.speed + " ft", [["Base", (Number(c.speed) || 30) + " ft"], ...d.speedFx.map(x => [x.src, sg(x.v) + " ft"])]) +
+        block("Initiative", sg(d.initiative), [["Dexterity", dex], ...(c.initBonus ? [["Set by hand", c.initBonus]] : []), ...d.initFx.map(x => [x.src, x.v])]) +
+        `<p class="sub2" style="margin-top:12px">Add or fix a number yourself under Edit character, Custom bonuses.</p>`,
+        `<button class="btn pri" data-a="closeModal">Done</button>`);
+    }
     case "edit": {
       const subs = subclassesFor(app.library, c.class);
       const species = enabledSpecies(app.library, app.campaign).map(s => s.name);
@@ -318,6 +331,15 @@ export function renderModal(app) {
             <input type="number" inputmode="numeric" min="1" max="30" data-edit-ability="${a}" value="${c.abilities[a]}" aria-label="${ABILITY_LABEL[a]}"></label>`).join("")}</div>
           <p class="lab" style="margin-top:6px">Saving throw proficiencies</p>
           <div class="grid3">${ABILITIES.map(a => `<label class="rowline" style="border:0;cursor:pointer;justify-content:flex-start"><input type="checkbox" data-a="toggleSaveProf" data-ab="${a}" ${c.saveProf.includes(a) ? "checked" : ""}> ${ABILITY_LABEL[a].slice(0, 3)}</label>`).join("")}</div>
+          <p class="lab" style="margin-top:6px">Custom bonuses</p>
+          ${(c.custom || []).map(x => `<div class="rowline"><span class="nm">${esc(x.label || "Custom")} <span class="sub2">${esc((FX_TARGETS.find(t => t[0] === x.t) || [0, x.t])[1])}</span></span><b>${x.v > 0 ? "+" : ""}${x.v}</b><button class="iconbtn" data-a="customRemove" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.label || "bonus")}">${ICONS.close}</button></div>`).join("")}
+          <div class="grid3" style="grid-template-columns:1.4fr .7fr 1fr;gap:8px;align-items:end">
+            <div class="field"><label for="cb-t">Changes</label><select class="f" id="cb-t">${FX_TARGETS.map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("")}</select></div>
+            <div class="field"><label for="cb-v">By</label><input class="f num" id="cb-v" type="number" inputmode="numeric" value="1"></div>
+            <div class="field"><label for="cb-l">Label</label><input class="f" id="cb-l" maxlength="24" placeholder="Why"></div>
+          </div>
+          <button class="btn block" data-a="customAdd">Add bonus</button>
+          <button class="btn block" data-a="openBreakdown">How HP, AC, speed and initiative are worked out</button>
           <p class="lab" style="margin-top:6px">Sheet style</p>
           <div class="seg" role="group" aria-label="Sheet style">${[["classic", "Classic"], ["advanced", "Advanced"]].map(([v, l]) => `<button data-a="setPrefV" data-k="sheetStyle" data-v="${v}" aria-pressed="${(app.prefs.sheetStyle || "classic") === v}">${l}</button>`).join("")}</div>
           <p class="sub2">Switching asks you to confirm. Your character is not changed.</p>

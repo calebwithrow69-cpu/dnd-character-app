@@ -107,7 +107,7 @@ export async function buildSheetPdf(PDFLib, char, library, campaign) {
   const MX = M + LW + 12, MW = 150;
   let my = 132;
   const trio = (items, yy) => items.forEach((it, i) => cap(it[0], it[1], MX + i * 52, yy + 8, 46, 28, it[2], { size: it[3] || 14, align: "center" }));
-  trio([["Armor class", "ac", String(d.ac)], ["Initiative", "init", signed(d.initiative)], ["Speed", "speed", String(char.speed) + " ft"]], my);
+  trio([["Armor class", "ac", String(d.ac)], ["Initiative", "init", signed(d.initiative)], ["Speed", "speed", String(d.speed) + " ft"]], my);
   my += 46;
   trio([["Prof. bonus", "prof", "+" + d.prof], ["Passive perc.", "pp", String(d.passivePerception)], ["Size", "size2", char.size || "Medium", 8]], my);
   my += 46;
@@ -283,7 +283,7 @@ export async function buildTemplateSheetPdf(PDFLib, char, library) {
 
   box("prof", 62, 205, 116, 262, signed(d.prof), { align: "c", size: 24 });
   box("inspiration", 70, 888, 106, 922, char.inspiration ? "X" : "", { align: "c", size: 16 });
-  const tiles = [["init", 346, signed(d.initiative)], ["speed", 484, `${char.speed} ft`], ["size", 633, char.size || "Medium"], ["pp", 773, String(d.passivePerception)]];
+  const tiles = [["init", 346, signed(d.initiative)], ["speed", 484, `${d.speed} ft`], ["size", 633, char.size || "Medium"], ["pp", 773, String(d.passivePerception)]];
   const tw = [117, 130, 128, 128];
   tiles.forEach(([k, x, v], i) => box(k, x, 198, x + tw[i], 232, v, { align: "c", size: 15 }));
 

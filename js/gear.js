@@ -1,3 +1,4 @@
+import { fxList } from "./effects.js";
 // Equipment: slots, what fits where, armor stats, and gear-driven AC.
 // Pure functions over a character — no DOM.
 
@@ -152,7 +153,9 @@ export function computeAC(char) {
     if (it && it.acBonus && active(it)) { total += +it.acBonus; parts.push([it.name, +it.acBonus]); }
   });
   if (ac.bonus) { total += +ac.bonus; parts.push(["Other", +ac.bonus]); }
-  return { total, parts, mode, warn, stealthDis: !!(a && a.stealth) };
+  const ctx = { armored: !!(armorItem && a && a.base != null), heavy: !!(a && a.cat === "Heavy"), shield: !!shieldItem || !!(ac.shield && !eq.off) };
+  fxList(char, "ac", ctx).forEach(x => { total += x.v; parts.push([x.src, x.v]); });
+  return { total, parts, mode, warn, stealthDis: !!(a && a.stealth), armored: ctx.armored, heavy: ctx.heavy, shield: ctx.shield };
 }
 
 export function gearSaveBonus(char) {

@@ -7,7 +7,6 @@ import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, skillIdByLabel, abilityMod
   primaryAbility, speciesSpeed, speciesSize, hpAverageGain, standardArray,
   roll4d6DropLowest, SUGGESTED_ARRAYS } from "./rules.js";
 import { newId, normalize } from "./store.js";
-import { featHp } from "./featfx.js";
 import { levelUpPlan, stepValidFor, optionPrereq, spellsFor, expertiseOptions } from "./progression.js";
 import {
   draftChoices, optionsFor, isAnswered, applyChoices, backgroundToolChoice,
@@ -542,7 +541,7 @@ export function buildCharacter(d, app) {
     profsText: cls ? [cls.armorProf, cls.weaponProf,
       /^choose/i.test(cls.toolProf || "") ? "" : cls.toolProf, tool?.fixed].filter(Boolean).join(". ") : "",
     languages: "Common", feats: bgFeat ? [bgFeat] : [],
-    hp: { max: maxHp, cur: maxHp, temp: 0 },
+    hp: { max: maxHp, cur: maxHp, temp: 0, base: hd + (level - 1) * hpAverageGain(hd, 0), adjust: 0 },
     ac: { base: 10, bonus: 0, shield: false, dexCap: null, armorName: "", override: null },
     speed: sp ? speciesSpeed(sp.traits) : 30, initBonus: 0, size: sp ? speciesSize(sp.traits) : "",
     hitDice: { total: level, spent: 0, die: hd },
@@ -561,10 +560,6 @@ export function buildCharacter(d, app) {
   const featTexts = [...char.feats, ...defs.filter(x => x.kind === "feat").flatMap(x => [].concat(d.picks[x.id] || []))]
     .map(f => [L.feats.find(x => x.name === f.replace(/\s*\(.*$/, ""))?.text || "", f]);
   applyChoices(char, defs, d.picks, L, [[speciesBaseText(sp, L, C), d.species], ...featTexts]);
-  // Tough and similar origin feats raise the maximum from the start
-  const featHpBonus = featTexts.reduce((n, [t]) => n + (featHp({ text: t })?.now(level) || 0), 0);
-  if (featHpBonus) { char.hp.max += featHpBonus; char.hp.cur += featHpBonus; }
-
   // Starting gear
   const W = allWeapons(L, C), I = allItems(L, C);
   for (const [which, key] of [["class", d.equipClass], ["bg", d.equipBg]]) {

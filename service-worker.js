@@ -7,14 +7,14 @@
 // - Rules data (data/*.json): network first when online, cache when not.
 //   Those update live without a version bump.
 // - Google Fonts: cached the first time they load, so offline keeps the look.
-const CACHE_VERSION = "v52";
+const CACHE_VERSION = "v53";
 const SHELL = "shell-" + CACHE_VERSION;
 const FONTS = "fonts-v1";
 
 const SHELL_FILES = [
   "./", "index.html", "manifest.json", "css/styles.css",
   "js/app.js", "js/data.js", "js/store.js", "js/rules.js", "js/dice.js", "js/ui.js", "js/gear.js", "js/progression.js", "js/crypt.js", "js/spells.js", "js/install.js", "js/choices.js", "js/equipment.js", "js/qr.js", "js/sfx.js", "js/changelog.js", "js/species.js", "js/portraits.js", "js/dm.js", "js/creation.js", "js/pdf.js", "js/views/feats.js", "js/featfx.js", "js/combat.js", "js/subtone.js", "js/shield.js", "js/weights.js", "js/views/subclass.js", "js/views/classic.js", "js/hpbar.js", "js/views/character.js", "js/views/play.js", "js/play.js", "js/rollstage.js", "js/riders.js", "js/emblems.js", "js/cxfx.js", "assets/sfx/hit.mp3", "assets/sfx/hit-big.mp3", "js/custombg.js", "js/views/home.js", "js/vendor/pdf-lib.min.js",
-  "js/views/roster.js", "js/views/create.js", "js/views/sheet.js", "js/views/modals.js", "js/views/levelup.js", "js/views/settings.js", "js/views/species.js", "js/views/codex.js", "js/views/dm.js", "js/views/loadout.js", "js/views/stylepick.js",
+  "js/views/roster.js", "js/views/create.js", "js/views/sheet.js", "js/views/modals.js", "js/views/levelup.js", "js/views/settings.js", "js/views/species.js", "js/views/codex.js", "js/views/dm.js", "js/views/loadout.js", "js/views/stylepick.js", "js/effects.js",
   "data/library.enc.json", "data/campaign.json", "data/seed-gandork.json", "data/terms.json",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"
 ];

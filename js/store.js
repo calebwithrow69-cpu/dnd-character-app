@@ -76,6 +76,7 @@ export function normalize(c, library) {
     : h.kind === "ability" ? true : false));
   out.loadouts = (Array.isArray(c.loadouts) ? c.loadouts : []).filter(l => l && l.id && l.name && l.eq && typeof l.eq === "object").slice(0, 12);
   out.levelLog = c.levelLog || [];
+  out.custom = (Array.isArray(c.custom) ? c.custom : []).filter(x => x && x.id && x.t).map(x => ({ id: x.id, t: x.t, v: Number(x.v) || 0, label: x.label || "Custom" }));
   out.schema = 3;
   if (!out.profs) { const r = parseProfs(out.profsText); out.profs = r.profs; out.profsText = r.rest; }
   return out;

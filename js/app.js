@@ -36,7 +36,8 @@ import { renderModal, renderRollCard, renderShopResults, shopPrice } from "./vie
 import { shopStock, pay, fmtPrice } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
 import { syncCustom, loadCustom, saveCustom, blankCustom, customValid } from "./custombg.js";
-import { featAbilityIncrease, applyFeat, featHp, ASI_FEAT } from "./featfx.js";
+import { featAbilityIncrease, applyFeat, ASI_FEAT } from "./featfx.js";
+import { setEffectsSource, syncHp, FX_TARGETS } from "./effects.js";
 import { stepValidFor, spellsFor } from "./progression.js";
 import { downloadSheetPdf } from "./pdf.js";
 import { featUiDefault } from "./views/feats.js";
@@ -172,6 +173,16 @@ function setRules() {
   APP.library = { ...r.library, subclasses: (r.library.subclasses || []).map(sc => ({ ...sc, features: normalizeSubclass(sc) })) };
   APP.campaign = r.campaign; APP._rulesIndex = null;
   syncCustom(APP.library);
+  setEffectsSource(() => APP.library ? { feats: [...APP.library.feats, ...((APP.campaign && APP.campaign.homebrew && APP.campaign.homebrew.feats) || [])],
+    classes: APP.library.classes, subclasses: APP.library.subclasses, species: APP.library.species, effectsV: APP.library.effectsV || 0 } : null);
+  syncAllChars();
+}
+// Max HP and other effect-driven numbers follow the rules data: bring every saved character up to date.
+function syncAllChars() {
+  try {
+    store.listCharacters().forEach(c => { if (syncHp(c)) store.saveCharacter(c); });
+    if (APP.char && syncHp(APP.char)) save();
+  } catch (e) { }
 }
 // One-shot "pop" feedback: an action queues keys, the next draw plays the animation on [data-pop=key] once.
 function queuePop(...keys) { APP._pop = (APP._pop || []).concat(keys); }
@@ -205,7 +216,7 @@ function renderNow() {
   else if (APP.screen === "roster") mount.innerHTML = renderRoster(APP);
   else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
   else if (APP.screen === "create") { prepareChoiceContext(APP); mount.innerHTML = renderCreate(APP); if (APP.createDraft) saveDraft(APP.createDraft); }
-  else if (APP.screen === "sheet" && APP.char) mount.innerHTML = renderSheet(APP);
+  else if (APP.screen === "sheet" && APP.char) { if (syncHp(APP.char)) save(); mount.innerHTML = renderSheet(APP); }
   else if (APP.screen === "levelup" && APP.char && APP.lvl) mount.innerHTML = renderLevelUp(APP);
 
   // Entrance animations (modal drop-in, roll card, tab pop, chip pop) belong to a NEW view/modal/roll only.
@@ -710,7 +721,7 @@ function onChange(e) {
     const v = el.value;
     if (ds.edit === "name") c.name = v.trim() || c.name;
     else if (ds.edit === "level") { c.level = Math.max(1, Math.min(20, parseInt(v, 10) || c.level)); c.hitDice.total = c.level; c.hitDice.spent = Math.min(c.hitDice.spent, c.level); }
-    else if (ds.edit === "maxhp") { c.hp.max = Math.max(1, parseInt(v, 10) || c.hp.max); c.hp.cur = Math.min(c.hp.cur, c.hp.max); }
+    else if (ds.edit === "maxhp") { const want = Math.max(1, parseInt(v, 10) || c.hp.max); c.hp.adjust = (c.hp.adjust || 0) + (want - c.hp.max); syncHp(c); c.hp.cur = Math.min(c.hp.cur, c.hp.max); }
     else if (ds.edit === "speed" || ds.edit === "initBonus") c[ds.edit] = parseInt(v, 10) || 0;
     else c[ds.edit] = v;
     save(); afterFieldChange(el); return;
@@ -794,6 +805,16 @@ const ACTIONS = {
   exportAll() { exportChars(null, "backup"); APP.prefs.lastBackup = Date.now(); savePrefs(); },
   setTheme(el) { APP.prefs.theme = el.dataset.v; savePrefs(); applyPrefs(); render(); },
   setSize(el) { APP.prefs.size = el.dataset.v; savePrefs(); applyPrefs(); render(); },
+  openBreakdown() { openModal({ type: "breakdown" }); },
+  customAdd() {
+    const t = document.getElementById("cb-t"), v = document.getElementById("cb-v"), l = document.getElementById("cb-l");
+    const n = parseInt(v && v.value, 10);
+    if (!t || !n) { toast("Enter a number to add"); return; }
+    const c = APP.char; c.custom = c.custom || [];
+    c.custom.push({ id: store.newId(), t: t.value, v: n, label: (l && l.value.trim()) || "Custom" });
+    syncHp(c); saveAndRender();
+  },
+  customRemove(el) { const c = APP.char; c.custom = (c.custom || []).filter(x => x.id !== el.dataset.id); syncHp(c); saveAndRender(); },
   classicSub(el) { APP.classicSub = el.dataset.sub; render(); window.scrollTo(0, 0); },
   charSub(el) { APP.charSub = el.dataset.sub; render(); window.scrollTo(0, 0); },
   turnPip(el) { const s = APP.turn.spent, k = el.dataset.k; if (s[k]) delete s[k]; else s[k] = true; render(); },
@@ -1775,27 +1796,24 @@ function applyLevelUp() {
   const ids = new Set(p.steps.map(s => s.id));
   const before = { level: c.level, con: c.abilities.con };
   const log = [];
-  let featHpNow = 0;
-  // Tough and similar: +2 for every level gained after the feat was taken
-  const perLevel = (c.feats || []).reduce((n, name) => n + (featHp(featDef(APP, name))?.perLevel || 0), 0);
+  syncHp(c); // make sure the dice total exists before anything is added to it
+  const hpBefore = c.hp.max;
   if (ids.has("asi")) {
     if (d.feat && d.feat !== ASI_FEAT) {
       const f = featDef(APP, d.feat);
       c.feats.push(d.feat); log.push("Feat: " + d.feat);
-      if (f) { const r = applyFeat(c, f, d.next, d.featAb); log.push(...r.log); featHpNow = r.hp; }
+      if (f) { const r = applyFeat(c, f, d.next, d.featAb); log.push(...r.log); }
     }
-    else { const r = asiResult(c, d); ABILITIES.forEach(a => { if (r[a] !== c.abilities[a]) log.push(`${ABILITY_LABEL[a]} ${c.abilities[a]}→${r[a]}`); }); c.abilities = r; }
+    else { const r = asiResult(c, d); ABILITIES.forEach(a => { if (r[a] !== c.abilities[a]) log.push(`${ABILITY_LABEL[a]} ${c.abilities[a]}\u2192${r[a]}`); }); c.abilities = r; }
   }
   if (!d.fromCreation) {
-    const conMod = abilityMod(c.abilities.con), oldConMod = abilityMod(before.con);
     const die = c.hitDice.die || 8;
-    const gain = (d.hpMode === "roll" && d.rolled ? Math.max(1, d.rolled + conMod) : hpAverageGain(die, conMod)) + (conMod - oldConMod) * before.level;
-    const extra = featHpNow + (d.fromCreation ? 0 : perLevel);
+    const diceGain = d.hpMode === "roll" && d.rolled ? Math.max(1, d.rolled) : hpAverageGain(die, 0);
     c.xp = Math.max(c.xp || 0, xpForLevel(d.next));
-    c.level = d.next; c.hp.max += gain + extra; c.hp.cur += gain + extra; c.hitDice.total = c.level;
-    log.unshift(`+${gain + extra} HP`);
+    c.level = d.next; c.hp.base = (c.hp.base || 0) + diceGain; c.hitDice.total = c.level;
   }
-  if (d.fromCreation && featHpNow) { c.hp.max += featHpNow; c.hp.cur += featHpNow; }
+  syncHp(c); // Constitution, feats and features now add up from the rules data
+  if (c.hp.max !== hpBefore) log.unshift(`${c.hp.max > hpBefore ? "+" : ""}${c.hp.max - hpBefore} HP`);
   if (ids.has("subclass") && d.subclass) { c.subclass = d.subclass; log.push("Subclass: " + d.subclass); }
   if (ids.has("style") && d.style) { c.feats.push(d.style); log.push("Fighting style: " + d.style); }
   if (ids.has("expertise")) d.expertise.forEach(id => { if (!c.skillExpertise.includes(id)) c.skillExpertise.push(id); if (!c.skillProf.includes(id)) c.skillProf.push(id); });

@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.15";
+export const VERSION = "0.1.16";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.16",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Feats and features now change your numbers.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Effects engine: hit points, Armor Class, speed, initiative, saves and skills are worked out from your features, feats and species instead of being set once. Hearty, Tough, Alert, Defense, Speedy, Scout, Fast Movement, Unarmored Movement, Jack of All Trades, Draconic Resilience, Dwarven Toughness and Northern Toughness now apply.",
+          "Existing characters are updated automatically. Tough was already counted; anything newly recognized (for example Hearty) is added on top.",
+          "Edit character > Custom bonuses lets you add your own +/- to AC, speed, initiative, hit points, saves, skills and spells, and a screen that shows how HP, AC, speed and initiative are worked out. Tap Speed on the sheet for the same screen.",
+          "Setting max HP by hand is kept as an adjustment on top of the calculated number."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.15",
     date: "2026-10-29",

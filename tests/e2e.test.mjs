@@ -78,7 +78,8 @@ const noErrs = p => assert(p.errs.length === 0, p.errs.join(" || "));
 // Every top-level JS file parses.
 await check("node --check on every JS file", async () => {
   const files = execSync("git ls-files '*.js' '*.mjs'", { cwd: root }).toString().trim().split("\n");
-  for (const f of files) execSync(`node --check "${f}"`, { cwd: root });
+  // Browser modules are checked AS modules: plain `node --check` once passed a file that broke startup in the browser.
+  for (const f of files) { if (/^js\/(?!vendor)/.test(f)) execSync("node --input-type=module --check", { cwd: root, input: readFileSync(join(root, f)) }); else execSync(`node --check "${f}"`, { cwd: root }); }
 });
 
 // Boot + layout at every width we care about.
@@ -371,6 +372,26 @@ await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again rem
   await clickA(p, "closeModal");
   assert(await p.locator(".hb-slot").count() === 0, "slot not removed by toggling off");
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+});
+
+await check("effects: old characters keep their HP, Hearty adds its level, custom bonus changes AC, breakdown opens", async () => {
+  const p0 = await open(390, 844, { touch: true }); await openSample(p0);
+  const ctx = p0.context(), url = p0.url(); await p0.close(); // closing saves the open character; do the edit after that
+  const p = await ctx.newPage(); p.errs = []; p.on("pageerror", e => p.errs.push(String(e))); await p.goto(url); await p.waitForTimeout(2500);
+  const hpMax = () => p.evaluate(() => JSON.parse(localStorage.getItem("dnd-roster-v1")).gandork.hp.max);
+  assert(await hpMax() === 78, "Gandork's max HP changed on load: " + await hpMax());
+  await p.evaluate(() => { const r = JSON.parse(localStorage.getItem("dnd-roster-v1")); r.gandork.feats.push("Hearty"); localStorage.setItem("dnd-roster-v1", JSON.stringify(r)); });
+  await p.reload(); await p.waitForTimeout(2500);
+  assert(await hpMax() === 85, "Hearty should add the level (7): " + await hpMax());
+  await clickA(p, "goRoster"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openAc"]', { timeout: 10000 });
+  const ac0 = parseInt(await p.locator(".shieldbtn b").first().innerText(), 10);
+  await clickA(p, "openEdit"); await p.locator("#cb-t").selectOption("ac"); await p.locator("#cb-v").fill("2"); await clickA(p, "customAdd");
+  await clickA(p, "closeModal");
+  const ac1 = parseInt(await p.locator(".shieldbtn b").first().innerText(), 10);
+  assert(ac1 === ac0 + 2, `custom +2 AC: ${ac0} -> ${ac1}`);
+  await clickA(p, "openEdit"); await p.locator('#modal-root [data-a="openBreakdown"]').click(); await p.waitForTimeout(350);
+  assert((await p.locator("#modal-root").innerText()).includes("Hearty"), "breakdown does not list Hearty");
+  noErrs(p); await p.context().close();
 });
 
 await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {

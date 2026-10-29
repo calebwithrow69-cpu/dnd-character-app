@@ -2,6 +2,7 @@
 // text (nothing reworded): ability score increases (fixed, a short list, or any
 // score), Resilient's saving throw proficiency, and Hit Point maximum bonuses.
 import { ABILITIES, ABILITY_LABEL, abilityMod } from "./rules.js";
+import { featHpGain } from "./effects.js";
 
 const NAME_TO_ID = { strength: "str", dexterity: "dex", constitution: "con", intelligence: "int", wisdom: "wis", charisma: "cha" };
 export const ASI_FEAT = "Ability Score Improvement";
@@ -34,7 +35,6 @@ export function featHp(feat) {
 export function previewFeat(feat, c, level, pickAb) {
   const rows = [];
   const inc = featAbilityIncrease(feat, c);
-  const hp = featHp(feat);
   let conMod0 = abilityMod(c.abilities.con), conMod1 = conMod0;
   if (inc && pickAb && inc.options.includes(pickAb)) {
     const to = Math.min(inc.cap, c.abilities[pickAb] + 1);
@@ -44,7 +44,7 @@ export function previewFeat(feat, c, level, pickAb) {
     if (inc.saveProf) rows.push({ label: ABILITY_LABEL[pickAb] + " saves", from: "no proficiency", to: "proficient" });
   }
   let hpGain = 0;
-  if (hp) hpGain += hp.now(level);
+  hpGain += featHpGain(feat, level);
   if (conMod1 !== conMod0) hpGain += (conMod1 - conMod0) * level;
   if (hpGain) rows.push({ label: "Hit point maximum", delta: hpGain, hp: true, extra: "on top of this level's hit die" });
   return rows;
@@ -61,6 +61,5 @@ export function applyFeat(c, feat, level, pickAb) {
     log.push(`${ABILITY_LABEL[pickAb]} ${from}→${to}`);
     if (inc.saveProf && !(c.saveProf || []).includes(pickAb)) { c.saveProf = [...(c.saveProf || []), pickAb]; log.push(`${ABILITY_LABEL[pickAb]} saving throws`); }
   }
-  const hp = featHp(feat);
-  return { log, hp: hp ? hp.now(level) : 0 };
+  return { log, hp: 0 }; // hit point bonuses come from the feat's effects now (js/effects.js)
 }

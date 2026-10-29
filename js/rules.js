@@ -1,4 +1,5 @@
 import { computeAC, gearSaveBonus } from "./gear.js";
+import { fxList, fxSum } from "./effects.js";
 
 // Pure D&D 2024 rules helpers. No DOM, no state — math and tables only,
 // so the sheet, dice and wizard all compute numbers the same way.
@@ -158,32 +159,38 @@ export function deriveCharacter(char) {
   const mods = {};
   ABILITIES.forEach(a => { mods[a] = abilityMod(char.abilities?.[a] ?? 10); });
 
+  const acInfo = computeAC(char);
+  const acTotal = acInfo.total;
+  const ctx = { armored: acInfo.armored, heavy: acInfo.heavy, shield: acInfo.shield };
+  const fx = t => fxList(char, t, ctx);
+
   const saveItems = gearSaveBonus(char);
   const saves = {};
-  ABILITIES.forEach(a => { saves[a] = mods[a] + ((char.saveProf || []).includes(a) ? prof : 0) + saveItems; });
+  ABILITIES.forEach(a => { saves[a] = mods[a] + ((char.saveProf || []).includes(a) ? prof : 0) + saveItems + fxSum(fx(["save." + a, "save.all"])); });
 
   const skills = SKILLS.map(s => {
     const proficient = (char.skillProf || []).includes(s.id);
     const expert = (char.skillExpertise || []).includes(s.id);
-    const bonus = mods[s.ability] + (expert ? prof * 2 : proficient ? prof : 0);
+    const extra = fxSum(fx(["skill." + s.id, "skill.all"])) + (!proficient && !expert ? fxSum(fx("skill.nonprof")) : 0);
+    const bonus = mods[s.ability] + (expert ? prof * 2 : proficient ? prof : 0) + extra;
     return { ...s, proficient, expert, bonus };
   });
   const perception = skills.find(s => s.id === "perception").bonus;
 
-  const acInfo = computeAC(char);
-  const acTotal = acInfo.total;
-
   const castAbility = spellcastingAbility(char.class);
   const spellInfo = castAbility ? {
     ability: castAbility, mod: mods[castAbility],
-    dc: 8 + prof + mods[castAbility], attackBonus: prof + mods[castAbility],
+    dc: 8 + prof + mods[castAbility] + fxSum(fx("spell.dc")), attackBonus: prof + mods[castAbility] + fxSum(fx("spell.atk")),
     slots: slotRows(char.class, level)
   } : null;
 
+  const speedFx = fx("speed"), initFx = fx("init");
+  const speed = (Number(char.speed) || 30) + fxSum(speedFx);
+  const initiative = mods.dex + Number(char.initBonus || 0) + fxSum(initFx);
   return {
-    level, prof, mods, saves, skills, ac: acTotal, acInfo, spellInfo,
-    initiative: mods.dex + Number(char.initBonus || 0),
-    passivePerception: 10 + perception
+    level, prof, mods, saves, skills, ac: acTotal, acInfo, spellInfo, speed, speedFx, initFx,
+    initiative,
+    passivePerception: 10 + perception + fxSum(fx("pp"))
   };
 }
 

@@ -73,7 +73,7 @@ export function renderSheet(app) {
         <p class="xpline">${c.level >= 20 ? "Max level" : `${(c.xp || 0).toLocaleString()} XP \u00b7 ${xpReady ? "ready for level " + (c.level + 1) : (xpForLevel(c.level + 1) - (c.xp || 0)).toLocaleString() + " to level " + (c.level + 1)}`}</p>
         <div class="quick">
           <button data-a="rollInit"><b>${fmtMod(d.initiative)}</b><span>Initiative · roll</span></button>
-          <div><b>${c.speed}</b><span>Speed ft</span></div>
+          <button data-a="openBreakdown" aria-label="Speed ${d.speed} feet. Tap to see how it is worked out."><b>${d.speed}</b><span>Speed ft</span></button>
           <div><b>${fmtMod(d.prof)}</b><span>Proficiency</span></div>
           <button data-term="Passive Perception"><b>${d.passivePerception}</b><span>Passive Perception</span></button>
         </div>
