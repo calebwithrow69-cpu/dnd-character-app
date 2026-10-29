@@ -1,7 +1,7 @@
 // Feat picker (medallion grid). Used for the feat choice at an ability-score level and for fighting styles.
 // Two columns of round-icon cards; tap one for a sheet with the full rules text split into its benefits.
 // Book text is shown exactly as stored. The Trait / Ability tag is the app's reading. ASCII only.
-import { esc, formatText } from "../ui.js";
+import { esc, formatText, kRow } from "../ui.js";
 import { classifyText } from "../species.js";
 
 const ICON = {
@@ -105,15 +105,11 @@ function visible(app, items) {
 export function renderFeatGrid(app, items, selected) {
   const list = visible(app, items);
   if (!list.length) return `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`;
-  return `<p class="sub2 sp-count">${list.length} shown</p><div class="fgrid">${list.map(({ f, ok, why }) => {
+  return `<p class="sub2 sp-count">${list.length} shown</p><div class="k-list">${list.map(({ f, ok, why }) => {
     const on = selected === f.name;
-    return `<button class="fcard ${on ? "on" : ""} ${ok ? "" : "locked"}" data-a="featOpen" data-name="${esc(f.name)}" aria-label="${esc(f.name)}${ok ? "" : ", not available yet"}">
-      ${on ? `<span class="fchosen">CHOSEN</span>` : ""}
-      <span class="fmed">${svg(featIcon(f), 34)}</span>
-      <span class="fname">${esc(f.name)}</span>
-      <span class="fchip">${esc(typeLabel(f))}</span>
-      <span class="fpre">${esc(ok ? prereqLabel(f) : why || prereqLabel(f))}</span>
-    </button>`;
+    return kRow({ icon: svg(featIcon(f), 18), tone: on ? "amber" : "feat", off: !ok, title: f.name, cap: typeLabel(f),
+      sub: ok ? prereqLabel(f) : (why || prereqLabel(f)), status: on ? "Chosen" : "",
+      mainAttrs: `data-a="featOpen" data-name="${esc(f.name)}" aria-label="${esc(f.name)}${ok ? "" : ", not available yet"}"`, cls: on ? "on" : "" });
   }).join("")}</div>`;
 }
 

@@ -1,6 +1,6 @@
 // Full-screen level-up, one decision per step (Baldur's Gate style).
 import { subRow } from "./subclass.js";
-import { esc, topbar, formatText, searchBox, infoRow, glossaryEntry } from "../ui.js";
+import { esc, topbar, formatText, searchBox, infoRow, glossaryEntry, ICONS, kRow, kGroup } from "../ui.js";
 import { detailFor, spellSub } from "./sheet.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, abilityMod, fmtMod, hpAverageGain, slotRows } from "../rules.js";
 import { findByName, findFeat, enabledFeats, allWeapons, subclassesFor } from "../data.js";
@@ -149,17 +149,16 @@ export function levelBody(app) {
     const feats = p.features, oldSlots = slotRows(c.class, c.level), newSlots = slotRows(c.class, d.next);
     const prof = lv => Math.ceil(lv / 4) + 1;
     const facts = [];
-    facts.push(["Proficiency bonus", prof(c.level) === prof(d.next) ? `+${prof(d.next)} (unchanged)` : `+${prof(c.level)} \u2192 +${prof(d.next)}`]);
+    facts.push([prof(c.level) === prof(d.next) ? "Proficiency (same)" : "Proficiency bonus", prof(c.level) === prof(d.next) ? `+${prof(d.next)}` : `+${prof(c.level)} \u2192 +${prof(d.next)}`]);
     const os = oldSlots.map(r => r.max).join("/"), ns = newSlots.map(r => r.max).join("/");
     if (ns && os !== ns) facts.push(["Spell slots", `${os || "none"} \u2192 ${ns}`]);
-    facts.push(["Hit die", `+1d${c.hitDice.die || 8} (next step)`]);
+    facts.push(["Hit die gained", `+1d${c.hitDice.die || 8}`]);
     body = `<p class="small muted">Here is everything level ${d.next} gives you. Tap a feature to read it, then continue to make your choices.</p>
-      <dl class="kv">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
-      ${feats.length ? `<p class="lab" style="margin-top:6px">New features</p><div class="optlist">${feats.map(f => {
+      <div class="quick" style="grid-template-columns:repeat(${facts.length},1fr);margin:12px 0 4px">${facts.map(([k, v]) => `<div><b style="font-size:${String(v).length > 12 ? ".95rem" : "1.15rem"}">${esc(v)}</b><span>${esc(k)}</span></div>`).join("")}</div>
+      ${feats.length ? kGroup("New features", feats.length, { tone: "amber" }) + `<div class="k-list">${feats.map(f => {
         const open = d.gainOpen === f.name;
-        return `<div class="sp-trait ${open ? "open" : ""}"><button class="sp-tbtn" data-a="lvlGainOpen" data-name="${esc(f.name)}" aria-expanded="${open}">
-          <span class="grow"><b>${esc(f.name)}</b><small>${f.from === c.class ? "Class feature" : esc(f.from)}</small></span><span class="chev">\u25be</span></button>
-          ${open ? `<div class="about">${formatText(f.text || "")}</div>` : ""}</div>`;
+        return kRow({ icon: ICONS.star, tone: "amber", title: f.name, cap: f.from === c.class ? "Class feature" : f.from, status: open ? "\u25b4" : "\u25be",
+          mainAttrs: `data-a="lvlGainOpen" data-name="${esc(f.name)}" aria-expanded="${open}"`, extra: "" }) + (open ? `<div class="about" style="margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius-sm)">${formatText(f.text || "")}</div>` : "");
       }).join("")}</div>`
         : p.open ? `<p class="sub2">Your rules data stops at level 10, so new features for level ${d.next} aren't listed. Add them from your book.</p>` : `<p class="sub2">No new class features at this level. Your choices come next.</p>`}`;
   }

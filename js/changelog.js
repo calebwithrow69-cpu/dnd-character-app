@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.10";
+export const VERSION = "0.1.11";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.11",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "One look for lists (first batch of the visual overhaul).",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Attacks, your spell list, every pick list (spells, feats, weapon mastery, options, conditions) and the level-up New this level step now share the Play Mode look: icon tile, name, small caption, detail line, status and buttons on the right.",
+          "Feats are a list instead of a card grid. Ones you cannot take yet are dimmed with the reason underneath.",
+          "Section headings use one style everywhere."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.10",
     date: "2026-10-29",

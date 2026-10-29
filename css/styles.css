@@ -1227,9 +1227,10 @@ body.modal-open{padding-right:var(--sbw,0px)}
 @media (prefers-reduced-motion:reduce){.rs-btn,.rs-die.idle .rs-dd,.rs-chip{animation:none!important}}
 
 /* ---------- Play Mode (port of the laptop demo) ---------- */
-.pm{--tone:var(--blue);--feat:#A58BE0;margin:0 -2px}
-@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .pm{--feat:#5B45B0}}
-:root[data-theme="light"] .pm{--feat:#5B45B0}
+.pm{--tone:var(--blue);margin:0 -2px}
+:root{--feat:#A58BE0}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--feat:#5B45B0}}
+:root[data-theme="light"]{--feat:#5B45B0}
 .pm kbd{font:600 .68rem/1 var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:3px 6px;color:var(--muted);background:var(--panel2)}
 .pm-cmd{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:0 0 10px}
 .pm-cmd .r{min-width:0;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;min-height:34px}
@@ -1522,3 +1523,36 @@ body.cx-on #app{position:relative;z-index:1}
 @media (max-width:420px){.cx-emhero{flex-direction:column;align-items:flex-start}}
 
 .randrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+
+/* ---- Shared list kit (js/ui.js kGroup / kRow): same look as Play Mode, used by attacks, spells, pickers ---- */
+.k-gh{display:flex;align-items:center;gap:12px;margin:0;padding:14px 2px 8px;font:600 .66rem/1 var(--display);letter-spacing:.16em;text-transform:uppercase;color:var(--rc,var(--faint))}
+.k-gh::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+.k-gh .ct{order:2;font:600 .72rem var(--mono);letter-spacing:0;color:var(--faint)}
+.k-gh.stick{position:sticky;top:0;z-index:3;background:linear-gradient(var(--bg) 80%,transparent)}
+.k-row{--rc:var(--faint);position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 10px;border-left:3px solid transparent;border-bottom:1px solid var(--line-soft);padding:4px 6px 4px 4px;transition:background .15s,border-color .15s}
+.k-row:hover{background:var(--panel)}
+.k-main{display:grid;grid-template-columns:38px minmax(0,1fr) auto;grid-template-areas:"ic nm st" "ic sm sm";align-items:center;gap:0 12px;min-height:56px;text-align:left;min-width:0;padding:6px 0;color:inherit;background:none;border:0;width:100%}
+.k-main.noic{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm st" "sm sm"}
+.k-ic{grid-area:ic;width:34px;height:34px;display:grid;place-items:center;border-radius:9px;color:var(--rc);border:1px solid var(--rc);background:color-mix(in srgb,var(--rc) 14%,transparent);font:600 .9rem var(--display)}
+.k-ic svg{width:18px;height:18px}
+.k-nm{grid-area:nm;display:grid;gap:1px;min-width:0}
+.k-nm h4{margin:0;font:600 1rem/1.2 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k-cap{font:600 .58rem/1.2 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-sm{grid-area:sm;font-size:.88rem;line-height:1.35;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.k-sm:empty{display:none}
+.k-st{grid-area:st;font:.74rem var(--mono);color:var(--faint);white-space:nowrap;justify-self:end}
+.k-go{display:flex;gap:6px;align-items:center;justify-self:end}
+.k-go .btn{min-height:32px;padding:0 12px}
+.k-extra{grid-column:1/-1;padding:0 0 8px 50px;font-size:.88rem;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.k-why{grid-column:1/-1;font-size:.82rem;color:var(--red);padding:0 0 6px 50px}
+.k-row.off .k-nm,.k-row.off .k-sm,.k-row.off .k-ic{opacity:.55}
+.k-list{border-top:1px solid var(--line-soft)}
+.k-nm h4{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.optcard .k-ic{flex:none}
+.optcard[aria-pressed="true"] .k-ic{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.optcard{min-height:60px}
+/* one section heading look everywhere: small caps, rule to the right (matches Play Mode groups) */
+.panel-head{background:transparent}
+.panel-head h2,.sec2,.sp2-lv{font:600 .7rem/1 var(--display)!important;letter-spacing:.16em!important;text-transform:uppercase!important;color:var(--faint)!important}
+.k-row.on{background:var(--amber-dim);border-left-color:var(--amber)}
+.k-row.on .k-st{color:var(--amber);font-weight:600}

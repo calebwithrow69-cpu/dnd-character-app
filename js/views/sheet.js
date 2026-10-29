@@ -1,4 +1,4 @@
-import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, activeChips, hotbarToggle } from "../ui.js";
+import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, activeChips, hotbarToggle, kRow, kGroup } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
@@ -98,19 +98,13 @@ export function attacksPanel(app, c, d, { head = "Attacks" } = {}) {
       ${weapons.length ? weapons.map(it => {
     const n = weaponNumbers(it.weapon, c);
     const w = it.weapon, k = slotOf(c, it.id);
-    return `<div class="rowline">
-          <span class="nm" style="flex-direction:column;align-items:flex-start;gap:1px">
-            <span class="row" style="gap:6px"><button class="linkbtn" data-a="openItem" data-id="${it.id}">${esc(it.name)}</button>
-              ${k ? `<span class="tag amber">${esc(where(it.id))}</span>` : ""}${w.mastery && mastered(it) ? `<button class="tag term" style="text-decoration:none" data-term="${esc(w.mastery)}">${esc(w.mastery)}</button>` : ""}</span>
-            <span class="sub2">${fmtMod(n.toHit)} to hit · ${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${esc(w.dtype || "")}</span>
-            ${w.ammo ? `<span class="sub2" style="display:flex;align-items:center;gap:6px;margin-top:4px">${esc(w.ammo.name)}:
-              <span class="stepper"><button data-a="ammoStep" data-id="${it.id}" data-n="-1" aria-label="Spend ammo">−</button><b>${w.ammo.cur}</b><button data-a="ammoStep" data-id="${it.id}" data-n="1" aria-label="Add ammo">+</button></span></span>` : ""}
-          </span>
-          <span class="row" style="gap:4px">
-            ${hotbarToggle(c, "attack", it.id, it.name, false)}
-            <button class="btn pri sm" data-a="attackRoll" data-id="${it.id}">Attack</button>
-          </span>
-        </div>`;
+    return kRow({
+      icon: ICONS.sword, tone: "amber", titleHtml: `<span data-a="openItem" data-id="${it.id}" role="button" tabindex="0" style="cursor:pointer">${esc(it.name)}</span>`,
+      capHtml: k ? esc(where(it.id)) : "In bag",
+      subHtml: `${fmtMod(n.toHit)} to hit \u00b7 ${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${esc(w.dtype || "")}${w.mastery && mastered(it) ? ` \u00b7 <button class="tag term" style="text-decoration:none" data-term="${esc(w.mastery)}">${esc(w.mastery)}</button>` : ""}`,
+      actions: `${hotbarToggle(c, "attack", it.id, it.name, false)}<button class="btn pri sm" data-a="attackRoll" data-id="${it.id}">Attack</button>`,
+      extra: w.ammo ? `${esc(w.ammo.name)}: <span class="stepper"><button data-a="ammoStep" data-id="${it.id}" data-n="-1" aria-label="Spend ammo">\u2212</button><b>${w.ammo.cur}</b><button data-a="ammoStep" data-id="${it.id}" data-n="1" aria-label="Add ammo">+</button></span>` : ""
+    });
   }).join("") : `<p class="muted small" style="padding:12px 0">No weapons in your bag yet.</p>`}
       </div></div>`;
 }
@@ -190,18 +184,19 @@ function spellsTab(app, c, d) {
       }).join("") + (info.slots.some(r => r.pact) ? `<p class="sub2">Pact slots come back on a short rest.</p>` : "") : `<p class="muted small">No spell slots at this level.</p>`}
       <p class="sub2 sp2-key">✦ always prepared · tap a spell to read it</p></div>
     <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><button class="btn sm pri" data-a="openPicker" data-picker="spells">Add spells</button></div>
-      ${known.length ? levels.map(lv => `<h3 class="sp2-lv">${levelLabel(lv)}</h3><div class="sp2-list">` + byLevel[lv].map(s => {
+      ${known.length ? levels.map(lv => kGroup(levelLabel(lv), byLevel[lv].length, { tone: lv === 0 ? "faint" : "amber" }) + `<div class="k-list">` + byLevel[lv].map(s => {
         const r = s.ref;
-        const sub = r ? [r.time, r.range].filter(Boolean).join(" · ") : "";
-        const tag = r?.conc ? "Concentration" : r?.ritual ? "Ritual" : s.always ? "Always" : "";
-        return `<div class="sp2-row ${lv > 0 && !s.always && !s.prepared ? "unprep" : ""}">
-          <button class="sp2-main-btn" data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"><span class="gl" aria-hidden="true">${esc((r?.school || s.name)[0])}</span>
-            <span class="t"><b>${esc(s.name)}${s.always ? " ✦" : ""}</b><span>${esc(sub)}</span>${tag ? `<em class="tg">${tag}</em>` : ""}</span></button>
-          <span class="sp2-act">
-            ${lv > 0 && !s.always ? `<label class="prep" data-pop="prep:${esc(s.name)}" title="Prepared"><input type="checkbox" data-a="togglePrepared" data-name="${esc(s.name)}" ${s.prepared ? "checked" : ""} aria-label="Prepared: ${esc(s.name)}"><span>Prep</span></label>` : ""}
+        const sub = r ? [r.time, r.range].filter(Boolean).join(" \u00b7 ") : "";
+        const tag = r?.conc ? "Concentration" : r?.ritual ? "Ritual" : s.always ? "Always prepared" : "";
+        const unprep = lv > 0 && !s.always && !s.prepared;
+        return kRow({
+          glyph: (r?.school || s.name)[0], tone: lv === 0 ? "blue" : "amber", off: unprep,
+          title: s.name + (s.always ? " \u2726" : ""), cap: [r?.school, tag].filter(Boolean).join(" \u00b7 "), sub,
+          mainAttrs: `data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"`,
+          actions: `${lv > 0 && !s.always ? `<label class="prep" data-pop="prep:${esc(s.name)}" title="Prepared"><input type="checkbox" data-a="togglePrepared" data-name="${esc(s.name)}" ${s.prepared ? "checked" : ""} aria-label="Prepared: ${esc(s.name)}"><span>Prep</span></label>` : ""}
             ${info && (lv === 0 || s.prepared || s.always) ? `<button class="btn sm ${lv === 0 ? "" : "pri"}" data-a="${lv === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
-            ${!s.always ? `<button class="iconbtn sp2-x" data-a="askRemove" data-do="removeSpell" data-what="spell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}
-          </span></div>`;
+            ${!s.always ? `<button class="iconbtn sp2-x" data-a="askRemove" data-do="removeSpell" data-what="spell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}`
+        });
       }).join("") + "</div>").join("") : `<p class="muted small" style="padding:12px 0">No spells yet. Tap "Add spells" to pick from your class list.</p>`}
     </div></div>`;
 }

@@ -120,7 +120,9 @@ export function conditionIcon(name) {
 }
 
 // One row in a picker: the choose button plus an (i) that expands what it does.
+const PICK_ICON = [[/spell|cantrip/i, "bolt", "blue"], [/mastery|weapon/i, "sword", "amber"], [/feat|style/i, "book", "feat"], [/condition/i, "flag", "red"], [/option|pick/i, "star", "amber"]];
 export function infoRow({ key, action, data = {}, title, sub = "", pressed = false, disabled = false, open = false, detail = "", badge = "", lead = "" }) {
+  if (!lead) { const m = PICK_ICON.find(x => x[0].test(action) || x[0].test(key || "")) || [0, "star", "faint"]; lead = `<span class="k-ic" style="--rc:var(--${m[2]})">${ICONS[m[1]] || ""}</span>`; }
   const attrs = Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(" ");
   return `<div class="inforow ${open ? "open" : ""}">
     <div class="inforow-top">
@@ -131,6 +133,20 @@ export function infoRow({ key, action, data = {}, title, sub = "", pressed = fal
     </div>
     ${open ? `<div class="about">${detail}</div>` : ""}
   </div>`;
+}
+
+// ---- Shared list kit (the Play Mode look): group header + row with icon tile, name, caption, detail line, status, actions.
+// tone: amber | green | blue | feat | red | faint (colours the icon tile and the left edge).
+export function kGroup(title, count = "", { tone = "faint", sticky = false } = {}) {
+  return `<h3 class="k-gh ${sticky ? "stick" : ""}" style="--rc:var(--${tone})"><span>${esc(title)}</span>${count !== "" ? `<span class="ct">${esc(String(count))}</span>` : ""}</h3>`;
+}
+export function kRow({ icon = "", glyph = "", tone = "faint", title, titleHtml = "", cap = "", capHtml = "", sub = "", subHtml = "", status = "", mainAttrs = "", actions = "", extra = "", off = false, cls = "", why = "" }) {
+  const ic = icon || glyph ? `<span class="k-ic">${icon || esc(glyph)}</span>` : "";
+  const main = `<span class="k-nm"><h4>${titleHtml || esc(title)}</h4>${cap || capHtml ? `<span class="k-cap">${capHtml || esc(cap)}</span>` : ""}</span>`
+    + `<span class="k-sm">${subHtml || esc(sub)}</span>${status ? `<span class="k-st">${status}</span>` : ""}`;
+  return `<div class="k-row ${off ? "off" : ""} ${cls}" style="--rc:var(--${tone})">
+    ${mainAttrs ? `<button class="k-main ${ic ? "" : "noic"}" ${mainAttrs}>${ic}${main}</button>` : `<div class="k-main ${ic ? "" : "noic"}">${ic}${main}</div>`}
+    ${actions ? `<span class="k-go">${actions}</span>` : ""}${extra ? `<div class="k-extra">${extra}</div>` : ""}${why ? `<span class="k-why">${esc(why)}</span>` : ""}</div>`;
 }
 
 let toastTimer = null;
