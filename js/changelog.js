@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.20";
+export const VERSION = "0.1.21";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.21",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "The Graveyard.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Characters can die. Fail a third death save (or choose Mark as dead in Edit character) and the app asks how they died. A dead character's sheet turns black and white with a banner and a Revive button.",
+          "Dead characters leave your character list and rest in the new Graveyard (a button under your list). Each gets a tombstone with their name, level, species, class, subclass and cause of death. Tap a stone to open the sheet, or press Revive to bring them back at 1 hit point."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.20",
     date: "2026-10-29",

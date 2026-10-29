@@ -15,6 +15,7 @@ import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
 import { applyPatch, loadPatch } from "./dm.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
+import { renderGraveyard } from "./views/graveyard.js";
 import { renderHome, renderRulesPage, playTomeOpen, lastCharacter } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
 import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet } from "./views/create.js";
@@ -215,14 +216,20 @@ function renderNow() {
   if (APP.screen === "home") mount.innerHTML = renderHome(APP);
   else if (APP.screen === "rules") mount.innerHTML = renderRulesPage(APP);
   else if (APP.screen === "roster") mount.innerHTML = renderRoster(APP);
+  else if (APP.screen === "graveyard") mount.innerHTML = renderGraveyard(APP);
   else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
   else if (APP.screen === "create") { prepareChoiceContext(APP); mount.innerHTML = renderCreate(APP); if (APP.createDraft) saveDraft(APP.createDraft); }
-  else if (APP.screen === "sheet" && APP.char) { if (syncHp(APP.char)) save(); mount.innerHTML = renderSheet(APP); }
+  else if (APP.screen === "sheet" && APP.char) {
+    if (syncHp(APP.char)) save(); mount.innerHTML = renderSheet(APP);
+    const ch = APP.char; // a third failed death save: ask once whether they have died
+    if (ch.deathSaves.fail >= 3 && !ch.dead && APP._diedAsked !== ch.id) { APP._diedAsked = ch.id; setTimeout(() => { if (APP.char === ch && !APP.modal) openModal({ type: "died" }); }, 700); }
+  }
   else if (APP.screen === "levelup" && APP.char && APP.lvl) mount.innerHTML = renderLevelUp(APP);
 
   // Entrance animations (modal drop-in, roll card, tab pop, chip pop) belong to a NEW view/modal/roll only.
   // Every action redraws the page, so repeat draws of the same thing are marked "still" and skip them.
   const viewKey = APP.screen + "|" + (APP.sheetTab || "") + "|" + (APP.char ? APP.char.id : "");
+  document.documentElement.classList.toggle("dead", APP.screen === "sheet" && !!(APP.char && APP.char.dead));
   mount.classList.toggle("still", viewKey === APP._viewKey); APP._viewKey = viewKey;
   document.documentElement.style.setProperty("--phase", (performance.now() / 1000).toFixed(2) + "s"); // keeps looping glints in step across redraws
   const nextType = APP.modal ? APP.modal.type + (APP.modal.picker || "") : null;
@@ -1147,6 +1154,23 @@ const ACTIONS = {
   glossaryBackToClass(el) { APP.glossarySubclass = ""; render(); },
   openEdit() { openModal({ type: "edit" }); },
   askDelete() { openModal({ type: "confirmDelete" }); },
+  goGraveyard() { APP.screen = "graveyard"; render(); window.scrollTo(0, 0); },
+  markDeadAsk() { openModal({ type: "died" }); },
+  confirmDead() {
+    const c = APP.char, v = (document.getElementById("f-cause") || {}).value || "";
+    c.dead = { cause: v.trim().slice(0, 300), at: new Date().toISOString().slice(0, 10) };
+    c.active = []; c.concentration = null; APP._diedAsked = c.id;
+    closeModal(); saveAndRender(); toast(`${c.name} has fallen`);
+  },
+  reviveAsk(el) { openModal({ type: "revive", id: el.dataset.id, name: el.dataset.name }); },
+  reviveGo() {
+    const id = APP.modal && APP.modal.id, open = APP.char && APP.char.id === id;
+    const c = open ? APP.char : (store.getCharacter(id) ? store.normalize(store.getCharacter(id), APP.library) : null);
+    if (!c) { closeModal(); return; }
+    c.dead = null; c.hp.cur = Math.max(1, Math.min(c.hp.max, 1)); c.deathSaves = { success: 0, fail: 0 }; APP._diedAsked = null;
+    if (open) { closeModal(); saveAndRender(); } else { store.saveCharacter(c); closeModal(); render(); }
+    toast(`${c.name} is back`);
+  },
   cancelDelete() { APP.modal = { type: "edit" }; render(); },
   deleteChar() {
     const gone = JSON.parse(JSON.stringify(APP.char)), name = gone.name;

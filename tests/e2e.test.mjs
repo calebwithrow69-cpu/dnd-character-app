@@ -368,6 +368,30 @@ await check("roll card: Heroic Inspiration rerolls one chosen damage die and is 
   noErrs(p); await p.context().close();
 });
 
+await check("Graveyard: mark dead (black and white), tombstone, open sheet, revive (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
+  await clickA(p, "openEdit");
+  await p.locator('[data-a="markDeadAsk"]').click(); await p.waitForTimeout(300);
+  await p.locator("#f-cause").fill("Eaten by a mimic"); await clickA(p, "confirmDead"); await p.waitForTimeout(400);
+  assert(await p.locator(".deadbar").count() === 1, "no death banner on the sheet");
+  assert(await p.evaluate(() => document.documentElement.classList.contains("dead")), "page is not black and white");
+  await clickA(p, "backToRoster"); await p.waitForTimeout(300);
+  assert(await p.locator('.rosteritem[data-id="gandork"]').count() === 0, "dead character still in the list");
+  assert(!(await p.evaluate(() => document.documentElement.classList.contains("dead"))), "roster should be in colour");
+  await clickA(p, "goGraveyard");
+  const stone = p.locator(".stone"); assert(await stone.count() === 1, "no tombstone");
+  const t = await stone.innerText(); assert(/Gandork/i.test(t) && /Level 7/.test(t) && /Druid/.test(t) && /Eaten by a mimic/.test(t), "tombstone text: " + t.replace(/\n/g, " | "));
+  assert(await hscroll(p) <= 0, "hscroll in graveyard");
+  if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT });
+  await stone.click(); await p.waitForSelector(".deadbar", { timeout: 8000 });
+  await clickA(p, "reviveAsk"); await clickA(p, "reviveGo"); await p.waitForTimeout(400);
+  assert(await p.locator(".deadbar").count() === 0, "banner after revive");
+  assert(!(await p.evaluate(() => document.documentElement.classList.contains("dead"))), "still black and white");
+  await clickA(p, "backToRoster");
+  assert(await p.locator('.rosteritem[data-id="gandork"]').count() === 1, "revived character is not back in the list");
+  noErrs(p); await p.context().close();
+});
+
 await check("Starry Form: turn on shows an Active chip, survives reload, long rest clears it (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   const use = p.locator('[data-a="playUse"][data-id*="Starry Form"]').first();

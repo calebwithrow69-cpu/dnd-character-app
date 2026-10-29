@@ -269,6 +269,18 @@ export function renderModal(app) {
         `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmUseGo">Use ${esc(e.name)}</button>`);
     }
 
+    case "died": {
+      const who = esc(c.name);
+      return modalShell(`${c.name} has fallen`,
+        `<p>${who} goes to the Graveyard. You can still open the sheet there, and you can bring them back whenever you like.</p>
+         <label class="field"><span class="lab">How did they die? (optional)</span><input class="f" id="f-cause" maxlength="300" autocomplete="off" placeholder="Where, and to what"></label>`,
+        `<button class="btn" data-a="closeModal">Not dead</button><button class="btn pri" data-a="confirmDead">Lay to rest</button>`);
+    }
+    case "revive": {
+      return modalShell("Bring them back?", `<p>${m.name ? esc(m.name) : "This character"} returns to the character list at 1 hit point, with death saves cleared. The cause of death is forgotten.</p>`,
+        `<button class="btn" data-a="closeModal">Stay buried</button><button class="btn pri" data-a="reviveGo">Revive</button>`);
+    }
+
     case "longRest":
       return modalShell("Take a long rest?",
         `<p>This restores all hit points, all spell slots, all Hit Dice and all trackers, ends concentration, and lowers exhaustion by 1.</p>`,
@@ -356,6 +368,7 @@ export function renderModal(app) {
           <div class="panel" style="margin-top:10px"><div class="panel-body stack">
             <button class="btn block" data-a="downloadPdf">Download character sheet (PDF)</button>
             <button class="btn block" data-a="exportOne">Save a backup of this character</button>
+            ${c.dead ? "" : `<button class="btn block" data-a="markDeadAsk">Mark as dead</button>`}
             <button class="btn danger block" data-a="askDelete">Delete character</button>
           </div></div>
         </div>`,

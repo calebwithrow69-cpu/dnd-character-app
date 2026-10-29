@@ -1613,3 +1613,18 @@ body.cx-on #app{position:relative;z-index:1}
 .cl-sec{font-family:var(--display);font-size:1.1rem;letter-spacing:.06em;text-transform:uppercase;margin:28px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .classic .search{margin:4px 0 8px}
 .subtabs.seg button{font-size:.62rem;letter-spacing:.02em;min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+/* Graveyard and dead characters */
+html.dead{filter:grayscale(1)}
+.deadbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.deadbar span{min-width:0}
+.tombs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:22px 16px;padding-top:6px}
+.tomb{display:flex;flex-direction:column;align-items:center;gap:8px}
+.stone{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;min-height:210px;padding:34px 12px 14px;text-align:center;color:#2b2b2b;
+  background:linear-gradient(180deg,#d8d8d4,#a9a9a4);border:0;border-radius:50% 50% 6px 6px / 28% 28% 6px 6px;box-shadow:inset 0 0 0 3px rgba(0,0,0,.12),0 6px 0 #6f6f6a,0 10px 14px rgba(0,0,0,.35);cursor:pointer;transition:transform .15s}
+.stone:hover,.stone:focus-visible{transform:translateY(-3px)}
+.stone .rip{font:700 .66rem var(--display);letter-spacing:.3em;color:#555}
+.stone .nm{font:700 1.05rem var(--display);line-height:1.15;overflow-wrap:anywhere}
+.stone .lv,.stone .cl{font-size:.78rem;color:#3a3a3a}
+.stone .why{margin-top:6px;font-size:.74rem;font-style:italic;color:#444;overflow-wrap:anywhere}
+.stone .dt{margin-top:auto;font:.68rem var(--mono);color:#555}

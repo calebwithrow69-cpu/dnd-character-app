@@ -57,6 +57,7 @@ export function renderSheet(app) {
   return `<div class="sheetview">
     ${topbar(c.name, meta, { back: "backToRoster", actions: [{ a: "openEdit", icon: "edit", label: "Edit character" }] })}
     <main class="wrap page ${wide ? "wide" : ""}">
+      ${c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : ""}</span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
       <section class="status" aria-label="Status">
         <div class="vitals">
           <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points. Tap to add XP or level up.">

@@ -4,8 +4,8 @@ import { installCard } from "../install.js";
 import { listCharacters } from "../store.js";
 
 export function renderRoster(app) {
-  const chars = listCharacters();
-  const seedAvailable = app.seedGandork && !chars.some(c => c.id === app.seedGandork.id);
+  const all = listCharacters(), chars = all.filter(c => !c.dead), fallen = all.length - chars.length;
+  const seedAvailable = app.seedGandork && !all.some(c => c.id === app.seedGandork.id);
 
   const list = chars.length
     ? `<div class="panel">${chars.map(c => `
@@ -25,6 +25,7 @@ export function renderRoster(app) {
       ${list}
       <div class="stack" style="margin-top:14px">
         <button class="btn pri block" data-a="newChar">New character</button>
+        ${fallen ? `<button class="btn block" data-a="goGraveyard">Graveyard (${fallen})</button>` : ""}
         <button class="btn block" data-a="importPrompt">Restore from a backup file</button>
         <button class="btn ghost block" data-a="dmAsk">DM editor</button>
         ${dmPinPanel(app)}

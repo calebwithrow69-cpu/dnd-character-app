@@ -76,6 +76,7 @@ export function normalize(c, library) {
     : h.kind === "ability" ? true : false));
   out.loadouts = (Array.isArray(c.loadouts) ? c.loadouts : []).filter(l => l && l.id && l.name && l.eq && typeof l.eq === "object").slice(0, 12);
   out.levelLog = c.levelLog || [];
+  out.dead = c.dead && typeof c.dead === "object" ? { cause: String(c.dead.cause || "").slice(0, 300), at: String(c.dead.at || "").slice(0, 10) } : null;
   out.hpRoll = c.hpRoll && c.hpRoll.level ? { level: Number(c.hpRoll.level), v: Number(c.hpRoll.v) } : undefined;
   out.custom = (Array.isArray(c.custom) ? c.custom : []).filter(x => x && x.id && x.t).map(x => ({ id: x.id, t: x.t, v: Number(x.v) || 0, label: x.label || "Custom" }));
   out.schema = 3;
