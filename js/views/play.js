@@ -5,7 +5,7 @@
 import { esc, ICONS, formatText } from "../ui.js";
 import { playEntries, playShow, levelTrack, SOURCES } from "../play.js";
 import { COST_LABEL } from "../combat.js";
-import { detailFor } from "./sheet.js";
+import { detailFor, hotbar } from "./sheet.js";
 
 const GROUPS = [["Action", "Action"], ["Bonus", "Bonus Action"], ["Reaction", "Reaction"], ["Other", "Other"], ["Feat", "Feats"], ["Passive", "Passive"]];
 const FILTERS = [["All", "All"], ["Action", "Action"], ["Bonus", "Bonus Action"], ["Reaction", "Reaction"], ["Avail", "Available"]];
@@ -64,6 +64,23 @@ function row(e, d, c, ctx, kid) {
     ${dim ? `<span class="why">${esc(e.block)}</span>` : ""}</div>`;
   if (e.type === "feat" && open && kids.length) return html + `<div class="kids">${kids.map(k => row(k, d, c, ctx, true)).join("")}</div>`;
   return html;
+}
+
+// Death saves live here now that the old Combat tab is gone: they appear whenever you are at 0 HP.
+function deathPanel(c) {
+  const pips = (n, kind, cls) => Array.from({ length: 3 }, (_, i) =>
+    `<button class="pip ${cls} ${i < n ? "" : "used"}" data-a="deathSave" data-kind="${kind}" data-i="${i}" aria-label="${kind} ${i + 1}"><i></i></button>`).join("");
+  return `<div class="panel" style="margin:10px 0"><div class="panel-head"><h2>Death saves</h2><span class="sub2">You are at 0 HP</span></div><div class="panel-body">
+    <div class="rowline"><span class="nm">Successes</span><span class="pips">${pips(c.deathSaves.success, "success", "ok")}</span></div>
+    <div class="rowline"><span class="nm">Failures</span><span class="pips">${pips(c.deathSaves.fail, "fail", "fail")}</span></div>
+    <button class="btn pri block" data-a="rollDeathSave" ${c.deathSaves.fail >= 3 || c.deathSaves.success >= 3 ? "disabled" : ""}>Roll death save</button>
+    <p class="small muted" style="margin-top:8px">You can't take actions or reactions. Damage at 0 HP adds a failure automatically. Healing brings you back.</p></div></div>`;
+}
+// Great Weapon Master: shown only when it applies (feat taken and a Heavy weapon in the bag).
+function gwmRow(app, c) {
+  if (!c.feats.includes("Great Weapon Master") || !c.inventory.some(i => /heavy/i.test((i.weapon && i.weapon.props) || ""))) return "";
+  return `<div class="panel" style="margin:10px 0"><div class="panel-body" style="padding:0 14px"><div class="setrow"><div class="setinfo"><div class="setlabel">Great Weapon Master</div><div class="sethint">On: Heavy weapon attacks add your Proficiency Bonus to damage.</div></div>
+    <button class="switch" role="switch" aria-checked="${app.gwm ? "true" : "false"}" aria-label="Great Weapon Master" data-a="togglePref" data-k="gwm"><i></i></button></div></div></div>`;
 }
 
 function slotsRail(c, d) {
@@ -157,7 +174,9 @@ export function playTab(app, c, d) {
       <div class="r"><span class="lab">Show</span>${SOURCES.map(([k, l]) => `<button class="src" data-a="playShow" data-k="${k}" role="checkbox" aria-checked="${show[k]}" aria-pressed="${show[k]}"><span class="bx">${CHECK}</span>${l} <b>${all.filter(e => (e.type === "std" ? "std" : e.type) === k).length}</b></button>`).join("")}
         <span class="sep"></span><span class="lab">Filter</span><div class="fchips" role="group" aria-label="Filter by action type">${FILTERS.map(([k, l]) => `<button class="fc" data-a="playFilter" data-k="${k}" aria-pressed="${filter === k}">${l} <b>${count(k)}</b></button>`).join("")}</div></div>
     </div>
-    ${dying ? `<div class="tilewhy" role="note" style="margin:10px 0"><b>You're at 0 HP</b><span>You can't take actions or reactions. Death saves are on the Combat tab.</span></div>` : ""}
+    ${dying ? deathPanel(c) : ""}
+    ${hotbar(app, c, d)}
+    ${gwmRow(app, c)}
     <div class="pm-main">
       <aside class="pm-rail" aria-label="Sections"><section><h3>Sections</h3><nav class="nav">${nav}</nav></section>${slotsRail(c, d)}</aside>
       <div class="pm-list">

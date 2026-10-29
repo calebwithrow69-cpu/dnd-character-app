@@ -309,11 +309,9 @@ await check("Play Mode: only the weapon in hand attacks; Swap weapon is a Bonus 
 
 await check("Starry Form: turn on shows an Active chip, survives reload, long rest clears it (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
-  await p.locator('[data-a="charSub"][data-sub="combat"]').click(); await p.waitForTimeout(300);
-  const tile = p.locator('[data-a="openTile"][data-id*="Starry Form"]').first();
-  assert(await tile.count() === 1, "no Starry Form tile on the Combat tab");
-  await tile.click(); await p.waitForTimeout(300);
-  await p.locator('[data-a="toggleActive"]').click(); await p.waitForTimeout(400);
+  const use = p.locator('[data-a="playUse"][data-id*="Starry Form"]').first();
+  assert(await use.count() === 1, "no Starry Form row in Play Mode");
+  await use.click(); await p.waitForTimeout(400);
   assert(await p.locator(".chip.fx").count() >= 1, "no Active chip after turning on");
   assert(await hscroll(p) <= 0, "hscroll with chip");
   await p.reload(); await p.waitForSelector("#home-book", { timeout: 15000 });
@@ -321,9 +319,7 @@ await check("Starry Form: turn on shows an Active chip, survives reload, long re
   assert(await p.locator(".chip.fx").count() >= 1, "Active chip lost after reload");
   await p.locator('[data-a="endActive"]').first().click(); await p.waitForTimeout(300);
   assert(await p.locator(".chip.fx").count() === 0, "chip x did not turn it off");
-  await p.locator('[data-a="charSub"][data-sub="combat"]').click(); await p.waitForTimeout(300);
-  await p.locator('[data-a="openTile"][data-id*="Starry Form"]').first().click();
-  await p.locator('[data-a="toggleActive"]').click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="playUse"][data-id*="Starry Form"]').first().click(); await p.waitForTimeout(300);
   await p.locator('[data-a="charSub"][data-sub="tools"]').click(); await p.waitForTimeout(300);
   await clickA(p, "openLongRest"); await clickA(p, "confirmLongRest"); await p.waitForTimeout(400);
   assert(await p.locator(".chip.fx").count() === 0, "long rest did not clear it");
@@ -361,7 +357,7 @@ await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again rem
   await p.waitForTimeout(700);
   assert(await p.locator('[data-a="toggleHotbar"][aria-pressed="true"]').count() === 1, "button did not fill");
   await clickA(p, "setPrefV");
-  await p.locator('[data-a="charSub"][data-sub="combat"]').click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="charSub"][data-sub="play"]').click(); await p.waitForTimeout(300);
   assert(await p.locator(".hb-slot").count() === 1, "hotbar slot missing");
   await clickA(p, "openHotbarAdd");
   const on = p.locator('#modal-root [data-a="toggleHotbar"][aria-pressed="true"]');
@@ -371,6 +367,25 @@ await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again rem
   await clickA(p, "closeModal");
   assert(await p.locator(".hb-slot").count() === 0, "slot not removed by toggling off");
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+});
+
+await check("loadouts (advanced Gear): save, preview does not change gear, apply does; Combat sub-tab is gone", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  assert(await p.locator('[data-a="charSub"][data-sub="combat"]').count() === 0, "Combat sub-tab still there");
+  await p.locator('[data-a="sheetTab"][data-tab="gear"]').last().click(); await p.waitForTimeout(400);
+  await clickA(p, "loadoutSaveOpen"); await p.locator("#f-ldname").fill("Test set"); await clickA(p, "loadoutSave"); await p.waitForTimeout(300);
+  await p.locator('[data-a="slotTap"][data-slot="main"]').first().click(); await p.waitForTimeout(250);
+  await p.locator('[data-a="equipHere"]').first().click(); await p.waitForTimeout(300);
+  const worn = async () => (await p.locator('[data-a="slotTap"][data-slot="main"] h4').first().innerText()).trim();
+  const before = await worn(); assert(before !== "Empty", "weapon was not equipped");
+  await p.locator('[data-a="loadoutOpen"]').first().click(); await p.waitForTimeout(300);
+  await clickA(p, "closeModal"); await p.waitForTimeout(200);
+  assert(await worn() === before, "opening the preview changed the gear");
+  await p.locator('[data-a="loadoutOpen"]').first().click(); await p.waitForTimeout(300);
+  await clickA(p, "loadoutApply"); await p.waitForTimeout(400);
+  assert(await worn() === "Empty", "applying the loadout did not restore it");
+  assert(await hscroll(p) <= 0, "hscroll on gear");
+  noErrs(p); await p.context().close();
 });
 
 await check("characters survive a reload", async () => {

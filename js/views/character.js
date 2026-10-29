@@ -1,4 +1,4 @@
-// The Character tab: Combat / Rolls / Features / Tools / Notes.
+// The Character tab: Play Mode / Rolls / Features / Tools / Notes.
 import { esc, ICONS, conditionIcon, formatText, activeChips, turnBar } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, ABILITY_SHORT, fmtMod } from "../rules.js";
 import { findByName, subclassesFor } from "../data.js";
@@ -8,11 +8,11 @@ import { hotbar, diceTab, needsFirstChoices } from "./sheet.js";
 import { playTab } from "./play.js";
 import { playEntries } from "../play.js";
 
-export const SUBTABS = [["play", "Play Mode"], ["combat", "Combat"], ["rolls", "Rolls"], ["features", "Features"], ["tools", "Tools"], ["notes", "Notes"]];
+export const SUBTABS = [["play", "Play Mode"], ["rolls", "Rolls"], ["features", "Features"], ["tools", "Tools"], ["notes", "Notes"]];
 
 export function characterBody(app, c, d) {
   const sub = SUBTABS.some(s => s[0] === app.charSub) ? app.charSub : "play";
-  const body = sub === "play" ? playTab(app, c, d) : sub === "combat" ? combatTab(app, c, d) : sub === "rolls" ? rollsTab(app, c, d)
+  const body = sub === "play" ? playTab(app, c, d) : sub === "rolls" ? rollsTab(app, c, d)
     : sub === "features" ? featuresTab(app, c, d) : sub === "tools" ? toolsTab(app, c, d) : notesTab(app, c, d);
   return `<div class="viewswap"><span class="sub2">Advanced sheet</span><button class="linkbtn" data-a="setPrefV" data-k="sheetStyle" data-v="classic">Switch to the classic sheet</button></div><div class="subtabs seg" role="group" aria-label="Character sections">
       ${SUBTABS.map(([id, label]) => `<button data-a="charSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}
@@ -29,44 +29,6 @@ function tileIcon(e) {
 // ---------------- Combat ----------------
 export function combatEntries(app, c, d) {
   return buildCombat(app, c, d);
-}
-
-function combatTab(app, c, d) {
-  const dying = c.hp.cur <= 0;
-  const pips = (n, kind, cls) => Array.from({ length: 3 }, (_, i) =>
-    `<button class="pip ${cls} ${i < n ? "" : "used"}" data-a="deathSave" data-kind="${kind}" data-i="${i}" aria-label="${kind} ${i + 1}"><i></i></button>`).join("");
-  const all = combatEntries(app, c, d);
-  const f = app.combatFilter || "All";
-  const shown = sortCombat(all.filter(e => f === "All" || e.cost === f || (f === "Passive" && e.cost === "Passive")), app.combatSort);
-  const count = k => all.filter(e => k === "All" || e.cost === k).length;
-  const gwm = c.feats.includes("Great Weapon Master");
-  const heavy = all.some(e => e.weaponId && /heavy/i.test((c.inventory.find(i => i.id === e.weaponId)?.weapon?.props) || ""));
-
-  const onIds = new Set((c.active || []).map(a => a.id));
-  const tile = e => `<button class="ctile ${e.block ? "off" : ""} ${onIds.has(e.id) ? "fxon" : ""} ${e.cost.toLowerCase()}" data-a="openTile" data-id="${esc(e.id)}" aria-label="${esc(e.name)}, ${COST_LABEL[e.cost]}${e.block ? ", unavailable: " + esc(e.block) : ""}">
-      <span class="ct-ic">${tileIcon(e)}</span>
-      <span class="ct-nm">${esc(e.name)}</span>
-      <span class="ct-sub">${e.res ? (e.res.max != null ? `${e.res.cur}/${e.res.max} left` : `${e.res.cur} ${esc(e.res.label)}`) : esc(e.src)}${e.note ? ` · ${e.note}` : ""}</span>
-      <span class="ct-cost">${onIds.has(e.id) ? "Active" : e.block ? "Unavailable" : COST_LABEL[e.cost]}</span>
-    </button>`;
-
-  return `
-    ${app.prefs.turns ? turnBar(app) : ""}
-    ${dying ? `<div class="panel"><div class="panel-head"><h2>Death saves</h2></div><div class="panel-body">
-        <div class="rowline"><span class="nm">Successes</span><span class="pips">${pips(c.deathSaves.success, "success", "ok")}</span></div>
-        <div class="rowline"><span class="nm">Failures</span><span class="pips">${pips(c.deathSaves.fail, "fail", "fail")}</span></div>
-        <button class="btn pri block" data-a="rollDeathSave" ${c.deathSaves.fail >= 3 || c.deathSaves.success >= 3 ? "disabled" : ""}>Roll death save</button>
-        <p class="small muted" style="margin-top:8px">Damage at 0 HP adds a failure automatically. Healing brings you back.</p></div></div>` : ""}
-    ${hotbar(app, c, d)}
-    ${gwm && heavy ? `<div class="panel"><div class="panel-body" style="padding:0 14px">${switchRow("gwm", "Great Weapon Master", "On: Heavy weapon attacks add your Proficiency Bonus to damage (once per turn, on a hit during the Attack action).", !!app.gwm)}</div></div>` : ""}
-    <div class="combathead"><h2>What can I do?</h2>
-      <label class="sortsel"><span class="sub2">Sort</span><select class="f" data-a="combatSort" aria-label="Sort abilities">
-        ${[["avail", "Available first"], ["name", "A to Z"], ["source", "Source"]].map(([v, l]) => `<option value="${v}" ${(app.combatSort || "avail") === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
-    ${shown.length ? `<div class="ctiles">${shown.map(tile).join("")}</div>` : `<p class="muted small" style="padding:14px 0">Nothing here for ${f === "All" ? "this character" : COST_LABEL[f].toLowerCase()} yet.</p>`}
-    <p class="sub2" style="margin-top:12px">Greyed tiles can't be used right now; tap one to see why and read it. Action types are the app's reading of the rules text.</p>
-    <div class="filterstrip" role="group" aria-label="Filter by action type">
-      ${["All", ...COSTS].map(k => `<button data-a="combatFilter" data-k="${k}" aria-pressed="${f === k}">${k === "Bonus" ? "Bonus" : k === "Passive" ? "Passive" : k}<span>${count(k)}</span></button>`).join("")}
-    </div>`;
 }
 
 // ---------------- Rolls ----------------

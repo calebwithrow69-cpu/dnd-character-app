@@ -18,6 +18,7 @@ import { renderHome, renderRulesPage, playTomeOpen, lastCharacter } from "./view
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
 import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet } from "./views/create.js";
 import { cxStop, cxSeal } from "./cxfx.js";
+import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
 import { emblemFor } from "./emblems.js";
 import {
   CHAPTERS, ALIGNMENTS, blankDraft, saveDraft, loadDraft, clearDraft, validateChapter, validateAll, buildCharacter,
@@ -1376,6 +1377,37 @@ const ACTIONS = {
     APP.selItem = id; render();
   },
   clearSel() { APP.selItem = null; render(); },
+  // Loadouts (Advanced sheet > Gear). Opening one only previews it; loadoutApply is the confirm.
+  loadoutOpen(el) { openModal({ type: "loadout", id: el.dataset.id }); },
+  loadoutAskDelete() { if (APP.modal) { APP.modal.confirmDelete = true; render(); } },
+  loadoutSaveOpen() { openModal({ type: "loadoutSave" }); setTimeout(() => { const f = document.getElementById("f-ldname"); if (f) { f.focus(); f.select(); } }, 60); },
+  loadoutSave() {
+    const c = APP.char, f = document.getElementById("f-ldname");
+    const list = loadoutsOf(c);
+    if (list.length >= 12) { toast("You can keep up to 12 loadouts. Delete one first."); return; }
+    const name = ((f && f.value) || "").trim().slice(0, 24) || "Loadout " + (list.length + 1);
+    c.loadouts = [...list, { id: "ld" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, eq: { ...c.equipment } }];
+    closeModal(); saveAndRender(); toast(`Saved "${name}"`);
+  },
+  loadoutApply(el) {
+    const c = APP.char, l = loadoutsOf(c).find(x => x.id === el.dataset.id);
+    if (!l) return;
+    const p = loadoutPlan(c, l);
+    c.equipment = { ...p.eq };
+    recheckEquipped(); APP.selItem = null;
+    closeModal(); saveAndRender();
+    toast(`${l.name} equipped \u00b7 AC ${deriveCharacter(c).ac}`);
+  },
+  loadoutUpdate(el) {
+    const c = APP.char, l = loadoutsOf(c).find(x => x.id === el.dataset.id);
+    if (!l) return;
+    l.eq = { ...c.equipment }; saveAndRender(); toast(`${l.name} now matches what you are wearing`);
+  },
+  loadoutDelete(el) {
+    const c = APP.char, l = loadoutsOf(c).find(x => x.id === el.dataset.id);
+    c.loadouts = loadoutsOf(c).filter(x => x.id !== el.dataset.id);
+    closeModal(); saveAndRender(); if (l) toast(`Deleted "${l.name}"`);
+  },
   slotTap(el) {
     const slot = el.dataset.slot, c = APP.char;
     if (APP.selItem) {

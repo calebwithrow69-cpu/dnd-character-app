@@ -1,3 +1,4 @@
+import { readinessStrip, loadoutCards, wornRows } from "./loadout.js";
 import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, activeChips, hotbarToggle, kRow, kGroup } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
@@ -52,7 +53,7 @@ export function renderSheet(app) {
   let body;
   if (tab === "stats") body = (app.prefs.sheetStyle || "classic") === "advanced" ? characterBody(app, c, d) : classicBody(app, c, d);
   else if (tab === "spells") body = spellsTab(app, c, d);
-  else if (tab === "gear") body = gearTab(app, c, d);
+  else if (tab === "gear") body = (app.prefs.sheetStyle || "classic") === "advanced" ? loadoutGearTab(app, c, d) : gearTab(app, c, d);
   else body = rulesTab(app);
 
   return `<div class="sheetview">
@@ -286,6 +287,21 @@ function figureFor(c) {
     </g></svg>`;
 }
 
+function coinsPanel(c) {
+  return `<div class="panel"><div class="panel-head"><h2>Coins</h2><button class="btn sm" data-a="openShop">Shop</button></div><div class="panel-body">
+      <div class="coinrow">
+        ${[["pp", "#D9D6E2", "Platinum"], ["gp", "#E3BF5C", "Gold"], ["ep", "#CFC49A", "Electrum"], ["sp", "#C9CCD1", "Silver"], ["cp", "#C98B5B", "Copper"]].map(([k, col, nm]) => `<label class="coinc"><i style="background:radial-gradient(circle at 35% 30%,#fff9,${col} 55%,${col})" aria-hidden="true">${k.toUpperCase()}</i><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" aria-label="${nm} pieces"></label>`).join("")}
+      </div></div></div>`;
+}
+
+// Advanced sheet gear: status strip, loadouts, worn gear as rows, then the bag and coins.
+function loadoutGearTab(app, c, d) {
+  const sel = app.selItem ? itemById(c, app.selItem) : null;
+  return `<div class="ld-page">${readinessStrip(app, c, d)}${loadoutCards(app, c)}
+    ${sel ? `<div class="selbar"><span>Tap a slot to equip <b>${esc(sel.name)}</b></span><button class="btn sm" data-a="clearSel">Cancel</button></div>` : ""}
+    <div class="ld-cols"><div>${wornRows(app, c)}</div><div>${bagGrid(app, c)}${coinsPanel(c)}</div></div></div>`;
+}
+
 function gearTab(app, c, d) {
   const sel = app.selItem ? itemById(c, app.selItem) : null;
   const ac = d.acInfo;
@@ -306,10 +322,7 @@ function gearTab(app, c, d) {
 
     ${bagGrid(app, c)}
 
-    <div class="panel"><div class="panel-head"><h2>Coins</h2><button class="btn sm" data-a="openShop">Shop</button></div><div class="panel-body">
-      <div class="coinrow">
-        ${[["pp", "#D9D6E2", "Platinum"], ["gp", "#E3BF5C", "Gold"], ["ep", "#CFC49A", "Electrum"], ["sp", "#C9CCD1", "Silver"], ["cp", "#C98B5B", "Copper"]].map(([k, col, nm]) => `<label class="coinc"><i style="background:radial-gradient(circle at 35% 30%,#fff9,${col} 55%,${col})" aria-hidden="true">${k.toUpperCase()}</i><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" aria-label="${nm} pieces"></label>`).join("")}
-      </div></div></div>
+    ${coinsPanel(c)}
     </div></div>`;
 }
 

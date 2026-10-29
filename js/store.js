@@ -73,6 +73,7 @@ export function normalize(c, library) {
     h.kind === "spell" ? out.spellcasting.spells.some(s => s.name === h.name)
     : (h.kind === "attack" || h.kind === "item") ? out.inventory.some(i => i.id === h.id)
     : h.kind === "ability" ? true : false));
+  out.loadouts = (Array.isArray(c.loadouts) ? c.loadouts : []).filter(l => l && l.id && l.name && l.eq && typeof l.eq === "object").slice(0, 12);
   out.levelLog = c.levelLog || [];
   out.schema = 3;
   return out;

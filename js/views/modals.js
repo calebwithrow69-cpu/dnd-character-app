@@ -20,6 +20,7 @@ import { COST_LABEL } from "../combat.js";
 import { wieldedId } from "../play.js";
 import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
+import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
 
 export function renderModal(app) {
   const m = app.modal;
@@ -220,6 +221,9 @@ export function renderModal(app) {
         </div>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
+
+    case "loadout": { const r = renderLoadoutBody(app, c, m); return modalShell(r.title, r.body, r.foot); }
+    case "loadoutSave": { const r = renderLoadoutSave(app, c); return modalShell(r.title, r.body, r.foot); }
 
     case "slot": {
       const label = SLOTS.find(s => s.key === m.slot).label;

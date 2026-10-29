@@ -2,11 +2,31 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.11";
+export const VERSION = "0.1.12";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.12",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Loadouts and a new Gear screen for the Advanced sheet.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Advanced sheet > Gear is rebuilt: a status strip (carrying and attunement), saved loadouts, and your worn gear as rows. The Classic sheet keeps the doll.",
+          "Loadouts remember what you are wearing and holding. Tapping one shows a preview of what changes and your new AC. Nothing changes until you press Equip loadout.",
+          "Death saves, the hotbar and the Great Weapon Master switch now sit on Play Mode."
+        ]
+      },
+      {
+        title: "Removed",
+        items: ["The Combat sub-tab on the Advanced sheet. Play Mode does everything it did."]
+      }
+    ]
+  },
   {
     v: "0.1.11",
     date: "2026-10-29",

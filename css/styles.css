@@ -1556,3 +1556,21 @@ body.cx-on #app{position:relative;z-index:1}
 .panel-head h2,.sec2,.sp2-lv{font:600 .7rem/1 var(--display)!important;letter-spacing:.16em!important;text-transform:uppercase!important;color:var(--faint)!important}
 .k-row.on{background:var(--amber-dim);border-left-color:var(--amber)}
 .k-row.on .k-st{color:var(--amber);font-weight:600}
+
+/* ---- Advanced sheet > Gear: readiness strip, loadouts, worn rows ---- */
+.ld-ready{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;align-items:center;padding:10px 12px;margin:12px 0 4px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel)}
+.ld-ac{position:relative;width:60px;height:70px;display:grid;place-items:center;padding:0}
+.ld-ac .svg{position:absolute;inset:0}.ld-ac .svg svg{width:100%;height:100%}
+.ld-ac b{position:relative;font:700 1.35rem var(--display);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);transform:translateY(-3px)}
+.ld-m .h{display:flex;justify-content:space-between;gap:6px;font-size:.78rem;color:var(--muted);margin-bottom:4px}.ld-m .h b{font:600 .74rem var(--mono);color:var(--ink)}
+.ld-pips{display:flex;gap:8px;align-items:center;height:12px}.ld-pips i{width:12px;height:12px;transform:rotate(45deg);border:1.5px solid var(--blue);border-radius:2px}.ld-pips i.on{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.ld-flag{grid-column:1/-1;margin:0;font-size:.82rem;color:var(--red)}
+.ld-cards{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity}
+.ld-card{flex:0 0 150px;scroll-snap-align:start;display:grid;gap:3px;padding:10px 12px;text-align:left;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel2);transition:border-color .2s,transform .15s}
+.ld-card:hover{transform:translateY(-2px)}.ld-card.on{border-color:var(--amber);background:var(--amber-dim)}
+.ld-card b{font:600 .7rem var(--display);letter-spacing:.1em;text-transform:uppercase}.ld-card .n{font:700 1.35rem var(--display)}
+.ld-card .d{font:600 .72rem var(--mono);color:var(--muted)}.ld-card .d.up{color:var(--green)}.ld-card .d.dn{color:var(--red)}
+.ld-card.add{border-style:dashed;place-content:center;text-align:center;flex-basis:130px;color:var(--muted)}
+.ld-cols{display:grid;gap:0 28px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.ld-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.ld-edit{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-top:16px;flex-wrap:wrap}
