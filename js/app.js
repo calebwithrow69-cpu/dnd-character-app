@@ -1495,7 +1495,7 @@ const ACTIONS = {
     const c = APP.char, it = itemById(c, el.dataset.id); if (!it) return;
     c.wielded = it.id;
     if (APP.turn.on) APP.turn.spent.Bonus = true;
-    closeModal(); saveAndRender(); toast(`${it.name} in hand`);
+    closeModal(); saveAndRender(); toast(APP.turn.on ? `${it.name} in hand \u00b7 Bonus Action used` : `${it.name} in hand`);
   },
   // dice tab
   quickRoll(el) {

@@ -5,10 +5,10 @@
 import { buildCombat, turnBlock } from "./combat.js";
 import { itemCategory, weaponsOf, itemById } from "./gear.js";
 import { findByName, findFeat } from "./data.js";
-import { optionNames, optionGroup } from "./progression.js";
-import { weaponNumbers, fmtMod } from "./rules.js";
+import { optionNames, optionGroup, tableCounts } from "./progression.js";
+import { weaponNumbers, fmtMod, slotRows } from "./rules.js";
 import { analyzeSpell, castDice } from "./spells.js";
-import { ensureLuck, starryOn } from "./riders.js";
+import { ensureLuck, starryOn, pbOf } from "./riders.js";
 
 export const SOURCES = [["feature", "Class features"], ["feat", "Feats"], ["attack", "Attacks"], ["spell", "Spells"], ["item", "Items"], ["std", "Standard actions"]];
 export const DEFAULT_SHOW = { feature: true, feat: true, attack: true, spell: true, item: true, std: false };
@@ -181,6 +181,20 @@ export function levelTrack(app, c) {
   ((sub && sub.features) || []).filter(f => !f.intro).forEach(f => rows.push({ lv: f.lv, name: f.name, kind: "subclassFeature", from: c.subclass }));
   const by = {};
   rows.forEach(r => { (by[r.lv] = by[r.lv] || []).push(r); });
-  const max = Math.max(20, c.level);
-  return Array.from({ length: max }, (_, i) => ({ lv: i + 1, features: by[i + 1] || [] }));
+  const max = Math.max(20, c.level), ord = n => ["", "1st", "2nd", "3rd"][n] || n + "th";
+  let prev = { pb: 0, cantrips: 0, prepared: 0, top: 0 };
+  return Array.from({ length: max }, (_, i) => {
+    const lv = i + 1, pb = pbOf(lv), tc = tableCounts(cls, lv) || {};
+    const slots = slotRows(c.class, lv), top = slots.length ? Math.max(...slots.map(r => r.level)) : 0;
+    const cantrips = tc.cantrips || 0, prepared = tc.prepared || 0;
+    const pbUp = prev.pb && pb > prev.pb, newSlot = top > prev.top ? top : 0;
+    const spellUp = (cantrips > prev.cantrips && prev.cantrips > 0) || (prepared > prev.prepared && prev.prepared > 0) || !!newSlot;
+    const extra = [`Proficiency bonus +${pb}${pbUp ? " (up)" : ""}`];
+    if (cantrips) extra.push(`Cantrips known ${cantrips}${prev.cantrips && cantrips > prev.cantrips ? " (+" + (cantrips - prev.cantrips) + ")" : ""}`);
+    if (prepared) extra.push(`Prepared spells ${prepared}${prev.prepared && prepared > prev.prepared ? " (+" + (prepared - prev.prepared) + ")" : ""}`);
+    if (newSlot) extra.push(`New: ${ord(newSlot)}-level spell slots`);
+    if (slots.length) extra.push("Slots " + slots.map(r => `${ord(r.level)} \u00d7${r.max}`).join(", "));
+    prev = { pb, cantrips, prepared, top };
+    return { lv, features: by[lv] || [], pb, pbUp: !!pbUp, spellUp, extra };
+  });
 }
