@@ -26,7 +26,7 @@ const baseName = n => String(n || "").replace(/\s*\(.*$/, "");
 //         dice (roll targets only): "1d8" or { dice:"1d4", steps:[[9,"2d4"],[16,"4d4"]] }
 // Cond:   "armored"|"unarmored"|"notHeavy"|"unarmoredNoShield" (older strings) or
 //         { all:[..] } { any:[..] } { not:c } { armor:"none|any|light|medium|heavy" } { shield:bool }
-//         { wield:"melee|ranged|twoHanded|oneHanded|light|finesse|thrown|versatile|dual|unarmed" } { attack:"melee|ranged|spell|weapon|unarmed|cantrip" }
+//         { wield:"melee|ranged|twoHanded|oneHanded|alone|light|finesse|thrown|versatile|dual|unarmed" } { abil:"str|dex|..." } { pick:[choiceLabel, option] } { attack:"melee|ranged|spell|weapon|unarmed|cantrip" }
 //         { hpBelow:fraction } { level:{gte,lte} } { class:name } { toggle:id } { condition:name } { uses:{id,gte} }
 // The engine is the one place that knows how to read all this; the DM block editor will only ever
 // write and read this same JSON. No DOM in here. ASCII only.
@@ -36,11 +36,11 @@ export const FX_TARGETS = [
   ["save.all", "All saving throws"], ["skill.all", "All skills"], ["spell.dc", "Spell save DC"], ["spell.atk", "Spell attack"]
 ];
 const ABS = "str|dex|con|int|wis|cha";
-const TARGET_RES = [/^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
+const TARGET_RES = [/^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
   /^grant\.(resist|immune|prof|sense|language)\.[A-Za-z. ]+$/];
 const OPS = ["add", "set", "max", "min", "adv", "dis", "reroll", "grant"];
-const EXPR_KEYS = ["perLevel", "lvl", "prof", "halfProf", "abil", "classLevel", "steps", "add", "mul", "half", "neg", "max", "min", "if", "dice"];
-const COND_KEYS = ["all", "any", "not", "armor", "shield", "wield", "attack", "hpBelow", "level", "class", "toggle", "condition", "uses"];
+const EXPR_KEYS = ["ctx", "perLevel", "lvl", "prof", "halfProf", "abil", "classLevel", "steps", "add", "mul", "half", "neg", "max", "min", "if", "dice"];
+const COND_KEYS = ["all", "any", "not", "armor", "shield", "wield", "attack", "hpBelow", "level", "class", "toggle", "condition", "uses", "abil", "pick"];
 const LEGACY_COND = ["armored", "unarmored", "notHeavy", "unarmoredNoShield"];
 
 // Returns a list of problems (empty = valid). Used by the tests, the audit tool and the DM editor.
@@ -76,6 +76,18 @@ export function validateEffect(e) {
     if (c.not && !condOk(c.not)) return false;
     return true;
   };
+  if (e.t === "unarmed") {
+    const u = e.v;
+    if (!u || typeof u !== "object" || (u.dice != null && !/^\d*d\d+$/.test(String(u.dice))) || (u.flat != null && typeof u.flat !== "number") || (u.abil != null && !new RegExp("^(" + ABS + ")$").test(u.abil))) bad.push("unarmed needs { dice, dtype?, abil? }");
+    if (!condOk(e.when)) bad.push("bad condition");
+    return bad;
+  }
+  if (op === "reroll") {
+    const u = e.v;
+    if (!u || typeof u !== "object" || typeof u.atMost !== "number" || (u.as != null && typeof u.as !== "number")) bad.push("reroll needs { atMost, as? }");
+    if (!condOk(e.when)) bad.push("bad condition");
+    return bad;
+  }
   if (op === "add" || op === "set" || op === "max" || op === "min" || op === "reroll" || (op === "grant" && e.v != null)) { if (e.v == null || !exprOk(e.v)) bad.push("bad value"); }
   if (!condOk(e.when)) bad.push("bad condition");
   return bad;
@@ -88,6 +100,7 @@ export function evalExpr(v, c, ctx = {}) {
   if (typeof v === "number") return v;
   if (!v || typeof v !== "object") return 0;
   const L = c.level || 1, ev = x => evalExpr(x, c, ctx);
+  if (v.ctx) return Number(ctx[v.ctx]) || 0;
   if (v.perLevel != null) return v.perLevel * L;
   if (v.lvl) return L;
   if (v.prof) return pbOf(L) * (v.prof === true ? 1 : v.prof);
@@ -139,6 +152,8 @@ export function evalCond(w, ctx = {}, c = {}) {
   if (w.shield != null) ok = ok && !!x.shield === !!w.shield;
   if (w.wield) ok = ok && !!x.wield[w.wield];
   if (w.attack) ok = ok && ([].concat(x.attack || [])).includes(w.attack);
+  if (w.abil) ok = ok && x.abil === w.abil;
+  if (w.pick) ok = ok && [].concat((c.choices || {})[w.pick[0]] || []).includes(w.pick[1]);
   if (w.hpBelow != null) ok = ok && (c.hp ? c.hp.cur / Math.max(1, c.hp.max) : 1) < w.hpBelow;
   if (w.level) ok = ok && (w.level.gte == null || (c.level || 1) >= w.level.gte) && (w.level.lte == null || (c.level || 1) <= w.level.lte);
   if (w.class) ok = ok && c.class === w.class;
@@ -190,9 +205,11 @@ export function fxStat(c, target, base, ctx = {}) {
 // Things that change a ROLL: flat bonuses, bonus dice, advantage, disadvantage, rerolls.
 // target: "atk" | "dmg" | "init" | "save.dex" | "skill.stealth" ... ; ctx says what kind of attack/weapon this roll is.
 export function rollMods(c, target, ctx = {}) {
-  const out = { flat: 0, dice: [], adv: [], dis: [], reroll: [], parts: [] };
+  const out = { flat: 0, dice: [], adv: [], dis: [], reroll: [], parts: [], riders: [] };
   collectEffects(c).filter(e => e.t === target && applies(e, c, ctx)).forEach(e => {
     const op = e.op || "add";
+    // rider: the player decides on the roll (once-per-turn extras, "if thrown", "if within 5 feet")
+    if (e.rider && op === "add") { const d = evalDice(e.v, c); out.riders.push({ src: e.src, dice: d || null, flat: d ? 0 : evalExpr(e.v, c, ctx), once: !!e.once, note: e.note || "" }); return; }
     if (op === "adv") out.adv.push(e.src);
     else if (op === "dis") out.dis.push(e.src);
     else if (op === "reroll") out.reroll.push({ src: e.src, ...(typeof e.v === "object" ? e.v : {}) });
@@ -249,4 +266,11 @@ export function syncHp(c) {
     changed = true;
   }
   return changed;
+}
+
+// Unarmed Strike profiles the character has: the basic 1 + Str, plus any a trait or feat grants
+// ({ t:"unarmed", op:"grant", v:{ dice, dtype, abil, flat } }). Each is { src, dice, dtype, abil }.
+export function unarmedOptions(c, ctx = {}) {
+  return collectEffects(c).filter(e => e.t === "unarmed" && applies(e, c, ctx))
+    .map(e => ({ src: e.src, dice: e.v.dice || null, flat: e.v.flat || 0, dtype: e.v.dtype || "bludgeoning", abil: e.v.abil || "str" }));
 }

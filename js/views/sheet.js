@@ -4,7 +4,7 @@ import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
 import { findFeat, enabledSpells, allWeapons, allItems, enabledFeats, findByName, subclassesFor } from "../data.js";
-import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, weaponsOf, attunedCount, itemCategory, categoryRank, speciesLook } from "../gear.js";
+import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, weaponsOf, attacksOf, attunedCount, itemCategory, categoryRank, speciesLook } from "../gear.js";
 import { optionGroup, optionNames, levelUpPlan } from "../progression.js";
 import { characterBody, concBanner } from "./character.js";
 import { classicBody } from "./classic.js";
@@ -89,7 +89,7 @@ export function renderSheet(app) {
 
 // ---- Attacks (shared by the Stats and Gear tabs) ----
 export function attacksPanel(app, c, d, { head = "Attacks" } = {}) {
-  const weapons = weaponsOf(c);
+  const weapons = attacksOf(c);
   const where = id => slotsOf(c, id).map(k => SLOTS.find(s => s.key === k).label).join(" + ");
   const mastered = it => (c.masteries || []).some(m => m === it.name || m === it.weapon?.base);
   return `<div class="panel"><div class="panel-head"><h2>${head}</h2></div>
@@ -98,8 +98,8 @@ export function attacksPanel(app, c, d, { head = "Attacks" } = {}) {
     const n = weaponNumbers(it.weapon, c);
     const w = it.weapon, k = slotOf(c, it.id);
     return kRow({
-      icon: ICONS.sword, tone: "amber", titleHtml: `<span data-a="openItem" data-id="${it.id}" role="button" tabindex="0" style="cursor:pointer">${esc(it.name)}</span>`,
-      capHtml: k ? esc(where(it.id)) : "In bag",
+      icon: ICONS.sword, tone: "amber", titleHtml: it.virtual ? esc(it.name) : `<span data-a="openItem" data-id="${it.id}" role="button" tabindex="0" style="cursor:pointer">${esc(it.name)}</span>`,
+      capHtml: it.virtual ? "Natural" : k ? esc(where(it.id)) : "In bag",
       subHtml: `${fmtMod(n.toHit)} to hit \u00b7 ${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${esc(w.dtype || "")}${w.mastery && mastered(it) ? ` \u00b7 <button class="tag term" style="text-decoration:none" data-term="${esc(w.mastery)}">${esc(w.mastery)}</button>` : ""}`,
       actions: `${hotbarToggle(c, "attack", it.id, it.name, false)}<button class="btn pri sm" data-a="attackRoll" data-id="${it.id}">Attack</button>`,
       extra: w.ammo ? `${esc(w.ammo.name)}: <span class="stepper"><button data-a="ammoStep" data-id="${it.id}" data-n="-1" aria-label="Spend ammo">\u2212</button><b>${w.ammo.cur}</b><button data-a="ammoStep" data-id="${it.id}" data-n="1" aria-label="Add ammo">+</button></span>` : ""
@@ -312,7 +312,7 @@ export function gearTab(app, c, d, { attacks = true } = {}) {
         <p class="sub2" style="margin-top:10px">${matchMedia("(pointer:fine)").matches ? "Drag items between your bag and the slots, or click an item then a slot." : "Tap an item in your bag, then tap a glowing slot. Tap a slot to change it."}</p>
       </div></div></div><div class="gear-side">
 
-    ${attacks && weaponsOf(c).length ? attacksPanel(app, c, d) : ""}
+    ${attacks ? attacksPanel(app, c, d) : ""}
 
     <div class="panel"><div class="panel-head"><h2>Armor class ${d.ac}</h2>${ac.stealthDis ? `<span class="tag">Stealth disadvantage</span>` : ""}</div>
       <div class="panel-body stack">${acBody(c, d)}

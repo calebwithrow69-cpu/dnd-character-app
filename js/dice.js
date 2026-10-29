@@ -80,3 +80,27 @@ export function spin(bet = 5) {
   setCredits(credits);
   return { reels, bet, winnings, credits };
 }
+
+// Damage-die rules from the effects engine: { atMost, as? }. With `as`, a die showing atMost or less
+// counts as that number (Great Weapon Fighting); without it the die is rolled again once and the
+// new roll stands (Tavern Brawler). Changes r in place and returns short notes for the roll card.
+export function applyDieRules(r, rules) {
+  const notes = [];
+  if (!r || !rules || !rules.length) return notes;
+  r.groups.forEach(g => {
+    if (g.sign < 0) return;
+    g.rolls.forEach((v, i) => {
+      rules.forEach(rule => {
+        const cur = g.rolls[i];
+        if (cur > rule.atMost) return;
+        const next = rule.as != null ? Math.max(cur, rule.as) : rollDie(g.sides);
+        if (next === cur) return;
+        g.rolls[i] = next;
+        if (g.keptIdx.has(i)) { const k = g.kept.indexOf(cur); if (k >= 0) g.kept[k] = next; r.total += next - cur; }
+        notes.push(`${cur}→${next}`);
+      });
+    });
+  });
+  r.rolls = r.groups.flatMap(g => g.kept);
+  return notes;
+}

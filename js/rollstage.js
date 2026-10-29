@@ -5,7 +5,7 @@
 // ASCII only in this file: use \u escapes for symbols.
 import { sfx, buzz } from "./sfx.js";
 import { rollDie } from "./rules.js";
-import { rollFormula, describeGroups } from "./dice.js";
+import { rollFormula, describeGroups, applyDieRules } from "./dice.js";
 
 let root = null, run = 0, pending = null, parts = [], raf = 0, closeT = 0;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -260,8 +260,10 @@ async function rollDamage(st) {
   const base = `${d.dice}${d.mod ? (d.mod > 0 ? "+" : "") + d.mod : ""}`;
   const r = rollFormula(base), extra = crit ? rollFormula(d.dice) : null;
   if (!r) { st.busy = false; st.phase = "done"; paint(); return; }
+  const fixed = applyDieRules(r, d.reroll), fixedX = extra ? applyDieRules(extra, d.reroll) : [];
   const total = Math.max(0, r.total + (extra ? extra.total : 0));
-  st.dmgRows = []; st.dmgBase = { total, bd: describeGroups(r).replace(/<[^>]*>/g, "") + (extra ? " + " + describeGroups(extra).replace(/<[^>]*>/g, "") : "") };
+  const rnote = fixed.length || fixedX.length ? " (" + (d.reroll.map(x => x.src).filter((x, i, a) => a.indexOf(x) === i).join(", ")) + ": " + [...fixed, ...fixedX].join(", ") + ")" : "";
+  st.dmgRows = []; st.dmgBase = { total, bd: describeGroups(r).replace(/<[^>]*>/g, "") + rnote + (extra ? " + " + describeGroups(extra).replace(/<[^>]*>/g, "") : "") };
   const row = addRow(crit ? "Crit damage" : (d.label || "Damage") + (d.type ? " \u00b7 " + d.type : ""), "", st.dmgBase.bd, crit);
   await flick(row.big, total, st.calm);
   if (!pending || pending.id !== id) return;
@@ -316,7 +318,7 @@ async function tap() {
 export function startRoll(spec, opts) {
   build(); if (pending) finish();
   const id = ++run, calm = reduced() || opts.mode === "off";
-  const st = { id, inter: true, phase: "ready", adv: "normal", lucky: false, busy: false, used: {}, spec, opts, calm, rolled: false, committed: false, atkExtra: [], dmgRows: [], dmgSum: 0, nat: null, pick: 0, d20total: 0 };
+  const st = { id, inter: true, phase: "ready", adv: (spec.d20 && spec.d20.adv) || "normal", lucky: false, busy: false, used: {}, spec, opts, calm, rolled: false, committed: false, atkExtra: [], dmgRows: [], dmgSum: 0, nat: null, pick: 0, d20total: 0 };
   spec.riders = spec.riders || { pre: [], attack: [], damage: [] };
   st.out = () => {
     const parts = [];

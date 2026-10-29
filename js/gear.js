@@ -1,4 +1,5 @@
 import { fxList, fxStat, effectsReady } from "./effects.js";
+import { unarmedWeapons, isUnarmedId } from "./attackctx.js";
 // Equipment: slots, what fits where, armor stats, and gear-driven AC.
 // Pure functions over a character — no DOM.
 
@@ -89,6 +90,7 @@ export function fits(item, slotKey, char) {
 export const fitsOk = (item, slot, char) => fits(item, slot, char) === true;
 
 export function itemById(char, id) {
+  if (isUnarmedId(id)) return unarmedWeapons(char).find(i => i.id === id) || null;
   return id ? (char.inventory || []).find(i => i.id === id) || null : null;
 }
 export function slotOf(char, id) {
@@ -178,6 +180,9 @@ export function weaponsOf(char) {
   const order = id => (eq.main === id ? 0 : eq.off === id ? 1 : eq.ranged === id ? 2 : 3);
   return (char.inventory || []).filter(i => i.weapon).sort((a, b) => order(a.id) - order(b.id));
 }
+
+// Everything that can make an attack: carried weapons first, then Unarmed Strike options.
+export function attacksOf(char) { return [...weaponsOf(char), ...unarmedWeapons(char)]; }
 
 // Build an inventory entry from a library/homebrew name, carrying over
 // weapon stats, armor type and magic properties where we can tell.

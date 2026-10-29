@@ -4,6 +4,8 @@
 //   node tests/engine.test.mjs                (also checks data/library.json effects if unlocked)
 import { readFileSync, existsSync } from "node:fs";
 import { isSustained } from "../js/combat.js";
+import { weaponNumbers } from "../js/rules.js";
+import { unarmedWeapons } from "../js/attackctx.js";
 import { computeAC } from "../js/gear.js";
 import { setEffectsSource, collectEffects, fxList, fxSum, fxStat, rollMods, grantsOf, hpParts, evalExpr, evalDice, diceAverage, validateEffect } from "../js/effects.js";
 
@@ -149,6 +151,79 @@ if (existsSync(libUrl)) {
     L.subclasses.forEach(c => (c.features || []).forEach(f => scan(c.name + ":" + f.name, f)));
     if (bad.length) throw new Error(bad.join(" | "));
   });
+}
+
+// ---- attacks and damage, against the real (unlocked) rules ----
+if (existsSync(new URL("../data/library.json", import.meta.url))) {
+  const LIB = JSON.parse(readFileSync(new URL("../data/library.json", import.meta.url), "utf8"));
+  const REAL = { feats: LIB.feats, classes: LIB.classes, subclasses: LIB.subclasses, species: LIB.species, effectsV: LIB.effectsV };
+  const W = {
+    longbow: { dice: "1d8", dtype: "piercing", kind: "Ranged", props: "Ammunition, Heavy, Two-Handed", ability: null, magic: 0 },
+    longsword: { dice: "1d8", dtype: "slashing", kind: "Melee", props: "Versatile (1d10)", ability: null, magic: 0 },
+    greatsword: { dice: "2d6", dtype: "slashing", kind: "Melee", props: "Heavy, Two-Handed", ability: null, magic: 0 },
+    dagger: { dice: "1d4", dtype: "piercing", kind: "Melee", props: "Finesse, Light, Thrown (Range 20/60)", ability: null, magic: 0 },
+    shortsword: { dice: "1d6", dtype: "piercing", kind: "Melee", props: "Finesse, Light", ability: null, magic: 0 },
+    javelin: { dice: "1d6", dtype: "piercing", kind: "Melee", props: "Thrown (Range 30/120)", ability: null, magic: 0 }
+  };
+  // a character holding the named weapons: first is main hand, second (if any) off hand
+  const hold = (feats, main, off, o = {}) => {
+    const inv = [{ id: "a", name: main, weapon: { ...W[main] } }]; const eq = { main: "a" };
+    if (off) { inv.push({ id: "b", name: off, weapon: { ...W[off] } }); eq.off = "b"; }
+    return { ...mk({ feats, ...o }), inventory: inv, equipment: eq };
+  };
+  const withReal = fn => withSource(REAL, fn);
+  const numA = (c, id = "a") => weaponNumbers(c.inventory.find(i => i.id === id).weapon, c);
+  t("real rules: every fighting style/feat effect validates", () => withReal(() => { eq(LIB.feats.filter(f => f.effects).flatMap(f => f.effects.flatMap(validateEffect)), []); }));
+  t("Archery adds +2 to ranged weapon attacks only", () => withReal(() => {
+    const plain = numA(hold([], "longbow")).toHit, arch = numA(hold(["Archery"], "longbow")).toHit;
+    eq(arch - plain, 2); eq(numA(hold(["Archery"], "longsword")).toHit, numA(hold([], "longsword")).toHit);
+  }));
+  t("Dueling: +2 damage with one melee weapon in hand and nothing else, not with a second weapon", () => withReal(() => {
+    const base = numA(hold([], "longsword")).dmgMod;
+    eq(numA(hold(["Dueling"], "longsword")).dmgMod - base, 2);
+    eq(numA(hold(["Dueling"], "longsword", "shortsword")).dmgMod - base, 0);
+    eq(numA(hold(["Dueling"], "greatsword")).dmgMod - numA(hold([], "greatsword")).dmgMod, 0);
+  }));
+  t("Great Weapon Fighting: counts 1s and 2s as 3 with a two-handed grip only", () => withReal(() => {
+    eq(numA(hold(["Great Weapon Fighting"], "greatsword")).reroll.map(r => [r.atMost, r.as]), [[2, 3]]);
+    eq(numA(hold(["Great Weapon Fighting"], "longsword")).reroll.length, 1, "versatile with a free hand");
+    eq(numA(hold(["Great Weapon Fighting"], "longsword", "shortsword")).reroll.length, 0, "other weapon in hand");
+    eq(numA(hold(["Great Weapon Fighting"], "longbow")).reroll.length, 0, "ranged");
+  }));
+  t("Two-Weapon Fighting: the off-hand attack adds the ability modifier; without it, it does not", () => withReal(() => {
+    const off = hold([], "dagger", "shortsword"), offT = hold(["Two-Weapon Fighting"], "dagger", "shortsword");
+    eq(numA(off, "b").dmgMod, 0); eq(numA(offT, "b").dmgMod, numA(offT, "a").dmgMod);
+  }));
+  t("Thrown Weapon Fighting is offered as a rider on a Thrown weapon", () => withReal(() => {
+    const n = numA(hold(["Thrown Weapon Fighting"], "javelin")); eq(n.riders.dmg.map(r => [r.src, r.flat]), [["Thrown Weapon Fighting", 2]]);
+    eq(numA(hold(["Thrown Weapon Fighting"], "longsword")).riders.dmg.length, 0);
+  }));
+  t("Rage adds its damage only while Rage is on and the attack uses Strength", () => withReal(() => {
+    const on = { ...hold([], "greatsword", null, { class: "Barbarian", level: 9 }), active: [{ id: "feature:Rage", name: "Rage" }] };
+    const off = hold([], "greatsword", null, { class: "Barbarian", level: 9 });
+    eq(numA(on).dmgMod - numA(off).dmgMod, 3);
+    const dexOn = { ...on, inventory: [{ id: "a", name: "x", weapon: { ...W.shortsword, ability: "dex" } }] };
+    eq(numA(dexOn).dmgMod, 2);
+  }));
+  t("Reckless Attack gives advantage on Strength attacks while it is on", () => withReal(() => {
+    const on = { ...hold([], "greatsword", null, { class: "Barbarian" }), active: [{ id: "feature:Reckless Attack", name: "Reckless Attack" }] };
+    eq(numA(on).adv, ["Reckless Attack"]); eq(numA(hold([], "greatsword", null, { class: "Barbarian" })).adv, []);
+  }));
+  t("Unarmed Strike: basic 1 + Str; species, Tavern Brawler, Unarmed Fighting and Altered add options", () => withReal(() => {
+    const names = c => unarmedWeapons(c).map(i => i.name);
+    eq(names(mk({})), ["Unarmed Strike"]);
+    eq(names(mk({ species: "Tabaxi" })), ["Unarmed Strike", "Cat's Claws (unarmed)"]);
+    eq(names(mk({ feats: ["Tavern Brawler"] })), ["Unarmed Strike", "Tavern Brawler (unarmed)"]);
+    const alone = unarmedWeapons({ ...mk({ feats: ["Unarmed Fighting"] }), inventory: [], equipment: {} }).find(i => i.name.startsWith("Unarmed Fighting")); eq(alone.weapon.dice, "1d8");
+    const armed = unarmedWeapons(hold(["Unarmed Fighting"], "longsword")).find(i => i.name.startsWith("Unarmed Fighting")); eq(armed.weapon.dice, "1d6");
+    eq(names(mk({ feats: ["Altered"] })), ["Unarmed Strike"]);
+    eq(names({ ...mk({ feats: ["Altered"] }), choices: { Altered: ["Natural Weapons"] } }), ["Unarmed Strike", "Natural Weapons (unarmed)"]);
+    eq(unarmedWeapons(mk({ species: "Dhampir" }))[1].weapon.ability, "con");
+  }));
+  t("Tavern Brawler rerolls 1s on Unarmed Strike damage, not weapon damage", () => withReal(() => {
+    const c = hold(["Tavern Brawler"], "longsword");
+    eq(weaponNumbers(unarmedWeapons(c)[0].weapon, c).reroll.map(r => r.atMost), [1]); eq(numA(c).reroll.length, 0);
+  }));
 }
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);

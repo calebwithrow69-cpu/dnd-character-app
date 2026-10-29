@@ -1553,12 +1553,20 @@ const ACTIONS = {
     const n = weaponNumbers(w, c), exh = c.exhaustion * 2;
     const pb = APP.gwm && c.feats.includes("Great Weapon Master") && /heavy/i.test(w.props || "") ? d.prof : 0;
     const mastery = w.mastery && (c.masteries || []).includes(it.name) ? `mastery: ${w.mastery}` : "";
+    const rid = ridersFor(APP, c, d, { kind: "weapon" });
+    const asRider = (r, i, k) => ({ id: `fx${k}${i}`, label: r.src, dice: r.dice || undefined, flat: r.flat || undefined, note: r.note || "", once: r.once });
+    n.riders.atk.forEach((r, i) => rid.attack.push(asRider(r, i, "a")));
+    n.riders.dmg.forEach((r, i) => rid.damage.push(asRider(r, i, "d")));
+    const adv = n.adv.length && !n.dis.length ? "adv" : n.dis.length && !n.adv.length ? "dis" : null;
+    const dice = n.dice + n.extraDice.map(x => "+" + x.dice).join("");
+    const fxNotes = [...n.parts.atk.filter(p => p[1]).map(p => `${p[0]} ${p[1] > 0 ? "+" : ""}${p[1]} to hit`), ...n.parts.dmg.filter(p => p[1]).map(p => `${p[0]} ${typeof p[1] === "number" && p[1] > 0 ? "+" : ""}${p[1]} damage`),
+      ...n.reroll.map(r => r.as ? `${r.src}: ${r.atMost >= 2 ? "1s and 2s" : "1s"} count as ${r.as}` : `${r.src}: reroll ${r.atMost >= 2 ? "1s and 2s" : "1s"}`), ...(adv ? [`${(adv === "adv" ? n.adv : n.dis).join(", ")}: ${adv === "adv" ? "advantage" : "disadvantage"}`] : [])];
     rollSpec({
       title: `${it.name} attack${w.ammo ? ` \u00b7 ${w.ammo.cur - 1} ${w.ammo.name} left` : ""}`,
-      d20: { mod: n.toHit - exh, label: "To hit" },
-      dmg: { dice: n.dice, mod: n.dmgMod + pb, type: w.dtype || "", label: "Damage" },
-      riders: ridersFor(APP, c, d, { kind: "weapon" }),
-      notes: [pb ? `includes +${pb} Heavy Weapon Mastery on a hit` : "", mastery].filter(Boolean).join(" \u00b7 ")
+      d20: { mod: n.toHit - exh, label: "To hit", adv },
+      dmg: { dice, mod: n.dmgMod + pb, type: w.dtype || "", label: "Damage", reroll: n.reroll },
+      riders: rid,
+      notes: [pb ? `includes +${pb} Heavy Weapon Mastery on a hit` : "", mastery, ...fxNotes].filter(Boolean).join(" \u00b7 ")
     }, { onRoll: () => { if (w.ammo && w.ammo.cur > 0) w.ammo.cur -= 1; if (APP.turn.on && APP.turn.spent.Action !== true) APP.turn.spent.Action = "attack"; save(); } });
   },
   starryArrow() {

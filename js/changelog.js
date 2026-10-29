@@ -2,11 +2,35 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.18";
+export const VERSION = "0.1.19";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.19",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Attack and damage rolls now use your feats, features and species.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Unarmed Strike is now an attack of its own, with the options your character really has: Tabaxi, Khajiit and Leonin claws, Lizardfolk bite, Minotaur horns, Satyr ram, Dhampir bite, Shifter fangs, Tavern Brawler, Unarmed Fighting, and the Altered feat's Natural Weapons.",
+          "Archery, Dueling, Great Weapon Fighting, Two-Weapon Fighting, Thrown Weapon Fighting, Close Combat Artillerist, Rage damage and Reckless Attack advantage now change your attack and damage rolls by themselves, and the roll card says where each bonus came from.",
+          "Optional extras (a thrown weapon's bonus, Ardling's once-per-turn damage) show up as buttons on the roll card instead of being added for you."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "The off-hand attack with a second Light weapon no longer adds your ability modifier to damage unless you have Two-Weapon Fighting (or it is negative), as the 2024 rules say.",
+          "A Versatile weapon counts as one-handed and as two-handed when your other hand is empty, so Dueling and Great Weapon Fighting both apply to it. If you have both styles, only use the one that matches how you actually hold it."
+        ]
+      },
+      { title: "Fixed", items: ["Action Surge no longer costs an action to use."] }
+    ]
+  },
   {
     v: "0.1.18",
     date: "2026-10-29",

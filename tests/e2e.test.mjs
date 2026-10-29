@@ -296,7 +296,8 @@ await check("attack: you can skip the add-ons and close the screen (phone)", asy
 
 await check("Play Mode: only the weapon in hand attacks; Swap weapon is a Bonus Action; feats are one group with a submenu (laptop)", async () => {
   const p = await open(1280, 800, {}); await openSample(p); await goAdvanced(p);
-  assert(await p.locator('.pm-list .row.t-attack:not([data-row="x:swap"]) ').count() === 1, "more than one weapon attack row");
+  assert(await p.locator('.pm-list .row.t-attack:not([data-row="x:swap"]):not([data-row^="w:unarmed"])').count() === 1, "more than one weapon attack row");
+  assert(await p.locator('.pm-list .row.t-attack[data-row="w:unarmed:base"]').count() === 1, "Unarmed Strike row is missing");
   assert(await p.locator('[data-row="x:swap"][data-cost="Bonus"]').count() === 1, "no Swap weapon bonus action");
   await p.locator('[data-a="playUse"][data-id="x:swap"]').click(); await p.waitForTimeout(300);
   assert(await p.locator('[data-a="swapTo"]').count() >= 2, "swap list is empty");

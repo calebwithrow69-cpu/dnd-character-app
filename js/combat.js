@@ -3,7 +3,7 @@
 // used right now. Nothing is reworded: the cost is the app's reading of the
 // rules text (same reading the species picker uses), shown as such.
 import { findByName, findFeat, enabledSpells, enabledFeats } from "./data.js";
-import { weaponsOf } from "./gear.js";
+import { attacksOf } from "./gear.js";
 import { optionNames, optionGroup } from "./progression.js";
 import { parseSpecies, classifyText } from "./species.js";
 
@@ -15,6 +15,8 @@ const DOWN = ["Incapacitated", "Stunned", "Paralyzed", "Unconscious", "Petrified
 export function costOfText(text) {
   const t = String(text || "").replace(/’/g, "'");
   if (classifyText(t).kind !== "active") return "Passive";
+  // Grants an extra action rather than costing one (Action Surge): takes no action of its own.
+  if (/\b(?:take|get|have) (?:one |an )?additional action\b/i.test(t)) return "Other";
   const hits = [["Bonus", /\bBonus Action\b/], ["Reaction", /\bReaction\b/], ["Action", /\b(?:Magic action|as an action|Use an action)\b/i]]
     .map(([k, re]) => [k, t.search(re)]).filter(h => h[1] >= 0).sort((a, b) => a[1] - b[1]);
   return hits.length ? hits[0][0] : "Other";
@@ -54,14 +56,15 @@ export function buildCombat(app, c, d) {
   };
 
   // Attacks
-  weaponsOf(c).forEach(it => {
+  attacksOf(c).forEach(it => {
     const w = it.weapon;
     const heavy = /heavy/i.test(w.props || "");
     let block = turnBlock(c, turn, "Action", true);
     if (!block && w.ammo && w.ammo.cur <= 0) block = `Out of ${w.ammo.name}.`;
     add({ id: "w:" + it.id, name: it.name, cost: "Action", src: "Attack", type: "attack", kind: "Ability", block,
       note: heavy && c.feats.includes("Great Weapon Master") && app.gwm ? "+PB" : "",
-      act: { a: "attackRoll", id: it.id }, detail: { kind: "weapon", name: it.name }, weaponId: it.id,
+      act: { a: "attackRoll", id: it.id }, detail: it.virtual ? null : { kind: "weapon", name: it.name }, weaponId: it.id, unarmed: !!it.virtual,
+      text: it.virtual ? "Unarmed Strike: you hit with a fist, foot, claw or whatever your body offers. Damage is 1 plus your Strength modifier unless a trait or feat gives you something better." : undefined,
       res: w.ammo ? { cur: w.ammo.cur, max: null, label: w.ammo.name } : null });
   });
 

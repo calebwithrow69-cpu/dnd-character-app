@@ -1,5 +1,6 @@
 import { computeAC, gearSaveBonus } from "./gear.js";
-import { fxList, fxSum } from "./effects.js";
+import { fxList, fxSum, rollMods } from "./effects.js";
+import { attackCtx } from "./attackctx.js";
 
 // Pure D&D 2024 rules helpers. No DOM, no state — math and tables only,
 // so the sheet, dice and wizard all compute numbers the same way.
@@ -198,13 +199,22 @@ export function deriveCharacter(char) {
 // (Proficiency never adds to damage.)
 export function weaponNumbers(weapon, char) {
   const d = deriveCharacter(char);
-  const abil = weaponAbilityMod(weapon, char.abilities);
+  const ctx = attackCtx(char, weapon);
+  const abil = ctx.abilMod;
   const magic = Number(weapon.magic || 0);
   const proficient = weapon.prof !== false;
+  const atk = rollMods(char, "atk", ctx), dm = rollMods(char, "dmg", ctx);
+  // The extra attack with a second Light weapon does not add the ability modifier (unless it is negative).
+  const dmgAbil = ctx.wield.dual ? Math.min(0, abil) : abil;
+  const adv = [...atk.adv], dis = [...atk.dis];
   return {
-    toHit: abil + (proficient ? d.prof : 0) + magic,
-    dmgMod: abil + magic,
-    dice: weapon.dice || "1d4"
+    toHit: abil + (proficient ? d.prof : 0) + magic + atk.flat,
+    dmgMod: dmgAbil + magic + dm.flat,
+    dice: weapon.dice || "1d4",
+    extraDice: dm.dice.filter(x => !x.once),
+    riders: { atk: atk.riders, dmg: dm.riders },
+    reroll: dm.reroll,
+    adv, dis, parts: { atk: atk.parts, dmg: dm.parts }, ctx
   };
 }
 

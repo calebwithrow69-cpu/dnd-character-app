@@ -116,7 +116,7 @@ export function playEntries(app, c, d) {
   const luckI = (c.resources || []).findIndex(r => r.name === "Luck Points");
   raw.forEach(e0 => {
     const e = { ...e0, type: e0.type || "feature" };
-    if (e.type === "attack" && e.weaponId && e.weaponId !== wid) return;
+    if (e.type === "attack" && e.weaponId && !e.unarmed && e.weaponId !== wid) return;
     if (/^ft:/.test(e.id)) {
       const fname = e.src === "Feat" ? e.name : e.src;
       if (e.src !== "Feat" && luckI >= 0 && fname === "Lucky" && /^(Luck Points|Advantage|Disadvantage)$/.test(e.name)) {
