@@ -1,4 +1,5 @@
 import { allPortraits } from "./portraits.js";
+import { parseProfs } from "./rules.js";
 
 // Character roster: lives in this device's localStorage only.
 // Backups are plain JSON files the player saves wherever they like.
@@ -27,7 +28,7 @@ export function normalize(c, library) {
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...(c.abilities || {}) },
     saveProf: c.saveProf || [], skillProf: c.skillProf || [], skillExpertise: c.skillExpertise || [],
     xp: Math.max(0, Number(c.xp) || 0), levelMode: c.levelMode === "milestone" ? "milestone" : "xp",
-    profsText: c.profsText || "", languages: c.languages || "", feats: c.feats || [],
+    profs: c.profs && typeof c.profs === "object" ? { armor: c.profs.armor || [], weapons: c.profs.weapons || [] } : null, profsText: c.profsText || "", languages: c.languages || "", feats: c.feats || [],
     hp: { max: 1, cur: 1, temp: 0, ...(c.hp || {}) },
     ac: { base: 10, bonus: 0, shield: false, dexCap: null, armorName: "", override: null, ...(c.ac || {}) },
     speed: Number(c.speed) || 30, initBonus: Number(c.initBonus) || 0, size: c.size || "",
@@ -76,6 +77,7 @@ export function normalize(c, library) {
   out.loadouts = (Array.isArray(c.loadouts) ? c.loadouts : []).filter(l => l && l.id && l.name && l.eq && typeof l.eq === "object").slice(0, 12);
   out.levelLog = c.levelLog || [];
   out.schema = 3;
+  if (!out.profs) { const r = parseProfs(out.profsText); out.profs = r.profs; out.profsText = r.rest; }
   return out;
 }
 

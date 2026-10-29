@@ -1575,21 +1575,31 @@ body.cx-on #app{position:relative;z-index:1}
 @media(min-width:900px){.ld-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .ld-edit{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-top:16px;flex-wrap:wrap}
 
-/* ---- Sheet style chooser, classic sections, six-tab Advanced bar ---- */
-.stylepick{margin:6px 0 20px}
-.stylepick h2{font-family:var(--display);font-size:1.25rem;margin:0 0 6px}
-.sp-cards{display:grid;gap:12px;margin-top:14px;grid-template-columns:1fr}
-@media (min-width:760px){.sp-cards{grid-template-columns:1fr 1fr}}
+/* ---- Sheet style chooser (full screen), classic sub-tabs, proficiency boxes ---- */
+.stylefull .sp-cards{display:grid;gap:12px;grid-template-columns:1fr}
+@media (min-width:760px){.stylefull .sp-cards{grid-template-columns:1fr 1fr}}
 .sp-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);color:var(--ink);min-height:0}
 .sp-card:hover,.sp-card:focus-visible{border-color:var(--amber)}
 .sp-card.rec{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
 .sp-card b{font-family:var(--display);font-size:1.1rem}
 .sp-card .sp-ic svg{width:30px;height:30px;color:var(--amber)}
 .sp-card .sp-d{color:var(--muted)}
-.sp-card ul{margin:0;padding-left:18px;color:var(--ink);display:grid;gap:4px;font-size:.92rem}
 .sp-badge{font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber);padding:2px 8px;border-radius:3px}
 .sp-badge.alt{background:var(--raised);color:var(--muted)}
 .sp-go{margin-top:auto;padding-top:6px;color:var(--amber);font-weight:700}
+.sp-cmp-h{font-family:var(--display);font-size:1.05rem;margin:22px 0 8px}
+.sp-cmp{border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;background:var(--panel);margin-bottom:24px}
+.sp-cmp .r{display:grid;grid-template-columns:.8fr 1fr 1fr;gap:10px;padding:10px 12px;border-top:1px solid var(--line-soft);font-size:.88rem;align-items:start}
+.sp-cmp .r:first-child{border-top:0}
+.sp-cmp .head{font-family:var(--display);text-transform:uppercase;letter-spacing:.07em;font-size:.75rem;background:var(--panel2)}
+.sp-cmp .k{color:var(--muted);font-weight:700}
+.sp-cmp .yes{color:var(--green);font-weight:700}.sp-cmp .no{color:var(--faint)}
+.profgrp{display:flex;flex-direction:column;gap:4px}
+.profopts{display:flex;flex-wrap:wrap;gap:8px}
+.profchk{display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);padding:0 12px;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer}
+.profchk input{width:20px;height:20px;accent-color:var(--amber)}
+.cl-two{grid-template-columns:1fr}
+@media (min-width:1100px){.cl-two{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .cl-sec{font-family:var(--display);font-size:1.1rem;letter-spacing:.06em;text-transform:uppercase;margin:28px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .classic .search{margin:4px 0 8px}
 .subtabs.seg button{font-size:.62rem;letter-spacing:.02em;min-width:0;overflow:hidden;text-overflow:ellipsis}

@@ -54,7 +54,7 @@ const LS_INSTALL = "dnd-install-dismissed";
 const APP = {
   info: new Set(), spUi: spUiDefault(), featUi: featUiDefault(),
   screen: "loading", library: null, campaign: null,
-  char: null, sheetTab: "stats", charSub: "play", combatFilter: "All", combatSort: "avail", featFilter: "All", featSort: "level",
+  char: null, sheetTab: "stats", charSub: "play", classicSub: "sheet", combatFilter: "All", combatSort: "avail", featFilter: "All", featSort: "level",
   turn: { on: false, round: 0, spent: {}, once: {} }, gwm: false, concPrompt: null, createDraft: null, seedGandork: null,
   roll: null, history: [], diceFormula: "",
   modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "", sheetQuery: "",
@@ -772,7 +772,7 @@ const ACTIONS = {
     const gained = syncLineageSpells(APP.char, APP.library, APP.campaign);
     save();
     if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
-    APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null; APP.turn.round = 0; APP.turn.spent = {}; APP.concPrompt = null; APP.charSub = "play"; preloadSamples();
+    APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null; APP.turn.round = 0; APP.turn.spent = {}; APP.concPrompt = null; APP.charSub = "play"; APP.classicSub = "sheet"; preloadSamples();
     store.setActiveId(APP.char.id); APP.prefs.lastChar = APP.char.id; savePrefs();
     APP.screen = "sheet"; render(); window.scrollTo(0, 0);
   },
@@ -794,6 +794,14 @@ const ACTIONS = {
   exportAll() { exportChars(null, "backup"); APP.prefs.lastBackup = Date.now(); savePrefs(); },
   setTheme(el) { APP.prefs.theme = el.dataset.v; savePrefs(); applyPrefs(); render(); },
   setSize(el) { APP.prefs.size = el.dataset.v; savePrefs(); applyPrefs(); render(); },
+  classicSub(el) { APP.classicSub = el.dataset.sub; render(); window.scrollTo(0, 0); },
+  toggleProf(el) {
+    const c = APP.char, g = el.dataset.g, k = el.dataset.k;
+    c.profs = c.profs || { armor: [], weapons: [] };
+    const a = c.profs[g] || [];
+    c.profs[g] = el.checked ? [...new Set([...a, k])] : a.filter(x => x !== k);
+    save();
+  },
   charSub(el) { APP.charSub = el.dataset.sub; render(); window.scrollTo(0, 0); },
   combatFilter(el) { APP.combatFilter = el.dataset.k; render(); },
   combatSort(el) { APP.combatSort = el.value; render(); },

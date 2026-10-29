@@ -318,6 +318,9 @@ export function renderModal(app) {
             <input type="number" inputmode="numeric" min="1" max="30" data-edit-ability="${a}" value="${c.abilities[a]}" aria-label="${ABILITY_LABEL[a]}"></label>`).join("")}</div>
           <p class="lab" style="margin-top:6px">Saving throw proficiencies</p>
           <div class="grid3">${ABILITIES.map(a => `<label class="rowline" style="border:0;cursor:pointer;justify-content:flex-start"><input type="checkbox" data-a="toggleSaveProf" data-ab="${a}" ${c.saveProf.includes(a) ? "checked" : ""}> ${ABILITY_LABEL[a].slice(0, 3)}</label>`).join("")}</div>
+          <p class="lab" style="margin-top:6px">Sheet style</p>
+          <div class="seg" role="group" aria-label="Sheet style">${[["classic", "Classic"], ["advanced", "Advanced"]].map(([v, l]) => `<button data-a="setPrefV" data-k="sheetStyle" data-v="${v}" aria-pressed="${(app.prefs.sheetStyle || "classic") === v}">${l}</button>`).join("")}</div>
+          <p class="sub2">Switching asks you to confirm. Your character is not changed.</p>
           <div class="panel" style="margin-top:10px"><div class="panel-body stack">
             <button class="btn block" data-a="downloadPdf">Download character sheet (PDF)</button>
             <button class="btn block" data-a="exportOne">Save a backup of this character</button>

@@ -240,3 +240,28 @@ export function hpAverageGain(hitDie, conMod) {
 // XP needed to reach each level (index 0 = level 1). 2024 rules / SRD 5.2.
 export const XP_TABLE = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
 export const xpForLevel = lv => XP_TABLE[Math.max(1, Math.min(20, lv)) - 1];
+
+// ---- Armor and weapon training as check boxes (c.profs) ----
+export const PROF_GROUPS = [
+  ["armor", "Armor", [["light", "Light"], ["medium", "Medium"], ["heavy", "Heavy"], ["shield", "Shields"]]],
+  ["weapons", "Weapons", [["simple", "Simple"], ["martial", "Martial"]]]
+];
+// Reads the older free-text training line: returns the boxes it implies and what is left over (tools, special rules).
+export function parseProfs(text) {
+  let t = String(text || "");
+  const profs = { armor: [], weapons: [] };
+  const take = (re, grp, key) => { if (re.test(t)) { profs[grp].push(key); t = t.replace(re, "\u0001"); } };
+  const keep = [];
+  t = t.replace(/Martial weapons that have[^.,]*/gi, m => { keep.push(m.trim()); return "\u0002"; });
+  take(/\bLight(?:\s+armou?r)?\b/i, "armor", "light"); take(/\bMedium(?:\s+armou?r)?\b/i, "armor", "medium");
+  take(/\bHeavy(?:\s+armou?r)?\b/i, "armor", "heavy"); take(/\bShields?\b/i, "armor", "shield");
+  take(/\bSimple\b(?:\s+weapons?)?/i, "weapons", "simple"); take(/\bMartial\b(?:\s+weapons?)?/i, "weapons", "martial");
+  t = t.replace(/(?:\band\s+)?[\u0001\u0002](?:\s*(?:,|\band\b)?\s*[\u0001\u0002])*/g, " ").replace(/\s+/g, " ").replace(/(\s*[,.]\s*){2,}/g, ". ").replace(/^[\s,.]+|[\s,.]+$/g, "");
+  const rest = [...(t ? [t] : []), ...keep].join(". ");
+  return { profs, rest };
+}
+export function profsString(c) {
+  const p = c.profs || { armor: [], weapons: [] };
+  const names = PROF_GROUPS.flatMap(([g, , opts]) => opts.filter(([k]) => (p[g] || []).includes(k)).map(([, l]) => (g === "armor" ? l + (l === "Shields" ? "" : " armor") : l + " weapons")));
+  return [...names, c.profsText].filter(Boolean).join(". ");
+}

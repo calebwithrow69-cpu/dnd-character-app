@@ -7,6 +7,7 @@ import { optionNames, optionGroup } from "../progression.js";
 import { buildCombat, sortCombat, COSTS, COST_LABEL } from "../combat.js";
 import { hotbar, diceTab, needsFirstChoices, spellsTab, loadoutGearTab } from "./sheet.js";
 import { playTab } from "./play.js";
+import { profsChecks } from "./classic.js";
 import { playEntries } from "../play.js";
 
 export function subtabsFor(c) {
@@ -19,7 +20,7 @@ export function characterBody(app, c, d) {
   const sub = tabs.some(s => s[0] === app.charSub) ? app.charSub : "play";
   const body = sub === "play" ? playTab(app, c, d) : sub === "spells" ? spellsTab(app, c, d) : sub === "gear" ? loadoutGearTab(app, c, d)
     : sub === "rolls" ? rollsTab(app, c, d) : sub === "features" ? featuresTab(app, c, d) : toolsTab(app, c, d) + notesTab(app, c, d);
-  return `<div class="viewswap"><span class="sub2">Advanced sheet</span><button class="linkbtn" data-a="setPrefV" data-k="sheetStyle" data-v="classic">Switch to the classic sheet</button></div><div class="subtabs seg" role="group" aria-label="Character sections" style="--n:${tabs.length}">
+  return `<div class="subtabs seg" role="group" aria-label="Character sections" style="--n:${tabs.length}">
       ${tabs.map(([id, label]) => `<button data-a="charSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}
     </div>${body}`;
 }
@@ -138,7 +139,8 @@ function notesTab(app, c) {
     ${c.classFeatureNotes ? `<div class="panel"><div class="panel-head"><h2>Class notes</h2></div><div class="panel-body">
       <textarea class="f" data-field="classFeatureNotes" aria-label="Class notes">${esc(c.classFeatureNotes)}</textarea></div></div>` : ""}
     <div class="panel"><div class="panel-head"><h2>Proficiencies &amp; languages</h2></div><div class="panel-body stack">
-      <div class="field"><label>Armor, weapons, tools</label><textarea class="f" data-field="profsText" style="min-height:70px">${esc(c.profsText)}</textarea></div>
+      ${profsChecks(c)}
+      <div class="field"><label>Tools and other training</label><textarea class="f" data-field="profsText" style="min-height:60px">${esc(c.profsText)}</textarea></div>
       <div class="field"><label>Languages</label><input class="f" data-field="languages" value="${esc(c.languages)}"></div>
     </div></div>
     <button class="btn block pdfbtn" data-a="downloadPdf">Download character sheet (PDF)</button>`;

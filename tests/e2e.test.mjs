@@ -68,10 +68,11 @@ const hscroll = p => p.evaluate(() => document.documentElement.scrollWidth - doc
 const clickA = async (p, a, sel = "") => { await p.locator(`[data-a="${a}"]${sel}`).first().click(); await p.waitForTimeout(350); };
 const openSample = async p => {
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
+  await p.waitForSelector('[data-a="openHp"], .stylefull', { timeout: 10000 });
+  if (await p.locator(".stylefull").count()) { await p.locator('[data-a="setPrefV"][data-v="classic"]').first().click(); await p.waitForTimeout(350); }
   await p.waitForSelector('[data-a="openHp"]', { timeout: 10000 });
-  if (await p.locator(".stylepick").count()) { await p.locator('[data-a="setPrefV"][data-v="classic"]').first().click(); await p.waitForTimeout(350); }
 };
-const goAdvanced = async p => { await clickA(p, "setPrefV"); await clickA(p, "confirmStyle"); };
+const goAdvanced = async p => { await clickA(p, "openEdit"); await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(300); await clickA(p, "confirmStyle"); };
 const noErrs = p => assert(p.errs.length === 0, p.errs.join(" || "));
 
 // Every top-level JS file parses.
@@ -195,10 +196,11 @@ await check("new character: creation flow loads class list, picks a class, advan
 await check("random character builds and lands on a sheet", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "newChar");
   await clickA(p, "randomAll"); await p.waitForTimeout(1500);
-  for (let i = 0; i < 12 && !(await p.locator('[data-a="openHp"]').count()); i++) {
+  for (let i = 0; i < 12 && !(await p.locator('[data-a="openHp"], .stylefull').count()); i++) {
     const nxt = p.locator('[data-a="nextStep"], [data-a="finishCreate"]'); if (!(await nxt.count())) break;
     await nxt.first().click(); await p.waitForTimeout(500);
   }
+  if (await p.locator(".stylefull").count()) { await p.locator('[data-a="setPrefV"][data-v="classic"]').first().click(); await p.waitForTimeout(350); }
   assert(await p.locator('[data-a="openHp"]').count() > 0, "random build did not reach a sheet");
   noErrs(p); await p.context().close();
 });
@@ -374,18 +376,27 @@ await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again rem
 await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
-  await p.waitForSelector(".stylepick", { timeout: 10000 });
-  assert(await p.locator(".sp-card").count() === 2, "expected two style cards");
-  assert(await p.locator('[data-a="sheetTab"]').count() === 2, "bottom tabs should be Character and Rules only");
+  await p.waitForSelector(".stylefull", { timeout: 10000 });
+  assert(await p.locator(".sp-card").count() === 2 && await p.locator(".sp-cmp .r").count() > 5, "expected two cards and a comparison");
+  assert(await p.locator('[data-a="sheetTab"]').count() === 0, "chooser should be full screen");
   await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(350);
   assert(await p.locator(".classic").count() === 1, "classic sheet missing");
-  assert(await p.locator("#cl-gear").count() === 1, "classic has no equipment section");
+  assert(await p.locator('[data-a="sheetTab"]').count() === 2, "bottom tabs should be Character and Rules only");
+  assert(await p.locator('[data-a="toggleProf"]').count() === 0, "profs belong on the Notes sub-tab");
+  await p.locator('[data-a="classicSub"][data-sub="notes"]').click(); await p.waitForTimeout(250);
+  assert(await p.locator('[data-a="toggleProf"]').count() === 6, "expected 6 training check boxes");
+  assert(await p.locator('[data-a="toggleProf"][data-k="light"]').isChecked(), "Light armor should be checked for a druid");
+  await p.locator('[data-a="classicSub"][data-sub="gear"]').click(); await p.waitForTimeout(250);
+  assert(await p.locator(".doll").count() === 1, "classic Equipment sub-tab has no doll");
+  await p.locator('[data-a="classicSub"][data-sub="sheet"]').click(); await p.waitForTimeout(250);
   await p.locator('[data-query="sheet"]').fill("stealth"); await p.waitForTimeout(250);
   assert(await p.locator('#results-sheet [data-a="rollSkill"]').count() >= 1, "search found no skill");
+  await clickA(p, "openEdit");
   await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(300);
   assert(await p.locator(".classic").count() === 1, "switched without asking");
   await clickA(p, "closeModal");
   assert(await p.locator(".classic").count() === 1, "cancel changed the sheet");
+  await clickA(p, "openEdit");
   await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(300);
   await clickA(p, "confirmStyle");
   assert(await p.locator(".classic").count() === 0 && await p.locator('[data-a="charSub"][data-sub="gear"]').count() === 1, "advanced did not open with a Gear sub-tab");

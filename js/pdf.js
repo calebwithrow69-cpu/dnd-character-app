@@ -2,7 +2,7 @@
 // buildTemplateSheetPdf writes onto the official 2024 sheet (artwork stored in the locked rules file as library.sheetTemplate);
 // buildSheetPdf is the plain fillable layout used only if that artwork is not in the rules data.
 // pdf-lib is loaded on demand from js/vendor. ASCII only in this file.
-import { deriveCharacter, weaponNumbers, SKILLS, ABILITIES, ABILITY_LABEL, fmtMod, slotRows, CASTER_TYPE } from "./rules.js";
+import { profsString, deriveCharacter, weaponNumbers, SKILLS, ABILITIES, ABILITY_LABEL, fmtMod, slotRows, CASTER_TYPE } from "./rules.js";
 import { parseSpecies } from "./species.js";
 import { optionGroup, optionNames } from "./progression.js";
 
@@ -128,7 +128,7 @@ export async function buildSheetPdf(PDFLib, char, library, campaign) {
   const feats = (char.feats || []).join(", ") || "None";
   cap("Feats", "feats", MX, my + 8, MW, 80, feats, { multiline: true });
   my += 96;
-  cap("Armor, weapon and tool training", "profs", MX, my + 8, MW, 624 - my - 8, char.profsText || "None", { multiline: true });
+  cap("Armor, weapon and tool training", "profs", MX, my + 8, MW, 624 - my - 8, profsString(char) || "None", { multiline: true });
 
   // ---------------- right column: weapons and spellcasting summary
   const RX = MX + MW + 12, RW = PAGE_W - M - RX;
@@ -323,8 +323,8 @@ export async function buildTemplateSheetPdf(PDFLib, char, library) {
   const traits = sp ? parseSpecies(sp).traits.filter(t => t.level <= char.level).map(t => t.name) : [];
   box("species_t", 350, 906, 596, 1158, traits.join("\n"), { multi: true });
   box("feats", 632, 906, 893, 1158, (char.feats || []).join("\n"), { multi: true });
-  const profs = char.profsText || "";
-  [["Light", 96], ["Medium", 147], ["Heavy", 208], ["Shields", 273]].forEach(([w, x]) => diamond(x, 990, new RegExp(w, "i").test(profs)));
+  const profs = profsString(char);
+  [["light", 96], ["medium", 147], ["heavy", 208], ["shield", 273]].forEach(([w, x]) => diamond(x, 990, ((char.profs || {}).armor || []).includes(w)));
   box("profs", 26, 1024, 316, 1100, profs, { multi: true, size: 8 });
 
   // ---------------- page 2

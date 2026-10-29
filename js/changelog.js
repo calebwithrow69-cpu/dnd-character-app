@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.13";
+export const VERSION = "0.1.14";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.14",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Full-screen sheet choice, Classic sub-tabs, proficiency check boxes.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "The sheet style choice is now a full screen with a side-by-side comparison. The swap lives in Edit character instead of the top of the sheet.",
+          "The Classic sheet has sub-tabs (Sheet, Features, Spells, Equipment, Notes) instead of one long scroll.",
+          "Armor and weapon training are check boxes. Older characters are converted automatically; tools and other training stay as text."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.13",
     date: "2026-10-29",

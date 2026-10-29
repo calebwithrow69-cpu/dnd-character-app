@@ -28,6 +28,7 @@ export function renderSheet(app) {
   const tabs = sheetTabs(app);
   if (!tabs.some(t => t[0] === app.sheetTab)) app.sheetTab = "stats";
   const tab = app.sheetTab;
+  if (tab === "stats" && app.prefs.sheetStyle !== "classic" && app.prefs.sheetStyle !== "advanced") return stylePicker(app);
 
   const pct = Math.max(0, Math.min(100, (c.hp.cur / Math.max(1, c.hp.max)) * 100));
   const hpState = c.hp.cur <= c.hp.max * 0.25 ? "low" : c.hp.cur <= c.hp.max * 0.6 ? "mid" : "";
@@ -49,7 +50,7 @@ export function renderSheet(app) {
 
   let body;
   const styled = app.prefs.sheetStyle === "advanced" || app.prefs.sheetStyle === "classic";
-  if (tab === "stats") body = !styled ? stylePicker(app) : app.prefs.sheetStyle === "advanced" ? characterBody(app, c, d) : classicBody(app, c, d);
+  if (tab === "stats") body = app.prefs.sheetStyle === "advanced" ? characterBody(app, c, d) : classicBody(app, c, d);
   else body = rulesTab(app);
   const wide = tab === "stats" && app.prefs.sheetStyle === "advanced" && app.charSub === "gear";
 
