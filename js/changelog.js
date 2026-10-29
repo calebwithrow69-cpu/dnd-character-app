@@ -2,11 +2,30 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.7";
+export const VERSION = "0.1.8";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.8",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "New look for character creation.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Creation has a chapter rail on the left and a live character sheet on the right (laptops). HP, Armor Class, speed, a radar of your ability scores, proficiencies, spells and features update as you choose. Phones show the same sheet under the chapter.",
+          "Every class, species and background has its own emblem instead of a letter. Names without a drawing show a monogram. Your own uploaded portrait still replaces the emblem.",
+          "The accent colour, the falling particles (leaves, forge sparks, snow, stars and more) and a short colour wash follow whatever you are looking at. Settings > Character creation effects turns them off; the system Reduce motion setting turns them off too.",
+          "Point buy joins Standard array, Suggested and Roll 4d6 on the Ability Scores step: 27 points, scores 8 to 15, with + and - on each score. Rolls pop in one by one.",
+          "Backgrounds say how they fit the class you picked: which increases hit its primary ability and which skills are already on its list.",
+          "Finishing a character stamps a wax seal over the new sheet."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.7",
     date: "2026-10-28",

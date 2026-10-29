@@ -11,9 +11,13 @@ import { parseSpecies, classifyText } from "../species.js";
 import { renderCodexList, renderControls } from "./codex.js";
 import { levelBody, levelWhy } from "./levelup.js";
 import { stepValidFor } from "../progression.js";
+import { normalize } from "../store.js";
+import { computeAC } from "../gear.js";
+import { emblem, emblemFor, emblemIcon } from "../emblems.js";
+import { cxSync } from "../cxfx.js";
 import {
   CHAPTERS, ALIGNMENTS, validateChapter, validateAll, unresolvedDecisions, choicePlan, bgAbilities, takenSkills, classSkillOptions,
-  finalAbilities, suggestedArray, equipOptions, gearChoices
+  finalAbilities, suggestedArray, equipOptions, gearChoices, buildCharacter, PB_BUDGET, pbSpent
 } from "../creation.js";
 
 const firstLineOf = t => { const s = String(t || "").split("\n")[0]; return s.length > 90 ? s.slice(0, 88) + "\u2026" : s; };
@@ -166,6 +170,17 @@ function cfgFor(app, d, kind) {
       return [["Ability scores", bgAbilityIds(b).map(a => ABILITY_LABEL[a]).join(", ")], ["Skills", parseList(b.skills).join(", ")], ["Tool", tool ? (tool.fixed || "Your choice of one") : ""],
         ["Feat", backgroundFeatNames(b).join(" or ")], ["Equipment", eq || ""]].filter(f => f[1]);
     },
+    synergyFor: d.class || "character",
+    synergy: b => {
+      const cls = findByName(L.classes, d.class); if (!cls) return "";
+      const out = [], ids = bgAbilityIds(b), pri = ids.filter(a => String(cls.primary || "").includes(ABILITY_LABEL[a]));
+      if (pri.length) out.push(`Raises ${pri.map(a => ABILITY_LABEL[a]).join(" and ")}, which ${cls.name}s rely on most.`);
+      else if (ids.length) out.push(`None of its increases are ${cls.primary || "your main ability"}, so your best score stays where you put it.`);
+      const list = parseList(cls.skillFrom), own = parseList(b.skills), on = own.filter(x => list.includes(x));
+      if (on.length) out.push(`${on.join(" and ")} ${on.length > 1 ? "are" : "is"} on the ${cls.name} skill list, so your class picks go further.`);
+      else if (own.length) out.push(`${own.join(" and ")} ${own.length > 1 ? "are" : "is"} not on the ${cls.name} list: you gain them without using a class pick.`);
+      return out.join(" ");
+    },
     lore: b => b.desc || "",
     traits: b => backgroundFeatNames(b).map(n => {
       const f = [...L.feats, ...(C.homebrew?.feats || [])].find(x => x.name === featBase(n));
@@ -227,13 +242,16 @@ function abilitiesBody(app, d) {
     <div class="btnrow" style="margin-top:10px">
       ${sug ? `<button class="btn sm pri" data-a="suggestedArray">Suggested for ${esc(d.class)}</button>` : ""}
       <button class="btn sm" data-a="standardArray">Standard array</button>
+      <button class="btn sm${d.pointBuy ? " pri" : ""}" data-a="cxPointBuy">Point buy</button>
       <button class="btn sm" data-a="rollStats">Roll 4d6 for each</button>
     </div>
+    ${d.pointBuy ? `<p class="cx-budget"><b class="num" id="cx-pbleft">${PB_BUDGET - pbSpent(d)}</b> of ${PB_BUDGET} points left. Scores run 8 to 15 before your background bonus.</p>` : ""}
     ${d.rolls ? `<p class="sub2" style="margin-top:6px">Your roll is saved: ${ABILITIES.map(a => d.rolls[a]).join(", ")}. Reloading will not roll again.</p>` : ""}
-    <div class="grid3" style="margin-top:12px">
-      ${ABILITIES.map(a => `<label class="abil"><span class="an">${ABILITY_LABEL[a]}</span>
+    <div class="grid3 ${app._cxPop ? "cx-pop" : ""}" style="margin-top:12px">
+      ${ABILITIES.map((a, i) => `<div class="abil ${cls && String(cls.primary || "").includes(ABILITY_LABEL[a]) ? "cx-prime" : ""}" style="--i:${i}"><label><span class="an">${ABILITY_LABEL[a]}${cls && String(cls.primary || "").includes(ABILITY_LABEL[a]) ? ' <i title="Primary ability for ' + esc(cls.name) + '">&#9733;</i>' : ""}</span>
         <input type="number" inputmode="numeric" min="3" max="20" data-draft-ability="${a}" value="${d.base[a]}" aria-label="${ABILITY_LABEL[a]} base score">
-        <span class="as" data-final="${a}">${fin[a] !== d.base[a] ? "\u2192 " + fin[a] + " " : ""}(${fmtMod(abilityMod(fin[a]))})</span></label>`).join("")}
+        <span class="as" data-final="${a}">${fin[a] !== d.base[a] ? "\u2192 " + fin[a] + " " : ""}(${fmtMod(abilityMod(fin[a]))})</span></label>
+        ${d.pointBuy ? `<div class="cx-pb"><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="-1" aria-label="Lower ${ABILITY_LABEL[a]}" ${d.base[a] <= 8 ? "disabled" : ""}>-</button><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="1" aria-label="Raise ${ABILITY_LABEL[a]}" ${d.base[a] >= 15 ? "disabled" : ""}>+</button></div>` : ""}</div>`).join("")}
     </div>
     <p class="sub2" style="margin-top:8px">Under each score: the final score after your background bonus, and its modifier.</p>
     ${renderBonus(app, d) || `<p class="muted small" style="margin-top:12px">Choose a background first to see its bonus.</p>`}`;
@@ -325,9 +343,98 @@ function finishBody(app, d) {
     ${open.length ? `<div class="choice"><div class="choice-head"><h3>Still to do</h3></div>${open.map(x => `<button class="optcard" data-a="gotoChapter" data-id="${x.chapter}" style="margin-bottom:6px"><span class="grow"><b>${esc(x.label)}</b><span>${esc(x.reason)}</span></span><span class="sub2">Go</span></button>`).join("")}</div>` : ""}`;
 }
 
+// ---- the shell: chapter rail, live sheet, accent colour per choice
+const AB_NAME = { str: "STR", dex: "DEX", con: "CON", int: "INT", wis: "WIS", cha: "CHA" };
+const CXL = { hp: 0, ac: 10, rad: [0, 0, 0, 0, 0, 0] }; // what the sheet last showed, so numbers and the radar animate from there
+let CX_HUE = 9;
+
+function cxLook(app, d) {
+  const id = chapterId(d);
+  const pick = { class: d.class, species: d.species, background: d.background }[id];
+  const kind = { class: "class", species: "species", background: "background" }[id];
+  if (pick) { const e = emblemFor(kind, pick); return { hue: e.hue, amb: e.amb }; }
+  if (id === "classChoices" || id === "classOpts" || id === "finish" || id === "abilities") {
+    const e = d.species ? emblemFor("species", d.species) : d.class ? emblemFor("class", d.class) : null;
+    if (e) return { hue: e.hue, amb: e.amb };
+  }
+  return { hue: 9, amb: "embers" };
+}
+
+function previewChar(app, d) {
+  if (!d.class) return null;
+  try { return normalize(buildCharacter(d, app), app.library); } catch (e) { return null; }
+}
+
+function sheetInner(app, d, reach) {
+  const cls = findByName(app.library.classes, d.class), sp = findByName(app.library.species, d.species), bg = findByName(app.library.backgrounds, d.background);
+  const c = previewChar(app, d), fin = finalAbilities(app, d);
+  const abIdx = CHAPTERS.findIndex(x => x.id === "abilities");
+  const showAb = d.chapter >= abIdx || reach > abIdx;
+  const hp = c ? c.hp.max : 0, ac = c ? computeAC(c).total : 10, speed = c ? c.speed : (sp ? speciesSpeed(sp.traits) : null);
+  const hue = (d.species ? emblemFor("species", d.species) : d.class ? emblemFor("class", d.class) : { hue: 9 }).hue;
+  const skills = c ? c.skillProf.map(id => (SKILLS.find(s => s.id === id) || {}).label).filter(Boolean) : [];
+  const bgSk = new Set(bg ? parseList(bg.skills) : []);
+  const saves = c ? c.saveProf.map(a => a.toUpperCase()) : [];
+  const spells = d.lvl ? [...(d.lvl.cantrips || []), ...(d.lvl.spells || [])] : [];
+  const feats = [...(c ? c.feats : []), ...(sp ? parseSpecies(sp).traits.filter(t => (t.level || 1) <= 1).slice(0, 4).map(t => t.name) : [])];
+  const R = 88, cx = 110, cy = 104, pt = (i, r) => { const a = -Math.PI / 2 + i * Math.PI / 3; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+  const ring = f => `<polygon points="${ABILITIES.map((_, i) => pt(i, R * f).map(v => v.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="var(--line)" stroke-width="1" opacity=".7"/>`;
+  const dim = (on, h) => on ? h : h.replace('class="em', 'class="em empty');
+  const trioHtml = [d.class ? emblem("class", d.class) : dim(false, emblemIcon("druid", 40)), d.species ? emblem("species", d.species) : dim(false, emblemIcon("human", 40)), d.background ? emblem("background", d.background) : dim(false, emblemIcon("sage", 40))].join("");
+  CXL.next = { hp, ac, rad: ABILITIES.map(a => showAb ? Math.min(20, fin[a]) : 0) };
+  const prim = a => cls && String(cls.primary || "").includes(ABILITY_LABEL[a]);
+  return `<div class="cx-sh-head"><div class="cx-trio">${trioHtml}</div><div class="grow"><div class="cx-sh-name ${d.name.trim() ? "" : "empty"}" id="cx-name">${d.name.trim() ? esc(d.name.trim()) : "Unnamed adventurer"}</div>
+      <div class="sub2">${esc(["Level " + (c ? c.level : 1) + (d.class ? " " + d.class : ""), d.species, d.background].filter(Boolean).join(" \u00b7 "))}</div></div></div>
+    <div class="cx-vit"><div><div class="cx-vial" title="Hit points"><div class="cx-liq" id="cx-liq" style="height:${Math.min(100, CXL.hp / 20 * 100)}%"></div></div><b class="num" id="cx-hp">${CXL.hp}</b><small>Hit points</small></div>
+      <div><div class="cx-shield"><svg viewBox="0 0 54 62" aria-hidden="true"><path d="M27 2 L50 10 V30 C50 44 40 54 27 60 C14 54 4 44 4 30 V10 Z" fill="var(--panel2)" stroke="var(--amber)" stroke-width="2.5"/></svg><b class="num" id="cx-ac">${CXL.ac}</b></div><small>Armor Class</small></div>
+      <div><b class="num cx-spd">${speed == null ? "--" : speed}</b><small>Speed (ft)</small></div></div>
+    <svg class="cx-radar" viewBox="0 -8 220 226" role="img" aria-label="Ability scores">${[0.25, 0.5, 0.75, 1].map(ring).join("")}${ABILITIES.map((_, i) => { const q = pt(i, R); return `<line x1="${cx}" y1="${cy}" x2="${q[0].toFixed(1)}" y2="${q[1].toFixed(1)}" stroke="var(--line-soft)"/>`; }).join("")}<polygon id="cx-rpoly" points="" fill="var(--amber)" fill-opacity=".28" stroke="var(--amber)" stroke-width="2" stroke-linejoin="round"/>${ABILITIES.map((a, i) => { const q = pt(i, R + 14); return `<text x="${q[0].toFixed(1)}" y="${(q[1] + 4).toFixed(1)}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--faint)" stroke="none">${AB_NAME[a]}</text>`; }).join("")}</svg>
+    <div class="cx-six">${ABILITIES.map(a => `<div class="${prim(a) ? "p" : ""}"><span>${AB_NAME[a]}</span><b>${showAb ? fin[a] : "\u2013"}</b><i>${showAb ? fmtMod(abilityMod(fin[a])) : ""}</i></div>`).join("")}</div>
+    ${(saves.length || skills.length) ? `<div><h4 class="cx-h">Proficiencies \u00b7 bonus +2</h4><div class="cx-pills">${saves.map(x => `<span class="cx-pill">Save ${x}</span>`).join("")}${skills.map(x => `<span class="cx-pill ${bgSk.has(x) ? "bg" : ""}">${esc(x)}</span>`).join("")}</div></div>` : ""}
+    ${spells.length ? `<div><h4 class="cx-h">Spells</h4><div class="cx-pills">${spells.map(x => `<span class="cx-pill bg">${esc(x)}</span>`).join("")}</div></div>` : ""}
+    ${feats.length ? `<div><h4 class="cx-h">Features</h4><div class="cx-pills">${feats.map(x => `<span class="cx-pill">${esc(x)}</span>`).join("")}</div></div>` : ""}`;
+}
+
+function railHtml(app, d, reach) {
+  const done = CHAPTERS.map(c => validateChapter(c.id, d, app).valid && (c.id !== "abilities" || !!d.background));
+  const n = CHAPTERS.length;
+  return `<nav class="cx-rail" aria-label="Creation chapters"><div class="cx-line"><i style="height:calc(${Math.min(reach, n - 1)} / ${n - 1} * 100%)"></i></div>${CHAPTERS.map((c, i) => {
+    const val = chapterValue(app, d, c.id), isOn = i === d.chapter, ok = done[i] && i <= reach;
+    return `<button class="cx-chap ${isOn ? "on" : ""} ${ok ? "ok" : ""}" data-a="gotoChapter" data-i="${i}" ${i > reach ? "disabled" : ""} ${isOn ? 'aria-current="step"' : ""}>
+      <span class="cx-no">${ok ? "\u2713" : i + 1}</span><span class="grow"><b>${esc(c.title)}</b><small>${esc(ok || isOn ? (val || "") : "")}</small></span></button>`;
+  }).join("")}</nav>`;
+}
+
+// After every redraw: accent + particles for what is on screen, and animate the sheet numbers.
+export function cxAfterRender(app) {
+  const d = app.createDraft; if (!d) return;
+  const look = cxLook(app, d);
+  cxSync(look.amb, look.hue, app.prefs.cxfx !== false);
+  cxAnimate();
+}
+function cxAnimate() {
+  const n = CXL.next; if (!n) return;
+  const poly = document.getElementById("cx-rpoly");
+  if (poly) {
+    const from = CXL.rad.slice(), R = 88, cx = 110, cy = 104, t0 = performance.now(), id = (CXL.tw = (CXL.tw || 0) + 1);
+    const draw = arr => poly.setAttribute("points", arr.map((v, i) => { const a = -Math.PI / 2 + i * Math.PI / 3, r = R * Math.max(0, Math.min(20, v)) / 20; return (cx + r * Math.cos(a)).toFixed(1) + "," + (cy + r * Math.sin(a)).toFixed(1); }).join(" "));
+    (function f(now) { if (id !== CXL.tw) return; const k = Math.min(1, (now - t0) / 700), e = 1 - Math.pow(1 - k, 3); draw(n.rad.map((v, i) => from[i] + (v - from[i]) * e)); if (k < 1) requestAnimationFrame(f); })(t0);
+  }
+  const liq = document.getElementById("cx-liq"); if (liq) requestAnimationFrame(() => { liq.style.height = Math.min(100, n.hp / 20 * 100) + "%"; });
+  const count = (el, a, b) => { if (!el || a === b) return; const t0 = performance.now(); (function f(now) { const k = Math.min(1, (now - t0) / 600); el.textContent = Math.round(a + (b - a) * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); })(t0); };
+  count(document.getElementById("cx-hp"), CXL.hp, n.hp); count(document.getElementById("cx-ac"), CXL.ac, n.ac);
+  CXL.hp = n.hp; CXL.ac = n.ac; CXL.rad = n.rad.slice();
+}
+// Refresh only the sheet panel (used while typing a name or a score, when the page is not redrawn).
+export function cxRefreshSheet(app) {
+  const d = app.createDraft, el = document.querySelector(".cx-sheet"); if (!d || !el) return;
+  el.innerHTML = sheetInner(app, d, reachIndex(app, d)); cxAnimate();
+}
+
 export function renderCreate(app) {
   const d = app.createDraft, id = chapterId(d), ch = CHAPTERS[d.chapter] || CHAPTERS[0];
-  const v = canContinue(app, d, id);
+  const v = canContinue(app, d, id), reach = reachIndex(app, d), look = cxLook(app, d);
+  CX_HUE = look.hue;
   let tools = "", content = "";
   if (LIST_KINDS.includes(id)) {
     const cfg = cfgFor(app, d, id);
@@ -344,12 +451,19 @@ export function renderCreate(app) {
   } else if (id === "classChoices") content = classChoicesBody(app, d);
   else content = finishBody(app, d);
   const last = d.chapter === CHAPTERS.length - 1;
-  return `
+  app._cxPop = false;
+  return `<div class="cx-shell" style="--cx-h:${CX_HUE}">
     ${topbar(ch.title, `Step ${d.chapter + 1} of ${CHAPTERS.length}`, { back: d.chapter === 0 ? "cancelCreate" : "prevStep" })}
-    <main class="wrap page has-stickybar">
-      <div class="steprow" aria-hidden="true">${CHAPTERS.map((_, i) => `<div class="step ${i <= d.chapter ? "done" : ""}"></div>`).join("")}</div>
-      ${tools ? `<div class="wiztools">${tools}</div>` : ""}
-      <div class="panel"><div class="panel-body">${content}</div></div>
+    <main class="wrap page has-stickybar cx-main">
+      <div class="cx-grid">
+        ${railHtml(app, d, reach)}
+        <section class="cx-stage" aria-label="${esc(ch.title)}">
+          <div class="steprow" aria-hidden="true">${CHAPTERS.map((_, i) => `<div class="step ${i <= d.chapter ? "done" : ""}"></div>`).join("")}</div>
+          ${tools ? `<div class="wiztools">${tools}</div>` : ""}
+          <div class="panel"><div class="panel-body">${content}</div></div>
+        </section>
+        <aside class="cx-sheet" aria-label="Your character so far">${sheetInner(app, d, reach)}</aside>
+      </div>
     </main>
     <div class="stickybar"><div class="wrap">
       <p class="why" id="wizard-why">${v.valid ? "" : esc(v.reasons.join(" "))}</p>
@@ -358,5 +472,5 @@ export function renderCreate(app) {
         <button class="btn pri" data-a="${last ? "finishCreate" : "nextStep"}" ${v.valid ? "" : "disabled"}>${last ? "Create character" : "Continue"}</button>
       </div>
     </div></div>
-    ${app.progressOpen ? progressSheet(app, d) : ""}`;
+    ${app.progressOpen ? progressSheet(app, d) : ""}</div>`;
 }

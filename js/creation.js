@@ -54,6 +54,7 @@ export function blankDraft() {
     equipClass: "A",
     equipBg: "A",
     rolls: null,           // { str, dex, ... } locked dice results, null = not rolled
+    pointBuy: false,       // true while the scores are being set with the 27-point budget
     mode: "manual",        // "manual" | "generate" | "template"
     templateId: null,
     lvl: null,             // level-1 class choices (subclass, spells, invocations...), same shape as the level-up draft
@@ -219,6 +220,7 @@ export function validateChapter(chapterId, d, app) {
   if (chapterId === "abilities") {
     const vals = Object.values(d.base);
     if (vals.some(v => v < 3 || v > 20)) reasons.push("Each ability score must be 3\u201320.");
+    if (d.pointBuy && pbSpent(d) > PB_BUDGET) reasons.push(`Point buy allows ${PB_BUDGET} points; you have spent ${pbSpent(d)}.`);
     if (!d.background) reasons.push("Choose a background first.");
     else {
       const bonusOk = !bgAbilities(app, d).length || d.bonusMode === "111" ||
@@ -455,10 +457,21 @@ export function pickBackground(d, app, name) {
 // \u2500\u2500\u2500 Locked dice rolls \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // Roll once, store the result. The draft keeps this so a refresh
 // doesn't silently reroll.
+export const PB_BUDGET = 27;
+export const PB_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+export const pbSpent = d => ABILITIES.reduce((n, a) => n + (PB_COST[d.base[a]] ?? 0), 0);
+export function startPointBuy(d) { d.base = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 }; d.rolls = null; d.pointBuy = true; }
+export function pointBuyStep(d, a, dir) {
+  const v = d.base[a], n = v + dir;
+  if (!(n in PB_COST) || !d.pointBuy) return false;
+  if (dir > 0 && pbSpent(d) - PB_COST[v] + PB_COST[n] > PB_BUDGET) return false;
+  d.base[a] = n; return true;
+}
 export function rollAndLock(d) {
   const rolls = {};
   for (const a of ABILITIES) rolls[a] = roll4d6DropLowest();
   d.rolls = rolls;
+  d.pointBuy = false;
   d.base = { ...rolls };
   return rolls;
 }
@@ -468,6 +481,7 @@ export function applySuggestedArray(d, app) {
   if (sug) {
     d.base = { ...sug };
     d.rolls = null; // suggested array replaces any roll
+    d.pointBuy = false;
   }
   return sug;
 }
@@ -475,7 +489,7 @@ export function applySuggestedArray(d, app) {
 export function applyStandardArray(d, app) {
   const cls = findByName(app.library.classes, d.class);
   d.base = standardArray(primaryAbility(cls?.primary));
-  d.rolls = null;
+  d.rolls = null; d.pointBuy = false;
 }
 
 // \u2500\u2500\u2500 Auto-equip (from create.js, now shared) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500

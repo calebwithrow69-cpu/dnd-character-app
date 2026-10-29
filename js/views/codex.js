@@ -5,6 +5,7 @@
 // ASCII only in this file.
 import { esc, formatText } from "../ui.js";
 import { portraitFor } from "../portraits.js";
+import { emblem, emblemFor } from "../emblems.js";
 
 const I = {
   chev: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
@@ -19,9 +20,10 @@ export const spUiDefault = () => ({
 });
 const favs = (app, kind) => app.prefs[favKey(kind)] || [];
 
-function thumb(name, cls) {
+// A saved portrait wins; otherwise the choice's own emblem (class, species and background each have a drawing).
+function thumb(name, cls, kind) {
   const img = portraitFor(name);
-  return img ? `<img class="${cls}" src="${img}" alt="" loading="lazy">` : `<span class="${cls} ph" aria-hidden="true">${esc(name[0] || "?")}</span>`;
+  return img ? `<img class="${cls}" src="${img}" alt="" loading="lazy">` : `<span class="${cls} ph cx-thumb" aria-hidden="true">${emblem(kind, name)}</span>`;
 }
 
 export function renderControls(app, cfg) {
@@ -71,7 +73,7 @@ function detail(app, cfg, o, chosenHtml) {
   return `<div class="sp-detail">
     <div class="chooserow top"><button class="btn pri block" data-a="cxChoose" data-kind="${cfg.kind}" data-name="${esc(o.name)}" ${on ? "disabled" : ""}>${on ? "Chosen" : "Choose " + esc(o.name)}</button></div>
     ${on && chosenHtml ? `<div class="sp-choices">${chosenHtml}</div>` : ""}
-    ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg">${upload}</div>`}
+    ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${cfg.synergy && cfg.synergy(o) ? `<p class="cx-syn"><b>For your ${esc(cfg.synergyFor || "character")}</b>${esc(cfg.synergy(o))}</p>` : ""}${upload}</div></div>`}
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
     <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Tap one to read it</span></div>
     <div class="sp-traits">
@@ -107,7 +109,7 @@ export function renderCodexList(app, cfg) {
     html += `<div class="sp-row ${open ? "open" : ""} ${on ? "on" : ""}">
       <div class="sp-top">
         <button class="sp-main" data-a="cxOpen" data-kind="${cfg.kind}" data-name="${esc(o.name)}" aria-expanded="${open}">
-          ${thumb(o.name, "sp-thumb")}
+          ${thumb(o.name, "sp-thumb", cfg.kind)}
           <span class="grow"><b>${esc(o.name)}</b><small>${esc(cfg.sub(o))}</small></span>
           ${on ? `<span class="tag amber">Chosen</span>` : ""}
           <span class="chev">${I.chev}</span>

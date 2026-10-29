@@ -16,11 +16,13 @@ import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, co
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderHome, renderRulesPage, playTomeOpen, lastCharacter } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
-import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext } from "./views/create.js";
+import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet } from "./views/create.js";
+import { cxStop, cxSeal } from "./cxfx.js";
+import { emblemFor } from "./emblems.js";
 import {
   CHAPTERS, ALIGNMENTS, blankDraft, saveDraft, loadDraft, clearDraft, validateChapter, validateAll, buildCharacter,
   bgAbilities, classSkillOptions, takenSkills, suggestedArray, gearChoices, finalAbilities,
-  choicePlan, rollAndLock, applySuggestedArray, applyStandardArray, generateRandom,
+  choicePlan, rollAndLock, applySuggestedArray, applyStandardArray, generateRandom, startPointBuy, pointBuyStep, PB_BUDGET, pbSpent,
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
 } from "./creation.js";
 import { draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
@@ -195,7 +197,7 @@ function renderNow() {
   const mb = modalRoot.querySelector(".modal-body"), rs = document.querySelector(".results");
   const keep = { modal: mb ? mb.scrollTop : 0, results: rs ? rs.scrollTop : 0, modalType: APP._lastModalType };
 
-  if (APP.screen === "locked") { mount.innerHTML = renderUnlock(APP); modalRoot.innerHTML = ""; rollRoot.innerHTML = ""; return; }
+  if (APP.screen === "locked") { cxStop(); mount.innerHTML = renderUnlock(APP); modalRoot.innerHTML = ""; rollRoot.innerHTML = ""; return; }
   if (APP.screen === "home") mount.innerHTML = renderHome(APP);
   else if (APP.screen === "rules") mount.innerHTML = renderRulesPage(APP);
   else if (APP.screen === "roster") mount.innerHTML = renderRoster(APP);
@@ -232,6 +234,7 @@ function renderNow() {
     const nrs = modalRoot.querySelector(".results"); if (nrs) nrs.scrollTop = keep.results;
   }
   APP._lastModalType = type;
+  if (APP.screen === "create") cxAfterRender(APP); else cxStop();
   animateHp();
   applyPops();
 }
@@ -310,6 +313,7 @@ const PREF_TOGGLES = {
   bigtap: { get: p => !!p.bigtap, set: (p, v) => { p.bigtap = v; } },
   turns: { get: p => p.turns !== false, set: (p, v) => { p.turns = v; } },
   keys: { get: p => p.keys !== false, set: (p, v) => { p.keys = v; } },
+  cxfx: { get: p => p.cxfx !== false, set: (p, v) => { p.cxfx = v; } },
   concprompt: { get: p => !!p.concprompt, set: (p, v) => { p.concprompt = v; if (!v) APP.concPrompt = null; } },
   gwm: { get: () => !!APP.gwm, set: (p, v) => { APP.gwm = v; } }
 };
@@ -578,6 +582,9 @@ function refreshWizardChrome() {
     const s = mount.querySelector(`[data-final="${a}"]`);
     if (s) s.textContent = `${fin[a] !== d.base[a] ? "\u2192 " + fin[a] + " " : ""}(${fmtMod(abilityMod(fin[a]))})`;
   });
+  const left = document.getElementById("cx-pbleft"); if (left) left.textContent = PB_BUDGET - pbSpent(d);
+  const nm = document.getElementById("cx-name"); if (nm) { nm.textContent = d.name.trim() || "Unnamed adventurer"; nm.classList.toggle("empty", !d.name.trim()); }
+  cxRefreshSheet(APP);
   saveDraft(d);
 }
 
@@ -632,6 +639,7 @@ function onInput(e) {
   if (ds.draftAbility && APP.createDraft) {
     const v = parseInt(el.value, 10);
     if (!isNaN(v)) APP.createDraft.base[ds.draftAbility] = Math.max(1, Math.min(30, v));
+    if (APP.createDraft.pointBuy) { APP.createDraft.pointBuy = false; document.querySelectorAll(".cx-pb, .cx-budget").forEach(e => e.remove()); }
     refreshWizardChrome(); return;
   }
   if (ds.draftText && APP.createDraft) { APP.createDraft[ds.draftText] = el.value; refreshWizardChrome(); return; }
@@ -995,7 +1003,9 @@ const ACTIONS = {
   },
   bonusMode(el) { APP.createDraft.bonusMode = el.dataset.mode; render(); },
   standardArray() { applyStandardArray(APP.createDraft, APP); render(); toast("Standard array placed. Swap numbers if you like"); },
-  rollStats() { rollAndLock(APP.createDraft); render(); toast("Rolled 4d6, dropping the lowest die, for each score"); },
+  rollStats() { rollAndLock(APP.createDraft); APP._cxPop = true; render(); toast("Rolled 4d6, dropping the lowest die, for each score"); },
+  cxPointBuy() { startPointBuy(APP.createDraft); render(); toast("Point buy: 27 points, scores 8 to 15"); },
+  cxPb(el) { if (pointBuyStep(APP.createDraft, el.dataset.ab, +el.dataset.dir)) render(); else toast(+el.dataset.dir > 0 ? "Not enough points left for that" : "Scores start at 8"); },
   pickEquip(el) { APP.createDraft[el.dataset.which] = el.dataset.k; render(); },
   randomGear() { randomGear(APP.createDraft); render(); },
   randomName() { APP.createDraft.name = randomName(); render(); },
@@ -1046,6 +1056,7 @@ const ACTIONS = {
     const d = APP.createDraft;
     const cp = choicePlan(d, APP);
     const char = store.normalize(buildCharacter(d, APP), APP.library);
+    const sealHue = (d.species ? emblemFor("species", d.species) : emblemFor("class", d.class)).hue;
     const goldOnly = char.inventory.length === 0 && (char.coins.gp > 0);
     APP.char = char; APP.screen = "sheet"; save();
     store.setActiveId(char.id); APP.prefs.lastChar = char.id; savePrefs();
@@ -1057,6 +1068,7 @@ const ACTIONS = {
       render(); window.scrollTo(0, 0);
     }
     toast(goldOnly ? "Spend your gold on starting gear" : `${APP.char.name} is ready`);
+    cxSeal(APP.char.name, sealHue);
   },
 
   // sheet nav
