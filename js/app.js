@@ -22,7 +22,7 @@ import { emblemFor } from "./emblems.js";
 import {
   CHAPTERS, ALIGNMENTS, blankDraft, saveDraft, loadDraft, clearDraft, validateChapter, validateAll, buildCharacter,
   bgAbilities, classSkillOptions, takenSkills, suggestedArray, gearChoices, finalAbilities,
-  choicePlan, rollAndLock, applySuggestedArray, applyStandardArray, generateRandom, startPointBuy, pointBuyStep, PB_BUDGET, pbSpent,
+  choicePlan, rollAndLock, applySuggestedArray, applyStandardArray, generateRandom, randomizeStep, startPointBuy, pointBuyStep, PB_BUDGET, pbSpent,
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
 } from "./creation.js";
 import { draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
@@ -1239,13 +1239,10 @@ const ACTIONS = {
   lvlOption(el) { toggleIn(APP.lvl.options, el.dataset.name); render(); },
   lvlCantrip(el) { toggleIn(APP.lvl.cantrips, el.dataset.name); refreshLevelResults(); },
   lvlSpell(el) { toggleIn(APP.lvl.spells, el.dataset.name); refreshLevelResults(); },
-  lvlRandomCantrips() {
-    const d = APP.lvl, p = levelPlan(APP), step = p.steps[d.step];
-    if (!step || step.id !== "cantrips" || step.n == null) return;
-    const have = d.cantrips.slice(0, step.n);
-    const list = spellsFor(APP.library, APP.campaign, APP.char, { cantrips: true, maxLevel: 0, all: false }).filter(s => !have.includes(s.name)).sort(() => Math.random() - 0.5);
-    d.cantrips = have.concat(list.slice(0, step.n - have.length).map(s => s.name));
-    render();
+  lvlRandomStep() {
+    const d = APP.lvl, step = levelPlan(APP).steps[d.step];
+    if (!step) return;
+    randomizeStep(APP, APP.char, d, step); render();
   },
   lvlShowAll(el) { APP.lvl.showAll = el.checked; render(); },
   lvlConfirm() { applyLevelUp(); },

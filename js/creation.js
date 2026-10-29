@@ -186,25 +186,29 @@ export function choicePlan(d, app) {
   return { tmp, lvl, plan, steps, ok: steps.every(st => stepValidFor(tmp, lvl, st)) };
 }
 
+// Fill ONE class-choice step at random (the Randomize button on each step). Keeps picks already made for spell lists.
+export function randomizeStep(app, tmp, lvl, st) {
+  const L = app.library, C = app.campaign;
+  const any = l => l[Math.floor(Math.random() * l.length)];
+  const some = (l, n) => [...l].sort(() => Math.random() - 0.5).slice(0, n);
+  if (st.id === "subclass") { const s = subclassesFor(L, tmp.class); if (s.length) lvl.subclass = any(s).name; }
+  else if (st.id === "style") { const f = enabledFeats(L, C).filter(f => /^Fighting Style Feat/i.test(f.type || "") && !tmp.feats.includes(f.name)); if (f.length) lvl.style = any(f).name; }
+  else if (st.id === "expertise") lvl.expertise = some(expertiseOptions(tmp), st.n).map(x => x.id);
+  else if (st.id === "mastery") lvl.mastery = some(allWeapons(L, C).filter(w => w.mastery && !(tmp.masteries || []).includes(w.name)), st.n).map(w => w.name);
+  else if (st.id === "options") {
+    const ok = st.group.options.filter(o => { const p = optionPrereq(o); return p.level <= lvl.next && !p.needs.length; });
+    lvl.options = some(ok, st.n).map(o => o.name);
+  } else if (st.id === "cantrips" || st.id === "spells") {
+    const key = st.id === "cantrips" ? "cantrips" : "spells", other = st.id === "cantrips" ? lvl.spells : lvl.cantrips;
+    const n = st.n == null ? 2 : st.n, have = lvl[key].slice(0, n);
+    const list = spellsFor(L, C, tmp, { cantrips: st.id === "cantrips", maxLevel: st.maxLevel || 0, all: false }).filter(s => !have.includes(s.name) && !other.includes(s.name));
+    lvl[key] = have.concat(some(list, n - have.length).map(s => s.name));
+  }
+}
 // Fill every class choice at random (used by "make everything random").
 export function randomClassChoices(d, app) {
   const cp = choicePlan(d, app); if (!cp) return;
-  const L = app.library, C = app.campaign, { tmp, lvl } = cp;
-  const any = l => l[Math.floor(Math.random() * l.length)];
-  const some = (l, n) => [...l].sort(() => Math.random() - 0.5).slice(0, n);
-  for (const st of cp.steps) {
-    if (st.id === "subclass") lvl.subclass = any(subclassesFor(L, tmp.class)).name;
-    else if (st.id === "style") lvl.style = any(enabledFeats(L, C).filter(f => /^Fighting Style Feat/i.test(f.type || "") && !tmp.feats.includes(f.name))).name;
-    else if (st.id === "expertise") lvl.expertise = some(expertiseOptions(tmp), st.n).map(x => x.id);
-    else if (st.id === "mastery") lvl.mastery = some(allWeapons(L, C).filter(w => w.mastery && !(tmp.masteries || []).includes(w.name)), st.n).map(w => w.name);
-    else if (st.id === "options") {
-      const ok = st.group.options.filter(o => { const p = optionPrereq(o); return p.level <= lvl.next && !p.needs.length; });
-      lvl.options = some(ok, st.n).map(o => o.name);
-    } else if (st.id === "cantrips" || st.id === "spells") {
-      const list = spellsFor(L, C, tmp, { cantrips: st.id === "cantrips", maxLevel: st.maxLevel || 0, all: false });
-      (st.id === "cantrips" ? (lvl.cantrips = some(list, st.n == null ? 2 : st.n).map(x => x.name)) : (lvl.spells = some(list, st.n == null ? 2 : st.n).map(x => x.name)));
-    }
-  }
+  for (const st of cp.steps) { if (st.id === "cantrips" || st.id === "spells") cp.lvl[st.id] = []; randomizeStep(app, cp.tmp, cp.lvl, st); }
 }
 
 // \u2500\u2500\u2500 Validation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500

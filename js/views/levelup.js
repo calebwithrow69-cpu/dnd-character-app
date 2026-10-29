@@ -233,7 +233,7 @@ export function levelBody(app) {
         ? `Your rules data has no table for level ${d.next}, so pick as many as your class allows.`
         : step.id === "cantrips" ? `Learn ${step.n} new cantrip${step.n === 1 ? "" : "s"}.` : `You can prepare ${step.n} more spell${step.n === 1 ? "" : "s"}, up to level ${step.maxLevel}.`}
         ${chosen.length}${step.n != null ? "/" + step.n : ""} chosen. You can also add spells later on the Spells tab.</p>
-      ${step.id === "cantrips" && step.n != null ? `<button class="btn sm" data-a="lvlRandomCantrips">Randomize cantrips</button>` : ""}
+
       <div style="margin-top:10px">${searchBox("lvl", d.query, "Search spells")}</div>
       <label class="rowline" style="cursor:pointer"><span class="nm small">Include other classes' spells</span><input type="checkbox" data-a="lvlShowAll" ${d.showAll ? "checked" : ""}></label>
       <div class="optlist" id="lvl-results">${renderLevelResults(app)}</div>`;
@@ -265,6 +265,8 @@ export function levelBody(app) {
         : p.open ? `<p class="sub2">Your rules data stops at level 10, so new features for level ${d.next} aren't listed. Add them from your book.</p>` : ""}`;
   }
 
+  const RAND = { subclass: "subclass", style: "fighting style", expertise: "expertise", mastery: "weapons", options: "picks", cantrips: "cantrips", spells: "spells" };
+  if (RAND[step.id]) body = `<div class="randrow"><button class="btn sm" data-a="lvlRandomStep">Randomize ${RAND[step.id]}</button><span class="small muted">Fills this screen. Change anything after.</span></div>` + body;
   return { body, step, plan: p };
 }
 export const levelWhy = id => why[id] || "";

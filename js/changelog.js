@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.9";
+export const VERSION = "0.1.10";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.10",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Randomize on every choice screen.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Every class-choice screen (subclass, fighting style, expertise, weapon mastery, tool and option picks, cantrips, spells) has a Randomize button that fills just that screen. It works in creation and in level-up."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.9",
     date: "2026-10-29",
