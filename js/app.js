@@ -3,7 +3,7 @@ import * as store from "./store.js";
 import { feedback, sfx, setSfxEnabled, setHaptics, setVolume, preloadSamples } from "./sfx.js";
 import { mountHp, unmountHp, applyHp as hpFx } from "./hpbar.js";
 import { findTile } from "./views/character.js";
-import { turnBlock } from "./combat.js";
+import { turnBlock, isSustained } from "./combat.js";
 import { playRollStage, startRoll, rollStageOpen } from "./rollstage.js";
 import { playShow, healingFormula, SOURCES, wieldedId, playEntries } from "./play.js";
 import { ridersFor } from "./riders.js";
@@ -851,7 +851,7 @@ const ACTIONS = {
       if (row) { row.classList.remove("nope"); void row.offsetWidth; row.classList.add("nope"); }
       return;
     }
-    if (e.kind === "Ability" && !e.act && e.type === "feature" && e.cost !== "Passive") { doToggle(e); return; }
+    if (e.kind === "Ability" && !e.act && e.type === "feature" && e.cost !== "Passive" && ((c.active || []).some(a => a.id === e.id) || isSustained(e.text))) { doToggle(e); return; }
     useEntry(e);
   },
   playToggle(el) {

@@ -19,6 +19,13 @@ export function costOfText(text) {
     .map(([k, re]) => [k, t.search(re)]).filter(h => h[1] >= 0).sort((a, b) => a[1] - b[1]);
   return hits.length ? hits[0][0] : "Other";
 }
+// True when the text describes something that stays on for a while (Rage, Wild Shape,
+// Bladesong...), as opposed to a one-shot like Action Surge or Second Wind.
+export function isSustained(text) {
+  const t = String(text || "").replace(/\u2019/g, "'");
+  return /\b(?:for|lasts?|up to) (?:1|one|\d+|a|an) (?:minute|hour|round)s?\b|\buntil (?:the end of|the start of|it ends|dawn|you (?:end|drop|choose|are))|\blasts? (?:for )?(?:a number of|up to|\d+)|\bstay in that form|\bleave the form early|\bends early if\b|\bfor the duration\b|\bwhile (?:you are|you're|it is) (?:raging|transformed|in this form)/i.test(t);
+}
+
 function costOfSpell(time) {
   const t = String(time || "");
   return /bonus/i.test(t) ? "Bonus" : /reaction/i.test(t) ? "Reaction" : /^\s*(?:1 )?action/i.test(t) ? "Action" : "Other";

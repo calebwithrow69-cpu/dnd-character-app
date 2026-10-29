@@ -17,7 +17,7 @@ import { customValid, loadCustom } from "../custombg.js";
 import { shopStock, walletCp, fmtPrice } from "../equipment.js";
 import { findTile } from "./character.js";
 import { hpParts, FX_TARGETS } from "../effects.js";
-import { COST_LABEL } from "../combat.js";
+import { COST_LABEL, isSustained } from "../combat.js";
 import { wieldedId } from "../play.js";
 import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
@@ -53,7 +53,7 @@ export function renderModal(app) {
       const verb = e.src === "Attack" ? "Attack" : e.spell ? (e.src === "Cantrip" ? "Cast" : "Cast...") : e.res ? "Use (spend 1)" : "Use";
       const usable = e.cost !== "Passive" && (e.act || ["Action", "Bonus", "Reaction"].includes(e.cost));
       const isOn = (c.active || []).some(a => a.id === e.id);
-      const canToggle = e.cost !== "Passive" && !e.spell && e.src !== "Attack";
+      const canToggle = e.cost !== "Passive" && !e.spell && e.src !== "Attack" && (isOn || isSustained(e.text));
       const body = `<div class="tilehead"><span class="tag amber">${COST_LABEL[e.cost]}</span><span class="tag">${esc(e.src)}</span>${e.conc ? `<span class="tag blue">Concentration</span>` : ""}${isOn ? `<span class="tag green">Active</span>` : ""}${e.res && e.res.max != null ? `<span class="tag">${e.res.cur}/${e.res.max} left</span>` : ""}</div>
         ${e.block ? `<div class="tilewhy" role="note"><b>Can't use this right now</b><span>${esc(e.block)}</span></div>` : ""}
         ${text}${e.cost !== "Passive" && !e.detail ? `<p class="sub2" style="margin-top:10px">The action type is the app's reading of the text above.</p>` : ""}${canToggle ? `<p class="sub2" style="margin-top:10px">Turn on shows it as an Active chip on your sheet until you turn it off or take a rest. The app does not apply its effects for you.</p>` : ""}`;

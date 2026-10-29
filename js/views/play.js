@@ -4,7 +4,7 @@
 // is missing (the action itself, a spell slot, a use) and tapping one says why.
 import { esc, ICONS, formatText } from "../ui.js";
 import { playEntries, playShow, levelTrack, SOURCES } from "../play.js";
-import { COST_LABEL } from "../combat.js";
+import { COST_LABEL, isSustained } from "../combat.js";
 import { detailFor, hotbar } from "./sheet.js";
 
 const GROUPS = [["Action", "Action"], ["Bonus", "Bonus Action"], ["Reaction", "Reaction"], ["Other", "Other"], ["Feat", "Feats"], ["Passive", "Passive"]];
@@ -48,7 +48,7 @@ const verb = e => e.type === "attack" ? (e.id === "x:swap" ? "Swap" : "Attack") 
 function row(e, d, c, ctx, kid) {
   const active = ctx.on.has(e.id), dim = !!e.block && !active, sel = ctx.sel === e.id;
   const st = status(e, d, c), open = ctx.open.has(e.id), kids = e.kids || [];
-  const toggle = e.type === "feature" && e.cost !== "Passive" && !e.spell && e.kind === "Ability"
+  const toggle = e.type === "feature" && e.cost !== "Passive" && !e.spell && e.kind === "Ability" && (active || isSustained(e.text))
     ? `<button class="r-tg ${active ? "on" : ""}" data-a="playToggle" data-id="${esc(e.id)}" aria-pressed="${active}" aria-label="${active ? "Turn off" : "Turn on"} ${esc(e.name)}" title="${active ? "Turn off" : "Turn on"}">${ICONS.power}</button>` : "";
   const go = e.type === "feat"
     ? (kids.length ? `<button class="btn sm r-go" data-a="playFeat" data-id="${esc(e.id)}" aria-expanded="${open}">${open ? "Hide" : "Abilities"}</button>` : "")

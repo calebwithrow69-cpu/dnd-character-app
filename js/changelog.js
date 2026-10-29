@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.17";
+export const VERSION = "0.1.18";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.18",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "One-shot abilities no longer stay on.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "Action Surge, Second Wind and other one-shot abilities no longer stay switched on after you use them. Only abilities that last a while (Rage, Wild Shape and similar) get an on/off switch."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.17",
     date: "2026-10-29",

@@ -3,6 +3,7 @@
 // and checks the engine's numbers. When an ability is "misread", fix its data, not the code.
 //   node tests/engine.test.mjs                (also checks data/library.json effects if unlocked)
 import { readFileSync, existsSync } from "node:fs";
+import { isSustained } from "../js/combat.js";
 import { computeAC } from "../js/gear.js";
 import { setEffectsSource, collectEffects, fxList, fxSum, fxStat, rollMods, grantsOf, hpParts, evalExpr, evalDice, diceAverage, validateEffect } from "../js/effects.js";
 
@@ -149,5 +150,11 @@ if (existsSync(libUrl)) {
     if (bad.length) throw new Error(bad.join(" | "));
   });
 }
+t("one-shot abilities are not toggles; lasting ones are", () => {
+  eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);
+  eq(isSustained("You regain Hit Points equal to 1d10 plus your Fighter level."), false);
+  eq(isSustained("You can imbue yourself with a primal power. Your Rage lasts until the end of your next turn, up to 10 minutes."), true);
+  eq(isSustained("You assume the form of a Beast for 1 hour."), true);
+});
 console.log(`${pass}/${pass + fail} engine checks passed`);
 process.exit(fail ? 1 : 0);
