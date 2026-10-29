@@ -181,6 +181,21 @@ function paint() {
   // options: before the roll (Lucky), after the d20 (riders on the attack), after damage (riders on damage)
   const list = ph === "ready" ? sp.riders.pre : ph === "rolled" && !st.dmgDone ? sp.riders.attack : st.dmgDone || (ph === "ready" && !sp.d20) ? sp.riders.damage : [];
   const box = $(".rs-opts"); box.textContent = "";
+  if (!st.busy && st.picking) {
+    const r = (sp.rerolls || []).find(x => x.id === st.picking);
+    const hd = document.createElement("small"); hd.className = "rs-pickhd"; hd.textContent = `${r ? r.label : "Reroll"}: tap the die to reroll`; box.appendChild(hd);
+    diceOf(st).forEach((d, k) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "rs-chip pick"; b.dataset.k = "die"; b.dataset.id = String(k);
+      const a = document.createElement("b"); a.textContent = `d${d.g.sides}: ${d.g.rolls[d.i]}`; b.append(a); box.appendChild(b);
+    });
+    const x = document.createElement("button"); x.type = "button"; x.className = "rs-chip ghost"; x.dataset.k = "rrcancel"; x.dataset.id = "x"; const xb = document.createElement("b"); xb.textContent = "Cancel"; x.append(xb); box.appendChild(x);
+    return;
+  }
+  if (!st.busy) (sp.rerolls || []).filter(r => rrAvail(st, r)).forEach(r => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "rs-chip rr"; b.dataset.k = "rr"; b.dataset.id = r.id;
+    const a = document.createElement("b"); a.textContent = (r.mode === "set" ? "\u21BB " : "\u21BB ") + r.label + (st.dmgDone ? (r.mode === "set" ? ": roll again" : ": reroll a die") : ": reroll the d20");
+    const n = document.createElement("small"); n.textContent = r.note || ""; b.append(a, n); box.appendChild(b);
+  });
   if (!st.busy) list.forEach(r => {
     const b = document.createElement("button"); b.type = "button"; b.dataset.k = ph === "ready" ? "pre" : st.dmgDone ? "damage" : "attack"; b.dataset.id = r.id;
     const used = st.used[r.id] || (r.once && st.opts.onceUsed && st.opts.onceUsed(r.id));
@@ -254,6 +269,64 @@ async function rollD20(st) {
   paint();
 }
 
+// Small tags on a roll that say where a bonus came from ("Rage +2"), so the number going up is explained.
+function fxChips(row, parts, calm) {
+  const list = (parts || []).filter(p => p.v || p.dice); if (!list.length) return;
+  const box = document.createElement("div"); box.className = "rs-fxs";
+  list.forEach((p, i) => {
+    const c = document.createElement("i"); c.className = "rs-fx"; c.textContent = `${p.label} ${p.dice ? "+" + p.dice : (p.v > 0 ? "+" : "\u2212") + Math.abs(p.v)}`;
+    if (!calm) c.style.animationDelay = (0.25 + i * 0.18) + "s"; box.appendChild(c);
+  });
+  row.appendChild(box);
+}
+
+// ---- rerolling dice (Heroic Inspiration, Piercer, Savage Attacker, Halfling Lucky) ----
+const diceOf = st => {
+  const R = st.dmgR; if (!R) return [];
+  const out = []; [R.r, R.extra].forEach(x => x && x.groups.forEach(g => { if (g.sign > 0) g.rolls.forEach((v, i) => out.push({ g, i })); }));
+  return out;
+};
+const recalc = x => { x.total = x.groups.reduce((t, g) => t + g.sign * [...g.keptIdx].reduce((s, i) => s + g.rolls[i], 0), 0) + x.mod; x.rolls = x.groups.flatMap(g => [...g.keptIdx].map(i => g.rolls[i])); };
+function redrawBase(st, note) {
+  const R = st.dmgR, total = Math.max(0, R.r.total + (R.extra ? R.extra.total : 0));
+  const bd = describeGroups(R.r).replace(/<[^>]*>/g, "") + R.rnote + (R.extra ? " + " + describeGroups(R.extra).replace(/<[^>]*>/g, "") : "") + (note ? " (" + note + ")" : "");
+  st.dmgBase = { total, bd }; st.baseRow.bd.textContent = bd; st.baseRow.big.textContent = total;
+  st.dmgSum = total + st.dmgRows.reduce((t, x) => t + x.total, 0); showTotal(st);
+}
+const rrAvail = (st, r) => {
+  if (st.used[r.id] || (r.once && st.opts.onceUsed && st.opts.onceUsed(r.id))) return false;
+  if (r.mode === "d20") return !!st.spec.d20 && st.rolled && !st.dmgDone && (!r.onNat1 || st.nat === "1");
+  if (!st.spec.dmg) return !!st.spec.d20 && r.any && st.rolled;
+  if (st.dmgDone) return true;
+  return !!r.any && !!st.spec.d20 && st.rolled && st.phase !== "ready";
+};
+async function startReroll(st, rid) {
+  const r = (st.spec.rerolls || []).find(x => x.id === rid); if (!r || !rrAvail(st, r)) return;
+  if (!st.dmgDone) { // a d20 reroll: roll the die again as a plain roll and use the new result
+    st.used[r.id] = true; if (st.opts.consume) st.opts.consume(r.id);
+    st.adv = "normal"; st.lucky = false; st.atkExtra = [];
+    root.classList.remove("c20", "c1"); const a = document.getElementById("app"); if (a) a.classList.remove("rs-gray");
+    root.querySelectorAll(".rs-res .rs-r:not(.info)").forEach(x => x.remove());
+    await rollD20(st); return;
+  }
+  if (r.mode === "set") {
+    st.used[r.id] = true; st.busy = true; paint();
+    const list = diceOf(st), old = list.map(d => d.g.rolls[d.i]), fresh = list.map(d => rollDie(d.g.sides));
+    const a = old.reduce((t, v) => t + v, 0), b = fresh.reduce((t, v) => t + v, 0);
+    if (b > a) { list.forEach((d, k) => { d.g.rolls[d.i] = fresh[k]; }); [st.dmgR.r, st.dmgR.extra].forEach(x => x && recalc(x)); }
+    if (st.opts.consume) st.opts.consume(r.id);
+    redrawBase(st, `${r.label}: first roll ${a}, second ${b}, kept ${Math.max(a, b)}`); sfx("rdone"); st.busy = false; paint(); return;
+  }
+  st.picking = r.id; paint();
+}
+function rerollDie(st, idx) {
+  const r = (st.spec.rerolls || []).find(x => x.id === st.picking), d = diceOf(st)[idx]; if (!r || !d) return;
+  const was = d.g.rolls[d.i], now = rollDie(d.g.sides);
+  d.g.rolls[d.i] = now; [st.dmgR.r, st.dmgR.extra].forEach(x => x && recalc(x));
+  st.used[r.id] = true; st.picking = null; if (st.opts.consume) st.opts.consume(r.id);
+  sfx("rdone"); redrawBase(st, `${r.label}: ${was} \u2192 ${now}`); paint();
+}
+
 async function rollDamage(st) {
   const sp = st.spec, d = sp.dmg, id = st.id, crit = st.nat === "20";
   st.busy = true; paint();
@@ -263,8 +336,10 @@ async function rollDamage(st) {
   const fixed = applyDieRules(r, d.reroll), fixedX = extra ? applyDieRules(extra, d.reroll) : [];
   const total = Math.max(0, r.total + (extra ? extra.total : 0));
   const rnote = fixed.length || fixedX.length ? " (" + (d.reroll.map(x => x.src).filter((x, i, a) => a.indexOf(x) === i).join(", ")) + ": " + [...fixed, ...fixedX].join(", ") + ")" : "";
+  st.dmgR = { r, extra, rnote };
   st.dmgRows = []; st.dmgBase = { total, bd: describeGroups(r).replace(/<[^>]*>/g, "") + rnote + (extra ? " + " + describeGroups(extra).replace(/<[^>]*>/g, "") : "") };
   const row = addRow(crit ? "Crit damage" : (d.label || "Damage") + (d.type ? " \u00b7 " + d.type : ""), "", st.dmgBase.bd, crit);
+  st.baseRow = row; fxChips(row.row, d.parts, st.calm);
   await flick(row.big, total, st.calm);
   if (!pending || pending.id !== id) return;
   sfx("rdone"); st.dmgDone = true; st.rolled = true; st.dmgSum = total; st.busy = false; st.phase = "done"; st.hasRolledDmg = true;
@@ -279,6 +354,9 @@ function showTotal(st) {
 
 async function useOpt(kind, rid) {
   const st = pending; if (!st || !st.inter || st.busy) return;
+  if (kind === "rr") { startReroll(st, rid); return; }
+  if (kind === "die") { rerollDie(st, +rid); return; }
+  if (kind === "rrcancel") { st.picking = null; paint(); return; }
   const sp = st.spec, r = (sp.riders[kind] || []).find(x => x.id === rid); if (!r) return;
   if (kind === "pre") { if (r.id === "lucky") { st.lucky = !st.lucky; sfx("rchip"); paint(); } return; }
   if (st.used[rid]) return;
@@ -290,6 +368,7 @@ async function useOpt(kind, rid) {
     total = f ? f.total : 0; bd = f ? describeGroups(f).replace(/<[^>]*>/g, "") : r.dice;
   } else { total = r.flat || 0; bd = (r.flat > 0 ? "+" : "") + r.flat; }
   if (r.once && st.opts.markOnce) st.opts.markOnce(r.id);
+  if (r.res && st.opts.spend) st.opts.spend(r.res);
   paint();
   if (kind === "attack") {
     st.atkExtra.push({ label: r.label, total, bd });
@@ -342,7 +421,7 @@ export function startRoll(spec, opts) {
   };
   pending = st;
   root.hidden = false; root.className = "rstage on inter"; fit(); parts = [];
-  $(".rs-title").textContent = spec.title; $(".rs-sub").textContent = spec.sub || ""; $(".rs-line").textContent = ""; $(".rs-line").classList.remove("on"); $(".rs-res").textContent = ""; $(".rs-banner").textContent = ""; $(".rs-note").textContent = ""; $(".rs-note").classList.remove("on");
+  $(".rs-title").textContent = spec.title; $(".rs-sub").textContent = spec.sub || ((spec.d20 && spec.d20.parts) || []).map(p => `${p.label} ${p.v > 0 ? "+" : "\u2212"}${Math.abs(p.v)}`).join(" \u00b7 "); $(".rs-line").textContent = ""; $(".rs-line").classList.remove("on"); $(".rs-res").textContent = ""; $(".rs-banner").textContent = ""; $(".rs-note").textContent = ""; $(".rs-note").classList.remove("on");
   $(".rs-cracks").innerHTML = "";
   const dice = root.querySelectorAll(".rs-die");
   dice.forEach((e, i) => { e.className = "rs-die idle" + (i ? " rs-d2" : ""); e.querySelector(".rs-num").textContent = "20"; });

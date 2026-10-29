@@ -4,8 +4,9 @@
 //   node tests/engine.test.mjs                (also checks data/library.json effects if unlocked)
 import { readFileSync, existsSync } from "node:fs";
 import { isSustained } from "../js/combat.js";
+import { rerollsFor, ensureLuck } from "../js/riders.js";
 import { weaponNumbers } from "../js/rules.js";
-import { unarmedWeapons } from "../js/attackctx.js";
+import { unarmedWeapons, attacksPerAction } from "../js/attackctx.js";
 import { computeAC } from "../js/gear.js";
 import { setEffectsSource, collectEffects, fxList, fxSum, fxStat, rollMods, grantsOf, hpParts, evalExpr, evalDice, diceAverage, validateEffect } from "../js/effects.js";
 
@@ -209,17 +210,36 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     const on = { ...hold([], "greatsword", null, { class: "Barbarian" }), active: [{ id: "feature:Reckless Attack", name: "Reckless Attack" }] };
     eq(numA(on).adv, ["Reckless Attack"]); eq(numA(hold([], "greatsword", null, { class: "Barbarian" })).adv, []);
   }));
-  t("Unarmed Strike: basic 1 + Str; species, Tavern Brawler, Unarmed Fighting and Altered add options", () => withReal(() => {
-    const names = c => unarmedWeapons(c).map(i => i.name);
-    eq(names(mk({})), ["Unarmed Strike"]);
-    eq(names(mk({ species: "Tabaxi" })), ["Unarmed Strike", "Cat's Claws (unarmed)"]);
-    eq(names(mk({ feats: ["Tavern Brawler"] })), ["Unarmed Strike", "Tavern Brawler (unarmed)"]);
-    const alone = unarmedWeapons({ ...mk({ feats: ["Unarmed Fighting"] }), inventory: [], equipment: {} }).find(i => i.name.startsWith("Unarmed Fighting")); eq(alone.weapon.dice, "1d8");
-    const armed = unarmedWeapons(hold(["Unarmed Fighting"], "longsword")).find(i => i.name.startsWith("Unarmed Fighting")); eq(armed.weapon.dice, "1d6");
-    eq(names(mk({ feats: ["Altered"] })), ["Unarmed Strike"]);
-    eq(names({ ...mk({ feats: ["Altered"] }), choices: { Altered: ["Natural Weapons"] } }), ["Unarmed Strike", "Natural Weapons (unarmed)"]);
-    eq(unarmedWeapons(mk({ species: "Dhampir" }))[1].weapon.ability, "con");
+  t("Unarmed Strike: one strike; species, Tavern Brawler, Unarmed Fighting and Altered improve it, only separate attacks get a row", () => withReal(() => {
+    const names = c => unarmedWeapons(c).map(i => i.name), first = c => unarmedWeapons(c)[0].weapon;
+    eq(names(mk({})), ["Unarmed Strike"]); eq(first(mk({})).dice, "1");
+    eq(names(mk({ species: "Tabaxi" })), ["Unarmed Strike"]); eq([first(mk({ species: "Tabaxi" })).dice, first(mk({ species: "Tabaxi" })).via, first(mk({ species: "Tabaxi" })).dtype], ["1d6", "Cat's Claws", "slashing"]);
+    eq(first(mk({ feats: ["Tavern Brawler"] })).via, "Tavern Brawler");
+    eq(first({ ...mk({ feats: ["Unarmed Fighting"] }), inventory: [], equipment: {} }).dice, "1d8");
+    eq(first(hold(["Unarmed Fighting"], "longsword")).dice, "1d6");
+    eq(first(mk({ feats: ["Altered"] })).dice, "1");
+    eq(first({ ...mk({ feats: ["Altered"] }), choices: { Altered: ["Natural Weapons"] } }).dice, "1d8");
+    eq(first(mk({ species: "Dhampir" })).ability, "con");
+    eq(names(mk({ species: "Shifter" })), ["Unarmed Strike", "Longtooth"]);
+    eq(names(mk({ species: "Tabaxi", feats: ["Tavern Brawler"] })), ["Unarmed Strike"]);
   }));
+  t("attacks per Attack action come from Extra Attack and its upgrades", () => withReal(() => {
+    eq([1, 4, 5, 10, 11, 19, 20].map(level => attacksPerAction(mk({ class: "Fighter", level }))), [1, 1, 2, 2, 3, 3, 4]);
+    eq(attacksPerAction(mk({ class: "Wizard", level: 9 })), 1); eq(attacksPerAction(mk({ class: "Paladin", level: 5 })), 2);
+  }));
+  t("reroll sources: Inspiration, Savage Attacker, Piercer, Halfling Lucky", () => {
+    const ids = (c, ctx) => rerollsFor(c, ctx).map(r => r.id);
+    eq(ids(mk({}), { weapon: true, hasDmg: true, hasD20: true }), []);
+    eq(ids({ ...mk({}), inspiration: true }, { hasD20: true }), ["insp"]);
+    eq(ids(mk({ feats: ["Savage Attacker"] }), { weapon: true, hasDmg: true, hasD20: true }), ["savage"]);
+    eq(ids(mk({ feats: ["Piercer"] }), { weapon: true, hasDmg: true, piercing: true }), ["piercer"]);
+    eq(ids(mk({ feats: ["Piercer"] }), { weapon: true, hasDmg: true, piercing: false }), []);
+    eq(ids(mk({ species: "Halfling" }), { hasD20: true }), ["hlf"]);
+  });
+  t("Goblin gets a Fury of the Small tracker equal to proficiency bonus", () => {
+    const c = mk({ species: "Goblin", level: 5 }); ensureLuck(c); const r = c.resources.find(x => x.name === "Fury of the Small");
+    eq([r.max, r.reset], [3, "long"]); c.level = 9; ensureLuck(c); eq(c.resources.find(x => x.name === "Fury of the Small").max, 4);
+  });
   t("Tavern Brawler rerolls 1s on Unarmed Strike damage, not weapon damage", () => withReal(() => {
     const c = hold(["Tavern Brawler"], "longsword");
     eq(weaponNumbers(unarmedWeapons(c)[0].weapon, c).reroll.map(r => r.atMost), [1]); eq(numA(c).reroll.length, 0);

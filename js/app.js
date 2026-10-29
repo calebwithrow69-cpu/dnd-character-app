@@ -4,9 +4,10 @@ import { feedback, sfx, setSfxEnabled, setHaptics, setVolume, preloadSamples } f
 import { mountHp, unmountHp, applyHp as hpFx } from "./hpbar.js";
 import { findTile } from "./views/character.js";
 import { turnBlock, isSustained } from "./combat.js";
+import { attacksPerAction } from "./attackctx.js";
 import { playRollStage, startRoll, rollStageOpen } from "./rollstage.js";
 import { playShow, healingFormula, SOURCES, wieldedId, playEntries } from "./play.js";
-import { ridersFor } from "./riders.js";
+import { ridersFor, rerollsFor } from "./riders.js";
 import { VERSION } from "./changelog.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
@@ -301,10 +302,12 @@ function commitRoll(title, parts, alt) {
 }
 function rollSpec(spec, hooks = {}) {
   const c = APP.char;
+  spec.rerolls = spec.rerolls || rerollsFor(c, { weapon: !!spec.weapon, piercing: /pierc/i.test((spec.dmg && spec.dmg.type) || ""), hasD20: !!spec.d20, hasDmg: !!spec.dmg });
   startRoll(spec, {
     mode: APP.prefs.rollfx || "full",
     commit: (parts, alt) => commitRoll(spec.title, parts, alt),
     spend: name => { const r = c.resources.find(x => x.name === name); if (r && r.max - r.used > 0) { r.used += 1; save(); } },
+    consume: id => { const r = (spec.rerolls || []).find(x => x.id === id); if (!r) return; if (r.insp) c.inspiration = false; if (r.once) { APP.turn.once = APP.turn.once || {}; APP.turn.once[r.id] = true; } save(); },
     markOnce: id => { APP.turn.once = APP.turn.once || {}; APP.turn.once[id] = true; },
     onceUsed: id => !!(APP.turn.once && APP.turn.once[id]),
     onRoll: hooks.onRoll
@@ -332,6 +335,15 @@ const PREF_TOGGLES = {
 };
 
 // ---------------- play mode helpers ----------------
+// An attack uses one swing of the Attack action; when the swings run out the Action is spent.
+// The off-hand attack with a second Light weapon is a Bonus Action instead.
+function attackSpent(c, offhand) {
+  const t = APP.turn; if (!t.on) return;
+  if (offhand) { t.spent.Bonus = true; return; }
+  if (t.spent.Action === true) return;
+  t.attacks = (t.attacks || 0) + 1;
+  t.spent.Action = t.attacks >= attacksPerAction(c) ? true : "attack";
+}
 function markSpent(e) {
   if (APP.turn.on && ["Action", "Bonus", "Reaction"].includes(e.cost) && e.act?.a !== "attackRoll") APP.turn.spent[e.cost] = true;
 }
@@ -357,6 +369,20 @@ function useEntry(e) {
     if (e.act.a === "useRes") { ACTIONS.useRes({ dataset: { i: e.act.i } }); toast(`Used ${e.name}`); render(); }
     else ACTIONS[e.act.a]({ dataset: { id: e.act.id, name: e.act.name, close: "1" } });
   } else { toast(`Used ${e.name}`); render(); }
+}
+// One entry point for an ability's button: Activate/Use, or End when it is already on. Anything that
+// spends a tracked use asks first and says what it will spend.
+function sustainedEntry(e) { return e.kind === "Ability" && e.type === "feature" && e.cost !== "Passive" && !e.spell && isSustained(e.text); }
+function activateEntry(e, confirmed) {
+  const c = APP.char;
+  if ((c.active || []).some(a => a.id === e.id)) { doToggle(e); return; }
+  if (e.block) { toast(e.block); return; }
+  if (e.res && e.res.max != null && !confirmed) { openModal({ type: "confirmUse", id: e.id }); return; }
+  if (sustainedEntry(e)) {
+    if (e.act && e.act.a === "useRes") ACTIONS.useRes({ dataset: { i: e.act.i } });
+    doToggle(e); return;
+  }
+  useEntry(e);
 }
 function doToggle(e) {
   const c = APP.char;
@@ -783,7 +809,7 @@ const ACTIONS = {
     const gained = syncLineageSpells(APP.char, APP.library, APP.campaign);
     save();
     if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
-    APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null; APP.turn.round = 0; APP.turn.spent = {}; APP.concPrompt = null; APP.charSub = "play"; APP.classicSub = "sheet"; preloadSamples();
+    APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null; APP.turn.round = 0; APP.turn.spent = {}; APP.turn.attacks = 0; APP.concPrompt = null; APP.charSub = "play"; APP.classicSub = "sheet"; preloadSamples();
     store.setActiveId(APP.char.id); APP.prefs.lastChar = APP.char.id; savePrefs();
     APP.screen = "sheet"; render(); window.scrollTo(0, 0);
   },
@@ -817,9 +843,9 @@ const ACTIONS = {
   customRemove(el) { const c = APP.char; c.custom = (c.custom || []).filter(x => x.id !== el.dataset.id); syncHp(c); saveAndRender(); },
   classicSub(el) { APP.classicSub = el.dataset.sub; render(); window.scrollTo(0, 0); },
   charSub(el) { APP.charSub = el.dataset.sub; render(); window.scrollTo(0, 0); },
-  turnPip(el) { const s = APP.turn.spent, k = el.dataset.k; if (s[k]) delete s[k]; else s[k] = true; render(); },
-  turnNext() { APP.turn.round += 1; APP.turn.spent = {}; APP.turn.once = {}; render(); },
-  turnEnd() { APP.turn.round = 0; APP.turn.spent = {}; APP.turn.once = {}; render(); },
+  turnPip(el) { const s = APP.turn.spent, k = el.dataset.k; if (s[k]) { delete s[k]; if (k === "Action") APP.turn.attacks = 0; } else s[k] = true; render(); },
+  turnNext() { APP.turn.round += 1; APP.turn.spent = {}; APP.turn.attacks = 0; APP.turn.once = {}; render(); },
+  turnEnd() { APP.turn.round = 0; APP.turn.spent = {}; APP.turn.attacks = 0; APP.turn.once = {}; render(); },
   toggleInsp() { APP.char.inspiration = !APP.char.inspiration; saveAndRender(); toast(APP.char.inspiration ? "Heroic Inspiration gained" : "Heroic Inspiration spent"); },
   concKeep() { APP.concPrompt = null; render(); },
   concLose() { APP.char.concentration = null; APP.concPrompt = null; saveAndRender(); toast("Concentration ended"); },
@@ -835,7 +861,12 @@ const ACTIONS = {
     if (e.block) { toast(e.block); return; }
     if (e.act?.a === "openCast") { markSpent(e); ACTIONS.openCast({ dataset: { name: e.act.name } }); return; }
     closeModal();
+    if (e.type === "feature" && e.cost !== "Passive") { activateEntry(e); return; }
     useEntry(e);
+  },
+  confirmUseGo() {
+    const c = APP.char, e = findTile(APP, c, deriveCharacter(c), APP.modal && APP.modal.id);
+    closeModal(); if (e) activateEntry(e, true);
   },
   toggleActive() {
     const c = APP.char, d = deriveCharacter(c), e = findTile(APP, c, d, APP.modal && APP.modal.id);
@@ -851,7 +882,7 @@ const ACTIONS = {
       if (row) { row.classList.remove("nope"); void row.offsetWidth; row.classList.add("nope"); }
       return;
     }
-    if (e.kind === "Ability" && !e.act && e.type === "feature" && e.cost !== "Passive" && ((c.active || []).some(a => a.id === e.id) || isSustained(e.text))) { doToggle(e); return; }
+    if (e.type === "feature" && e.cost !== "Passive") { activateEntry(e); return; }
     useEntry(e);
   },
   playToggle(el) {
@@ -1205,8 +1236,10 @@ const ACTIONS = {
   },
   lvlGoto(el) { APP.lvl.step = +el.dataset.i; APP.lvl.query = ""; render(); window.scrollTo(0, 0); },
   lvlHp(el) {
-    const d = APP.lvl; d.hpMode = el.dataset.mode;
-    if (d.hpMode === "roll" && !d.rolled) d.rolled = rollDie(APP.char.hitDice.die || 8);
+    const d = APP.lvl;
+    if (d.rolled) { d.hpMode = "roll"; return; } // already rolled: locked in
+    d.hpMode = el.dataset.mode;
+    if (d.hpMode === "roll") { d.rolled = rollDie(APP.char.hitDice.die || 8); if (!d.fromCreation) { APP.char.hpRoll = { level: d.next, v: d.rolled }; save(); } }
     render();
   },
   lvlGainOpen(el) { const d = APP.lvl; d.gainOpen = d.gainOpen === el.dataset.name ? "" : el.dataset.name; render(); },
@@ -1552,7 +1585,7 @@ const ACTIONS = {
     if (w.ammo && w.ammo.cur <= 0) { toast(`Out of ${w.ammo.name}`); return; }
     const n = weaponNumbers(w, c), exh = c.exhaustion * 2;
     const pb = APP.gwm && c.feats.includes("Great Weapon Master") && /heavy/i.test(w.props || "") ? d.prof : 0;
-    const mastery = w.mastery && (c.masteries || []).includes(it.name) ? `mastery: ${w.mastery}` : "";
+    const mastery = w.mastery && (c.masteries || []).includes(it.name) ? `mastery: ${w.mastery}` : (w.via ? `using ${w.via}` : "");
     const rid = ridersFor(APP, c, d, { kind: "weapon" });
     const asRider = (r, i, k) => ({ id: `fx${k}${i}`, label: r.src, dice: r.dice || undefined, flat: r.flat || undefined, note: r.note || "", once: r.once });
     n.riders.atk.forEach((r, i) => rid.attack.push(asRider(r, i, "a")));
@@ -1563,11 +1596,12 @@ const ACTIONS = {
       ...n.reroll.map(r => r.as ? `${r.src}: ${r.atMost >= 2 ? "1s and 2s" : "1s"} count as ${r.as}` : `${r.src}: reroll ${r.atMost >= 2 ? "1s and 2s" : "1s"}`), ...(adv ? [`${(adv === "adv" ? n.adv : n.dis).join(", ")}: ${adv === "adv" ? "advantage" : "disadvantage"}`] : [])];
     rollSpec({
       title: `${it.name} attack${w.ammo ? ` \u00b7 ${w.ammo.cur - 1} ${w.ammo.name} left` : ""}`,
-      d20: { mod: n.toHit - exh, label: "To hit", adv },
-      dmg: { dice, mod: n.dmgMod + pb, type: w.dtype || "", label: "Damage", reroll: n.reroll },
+      weapon: true,
+      d20: { mod: n.toHit - exh, label: "To hit", adv, parts: n.parts.atk.filter(p => typeof p[1] === "number" && p[1]).map(p => ({ label: p[0], v: p[1] })) },
+      dmg: { dice, mod: n.dmgMod + pb, type: w.dtype || "", label: "Damage", reroll: n.reroll, parts: [...n.parts.dmg.filter(p => typeof p[1] === "number" && p[1]).map(p => ({ label: p[0], v: p[1] })), ...n.extraDice.map(x => ({ label: x.src, dice: x.dice }))] },
       riders: rid,
       notes: [pb ? `includes +${pb} Heavy Weapon Mastery on a hit` : "", mastery, ...fxNotes].filter(Boolean).join(" \u00b7 ")
-    }, { onRoll: () => { if (w.ammo && w.ammo.cur > 0) w.ammo.cur -= 1; if (APP.turn.on && APP.turn.spent.Action !== true) APP.turn.spent.Action = "attack"; save(); } });
+    }, { onRoll: () => { if (w.ammo && w.ammo.cur > 0) w.ammo.cur -= 1; attackSpent(c, n.ctx.wield.dual); save(); } });
   },
   starryArrow() {
     const c = APP.char, d = deriveCharacter(c), si = d.spellInfo; if (!si) return;
@@ -1818,7 +1852,7 @@ function applyLevelUp() {
     const die = c.hitDice.die || 8;
     const diceGain = d.hpMode === "roll" && d.rolled ? Math.max(1, d.rolled) : hpAverageGain(die, 0);
     c.xp = Math.max(c.xp || 0, xpForLevel(d.next));
-    c.level = d.next; c.hp.base = (c.hp.base || 0) + diceGain; c.hitDice.total = c.level;
+    c.level = d.next; delete c.hpRoll; c.hp.base = (c.hp.base || 0) + diceGain; c.hitDice.total = c.level;
   }
   syncHp(c); // Constitution, feats and features now add up from the rules data
   if (c.hp.max !== hpBefore) log.unshift(`${c.hp.max > hpBefore ? "+" : ""}${c.hp.max - hpBefore} HP`);

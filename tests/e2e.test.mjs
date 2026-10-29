@@ -316,11 +316,64 @@ await check("Play Mode: only the weapon in hand attacks; Swap weapon is a Bonus 
   noErrs(p); await p.context().close();
 });
 
+await check("Play Mode: spending abilities ask first, one Activate/End button, attacks use up the Action", async () => {
+  const p = await open(1280, 800, {}); await openSample(p); await goAdvanced(p);
+  assert(await p.locator(".pm .r-tg").count() === 0, "the extra on/off button is still there");
+  const row = '[data-a="playUse"][data-id*="Wild Shape"]';
+  await p.locator(row).first().click(); await p.waitForTimeout(300);
+  assert(await p.locator('[data-a="confirmUseGo"]').count() === 1, "no confirm before spending a use");
+  assert(/spends 1 use/i.test(await p.locator(".modal").innerText()), "confirm does not say what it spends");
+  await p.locator('[data-a="closeModal"]').first().click(); await p.waitForTimeout(250);
+  assert(await p.locator(".chip.fx").count() === 0, "cancelled, but it turned on");
+  await p.locator(row).first().click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="confirmUseGo"]').click(); await p.waitForTimeout(400);
+  assert(await p.locator(".chip.fx").count() >= 1, "confirmed, but it did not turn on");
+  assert(/^End$/i.test((await p.locator(row).first().innerText()).trim()), "button should now read End, got: " + (await p.locator(row).allInnerTexts()).join("/"));
+  await p.locator(row).first().click(); await p.waitForTimeout(300);
+  assert(await p.locator(".chip.fx").count() === 0, "End did not turn it off");
+  // one attack uses the Action (no Extra Attack at this level); unarmed shares it
+  await p.locator('.pm-list .row.t-attack[data-row^="w:"]:not([data-row^="w:unarmed"]) [data-a="playUse"]').first().click(); await p.waitForTimeout(400);
+  await p.keyboard.press("Enter"); await p.waitForTimeout(2500);
+  for (let i = 0; i < 4 && await p.locator("#rstage:not([hidden])").count(); i++) {
+    const b = p.locator("#rstage .rs-main:not([hidden])"); if (await b.count()) { await b.click(); await p.waitForTimeout(2500); } else break;
+  }
+  if (await p.locator("#rstage .rs-done:not([hidden])").count()) await p.locator("#rstage .rs-done").click();
+  await p.waitForTimeout(500);
+  assert(await p.locator('.tk[data-k="Action"][aria-pressed="true"]').count() === 1, "attack did not spend the Action");
+  assert(await p.locator('[data-row="w:unarmed:base"].off').count() === 1, "unarmed strike is still free after the Action is gone");
+  noErrs(p); await p.context().close();
+});
+
+await check("roll card: Heroic Inspiration rerolls one chosen damage die and is used up (laptop)", async () => {
+  const p = await open(1280, 800, {}); await openSample(p); await goAdvanced(p);
+  await clickA(p, "charSub", '[data-sub="more"]');
+  const insp = p.locator('[data-a="toggleInsp"]').first(); assert(await insp.count() === 1, "no Heroic Inspiration button");
+  if (!/have it/i.test(await insp.innerText())) await insp.click(); await p.waitForTimeout(300);
+  await clickA(p, "charSub", '[data-sub="play"]');
+  await p.locator('.pm-list .row.t-attack[data-row^="w:"]:not([data-row^="w:unarmed"]) [data-a="playUse"]').first().click(); await p.waitForTimeout(400);
+  await p.keyboard.press("Enter"); await p.waitForTimeout(2600);
+  // skip over a miss: only continue when damage is offered
+  const main = p.locator("#rstage .rs-main:not([hidden])");
+  if (!(await main.count())) { await p.context().close(); return; } // natural 1, nothing to test this run
+  await main.click(); await p.waitForTimeout(2600);
+  assert(await p.locator("#rstage .rs-opts .rs-chip.rr").count() >= 1, "no reroll option after damage");
+  await p.locator("#rstage .rs-opts .rs-chip.rr").first().click(); await p.waitForTimeout(300);
+  assert(await p.locator("#rstage .rs-opts .rs-chip.pick").count() >= 1, "no dice to pick");
+  await p.locator("#rstage .rs-opts .rs-chip.pick").first().click(); await p.waitForTimeout(500);
+  assert(await p.locator("#rstage .rs-opts .rs-chip.rr").count() === 0, "Inspiration still offered after use");
+  assert(/\u2192/.test(await p.locator("#rstage .rs-res").innerText()), "the reroll is not shown in the damage line");
+  await p.locator("#rstage .rs-done").click(); await p.waitForTimeout(300);
+  await clickA(p, "charSub", '[data-sub="more"]');
+  assert(/none/i.test(await p.locator('[data-a="toggleInsp"]').first().innerText()), "Inspiration was not spent");
+  noErrs(p); await p.context().close();
+});
+
 await check("Starry Form: turn on shows an Active chip, survives reload, long rest clears it (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   const use = p.locator('[data-a="playUse"][data-id*="Starry Form"]').first();
   assert(await use.count() === 1, "no Starry Form row in Play Mode");
   await use.click(); await p.waitForTimeout(400);
+  if (await p.locator('[data-a="confirmUseGo"]').count()) await p.locator('[data-a="confirmUseGo"]').click(); await p.waitForTimeout(400);
   assert(await p.locator(".chip.fx").count() >= 1, "no Active chip after turning on");
   assert(await hscroll(p) <= 0, "hscroll with chip");
   await p.reload(); await p.waitForSelector("#home-book", { timeout: 15000 });

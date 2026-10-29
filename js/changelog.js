@@ -2,11 +2,37 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.19";
+export const VERSION = "0.1.20";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.20",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Fewer ways to cheat the action economy, and a smarter roll card.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Attacks now use up your Attack action: one swing for most characters, two with Extra Attack, three or four for a high-level Fighter. When the swings are gone the Action is spent (the off-hand attack with a second Light weapon takes your Bonus Action). Unarmed Strike shares the same limit.",
+          "Abilities that spend a tracked use (Rage, Wild Shape, Action Surge, Lucky and so on) now ask first and tell you what they will spend and how many uses are left.",
+          "The roll card tags every bonus with where it came from, like Rage +2 or Archery +2, and notes where a reroll changed a die.",
+          "You can reroll a single damage die with Heroic Inspiration or Piercer, roll the damage twice and keep the better with Savage Attacker, and reroll a d20 with Heroic Inspiration or Halfling Lucky when you roll a 1. Goblin's Fury of the Small shows up as an extra damage option and has its own use tracker."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Abilities that switch on and off now have one button: Activate, then End. The separate power-symbol button is gone.",
+          "Unarmed Strike is one attack. Claws, bites, horns, Tavern Brawler and the like replace the plain strike with the better version instead of adding a second row. Only a truly separate attack, like the Shifter's Longtooth, gets its own row.",
+          "Level up: once you roll for hit points, the roll is locked in, even if you back out and come back.",
+          "The heavy-hit sound is 25% quieter."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.19",
     date: "2026-10-29",

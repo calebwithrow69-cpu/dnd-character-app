@@ -1,7 +1,10 @@
 // What an attack looks like to the effects engine: which hand, which kind of weapon, which
 // ability. Fighting styles, Rage, Unarmed Strike options and the like read this context.
 // Pure, no DOM. ASCII only.
-import { unarmedOptions, diceAverage } from "./effects.js";
+import { unarmedOptions, diceAverage, fxStat } from "./effects.js";
+
+// Attacks you can make with one Attack action (Extra Attack and its upgrades come from the rules as `attacks` effects).
+export const attacksPerAction = c => Math.max(1, fxStat(c, "attacks", 1).total);
 
 const modOf = s => Math.floor((Number(s || 10) - 10) / 2);
 const has = (props, re) => re.test(String(props || ""));
@@ -47,20 +50,25 @@ export function attackCtx(char, weapon) {
   };
 }
 
-// Virtual attack entries for Unarmed Strike: the basic strike plus whatever the character's
-// species, feats or features let them use instead. Same shape as an inventory weapon item.
+// Virtual attack entries for Unarmed Strike. A character has ONE Unarmed Strike: when a species trait,
+// feat or feature says "instead of the normal damage", the best of those replaces the plain 1 + Str
+// (`via` names where it comes from). Only an option marked `separate` (a different attack with its own
+// action cost, like the Shifter's Longtooth) gets a row of its own. Same shape as an inventory weapon item.
 export function unarmedWeapons(char) {
-  const base = { src: "Unarmed Strike", dice: null, flat: 1, dtype: "bludgeoning", abil: "str" };
   const probe = attackCtx(char, { unarmed: true, ability: "str" });
+  const score = o => diceAverage(o.dice || "0") + (o.flat || 0) + modOf((char.abilities || {})[o.abil]);
   const best = {};
   unarmedOptions(char, probe).forEach(o => {
     const cur = best[o.src];
     if (!cur || diceAverage(o.dice) > diceAverage(cur.dice)) best[o.src] = o;
   });
-  const opts = [base, ...Object.values(best)];
-  return opts.map((o, i) => ({
-    id: "unarmed:" + (i ? o.src : "base"), name: i ? o.src + " (unarmed)" : "Unarmed Strike", qty: 1, virtual: true,
-    weapon: { dice: o.dice || "1", dtype: o.dtype, kind: "Melee", props: "", ability: o.abil, magic: 0, unarmed: true, prof: true, mastery: "", cat: "Unarmed" }
+  const all = Object.values(best);
+  let main = { src: "Unarmed Strike", dice: null, flat: 1, dtype: "bludgeoning", abil: "str" };
+  all.filter(o => !o.separate).forEach(o => { if (score(o) > score(main)) main = o; });
+  const rows = [main, ...all.filter(o => o.separate)];
+  return rows.map((o, i) => ({
+    id: "unarmed:" + (i ? o.src : "base"), name: i ? o.src : "Unarmed Strike", qty: 1, virtual: true,
+    weapon: { dice: o.dice || "1", dtype: o.dtype, kind: "Melee", props: "", ability: o.abil, magic: 0, unarmed: true, prof: true, mastery: "", cat: "Unarmed", via: o.src === "Unarmed Strike" ? "" : o.src }
   }));
 }
 export const isUnarmedId = id => String(id || "").startsWith("unarmed:");

@@ -36,7 +36,7 @@ export const FX_TARGETS = [
   ["save.all", "All saving throws"], ["skill.all", "All skills"], ["spell.dc", "Spell save DC"], ["spell.atk", "Spell attack"]
 ];
 const ABS = "str|dex|con|int|wis|cha";
-const TARGET_RES = [/^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
+const TARGET_RES = [/^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
   /^grant\.(resist|immune|prof|sense|language)\.[A-Za-z. ]+$/];
 const OPS = ["add", "set", "max", "min", "adv", "dis", "reroll", "grant"];
 const EXPR_KEYS = ["ctx", "perLevel", "lvl", "prof", "halfProf", "abil", "classLevel", "steps", "add", "mul", "half", "neg", "max", "min", "if", "dice"];
@@ -272,5 +272,5 @@ export function syncHp(c) {
 // ({ t:"unarmed", op:"grant", v:{ dice, dtype, abil, flat } }). Each is { src, dice, dtype, abil }.
 export function unarmedOptions(c, ctx = {}) {
   return collectEffects(c).filter(e => e.t === "unarmed" && applies(e, c, ctx))
-    .map(e => ({ src: e.src, dice: e.v.dice || null, flat: e.v.flat || 0, dtype: e.v.dtype || "bludgeoning", abil: e.v.abil || "str" }));
+    .map(e => ({ src: e.src, dice: e.v.dice || null, flat: e.v.flat || 0, dtype: e.v.dtype || "bludgeoning", abil: e.v.abil || "str", separate: !!e.v.separate }));
 }

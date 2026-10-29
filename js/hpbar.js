@@ -222,7 +222,7 @@ export function applyHp(prev, now, o) {
       floater("DOWN", "dmg txt big", PADX + (CW - PADX * 2) / 2, 0); shakeScreen(12); buzz([80, 60, 160], o.haptics); sfx("warn");
     }
     // the hit sound: the big one when it took 25% of max HP or more
-    if (dealt > 0) { playSample(big ? "hitbig" : "hit", big ? 1 : 0.9); buzz(big ? [30, 40, 60] : 25, o.haptics); }
+    if (dealt > 0) { playSample(big ? "hitbig" : "hit", big ? 0.75 : 0.9); buzz(big ? [30, 40, 60] : 25, o.haptics); }
     return { big };
   }
   if (gain > 0) {

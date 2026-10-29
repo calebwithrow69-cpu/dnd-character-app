@@ -10,9 +10,12 @@ import { renderFeatControls, renderFeatGrid, renderFeatSheet } from "./feats.js"
 import { featAbilityIncrease, previewFeat, ASI_FEAT } from "../featfx.js";
 
 export function newLevelDraft(char, { fromCreation = false } = {}) {
+  const next = fromCreation ? char.level : char.level + 1;
+  // a hit-die roll is kept on the character, so closing and reopening level up cannot re-roll or swap to the average
+  const kept = !fromCreation && char.hpRoll && char.hpRoll.level === next ? char.hpRoll.v : null;
   return {
-    next: fromCreation ? char.level : char.level + 1, fromCreation, step: 0,
-    hpMode: "avg", rolled: null, subclass: "",
+    next, fromCreation, step: 0,
+    hpMode: kept ? "roll" : "avg", rolled: kept, subclass: "",
     asiMode: "asi", asiSplit: "2", a2: "", a1a: "", a1b: "", feat: "", featAb: "", fxOpen: false,
     style: "", expertise: [], mastery: [], options: [], cantrips: [], spells: [],
     query: "", showAll: false, open: null
@@ -167,10 +170,10 @@ export function levelBody(app) {
     const die = c.hitDice.die || 8, conMod = abilityMod(c.abilities.con);
     body = `<p>Each level adds hit points: one d${die} plus your Constitution modifier (${fmtMod(conMod)}).</p>
       <div class="lvl-choice-row">
-        <button class="bigchoice" data-a="lvlHp" data-mode="avg" aria-pressed="${d.hpMode === "avg"}"><b>+${hpAverageGain(die, conMod)}</b><span>Take the average</span></button>
+        <button class="bigchoice" data-a="lvlHp" data-mode="avg" aria-pressed="${d.hpMode === "avg"}" ${d.rolled ? "disabled" : ""}><b>+${hpAverageGain(die, conMod)}</b><span>Take the average</span></button>
         <button class="bigchoice" data-a="lvlHp" data-mode="roll" aria-pressed="${d.hpMode === "roll"}"><b>${d.rolled ? "+" + Math.max(1, d.rolled + conMod) : "d" + die}</b><span>${d.rolled ? `Rolled ${d.rolled} ${fmtMod(conMod)}` : "Roll for it"}</span></button>
       </div>
-      <p class="sub2" style="margin-top:10px">Rolling can beat the average or fall short. You only get one roll.</p>`;
+      <p class="sub2" style="margin-top:10px">Rolling can beat the average or fall short. Once you roll, that result is locked in.</p>`;
   }
 
   else if (step.id === "subclass") {

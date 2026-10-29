@@ -51,13 +51,13 @@ export function renderModal(app) {
       if (!e) return modalShell("Not found", "", `<button class="btn" data-a="closeModal">Done</button>`);
       const text = e.detail ? detailFor(app, e.detail.kind, e.detail.name, null, e.detail.from).body : formatText(e.text || "");
       const verb = e.src === "Attack" ? "Attack" : e.spell ? (e.src === "Cantrip" ? "Cast" : "Cast...") : e.res ? "Use (spend 1)" : "Use";
-      const usable = e.cost !== "Passive" && (e.act || ["Action", "Bonus", "Reaction"].includes(e.cost));
+      const usable = e.cost !== "Passive" && (e.act || e.type === "feature" || ["Action", "Bonus", "Reaction"].includes(e.cost));
       const isOn = (c.active || []).some(a => a.id === e.id);
       const canToggle = e.cost !== "Passive" && !e.spell && e.src !== "Attack" && (isOn || isSustained(e.text));
       const body = `<div class="tilehead"><span class="tag amber">${COST_LABEL[e.cost]}</span><span class="tag">${esc(e.src)}</span>${e.conc ? `<span class="tag blue">Concentration</span>` : ""}${isOn ? `<span class="tag green">Active</span>` : ""}${e.res && e.res.max != null ? `<span class="tag">${e.res.cur}/${e.res.max} left</span>` : ""}</div>
         ${e.block ? `<div class="tilewhy" role="note"><b>Can't use this right now</b><span>${esc(e.block)}</span></div>` : ""}
-        ${text}${e.cost !== "Passive" && !e.detail ? `<p class="sub2" style="margin-top:10px">The action type is the app's reading of the text above.</p>` : ""}${canToggle ? `<p class="sub2" style="margin-top:10px">Turn on shows it as an Active chip on your sheet until you turn it off or take a rest. The app does not apply its effects for you.</p>` : ""}`;
-      return modalShell(e.name, body, `<button class="btn" data-a="closeModal">Done</button>${canToggle ? `<button class="btn" data-a="toggleActive" ${!isOn && e.block ? "disabled" : ""}>${isOn ? "Turn off" : "Turn on"}</button>` : ""}${usable ? `<button class="btn pri" data-a="tileUse" ${e.block ? "disabled" : ""}>${verb}</button>` : ""}`);
+        ${text}${e.cost !== "Passive" && !e.detail ? `<p class="sub2" style="margin-top:10px">The action type is the app's reading of the text above.</p>` : ""}`;
+      return modalShell(e.name, body, `<button class="btn" data-a="closeModal">Done</button>${isOn ? `<button class="btn pri" data-a="toggleActive">End</button>` : usable ? `<button class="btn pri" data-a="tileUse" ${e.block ? "disabled" : ""}>${canToggle ? "Activate" : verb}</button>` : ""}`);
     }
 
     case "swap": {
@@ -257,6 +257,16 @@ export function renderModal(app) {
          <button class="btn block" style="margin-top:10px" data-a="spendHitDie" ${left <= 0 || c.hp.cur >= c.hp.max ? "disabled" : ""}>Spend one Hit Die</button>
          ${(m.log || []).length ? `<p class="small muted" style="margin-top:10px">${m.log.map(esc).join("<br>")}</p>` : ""}`,
         `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="finishShortRest">Finish short rest</button>`);
+    }
+
+    case "confirmUse": {
+      const e = findTile(app, c, deriveCharacter(c), m.id);
+      if (!e) return modalShell("Not found", "", `<button class="btn" data-a="closeModal">Done</button>`);
+      const cost = e.cost === "Bonus" ? "Bonus Action" : e.cost === "Action" ? "Action" : e.cost === "Reaction" ? "Reaction" : "";
+      const r = e.res, after = r ? r.cur - 1 : 0;
+      return modalShell(`Use ${e.name}?`,
+        `<p>This spends <b>1 use</b> of ${esc(e.name)}.${r ? ` You have <b>${r.cur} of ${r.max}</b> left, so <b>${after}</b> after this.` : ""}</p>${cost ? `<p class="sub2">It also uses your ${cost}.</p>` : ""}`,
+        `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmUseGo">Use ${esc(e.name)}</button>`);
     }
 
     case "longRest":

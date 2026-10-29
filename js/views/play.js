@@ -43,17 +43,17 @@ function status(e, d, c) {
   }
   return "";
 }
+const sustainedFeature = e => e.type === "feature" && e.kind === "Ability" && e.cost !== "Passive" && !e.spell && isSustained(e.text);
 const verb = e => e.type === "attack" ? (e.id === "x:swap" ? "Swap" : "Attack") : e.type === "spell" ? "Cast" : "Use";
 
 function row(e, d, c, ctx, kid) {
   const active = ctx.on.has(e.id), dim = !!e.block && !active, sel = ctx.sel === e.id;
   const st = status(e, d, c), open = ctx.open.has(e.id), kids = e.kids || [];
-  const toggle = e.type === "feature" && e.cost !== "Passive" && !e.spell && e.kind === "Ability" && (active || isSustained(e.text))
-    ? `<button class="r-tg ${active ? "on" : ""}" data-a="playToggle" data-id="${esc(e.id)}" aria-pressed="${active}" aria-label="${active ? "Turn off" : "Turn on"} ${esc(e.name)}" title="${active ? "Turn off" : "Turn on"}">${ICONS.power}</button>` : "";
+  const toggle = "";
   const go = e.type === "feat"
     ? (kids.length ? `<button class="btn sm r-go" data-a="playFeat" data-id="${esc(e.id)}" aria-expanded="${open}">${open ? "Hide" : "Abilities"}</button>` : "")
     : e.cost === "Passive" ? ""
-    : `<button class="btn sm ${dim ? "" : "pri"} r-go ${dim ? "dim" : ""}" data-a="playUse" data-id="${esc(e.id)}" ${dim ? `aria-disabled="true" aria-label="${esc(verb(e))} ${esc(e.name)}, unavailable: ${esc(e.block)}"` : `aria-label="${esc(verb(e))} ${esc(e.name)}"`}>${active ? "Active" : verb(e)}</button>`;
+    : `<button class="btn sm ${dim ? "" : "pri"} r-go ${dim ? "dim" : ""}" data-a="playUse" data-id="${esc(e.id)}" ${dim ? `aria-disabled="true" aria-label="${esc(verb(e))} ${esc(e.name)}, unavailable: ${esc(e.block)}"` : `aria-label="${esc(verb(e))} ${esc(e.name)}"`}>${active ? "End" : sustainedFeature(e) ? "Activate" : verb(e)}</button>`;
   const html = `<div class="row ${e.cost.toLowerCase()} t-${e.type} ${dim ? "off" : ""} ${active ? "fxon" : ""} ${sel ? "sel" : ""} ${kid ? "kid" : ""}" data-row="${esc(e.id)}" data-cost="${e.cost}">
     <button class="r-main" data-a="playSel" data-id="${esc(e.id)}" aria-label="${esc(e.name)}, ${COST_LABEL[e.cost] || e.cost}, ${TYPE_WORD[e.type] || "Feature"}${dim ? ", unavailable: " + esc(e.block) : ""}">
       <span class="r-ic" aria-hidden="true">${typeIcon(e)}</span>
@@ -113,7 +113,7 @@ function sideHtml(app, c, d, e) {
     const active = (c.active || []).some(a => a.id === e.id), dim = !!e.block && !active;
     const text = e.detail && e.detail.kind ? detailFor(app, e.detail.kind, e.detail.name, null, e.detail.from).body : formatText(e.text || "");
     const st = status(e, d, c);
-    const act = e.type === "feat" || e.cost === "Passive" ? "" : `<button class="btn lg ${dim ? "" : "pri"} ${dim ? "dim" : ""}" data-a="playUse" data-id="${esc(e.id)}" ${dim ? 'aria-disabled="true"' : ""}>${active ? "Turn off" : verb(e)}</button>`;
+    const act = e.type === "feat" || e.cost === "Passive" ? "" : `<button class="btn lg ${dim ? "" : "pri"} ${dim ? "dim" : ""}" data-a="playUse" data-id="${esc(e.id)}" ${dim ? 'aria-disabled="true"' : ""}>${active ? "End" : sustainedFeature(e) ? "Activate" : verb(e)}</button>`;
     const kids = (e.kids || []).map(k => `<div class="opt"><b>${esc(k.name)}</b><p>${esc(k.sub || "")}</p>${k.cost !== "Passive" ? `<button class="btn sm ${k.block ? "dim" : ""}" data-a="playUse" data-id="${esc(k.id)}" ${k.block ? 'aria-disabled="true"' : ""}>${verb(k)}</button>` : ""}</div>`).join("");
     body = `<div class="kick">${esc(caption(e))} · <span class="tagc">${esc(COST_LABEL[e.cost] || e.cost)}</span></div><h2>${esc(e.name)}</h2>
       ${(st || act) ? `<div class="usebox"><div>${st ? `<span class="sub2">Available</span><b class="num">${st}</b>` : ""}</div>${act}</div>` : ""}
