@@ -1,11 +1,11 @@
 // The classic character sheet: one page laid out like the printed 2024 sheet
 // (header, vitals, six ability blocks with their saves and skills, weapons,
 // class features, species traits, feats, training). Everything is tappable.
-import { esc, ICONS } from "../ui.js";
-import { ABILITIES, ABILITY_LABEL, fmtMod } from "../rules.js";
+import { esc, ICONS, searchBox } from "../ui.js";
+import { ABILITIES, ABILITY_LABEL, fmtMod, deriveCharacter } from "../rules.js";
 import { findByName } from "../data.js";
 import { optionNames, optionGroup } from "../progression.js";
-import { attacksPanel, needsFirstChoices } from "./sheet.js";
+import { attacksPanel, needsFirstChoices, spellsTab, gearTab } from "./sheet.js";
 import { subclassesFor } from "../data.js";
 import { weaponsOf } from "../gear.js";
 
@@ -22,22 +22,50 @@ function abilityBlock(c, d, a) {
   </section>`;
 }
 
-export function classicBody(app, c, d) {
+
+function featureRows(app, c) {
   const cls = findByName(app.library.classes, c.class);
   const sub = c.subclass ? findByName(app.library.subclasses, c.subclass) : null;
   const hide = optionNames(cls), group = optionGroup(cls);
   const chosen = group ? (c.choices[group.key] || []) : [];
-  const classRows = [
+  return [
     ...((cls?.features) || []).filter(f => f.lv <= c.level && !hide.has(f.name)).map(f => ({ name: f.name, sub: `Lv ${f.lv}`, lv: f.lv, kind: "classFeature", from: c.class })),
-    ...((sub?.features) || []).filter(f => f.lv <= c.level && !f.intro).map(f => ({ name: f.name, sub: `${c.subclass} · Lv ${f.lv}`, lv: f.lv, kind: "subclassFeature", from: c.subclass })),
+    ...((sub?.features) || []).filter(f => f.lv <= c.level && !f.intro).map(f => ({ name: f.name, sub: `${c.subclass} \u00b7 Lv ${f.lv}`, lv: f.lv, kind: "subclassFeature", from: c.subclass })),
     ...chosen.map(n => ({ name: n, sub: group.label, lv: 99, kind: "classFeature", from: c.class }))
   ].sort((a, b) => a.lv - b.lv || a.name.localeCompare(b.name));
+}
+
+// Search the sheet: skills, abilities, features, feats, spells and bag items. Tapping a result rolls it or reads it.
+export function renderSheetSearch(app) {
+  const c = app.char, d = deriveCharacter(c), q = (app.sheetQuery || "").trim().toLowerCase();
+  if (!q) return "";
+  const has = t => String(t || "").toLowerCase().includes(q);
+  const hits = [];
+  ABILITIES.forEach(a => { if (has(ABILITY_LABEL[a])) hits.push(["Roll", `${ABILITY_LABEL[a]} check`, fmtMod(d.mods[a]), `data-a="rollAbility" data-ab="${a}"`]); });
+  d.skills.forEach(s => { if (has(s.label)) hits.push(["Roll", s.label, fmtMod(s.bonus), `data-a="rollSkill" data-id="${s.id}"`]); });
+  featureRows(app, c).forEach(r => { if (has(r.name)) hits.push(["Feature", r.name, r.sub, `data-a="showDetail" data-kind="${r.kind}" data-name="${esc(r.name)}" data-from="${esc(r.from)}"`]); });
+  c.feats.forEach((f, i) => { if (has(f)) hits.push(["Feat", f, "", `data-a="showDetail" data-kind="feat" data-name="${esc(f)}" data-i="${i}"`]); });
+  (c.spellcasting.spells || []).forEach(s => { if (has(s.name)) hits.push(["Spell", s.name, "", `data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"`]); });
+  (c.inventory || []).forEach(it => { if (has(it.name)) hits.push(["Item", it.name, it.qty > 1 ? "x" + it.qty : "", `data-a="showDetail" data-kind="item" data-name="${esc(it.name)}"`]); });
+  [[c.species, "species"], [c.background, "background"]].forEach(([n, k]) => { if (has(n)) hits.push([k === "species" ? "Species" : "Background", n, "", `data-a="showDetail" data-kind="${k}" data-name="${esc(n)}"`]); });
+  return `<div class="panel"><div class="panel-body flush">
+    ${hits.slice(0, 14).map(([g, n, v, at]) => `<button class="rowline rollable" ${at}><span class="nm">${esc(n)}</span><span class="sub2">${esc(g)}${v ? " \u00b7 " + esc(v) : ""}</span></button>`).join("")}
+    ${hits.length ? "" : `<p class="muted small" style="padding:12px 0">Nothing on your sheet matches.</p>`}
+    <button class="rowline rollable" data-a="searchRules"><span class="nm">Search all rules for \u201c${esc(app.sheetQuery.trim())}\u201d</span><span class="sub2">Glossary</span></button>
+  </div></div>`;
+}
+
+export function classicBody(app, c, d) {
+  const cls = findByName(app.library.classes, c.class);
+  const classRows = featureRows(app, c);
   const hd = c.hitDice, si = d.spellInfo;
   const pips = (n, kind, cls2) => Array.from({ length: 3 }, (_, i) => `<button class="pip ${cls2} ${i < n ? "" : "used"}" data-a="deathSave" data-kind="${kind}" data-i="${i}" aria-label="${kind} ${i + 1}"><i></i></button>`).join("");
   const val = (label, v, attrs = "") => `<${attrs ? "button" : "div"} class="cval" ${attrs}><b>${v}</b><span>${label}</span></${attrs ? "button" : "div"}>`;
 
   return `<div class="classic">
     <div class="viewswap"><span class="sub2">Classic sheet</span><button class="linkbtn" data-a="setPrefV" data-k="sheetStyle" data-v="advanced">Switch to the advanced sheet</button></div>
+    ${searchBox("sheet", app.sheetQuery, "Search your sheet: skills, features, spells, items...")}
+    <div id="results-sheet">${renderSheetSearch(app)}</div>
     ${!c.subclass && c.level >= 3 && subclassesFor(app.library, c.class).length ? `<div class="panel"><div class="panel-body"><div class="rowline" style="border:0"><span class="nm" style="color:var(--amber)">No subclass chosen yet</span><button class="btn sm" data-a="openEdit">Choose</button></div></div></div>` : ""}
     ${needsFirstChoices(app, c) ? `<div class="panel"><div class="panel-body"><div class="rowline" style="border:0"><span class="nm" style="color:var(--amber)">Level 1 choices not made yet</span><button class="btn sm pri" data-a="startFirstChoices">Choose</button></div></div></div>` : ""}
 
@@ -65,7 +93,7 @@ export function classicBody(app, c, d) {
       </div>
       <div class="cl-side">
     ${attacksPanel(app, c, d, { head: "Weapons and damage" })}
-    ${si ? `<div class="panel"><div class="panel-head"><h2>Spellcasting</h2><button class="btn sm" data-a="sheetTab" data-tab="spells">Open spells</button></div><div class="panel-body">
+    ${si ? `<div class="panel"><div class="panel-head"><h2>Spellcasting</h2></div><div class="panel-body">
       <div class="cvals three">${val("Ability", ABILITY_LABEL[si.ability])}${val("Modifier", fmtMod(si.mod))}${val("Spell save DC", si.dc)}${val("Spell attack", fmtMod(si.attackBonus))}</div></div></div>` : ""}
       </div>
     </div>
@@ -94,10 +122,11 @@ export function classicBody(app, c, d) {
       <div class="field"><label>Languages</label><input class="f" data-field="languages" value="${esc(c.languages)}"></div>
     </div></div>
     <div class="panel"><div class="panel-body"><div class="btnrow">
-      <button class="btn" data-a="sheetTab" data-tab="gear">Equipment and coins</button>
       <button class="btn" data-a="downloadPdf">Download character sheet (PDF)</button></div>
       <label class="field" style="margin-top:12px"><span class="lab">Notes</span><textarea class="f" data-field="notes" aria-label="Notes" style="min-height:120px">${esc(c.notes)}</textarea></label></div></div>
       </div>
     </div>
+    ${si ? `<h2 class="cl-sec" id="cl-spells">Spells</h2>${spellsTab(app, c, d)}` : ""}
+    <h2 class="cl-sec" id="cl-gear">Equipment</h2>${gearTab(app, c, d, { attacks: false })}
   </div>`;
 }

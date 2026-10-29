@@ -8,6 +8,7 @@ import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, weaponsOf, attunedC
 import { optionGroup, optionNames, levelUpPlan } from "../progression.js";
 import { characterBody, concBanner } from "./character.js";
 import { classicBody } from "./classic.js";
+import { stylePicker } from "./stylepick.js";
 import { xpForLevel } from "../rules.js";
 import { shieldSvg, armorTier } from "../shield.js";
 import { unitWeight, carried, fmtLb } from "../weights.js";
@@ -15,14 +16,10 @@ import { unitWeight, carried, fmtLb } from "../weights.js";
 const levelLabel = l => (Number(l) === 0 ? "Cantrip" : `Level ${l}`);
 
 export function sheetTabs(app) {
-  const c = app.char;
-  const caster = !!CASTER_TYPE[c.class] || (c.spellcasting.spells || []).length > 0;
   return [
     ["stats", "Character", ICONS.stats],
-    caster ? ["spells", "Spells", ICONS.spell] : null,
-    ["gear", "Gear", ICONS.gear],
     ["rules", "Rules", ICONS.book]
-  ].filter(Boolean);
+  ];
 }
 
 export function renderSheet(app) {
@@ -51,14 +48,14 @@ export function renderSheet(app) {
   const meta = `Level ${c.level} ${c.species} ${c.class}${c.subclass ? " · " + c.subclass : ""}`;
 
   let body;
-  if (tab === "stats") body = (app.prefs.sheetStyle || "classic") === "advanced" ? characterBody(app, c, d) : classicBody(app, c, d);
-  else if (tab === "spells") body = spellsTab(app, c, d);
-  else if (tab === "gear") body = (app.prefs.sheetStyle || "classic") === "advanced" ? loadoutGearTab(app, c, d) : gearTab(app, c, d);
+  const styled = app.prefs.sheetStyle === "advanced" || app.prefs.sheetStyle === "classic";
+  if (tab === "stats") body = !styled ? stylePicker(app) : app.prefs.sheetStyle === "advanced" ? characterBody(app, c, d) : classicBody(app, c, d);
   else body = rulesTab(app);
+  const wide = tab === "stats" && app.prefs.sheetStyle === "advanced" && app.charSub === "gear";
 
   return `<div class="sheetview">
     ${topbar(c.name, meta, { back: "backToRoster", actions: [{ a: "openEdit", icon: "edit", label: "Edit character" }] })}
-    <main class="wrap page ${tab === "gear" ? "wide" : ""}">
+    <main class="wrap page ${wide ? "wide" : ""}">
       <section class="status" aria-label="Status">
         <div class="vitals">
           <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points. Tap to add XP or level up.">
@@ -158,7 +155,7 @@ export function needsFirstChoices(app, c) {
 }
 
 // ---------------- Spells ----------------
-function spellsTab(app, c, d) {
+export function spellsTab(app, c, d) {
   const info = d.spellInfo;
   const L = app.library;
   const known = c.spellcasting.spells.map(s => ({ ...s, ref: findByName(enabledSpells(L, app.campaign), s.name) || findByName(L.spells, s.name) }));
@@ -287,7 +284,7 @@ function figureFor(c) {
     </g></svg>`;
 }
 
-function coinsPanel(c) {
+export function coinsPanel(c) {
   return `<div class="panel"><div class="panel-head"><h2>Coins</h2><button class="btn sm" data-a="openShop">Shop</button></div><div class="panel-body">
       <div class="coinrow">
         ${[["pp", "#D9D6E2", "Platinum"], ["gp", "#E3BF5C", "Gold"], ["ep", "#CFC49A", "Electrum"], ["sp", "#C9CCD1", "Silver"], ["cp", "#C98B5B", "Copper"]].map(([k, col, nm]) => `<label class="coinc"><i style="background:radial-gradient(circle at 35% 30%,#fff9,${col} 55%,${col})" aria-hidden="true">${k.toUpperCase()}</i><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" aria-label="${nm} pieces"></label>`).join("")}
@@ -295,14 +292,14 @@ function coinsPanel(c) {
 }
 
 // Advanced sheet gear: status strip, loadouts, worn gear as rows, then the bag and coins.
-function loadoutGearTab(app, c, d) {
+export function loadoutGearTab(app, c, d) {
   const sel = app.selItem ? itemById(c, app.selItem) : null;
   return `<div class="ld-page">${readinessStrip(app, c, d)}${loadoutCards(app, c)}
     ${sel ? `<div class="selbar"><span>Tap a slot to equip <b>${esc(sel.name)}</b></span><button class="btn sm" data-a="clearSel">Cancel</button></div>` : ""}
     <div class="ld-cols"><div>${wornRows(app, c)}</div><div>${bagGrid(app, c)}${coinsPanel(c)}</div></div></div>`;
 }
 
-function gearTab(app, c, d) {
+export function gearTab(app, c, d, { attacks = true } = {}) {
   const sel = app.selItem ? itemById(c, app.selItem) : null;
   const ac = d.acInfo;
   return `<div class="gear-grid"><div class="doll-col">
@@ -314,7 +311,7 @@ function gearTab(app, c, d) {
         <p class="sub2" style="margin-top:10px">${matchMedia("(pointer:fine)").matches ? "Drag items between your bag and the slots, or click an item then a slot." : "Tap an item in your bag, then tap a glowing slot. Tap a slot to change it."}</p>
       </div></div></div><div class="gear-side">
 
-    ${weaponsOf(c).length ? attacksPanel(app, c, d) : ""}
+    ${attacks && weaponsOf(c).length ? attacksPanel(app, c, d) : ""}
 
     <div class="panel"><div class="panel-head"><h2>Armor class ${d.ac}</h2>${ac.stealthDis ? `<span class="tag">Stealth disadvantage</span>` : ""}</div>
       <div class="panel-body stack">${acBody(c, d)}

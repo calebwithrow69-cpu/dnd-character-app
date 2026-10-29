@@ -69,7 +69,9 @@ const clickA = async (p, a, sel = "") => { await p.locator(`[data-a="${a}"]${sel
 const openSample = async p => {
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector('[data-a="openHp"]', { timeout: 10000 });
+  if (await p.locator(".stylepick").count()) { await p.locator('[data-a="setPrefV"][data-v="classic"]').first().click(); await p.waitForTimeout(350); }
 };
+const goAdvanced = async p => { await clickA(p, "setPrefV"); await clickA(p, "confirmStyle"); };
 const noErrs = p => assert(p.errs.length === 0, p.errs.join(" || "));
 
 // Every top-level JS file parses.
@@ -104,7 +106,7 @@ for (const [name, w, h, o] of [VIEWS[0], VIEWS[2], VIEWS[4]]) {
 
 await check("advanced sheet: every Character sub-tab opens (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
-  await clickA(p, "setPrefV");
+  await goAdvanced(p);
   const subs = await p.locator('[data-a="charSub"]').evaluateAll(es => es.map(e => e.dataset.v || e.dataset.t || e.textContent.trim()));
   assert(subs.length >= 5, "expected 5 sub-tabs, got " + subs.length);
   for (let i = 0; i < subs.length; i++) { await p.locator('[data-a="charSub"]').nth(i).click(); await p.waitForTimeout(250); assert(await hscroll(p) <= 0, "hscroll on sub-tab " + i); }
@@ -112,15 +114,15 @@ await check("advanced sheet: every Character sub-tab opens (phone)", async () =>
 });
 
 await check("advanced sheet: every sheet tab opens, no sideways scroll (phone)", async () => {
-  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
-  const n = await p.locator('[data-a="sheetTab"]').count(); assert(n >= 3, "tabs: " + n);
+  const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
+  const n = await p.locator('[data-a="sheetTab"]').count(); assert(n >= 2, "tabs: " + n);
   for (let i = 0; i < n; i++) { await p.locator('[data-a="sheetTab"]').nth(i).click(); await p.waitForTimeout(300); assert(await hscroll(p) <= 0, "hscroll on tab " + i); }
   noErrs(p); await p.context().close();
 });
 
 await check("advanced sheet: every sheet tab opens, no sideways scroll (laptop 1100)", async () => {
-  const p = await open(1100, 800); await openSample(p); await clickA(p, "setPrefV");
-  const n = await p.locator('[data-a="sheetTab"]').count(); assert(n >= 3, "tabs: " + n);
+  const p = await open(1100, 800); await openSample(p); await goAdvanced(p);
+  const n = await p.locator('[data-a="sheetTab"]').count(); assert(n >= 2, "tabs: " + n);
   for (let i = 0; i < n; i++) { await p.locator('[data-a="sheetTab"]').nth(i).click(); await p.waitForTimeout(300); assert(await hscroll(p) <= 0, "hscroll on tab " + i); }
   noErrs(p); await p.context().close();
 });
@@ -203,9 +205,9 @@ await check("random character builds and lands on a sheet", async () => {
 
 await check("Play Mode: first sub-tab, groups, dimmed buttons, standard actions, roll stage (phone + laptop)", async () => {
   for (const [w, h, o] of [[390, 844, { touch: true }], [1280, 800, {}]]) {
-    const p = await open(w, h, o); await openSample(p); await clickA(p, "setPrefV");
+    const p = await open(w, h, o); await openSample(p); await goAdvanced(p);
     const first = await p.locator('[data-a="charSub"]').first().textContent();
-    assert(/Play Mode/.test(first), "Play Mode is not the first sub-tab: " + first);
+    assert(/^Play/.test(first), "Play Mode is not the first sub-tab: " + first);
     assert(await p.locator(".row").count() > 0, "no rows in Play Mode");
     assert(await p.locator(".row .r-ic svg").count() > 0, "rows have no icons");
     assert(await p.locator(".pgrp").count() > 0, "no groups");
@@ -231,7 +233,7 @@ await check("Play Mode: first sub-tab, groups, dimmed buttons, standard actions,
 });
 
 await check("roll stage: nat 20 / nat 1 effects, advantage and disadvantage, Lucky, Primal Strike (phone)", async () => {
-  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   await p.locator('[data-a="charSub"][data-sub="rolls"]').click(); await p.waitForTimeout(300);
   const seq = async list => p.evaluate(l => { window.__q = l.slice(); crypto.getRandomValues = a => { a[0] = (window.__q.length ? window.__q.shift() : 10) - 1; return a; }; }, list);
   const start = async () => { await p.locator('[data-a="rollSkill"], [data-a="rollAbility"], [data-a="rollSave"]').first().click({ timeout: 4000 }); await p.waitForTimeout(300); };
@@ -261,7 +263,7 @@ await check("roll stage: nat 20 / nat 1 effects, advantage and disadvantage, Luc
 });
 
 await check("attack: tap to roll, damage on a second tap, Primal Strike offered after and can be ignored (phone)", async () => {
-  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   await p.evaluate(() => { crypto.getRandomValues = a => { a[0] = 9; return a; }; });
   await p.locator('.row.t-attack [data-a="playUse"]').first().click(); await p.waitForTimeout(400);
   assert(await p.locator(".rs-main").isVisible(), "attack did not wait for a tap");
@@ -278,7 +280,7 @@ await check("attack: tap to roll, damage on a second tap, Primal Strike offered 
 });
 
 await check("attack: you can skip the add-ons and close the screen (phone)", async () => {
-  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   await p.locator('.row.t-attack [data-a="playUse"]').first().click(); await p.waitForTimeout(300);
   await p.locator(".rs-main").click(); await p.waitForTimeout(2200);
   await p.locator(".rs-done").click(); await p.waitForTimeout(300);
@@ -287,7 +289,7 @@ await check("attack: you can skip the add-ons and close the screen (phone)", asy
 });
 
 await check("Play Mode: only the weapon in hand attacks; Swap weapon is a Bonus Action; feats are one group with a submenu (laptop)", async () => {
-  const p = await open(1280, 800, {}); await openSample(p); await clickA(p, "setPrefV");
+  const p = await open(1280, 800, {}); await openSample(p); await goAdvanced(p);
   assert(await p.locator('.pm-list .row.t-attack:not([data-row="x:swap"]) ').count() === 1, "more than one weapon attack row");
   assert(await p.locator('[data-row="x:swap"][data-cost="Bonus"]').count() === 1, "no Swap weapon bonus action");
   await p.locator('[data-a="playUse"][data-id="x:swap"]').click(); await p.waitForTimeout(300);
@@ -308,7 +310,7 @@ await check("Play Mode: only the weapon in hand attacks; Swap weapon is a Bonus 
 });
 
 await check("Starry Form: turn on shows an Active chip, survives reload, long rest clears it (phone)", async () => {
-  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   const use = p.locator('[data-a="playUse"][data-id*="Starry Form"]').first();
   assert(await use.count() === 1, "no Starry Form row in Play Mode");
   await use.click(); await p.waitForTimeout(400);
@@ -320,7 +322,7 @@ await check("Starry Form: turn on shows an Active chip, survives reload, long re
   await p.locator('[data-a="endActive"]').first().click(); await p.waitForTimeout(300);
   assert(await p.locator(".chip.fx").count() === 0, "chip x did not turn it off");
   await p.locator('[data-a="playUse"][data-id*="Starry Form"]').first().click(); await p.waitForTimeout(300);
-  await p.locator('[data-a="charSub"][data-sub="tools"]').click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="charSub"][data-sub="more"]').click(); await p.waitForTimeout(300);
   await clickA(p, "openLongRest"); await clickA(p, "confirmLongRest"); await p.waitForTimeout(400);
   assert(await p.locator(".chip.fx").count() === 0, "long rest did not clear it");
   noErrs(p); await p.context().close();
@@ -356,7 +358,7 @@ await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again rem
   assert(await p.locator('.bm.pop').count() >= 1, "no pop animation class after adding");
   await p.waitForTimeout(700);
   assert(await p.locator('[data-a="toggleHotbar"][aria-pressed="true"]').count() === 1, "button did not fill");
-  await clickA(p, "setPrefV");
+  await goAdvanced(p);
   await p.locator('[data-a="charSub"][data-sub="play"]').click(); await p.waitForTimeout(300);
   assert(await p.locator(".hb-slot").count() === 1, "hotbar slot missing");
   await clickA(p, "openHotbarAdd");
@@ -369,10 +371,31 @@ await check("hotbar bookmark: add pops and fills, shows in hotbar, tap again rem
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
 });
 
+await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {
+  const p = await open(390, 844, { touch: true });
+  await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
+  await p.waitForSelector(".stylepick", { timeout: 10000 });
+  assert(await p.locator(".sp-card").count() === 2, "expected two style cards");
+  assert(await p.locator('[data-a="sheetTab"]').count() === 2, "bottom tabs should be Character and Rules only");
+  await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(350);
+  assert(await p.locator(".classic").count() === 1, "classic sheet missing");
+  assert(await p.locator("#cl-gear").count() === 1, "classic has no equipment section");
+  await p.locator('[data-query="sheet"]').fill("stealth"); await p.waitForTimeout(250);
+  assert(await p.locator('#results-sheet [data-a="rollSkill"]').count() >= 1, "search found no skill");
+  await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(300);
+  assert(await p.locator(".classic").count() === 1, "switched without asking");
+  await clickA(p, "closeModal");
+  assert(await p.locator(".classic").count() === 1, "cancel changed the sheet");
+  await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(300);
+  await clickA(p, "confirmStyle");
+  assert(await p.locator(".classic").count() === 0 && await p.locator('[data-a="charSub"][data-sub="gear"]').count() === 1, "advanced did not open with a Gear sub-tab");
+  noErrs(p); await p.context().close();
+});
+
 await check("loadouts (advanced Gear): save, preview does not change gear, apply does; Combat sub-tab is gone", async () => {
-  const p = await open(390, 844, { touch: true }); await openSample(p); await clickA(p, "setPrefV");
+  const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   assert(await p.locator('[data-a="charSub"][data-sub="combat"]').count() === 0, "Combat sub-tab still there");
-  await p.locator('[data-a="sheetTab"][data-tab="gear"]').last().click(); await p.waitForTimeout(400);
+  await p.locator('[data-a="charSub"][data-sub="gear"]').click(); await p.waitForTimeout(400);
   await clickA(p, "loadoutSaveOpen"); await p.locator("#f-ldname").fill("Test set"); await clickA(p, "loadoutSave"); await p.waitForTimeout(300);
   await p.locator('[data-a="slotTap"][data-slot="main"]').first().click(); await p.waitForTimeout(250);
   await p.locator('[data-a="equipHere"]').first().click(); await p.waitForTimeout(300);

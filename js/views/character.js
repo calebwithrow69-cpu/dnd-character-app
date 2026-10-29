@@ -1,21 +1,26 @@
-// The Character tab: Play Mode / Rolls / Features / Tools / Notes.
+// The Advanced sheet: Play Mode / Spells / Gear / Rolls / Features / More. (Classic is js/views/classic.js.)
 import { esc, ICONS, conditionIcon, formatText, activeChips, turnBar } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, ABILITY_SHORT, fmtMod } from "../rules.js";
 import { findByName, subclassesFor } from "../data.js";
+import { CASTER_TYPE } from "../rules.js";
 import { optionNames, optionGroup } from "../progression.js";
 import { buildCombat, sortCombat, COSTS, COST_LABEL } from "../combat.js";
-import { hotbar, diceTab, needsFirstChoices } from "./sheet.js";
+import { hotbar, diceTab, needsFirstChoices, spellsTab, loadoutGearTab } from "./sheet.js";
 import { playTab } from "./play.js";
 import { playEntries } from "../play.js";
 
-export const SUBTABS = [["play", "Play Mode"], ["rolls", "Rolls"], ["features", "Features"], ["tools", "Tools"], ["notes", "Notes"]];
+export function subtabsFor(c) {
+  const caster = !!CASTER_TYPE[c.class] || (c.spellcasting.spells || []).length > 0;
+  return [["play", "Play"], caster ? ["spells", "Spells"] : null, ["gear", "Gear"], ["rolls", "Rolls"], ["features", "Features"], ["more", "More"]].filter(Boolean);
+}
 
 export function characterBody(app, c, d) {
-  const sub = SUBTABS.some(s => s[0] === app.charSub) ? app.charSub : "play";
-  const body = sub === "play" ? playTab(app, c, d) : sub === "rolls" ? rollsTab(app, c, d)
-    : sub === "features" ? featuresTab(app, c, d) : sub === "tools" ? toolsTab(app, c, d) : notesTab(app, c, d);
-  return `<div class="viewswap"><span class="sub2">Advanced sheet</span><button class="linkbtn" data-a="setPrefV" data-k="sheetStyle" data-v="classic">Switch to the classic sheet</button></div><div class="subtabs seg" role="group" aria-label="Character sections">
-      ${SUBTABS.map(([id, label]) => `<button data-a="charSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}
+  const tabs = subtabsFor(c);
+  const sub = tabs.some(s => s[0] === app.charSub) ? app.charSub : "play";
+  const body = sub === "play" ? playTab(app, c, d) : sub === "spells" ? spellsTab(app, c, d) : sub === "gear" ? loadoutGearTab(app, c, d)
+    : sub === "rolls" ? rollsTab(app, c, d) : sub === "features" ? featuresTab(app, c, d) : toolsTab(app, c, d) + notesTab(app, c, d);
+  return `<div class="viewswap"><span class="sub2">Advanced sheet</span><button class="linkbtn" data-a="setPrefV" data-k="sheetStyle" data-v="classic">Switch to the classic sheet</button></div><div class="subtabs seg" role="group" aria-label="Character sections" style="--n:${tabs.length}">
+      ${tabs.map(([id, label]) => `<button data-a="charSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}
     </div>${body}`;
 }
 

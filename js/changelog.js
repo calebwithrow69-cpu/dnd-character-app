@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.12";
+export const VERSION = "0.1.13";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.13",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Everything for a character now lives on the Character screen.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Gear and Spells are no longer bottom tabs. The bottom bar is just Character and Rules.",
+          "First time you open a character you pick a sheet style: Classic (the printed 2024 sheet on one page, recommended if it is familiar) or Advanced (tabs, Play Mode, loadouts, turn tracking). Switching later asks you to confirm.",
+          "Classic now holds your spells and equipment on the same page, and has a search bar for skills, features, spells and items.",
+          "Advanced sheet tabs: Play, Spells, Gear, Rolls, Features, More (tools and notes together)."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.12",
     date: "2026-10-29",

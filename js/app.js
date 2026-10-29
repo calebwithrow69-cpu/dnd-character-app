@@ -27,6 +27,7 @@ import {
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
 } from "./creation.js";
 import { draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
+import { renderSheetSearch } from "./views/classic.js";
 import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { flourish, toneFor } from "./subtone.js";
 import { subList as scList } from "./views/subclass.js";
@@ -56,7 +57,7 @@ const APP = {
   char: null, sheetTab: "stats", charSub: "play", combatFilter: "All", combatSort: "avail", featFilter: "All", featSort: "level",
   turn: { on: false, round: 0, spent: {}, once: {} }, gwm: false, concPrompt: null, createDraft: null, seedGandork: null,
   roll: null, history: [], diceFormula: "",
-  modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "",
+  modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "", sheetQuery: "",
   glossaryCat: "", glossaryClass: "", glossarySubclass: "",
   setOpen: new Set(["appearance", "feel"]),
   prefs: readPrefs(), installDismissed: readFlag(LS_INSTALL), persisted: false
@@ -654,6 +655,7 @@ function onInput(e) {
   }
   if (ds.query === "shop") { APP.shopQuery = el.value; const r = document.getElementById("results-shop"); if (r) r.innerHTML = renderShopResults(APP); return; }
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
+  if (ds.query === "sheet") { APP.sheetQuery = el.value; const r = document.getElementById("results-sheet"); if (r) r.innerHTML = renderSheetSearch(APP); return; }
   if (ds.query === "rules") { APP.rulesQuery = el.value; if (el.value.trim()) { APP.glossaryClass = ""; APP.glossarySubclass = ""; } const r = document.getElementById("results-rules"); if (r) r.innerHTML = renderRulesResults(APP); return; }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
   if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
@@ -888,11 +890,18 @@ const ACTIONS = {
     if (["vignette", "contrast", "bigtap", "turns", "concprompt", "gwm"].includes(el.dataset.k)) render();
   },
   setPrefV(el) {
+    // Changing an already-chosen sheet style asks first; the very first pick applies at once.
+    if (el.dataset.k === "sheetStyle" && APP.prefs.sheetStyle && APP.prefs.sheetStyle !== el.dataset.v) { APP._style = el.dataset.v; openModal({ type: "confirmStyle" }); return; }
     APP.prefs[el.dataset.k] = el.dataset.v; savePrefs(); applyPrefs();
     el.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === el ? "true" : "false"));
     if (el.dataset.k === "sheetStyle") { render(); window.scrollTo(0, 0); }
     if (el.dataset.k === "startTab") toast("Characters will open on " + el.textContent);
   },
+  confirmStyle() {
+    APP.prefs.sheetStyle = APP._style; APP._style = null; savePrefs(); closeModal(); render(); window.scrollTo(0, 0);
+    toast("Switched to the " + APP.prefs.sheetStyle + " sheet");
+  },
+  searchRules() { APP.rulesQuery = APP.sheetQuery; APP.glossaryClass = ""; APP.glossarySubclass = ""; APP.sheetTab = "rules"; render(); window.scrollTo(0, 0); },
   testSound() { sfx("confirm"); sfx("dice"); },
   resetPrefs() {
     if (!window.confirm("Put every setting back to its default? Your characters are not touched.")) return;
@@ -1066,7 +1075,7 @@ const ACTIONS = {
     APP.shopAfterChoices = goldOnly;
     if (cp && cp.steps.length) { APP.lvl = cp.lvl; applyLevelUp(); } // applies subclass, spells, invocations... and opens the sheet
     else {
-      if (goldOnly) { APP.shopAfterChoices = false; APP.sheetTab = "gear"; openModal({ type: "shop" }); }
+      if (goldOnly) { APP.shopAfterChoices = false; APP.charSub = "gear"; openModal({ type: "shop" }); }
       render(); window.scrollTo(0, 0);
     }
     toast(goldOnly ? "Spend your gold on starting gear" : `${APP.char.name} is ready`);
@@ -1804,9 +1813,9 @@ function applyLevelUp() {
   c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });
   save();
   APP.lvl = null; APP.screen = "sheet"; APP.sheetTab = "stats";
-  if (APP.shopAfterChoices) { APP.shopAfterChoices = false; APP.sheetTab = "gear"; openModal({ type: "shop" }); }
+  if (APP.shopAfterChoices) { APP.shopAfterChoices = false; APP.charSub = "gear"; openModal({ type: "shop" }); }
   render(); window.scrollTo(0, 0);
-  toast(d.fromCreation ? (APP.sheetTab === "gear" ? "Now spend your gold on starting gear" : "Level 1 choices saved") : `${c.name} is now level ${c.level}!`);
+  toast(d.fromCreation ? (APP.charSub === "gear" ? "Now spend your gold on starting gear" : "Level 1 choices saved") : `${c.name} is now level ${c.level}!`);
 }
 
 // ---- drag and drop (laptop; phones use tap-then-tap)

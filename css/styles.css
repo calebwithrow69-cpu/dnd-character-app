@@ -1574,3 +1574,22 @@ body.cx-on #app{position:relative;z-index:1}
 .ld-cols{display:grid;gap:0 28px;grid-template-columns:minmax(0,1fr)}
 @media(min-width:900px){.ld-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .ld-edit{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-top:16px;flex-wrap:wrap}
+
+/* ---- Sheet style chooser, classic sections, six-tab Advanced bar ---- */
+.stylepick{margin:6px 0 20px}
+.stylepick h2{font-family:var(--display);font-size:1.25rem;margin:0 0 6px}
+.sp-cards{display:grid;gap:12px;margin-top:14px;grid-template-columns:1fr}
+@media (min-width:760px){.sp-cards{grid-template-columns:1fr 1fr}}
+.sp-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);color:var(--ink);min-height:0}
+.sp-card:hover,.sp-card:focus-visible{border-color:var(--amber)}
+.sp-card.rec{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset}
+.sp-card b{font-family:var(--display);font-size:1.1rem}
+.sp-card .sp-ic svg{width:30px;height:30px;color:var(--amber)}
+.sp-card .sp-d{color:var(--muted)}
+.sp-card ul{margin:0;padding-left:18px;color:var(--ink);display:grid;gap:4px;font-size:.92rem}
+.sp-badge{font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--amber-ink);background:var(--amber);padding:2px 8px;border-radius:3px}
+.sp-badge.alt{background:var(--raised);color:var(--muted)}
+.sp-go{margin-top:auto;padding-top:6px;color:var(--amber);font-weight:700}
+.cl-sec{font-family:var(--display);font-size:1.1rem;letter-spacing:.06em;text-transform:uppercase;margin:28px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.classic .search{margin:4px 0 8px}
+.subtabs.seg button{font-size:.62rem;letter-spacing:.02em;min-width:0;overflow:hidden;text-overflow:ellipsis}

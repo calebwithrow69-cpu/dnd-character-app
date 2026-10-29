@@ -89,6 +89,11 @@ export function renderModal(app) {
     }
 
     case "confirmDelete": return renderConfirmDelete(app);
+    case "confirmStyle": {
+      const to = app._style === "advanced" ? "advanced" : "classic";
+      return modalShell(`Switch to the ${to} sheet?`, `<p>Are you sure? Your characters are not changed, only how the sheet is laid out.</p><p class="sub2">${to === "advanced" ? "Advanced splits the sheet into tabs and adds Play Mode, loadouts and turn tracking." : "Classic puts everything on one page like the printed 2024 sheet."}</p>`,
+        `<button class="btn" data-a="closeModal">Keep my current sheet</button><button class="btn pri" data-a="confirmStyle">Switch</button>`);
+    }
     case "confirmRemove": {
       const r = app._rm || {};
       const note = r.what === "spell" ? "It leaves your spell list. You can add it back any time from Add spells."
