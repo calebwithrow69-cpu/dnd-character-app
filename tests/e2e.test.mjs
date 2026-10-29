@@ -75,6 +75,9 @@ const openSample = async p => {
 const goAdvanced = async p => { await clickA(p, "openEdit"); await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(300); await clickA(p, "confirmStyle"); };
 const noErrs = p => assert(p.errs.length === 0, p.errs.join(" || "));
 
+// The rules engine, pure and fast (also validates every effect in the unlocked rules file).
+await check("rules engine conformance (tests/engine.test.mjs)", async () => { execSync("node tests/engine.test.mjs", { cwd: root, stdio: "pipe" }); });
+
 // Every top-level JS file parses.
 await check("node --check on every JS file", async () => {
   const files = execSync("git ls-files '*.js' '*.mjs'", { cwd: root }).toString().trim().split("\n");

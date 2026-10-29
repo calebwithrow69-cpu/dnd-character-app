@@ -1,4 +1,4 @@
-import { fxList } from "./effects.js";
+import { fxList, fxStat, effectsReady } from "./effects.js";
 // Equipment: slots, what fits where, armor stats, and gear-driven AC.
 // Pure functions over a character — no DOM.
 
@@ -133,14 +133,22 @@ export function computeAC(char) {
     if (a.str && (char.abilities?.str || 10) < a.str) warn = `Needs Strength ${a.str}: −10 ft speed`;
   } else {
     if (armorItem && !a) warn = `Pick an armor type for ${armorItem.name} (tap it)`;
-    if (char.class === "Barbarian") { base = 10 + dex + con; parts.push(["Unarmored Defense", 10], ["Dex", dex], ["Con", con]); mode = "gear"; }
-    else if (char.class === "Monk" && !shieldItem) { base = 10 + dex + wis; parts.push(["Unarmored Defense", 10], ["Dex", dex], ["Wis", wis]); mode = "gear"; }
-    else if (armorItem || shieldItem) { base = 10 + dex; parts.push(["Unarmored", 10], ["Dex", dex]); mode = "gear"; }
-    else {
+    const plain = () => {
+      if (armorItem || shieldItem) { parts.push(["Unarmored", 10], ["Dex", dex]); mode = "gear"; return 10 + dex; }
       const capped = ac.dexCap != null && ac.dexCap !== "" ? Math.min(dex, Number(ac.dexCap)) : dex;
-      base = Number(ac.base ?? 10) + capped;
       parts.push([ac.armorName || "Base", Number(ac.base ?? 10)], ["Dex", capped]);
-    }
+      return Number(ac.base ?? 10) + capped;
+    };
+    if (effectsReady()) {
+      // Unarmored Defense and similar are data now: an "ac.base" effect with op "max" (see js/effects.js).
+      base = plain();
+      const shieldNow = !!shieldItem || !!(ac.shield && !eq.off);
+      const st = fxStat(char, "ac.base", base, { armored: false, heavy: false, shield: shieldNow });
+      const win = st.parts.filter(x => /better base|sets/.test(x[0])).pop();
+      if (win && st.total > base) { base = st.total; parts.length = 0; parts.push([win[0].replace(/ \((better base|sets)\)$/, ""), base]); mode = "gear"; }
+    } else if (char.class === "Barbarian") { base = 10 + dex + con; parts.push(["Unarmored Defense", 10], ["Dex", dex], ["Con", con]); mode = "gear"; }
+    else if (char.class === "Monk" && !shieldItem) { base = 10 + dex + wis; parts.push(["Unarmored Defense", 10], ["Dex", dex], ["Wis", wis]); mode = "gear"; }
+    else base = plain();
   }
   let total = base;
   if (armorItem && armorItem.magic && active(armorItem)) { total += +armorItem.magic; parts.push([`${armorItem.name} magic`, +armorItem.magic]); }

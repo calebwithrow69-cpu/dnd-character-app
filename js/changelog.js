@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.16";
+export const VERSION = "0.1.17";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.17",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "A fuller rules engine underneath.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "The effects engine now understands conditions (armor, shield, weapon in hand, attack type, toggles, health), formulas (levels, proficiency, ability scores, steps, if/else), set and better-of rules, advantage, rerolls, bonus dice and resistances.",
+          "Unarmored Defense for Barbarian, Monk and Draconic Sorcery now comes from data instead of code. Armor Class results are the same."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.16",
     date: "2026-10-29",
