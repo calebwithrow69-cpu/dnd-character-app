@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.14";
+export const VERSION = "0.1.15";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.15",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Advanced sheet cleanup; proficiencies are read-only.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Armor and weapon training boxes can no longer be ticked by tapping. They show what your class gives you.",
+          "Advanced > Rolls, Features and More use the same row style as Play, Spells and Gear. Features is grouped into Class, Species and background, and Feats, with no filter or sort controls.",
+          "More: rests and Heroic Inspiration are in one panel, and the duplicate Roll initiative button is gone (use the header)."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.14",
     date: "2026-10-29",

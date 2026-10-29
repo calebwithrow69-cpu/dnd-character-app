@@ -1596,7 +1596,8 @@ body.cx-on #app{position:relative;z-index:1}
 .sp-cmp .yes{color:var(--green);font-weight:700}.sp-cmp .no{color:var(--faint)}
 .profgrp{display:flex;flex-direction:column;gap:4px}
 .profopts{display:flex;flex-wrap:wrap;gap:8px}
-.profchk{display:inline-flex;align-items:center;gap:8px;min-height:var(--tap);padding:0 12px;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer}
+.profchk{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:default;color:var(--faint)}
+.profchk.on{color:var(--ink);border-color:var(--amber)}
 .profchk input{width:20px;height:20px;accent-color:var(--amber)}
 .cl-two{grid-template-columns:1fr}
 @media (min-width:1100px){.cl-two{grid-template-columns:repeat(2,minmax(0,1fr))}}

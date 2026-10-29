@@ -23,11 +23,11 @@ function abilityBlock(c, d, a) {
 }
 
 
-// Armor and weapon training as check boxes.
+// Armor and weapon training as check boxes. Read-only: training comes from your class and does not change by tapping.
 export function profsChecks(c) {
   const p = c.profs || { armor: [], weapons: [] };
   return PROF_GROUPS.map(([g, label, opts]) => `<div class="profgrp"><span class="lab">${label}</span><div class="profopts">${opts.map(([k, l]) =>
-    `<label class="profchk"><input type="checkbox" data-a="toggleProf" data-g="${g}" data-k="${k}" ${(p[g] || []).includes(k) ? "checked" : ""}><span>${l}</span></label>`).join("")}</div></div>`).join("");
+    `<label class="profchk ${(p[g] || []).includes(k) ? "on" : ""}"><input type="checkbox" disabled ${(p[g] || []).includes(k) ? "checked" : ""}><span>${l}</span></label>`).join("")}</div></div>`).join("");
 }
 
 function featureRows(app, c) {

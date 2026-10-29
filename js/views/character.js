@@ -1,11 +1,11 @@
 // The Advanced sheet: Play Mode / Spells / Gear / Rolls / Features / More. (Classic is js/views/classic.js.)
-import { esc, ICONS, conditionIcon, formatText, activeChips, turnBar } from "../ui.js";
+import { esc, ICONS, conditionIcon, formatText, activeChips, kRow, kGroup } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, ABILITY_SHORT, fmtMod } from "../rules.js";
 import { findByName, subclassesFor } from "../data.js";
 import { CASTER_TYPE } from "../rules.js";
 import { optionNames, optionGroup } from "../progression.js";
-import { buildCombat, sortCombat, COSTS, COST_LABEL } from "../combat.js";
-import { hotbar, diceTab, needsFirstChoices, spellsTab, loadoutGearTab } from "./sheet.js";
+import { buildCombat } from "../combat.js";
+import { diceTab, needsFirstChoices, spellsTab, loadoutGearTab } from "./sheet.js";
 import { playTab } from "./play.js";
 import { profsChecks } from "./classic.js";
 import { playEntries } from "../play.js";
@@ -28,34 +28,21 @@ export function characterBody(app, c, d) {
 const switchRow = (k, label, hint, on) => `<div class="setrow"><div class="setinfo"><div class="setlabel">${label}</div><div class="sethint">${hint}</div></div>
   <button class="switch" role="switch" aria-checked="${on ? "true" : "false"}" aria-label="${esc(label)}" data-a="togglePref" data-k="${k}"><i></i></button></div>`;
 
-function tileIcon(e) {
-  return e.spell ? ICONS.bolt : e.src === "Attack" ? ICONS.sword : e.kind === "Trait" ? ICONS.shield : ICONS.spell;
-}
-
-// ---------------- Combat ----------------
-export function combatEntries(app, c, d) {
-  return buildCombat(app, c, d);
-}
-
 // ---------------- Rolls ----------------
 function rollsTab(app, c, d) {
   return `
-    <div class="panel"><div class="panel-head"><h2>Abilities</h2><span class="sub2">Tap to roll</span></div><div class="panel-body">
+    <div class="panel"><div class="panel-head"><h2>Abilities</h2><span class="sub2">Tap to roll a check</span></div><div class="panel-body">
       <div class="grid3 grid6">
         ${ABILITIES.map(a => `<button class="abil" data-a="rollAbility" data-ab="${a}">
           <span class="an">${ABILITY_SHORT[a]}</span><span class="am" style="display:block">${c.abilities[a]}</span><span class="as">${fmtMod(d.mods[a])}</span></button>`).join("")}
       </div></div></div>
-    <div class="panel"><div class="panel-head"><h2>Saving throws</h2><span class="sub2">Tap to roll</span></div><div class="panel-body flush">
-      ${ABILITIES.map(a => `<button class="rowline rollable" data-a="rollSave" data-ab="${a}">
-        <span class="nm"><span class="dot ${c.saveProf.includes(a) ? "on" : ""}"></span>${ABILITY_LABEL[a]}</span><span class="val">${fmtMod(d.saves[a])}</span></button>`).join("")}
-    </div></div>
-    <div class="panel"><div class="panel-head"><h2>Skills</h2><span class="sub2">Dot: proficiency · name: roll</span></div><div class="panel-body flush">
-      ${d.skills.map(s => `<div class="rowline"><span class="nm">
-          <button class="pip" data-a="cycleSkill" data-id="${s.id}" aria-label="${s.label} proficiency: ${s.expert ? "expertise" : s.proficient ? "proficient" : "none"}" style="width:36px;margin-left:-8px">
-            <i style="width:14px;height:14px;${s.expert ? "box-shadow:0 0 0 3px var(--amber-dim),0 0 0 5px var(--amber);" : ""}${s.proficient || s.expert ? "" : "background:transparent;border-color:var(--faint)"}"></i></button>
-          <button class="linkbtn" style="text-decoration:none" data-a="rollSkill" data-id="${s.id}">${s.label} <span class="sub2">${ABILITY_SHORT[s.ability]}</span></button></span>
-        <button class="val" style="color:var(--amber);min-height:36px" data-a="rollSkill" data-id="${s.id}">${fmtMod(s.bonus)}</button></div>`).join("")}
-    </div></div>`;
+    ${kGroup("Saving throws", c.saveProf.length + " proficient", { tone: "amber" })}<div class="k-list">
+      ${ABILITIES.map(a => kRow({ glyph: ABILITY_SHORT[a], tone: c.saveProf.includes(a) ? "amber" : "faint", title: ABILITY_LABEL[a], cap: c.saveProf.includes(a) ? "Proficient" : "",
+        status: fmtMod(d.saves[a]), mainAttrs: `data-a="rollSave" data-ab="${a}"` })).join("")}</div>
+    ${kGroup("Skills", "dot = proficiency, row = roll", { tone: "blue" })}<div class="k-list">
+      ${d.skills.map(s => kRow({ glyph: ABILITY_SHORT[s.ability], tone: s.expert ? "amber" : s.proficient ? "blue" : "faint", title: s.label,
+        cap: s.expert ? "Expertise" : s.proficient ? "Proficient" : "", status: fmtMod(s.bonus), mainAttrs: `data-a="rollSkill" data-id="${s.id}"`,
+        actions: `<button class="pip" data-a="cycleSkill" data-id="${s.id}" aria-label="${s.label} proficiency: ${s.expert ? "expertise" : s.proficient ? "proficient" : "none"}"><i style="width:14px;height:14px;${s.expert ? "box-shadow:0 0 0 3px var(--amber-dim),0 0 0 5px var(--amber);" : ""}${s.proficient || s.expert ? "" : "background:transparent;border-color:var(--faint)"}"></i></button>` })).join("")}</div>`;
 }
 
 // ---------------- Features ----------------
@@ -64,34 +51,30 @@ function featuresTab(app, c, d) {
   const sub = c.subclass ? findByName(app.library.subclasses, c.subclass) : null;
   const hide = optionNames(cls), group = optionGroup(cls);
   const chosen = group ? (c.choices[group.key] || []) : [];
-  const rows = [
-    ...((cls?.features) || []).filter(f => f.lv <= c.level && !hide.has(f.name)).map(f => ({ g: "Class", name: f.name, sub: `Lv ${f.lv}`, lv: f.lv, kind: "classFeature", from: c.class })),
-    ...((sub?.features) || []).filter(f => f.lv <= c.level && !f.intro).map(f => ({ g: "Class", name: f.name, sub: `${c.subclass} · Lv ${f.lv}`, lv: f.lv, kind: "subclassFeature", from: c.subclass })),
-    ...chosen.map(n => ({ g: "Class", name: n, sub: group.label, lv: 99, kind: "classFeature", from: c.class })),
-    { g: "Species", name: `${c.species} traits`, sub: "Species", lv: 0, kind: "species", dn: c.species },
-    { g: "Background", name: c.background, sub: "Background", lv: 0, kind: "background", dn: c.background },
-    ...c.feats.map((f, i) => ({ g: "Feats", name: f, sub: "Feat", lv: 50, kind: "feat", i }))
-  ];
-  const f = app.featFilter || "All", how = app.featSort || "level";
-  const list = rows.filter(r => f === "All" || r.g === f).sort(how === "name" ? (a, b) => a.name.localeCompare(b.name) : (a, b) => a.lv - b.lv || a.name.localeCompare(b.name));
+  const classRows = [
+    ...((cls?.features) || []).filter(f => f.lv <= c.level && !hide.has(f.name)).map(f => ({ name: f.name, sub: `Level ${f.lv}`, lv: f.lv, kind: "classFeature", from: c.class })),
+    ...((sub?.features) || []).filter(f => f.lv <= c.level && !f.intro).map(f => ({ name: f.name, sub: `${c.subclass} \u00b7 level ${f.lv}`, lv: f.lv, kind: "subclassFeature", from: c.subclass })),
+    ...chosen.map(n => ({ name: n, sub: group.label, lv: 99, kind: "classFeature", from: c.class }))
+  ].sort((a, b) => a.lv - b.lv || a.name.localeCompare(b.name));
+  const rowOf = (r, tone, glyph) => kRow({ glyph: glyph || r.name[0], tone, title: r.name, cap: r.sub,
+    mainAttrs: `data-a="showDetail" data-kind="${r.kind}" data-name="${esc(r.dn || r.name)}" ${r.from ? `data-from="${esc(r.from)}"` : ""} ${r.i != null ? `data-i="${r.i}"` : ""}` });
+  const warn = [
+    !c.subclass && c.level >= 3 && subclassesFor(app.library, c.class).length ? `<div class="rowline"><span class="nm" style="color:var(--amber)">No subclass chosen yet</span><button class="btn sm" data-a="openEdit">Choose</button></div>` : "",
+    needsFirstChoices(app, c) ? `<div class="rowline"><span class="nm" style="color:var(--amber)">Level 1 choices not made yet</span><button class="btn sm pri" data-a="startFirstChoices">Choose</button></div>` : "",
+    (c.masteries || []).length ? `<div class="rowline"><span class="nm">Weapon mastery</span><span class="sub2" style="text-align:right">${esc(c.masteries.join(", "))}</span></div>` : "",
+    c.level >= 11 && !(cls?.features || []).some(x => x.lv > 10) ? `<p class="sub2" style="padding:8px 0">Your rules data stops at level 10, so level ${c.level} features aren't listed.</p>` : ""
+  ].join("");
   return `
     <div class="panel"><div class="panel-head"><h2>Level ${c.level} ${esc(c.class)}</h2>
       <button class="btn sm pri" data-a="openLevelMenu" ${c.level >= 20 ? "disabled" : ""}>Level up</button></div>
-      <div class="panel-body flush">
-        ${!c.subclass && c.level >= 3 && subclassesFor(app.library, c.class).length ? `<div class="rowline"><span class="nm" style="color:var(--amber)">No subclass chosen yet</span><button class="btn sm" data-a="openEdit">Choose</button></div>` : ""}
-        ${needsFirstChoices(app, c) ? `<div class="rowline"><span class="nm" style="color:var(--amber)">Level 1 choices not made yet</span><button class="btn sm pri" data-a="startFirstChoices">Choose</button></div>` : ""}
-        ${(c.masteries || []).length ? `<div class="rowline"><span class="nm">Weapon mastery</span><span class="sub2" style="text-align:right">${esc(c.masteries.join(", "))}</span></div>` : ""}
-        ${c.level >= 11 && !(cls?.features || []).some(x => x.lv > 10) ? `<p class="sub2" style="padding:8px 0">Your rules data stops at level 10, so level ${c.level} features aren't listed.</p>` : ""}
-      </div></div>
-    <div class="combathead"><div class="seg" role="group" aria-label="Filter features" style="flex:1">
-      ${["All", "Class", "Species", "Feats"].map(k => `<button data-a="featFilter" data-k="${k}" aria-pressed="${f === k}">${k}</button>`).join("")}</div>
-      <label class="sortsel"><span class="sub2">Sort</span><select class="f" data-a="featSort" aria-label="Sort features">
-        ${[["level", "By level"], ["name", "A to Z"]].map(([v, l]) => `<option value="${v}" ${how === v ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
-    <div class="panel"><div class="panel-body flush">
-      ${list.map(r => `<button class="rowline rollable" data-a="showDetail" data-kind="${r.kind}" data-name="${esc(r.dn || r.name)}" ${r.from ? `data-from="${esc(r.from)}"` : ""} ${r.i != null ? `data-i="${r.i}"` : ""}>
-        <span class="nm">${esc(r.name)}</span><span class="sub2">${esc(r.sub)}</span></button>`).join("")}
-    </div></div>
-    ${f === "Feats" ? `<div class="panel"><div class="panel-head"><h2>Add a feat</h2><button class="btn sm" data-a="openPicker" data-picker="feats">Add</button></div></div>` : ""}`;
+      ${warn ? `<div class="panel-body flush">${warn}</div>` : ""}</div>
+    ${kGroup("Class", classRows.length, { tone: "amber" })}<div class="k-list">${classRows.map(r => rowOf(r, "amber")).join("")}</div>
+    ${kGroup("Species and background", 2, { tone: "green" })}<div class="k-list">
+      ${rowOf({ name: `${c.species} traits`, sub: "Species", kind: "species", dn: c.species }, "green")}
+      ${rowOf({ name: c.background, sub: "Background", kind: "background", dn: c.background }, "blue")}</div>
+    ${kGroup("Feats", c.feats.length, { tone: "feat" })}<div class="k-list">
+      ${c.feats.map((f, i) => rowOf({ name: f, sub: "Feat", kind: "feat", i }, "feat")).join("")}</div>
+    <div class="btnrow" style="margin-top:10px"><button class="btn" data-a="openPicker" data-picker="feats">Add a feat</button></div>`;
 }
 
 // ---------------- Tools ----------------
@@ -99,17 +82,14 @@ function toolsTab(app, c, d) {
   const hd = c.hitDice;
   return `
     <div class="panel"><div class="panel-head"><h2>Turn helpers</h2><span class="sub2">Off unless you want them</span></div><div class="panel-body" style="padding:0 14px">
-      ${switchRow("turns", "Turn tracker", "Shows Action, Bonus Action and Reaction on the Combat tab, and greys out what you've already used.", !!app.prefs.turns)}
+      ${switchRow("turns", "Turn tracker", "Shows Action, Bonus Action and Reaction on the Play tab, and greys out what you've already used.", !!app.prefs.turns)}
       ${switchRow("concprompt", "Concentration prompts", "When you're hit while concentrating, asks you to make the Constitution save instead of just a note.", !!app.prefs.concprompt)}
     </div></div>
-    <div class="panel"><div class="panel-head"><h2>Initiative and inspiration</h2></div><div class="panel-body stack">
-      <div class="btnrow"><button class="btn pri" data-a="rollInit">Roll initiative ${fmtMod(d.initiative)}</button>
-        <button class="btn ${c.inspiration ? "pri" : ""}" data-a="toggleInsp" aria-pressed="${!!c.inspiration}">Heroic Inspiration: ${c.inspiration ? "have it" : "none"}</button></div>
-      <p class="sub2">Heroic Inspiration: reroll any die and keep the new roll. You can only hold one.</p>
-    </div></div>
-    <div class="panel"><div class="panel-head"><h2>Rests and hit dice</h2></div><div class="panel-body stack">
+    <div class="panel"><div class="panel-head"><h2>Rests and inspiration</h2></div><div class="panel-body stack">
       <div class="rowline" style="border:0"><span class="nm">Hit dice left</span><b>${hd.total - hd.spent} / ${hd.total} <span class="sub2">d${hd.die}</span></b></div>
       <div class="btnrow"><button class="btn" data-a="openShortRest">Short rest</button><button class="btn" data-a="openLongRest">Long rest</button></div>
+      <button class="btn ${c.inspiration ? "pri" : ""}" data-a="toggleInsp" aria-pressed="${!!c.inspiration}">Heroic Inspiration: ${c.inspiration ? "have it" : "none"}</button>
+      <p class="sub2">Heroic Inspiration: reroll any die and keep the new roll. You can only hold one. Initiative is the button in the header.</p>
     </div></div>
     ${trackersPanel(c)}
     <div class="panel"><div class="panel-head"><h2>Conditions</h2><button class="btn sm" data-a="openConditions">Change</button></div>
@@ -127,7 +107,7 @@ function trackersPanel(c) {
           ${r.max <= 8
             ? `<span class="pips">${Array.from({ length: r.max }, (_, k) => `<button class="pip ${k < r.max - r.used ? "" : "used"}" data-a="toggleResource" data-i="${i}" data-k="${k}" aria-label="${esc(r.name)} ${k + 1}"><i></i></button>`).join("")}</span>`
             : `<span class="stepper"><button data-a="resStep" data-i="${i}" data-n="1" aria-label="Use one">−</button><b>${r.max - r.used}</b><button data-a="resStep" data-i="${i}" data-n="-1" aria-label="Regain one">+</button></span>`}
-        </div>`).join("") : `<p class="muted small" style="padding:12px 0">Track things like Wild Shape, Rage or Channel Divinity uses. A tracker named like a feature links to it on the Combat tab.</p>`}
+        </div>`).join("") : `<p class="muted small" style="padding:12px 0">Track things like Wild Shape, Rage or Channel Divinity uses. A tracker named like a feature links to it on the Play tab.</p>`}
       </div></div>`;
 }
 

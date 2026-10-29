@@ -382,10 +382,11 @@ await check("style chooser: shows first, picking applies at once, switching late
   await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(350);
   assert(await p.locator(".classic").count() === 1, "classic sheet missing");
   assert(await p.locator('[data-a="sheetTab"]').count() === 2, "bottom tabs should be Character and Rules only");
-  assert(await p.locator('[data-a="toggleProf"]').count() === 0, "profs belong on the Notes sub-tab");
+  assert(await p.locator('.profchk').count() === 0, "profs belong on the Notes sub-tab");
   await p.locator('[data-a="classicSub"][data-sub="notes"]').click(); await p.waitForTimeout(250);
-  assert(await p.locator('[data-a="toggleProf"]').count() === 6, "expected 6 training check boxes");
-  assert(await p.locator('[data-a="toggleProf"][data-k="light"]').isChecked(), "Light armor should be checked for a druid");
+  assert(await p.locator('.profchk input').count() === 6, "expected 6 training check boxes");
+  assert(await p.locator('.profchk input:disabled').count() === 6, "training boxes must be read-only");
+  assert(await p.locator('.profchk.on').count() >= 2, "a druid should have some training checked");
   await p.locator('[data-a="classicSub"][data-sub="gear"]').click(); await p.waitForTimeout(250);
   assert(await p.locator(".doll").count() === 1, "classic Equipment sub-tab has no doll");
   await p.locator('[data-a="classicSub"][data-sub="sheet"]').click(); await p.waitForTimeout(250);
