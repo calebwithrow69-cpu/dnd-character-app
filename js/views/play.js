@@ -13,8 +13,8 @@ const ORD = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 const CHECK = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
 function typeIcon(e) {
-  if (e.type === "attack") return e.id === "x:swap" ? ICONS.dice : ICONS.sword;
-  if (e.type === "spell") return e.level ? ICONS.spell : ICONS.bolt;
+  if (e.type === "attack") return e.id === "x:swap" ? ICONS.dice : e.ranged ? ICONS.bow : ICONS.sword;
+  if (e.type === "spell") return e.level ? `<span class="lvb" title="Level ${e.level}">${e.level}</span>` : ICONS.bolt;
   if (e.type === "item") return e.src === "Scroll" ? ICONS.scroll : ICONS.flask;
   if (e.type === "std") return ICONS.flag;
   if (e.type === "feat") return ICONS.book;
@@ -57,7 +57,7 @@ function row(e, d, c, ctx, kid) {
   const html = `<div class="row ${e.cost.toLowerCase()} t-${e.type} ${dim ? "off" : ""} ${active ? "fxon" : ""} ${sel ? "sel" : ""} ${kid ? "kid" : ""}" data-row="${esc(e.id)}" data-cost="${e.cost}">
     <button class="r-main" data-a="playSel" data-id="${esc(e.id)}" aria-label="${esc(e.name)}, ${COST_LABEL[e.cost] || e.cost}, ${TYPE_WORD[e.type] || "Feature"}${dim ? ", unavailable: " + esc(e.block) : ""}">
       <span class="r-ic" aria-hidden="true">${typeIcon(e)}</span>
-      <span class="nmw"><h4>${esc(e.name)}</h4><span class="cap">${esc(caption(e))}</span></span>
+      <span class="nmw"><h4>${esc(e.name)}${e.conc ? `<span class="mk" title="Concentration">C</span>` : ""}${e.ritual ? `<span class="mk" title="Ritual">R</span>` : ""}</h4><span class="cap">${esc(caption(e))}</span></span>
       ${e.sub ? `<span class="sm">${esc(e.sub)}</span>` : `<span class="sm"></span>`}
       <span class="st">${st}</span>
     </button><span class="go">${toggle}${go}</span>
@@ -74,7 +74,7 @@ function deathPanel(c) {
     <div class="rowline"><span class="nm">Successes</span><span class="pips">${pips(c.deathSaves.success, "success", "ok")}</span></div>
     <div class="rowline"><span class="nm">Failures</span><span class="pips">${pips(c.deathSaves.fail, "fail", "fail")}</span></div>
     <button class="btn pri block" data-a="rollDeathSave" ${c.deathSaves.fail >= 3 || c.deathSaves.success >= 3 ? "disabled" : ""}>Roll death save</button>
-    <p class="small muted" style="margin-top:8px">You can't take actions or reactions. Damage at 0 HP adds a failure automatically. Healing brings you back.</p></div></div>`;
+    <p class="small muted" style="margin-top:8px">No actions or reactions at 0 HP.</p></div></div>`;
 }
 // Great Weapon Master: shown only when it applies (feat taken and a Heavy weapon in the bag).
 function gwmRow(app, c) {
@@ -163,8 +163,8 @@ export function playTab(app, c, d) {
   const tk = (k, label, col) => `<button class="tk" style="--c:var(${col})" data-a="turnPip" data-k="${k}" aria-pressed="${!!t.spent[k]}" aria-label="${label} ${t.spent[k] ? "used" : "available"}"><i></i>${label}</button>`;
   const tracker = t.on
     ? `<div class="tracker" role="group" aria-label="This turn">${tk("Action", "Action", "--amber")}${tk("Bonus", "Bonus Action", "--green")}${tk("Reaction", "Reaction", "--blue")}
-        <button class="tk next" data-a="turnNext">${t.round ? "Next turn" : "Start combat"}</button>${t.round ? `<button class="tk" data-a="turnEnd">End</button><span class="rnd">Round <b>${t.round}</b></span>` : ""}</div>`
-    : `<div class="tracker"><span class="sub2">Turn tracker is off, so Action, Bonus Action and Reaction won't dim.</span><button class="tk next" data-a="togglePref" data-k="turns">Turn it on</button></div>`;
+        <button class="tk next" data-a="turnNext">${t.round ? "Next turn" : "Start combat"}</button>${t.round ? `<button class="tk" data-a="turnEnd">End</button><span class="rnd">Round <b>${t.round}</b></span>` : ""}<button class="tk" data-a="togglePref" data-k="turns" aria-pressed="true">Turn tracker: On</button></div>`
+    : `<div class="tracker"><button class="tk next" data-a="togglePref" data-k="turns" aria-pressed="false">Turn tracker: Off</button></div>`;
   const keys = app.prefs.keys !== false;
   const nav = flat.map(([k, label, n]) => `<button data-a="playJump" data-g="${k}"><span>${label}</span><b>${n}</b></button>`).join("");
   return `<div class="pm ${keys ? "withkeys" : ""}">
@@ -183,7 +183,7 @@ export function playTab(app, c, d) {
         <div class="pm-slots">${slotsRail(c, d)}</div>
         ${show.feature ? trackHtml(app, c) : ""}
         ${groups || `<p class="muted small" style="padding:18px 0">Nothing matches. <button class="linkbtn" data-a="playClear">Reset filters</button></p>`}
-        <p class="sub2" style="margin:12px 0">Tap a name to read it. Dimmed buttons can't be used right now; tap one to see why. Action types are the app's reading of the rules text.</p>
+        <p class="sub2" style="margin:12px 0">Tap a name to read it. Dimmed = unavailable; tap for why.</p>
       </div>
       ${sideHtml(app, c, d, selE)}
     </div>

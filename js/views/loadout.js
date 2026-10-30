@@ -56,7 +56,7 @@ export function loadoutCards(app, c) {
       <span class="d ${on ? "" : dlt > 0 ? "up" : dlt < 0 ? "dn" : ""}">${on ? "Equipped" : `${dlt > 0 ? "+" : ""}${dlt} AC · ${p.changes.length} change${p.changes.length === 1 ? "" : "s"}`}</span></button>`;
   }).join("")}
       <button class="ld-card add" data-a="loadoutSaveOpen"><b>+ Save current gear</b><span class="d">as a loadout</span></button></div>
-    ${ls.length ? "" : `<p class="sub2" style="margin:4px 2px 0">A loadout remembers what you are wearing and holding, for example a melee set and a stealth set. Applying one always shows a preview first.</p>`}</div>`;
+    ${ls.length ? "" : `<p class="sub2" style="margin:4px 2px 0">Saved sets of worn and held gear. Applying shows a preview.</p>`}</div>`;
 }
 
 export function wornRows(app, c) {

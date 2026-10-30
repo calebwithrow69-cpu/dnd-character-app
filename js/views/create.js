@@ -46,7 +46,7 @@ export function renderChoice(app, d, def) {
       ${def.hint ? `<p class="small muted">${esc(def.hint)}</p>` : ""}`;
   if (def.kind === "text") {
     return `<div class="choice">${head}<input class="f" data-pick-text="${esc(def.id)}" value="${esc(d.picks[def.id] || "")}" placeholder="${esc(def.placeholder || "Your choice")}" autocomplete="off">
-      <p class="sub2" style="margin-top:4px">Optional \u2014 you can fill this in later on your sheet.</p></div>`;
+      <p class="sub2" style="margin-top:4px">Optional.</p></div>`;
   }
   if (!opts.length) return `<div class="choice">${head}<p class="small muted">${def.kind === "spell" ? "Choose the spell list above first." : "No options available."}</p></div>`;
   const rich = opts.some(o => o.detail || o.term);
@@ -253,7 +253,7 @@ function abilitiesBody(app, d) {
         <span class="as" data-final="${a}">${fin[a] !== d.base[a] ? "\u2192 " + fin[a] + " " : ""}(${fmtMod(abilityMod(fin[a]))})</span></label>
         ${d.pointBuy ? `<div class="cx-pb"><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="-1" aria-label="Lower ${ABILITY_LABEL[a]}" ${d.base[a] <= 8 ? "disabled" : ""}>-</button><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="1" aria-label="Raise ${ABILITY_LABEL[a]}" ${d.base[a] >= 15 ? "disabled" : ""}>+</button></div>` : ""}</div>`).join("")}
     </div>
-    <p class="sub2" style="margin-top:8px">Under each score: the final score after your background bonus, and its modifier.</p>
+    <p class="sub2" style="margin-top:8px">Under each score: final score and modifier.</p>
     ${renderBonus(app, d) || `<p class="muted small" style="margin-top:12px">Choose a background first to see its bonus.</p>`}`;
 }
 
@@ -271,7 +271,7 @@ function skillsGearBody(app, d) {
           return `<label class="optcard" aria-pressed="${on}"><input type="checkbox" data-a="toggleSkill" data-id="${id}" ${on ? "checked" : ""} ${!on && d.classSkills.length >= need ? "disabled" : ""}><span class="grow"><b>${esc(s.label)}</b><span>${ABILITY_LABEL[s.ability]}</span></span></label>`; }).join("")}
       </div></div>
     ${renderEquipGroup(app, d, "class")}${renderEquipGroup(app, d, "bg")}
-    <p class="sub2">Gear goes straight into your inventory, and armor, shield and weapons are put on for you. Gold can be spent in the shop on your Gear tab.</p></div>`;
+    <p class="sub2">Gear is added to inventory and equipped. Spend gold in the Gear tab shop.</p></div>`;
 }
 
 function choiceLines(app, d) {

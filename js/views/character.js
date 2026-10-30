@@ -82,14 +82,14 @@ function toolsTab(app, c, d) {
   const hd = c.hitDice;
   return `
     <div class="panel"><div class="panel-head"><h2>Turn helpers</h2><span class="sub2">Off unless you want them</span></div><div class="panel-body" style="padding:0 14px">
-      ${switchRow("turns", "Turn tracker", "Shows Action, Bonus Action and Reaction on the Play tab, and greys out what you've already used.", !!app.prefs.turns)}
+      ${switchRow("turns", "Turn tracker", "Action, Bonus Action, Reaction on Play tab.", !!app.prefs.turns)}
       ${switchRow("concprompt", "Concentration prompts", "When you're hit while concentrating, asks you to make the Constitution save instead of just a note.", !!app.prefs.concprompt)}
     </div></div>
     <div class="panel"><div class="panel-head"><h2>Rests and inspiration</h2></div><div class="panel-body stack">
       <div class="rowline" style="border:0"><span class="nm">Hit dice left</span><b>${hd.total - hd.spent} / ${hd.total} <span class="sub2">d${hd.die}</span></b></div>
       <div class="btnrow"><button class="btn" data-a="openShortRest">Short rest</button><button class="btn" data-a="openLongRest">Long rest</button></div>
       <button class="btn ${c.inspiration ? "pri" : ""}" data-a="toggleInsp" aria-pressed="${!!c.inspiration}">Heroic Inspiration: ${c.inspiration ? "have it" : "none"}</button>
-      <p class="sub2">Heroic Inspiration: reroll any die and keep the new roll. You can only hold one. Initiative is the button in the header.</p>
+      <p class="sub2">Heroic Inspiration: reroll any die, keep the new roll. Max one.</p>
     </div></div>
     ${trackersPanel(c)}
     <div class="panel"><div class="panel-head"><h2>Conditions</h2><button class="btn sm" data-a="openConditions">Change</button></div>
@@ -107,7 +107,7 @@ function trackersPanel(c) {
           ${r.max <= 8
             ? `<span class="pips">${Array.from({ length: r.max }, (_, k) => `<button class="pip ${k < r.max - r.used ? "" : "used"}" data-a="toggleResource" data-i="${i}" data-k="${k}" aria-label="${esc(r.name)} ${k + 1}"><i></i></button>`).join("")}</span>`
             : `<span class="stepper"><button data-a="resStep" data-i="${i}" data-n="1" aria-label="Use one">−</button><b>${r.max - r.used}</b><button data-a="resStep" data-i="${i}" data-n="-1" aria-label="Regain one">+</button></span>`}
-        </div>`).join("") : `<p class="muted small" style="padding:12px 0">Track things like Wild Shape, Rage or Channel Divinity uses. A tracker named like a feature links to it on the Play tab.</p>`}
+        </div>`).join("") : `<p class="muted small" style="padding:12px 0">No trackers. Add one for Wild Shape, Rage, Channel Divinity, etc.</p>`}
       </div></div>`;
 }
 

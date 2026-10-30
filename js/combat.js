@@ -61,7 +61,7 @@ export function buildCombat(app, c, d) {
     const heavy = /heavy/i.test(w.props || "");
     let block = turnBlock(c, turn, "Action", true);
     if (!block && w.ammo && w.ammo.cur <= 0) block = `Out of ${w.ammo.name}.`;
-    add({ id: "w:" + it.id, name: it.name, cost: "Action", src: "Attack", type: "attack", kind: "Ability", block,
+    add({ id: "w:" + it.id, name: it.name, cost: "Action", src: "Attack", type: "attack", ranged: !!w.ammo || /ammunition/i.test(w.props || "") || /ranged/i.test(String(w.cat || w.category || w.type || "")), kind: "Ability", block,
       note: heavy && c.feats.includes("Great Weapon Master") && app.gwm ? "+PB" : "",
       act: { a: "attackRoll", id: it.id }, detail: it.virtual ? null : { kind: "weapon", name: it.name }, weaponId: it.id, unarmed: !!it.virtual,
       text: it.virtual ? "Unarmed Strike: you hit with a fist, foot, claw or whatever your body offers. Damage is 1 plus your Strength modifier unless a trait or feat gives you something better." : undefined,
@@ -82,7 +82,7 @@ export function buildCombat(app, c, d) {
     if (!block && ref.level > 0 && !info) block = "Your class doesn't give you spell slots.";
     add({ id: "s:" + s.name, name: s.name, cost, src: ref.level ? "Spell " + ref.level : "Cantrip", type: "spell", level: ref.level || 0, kind: "Ability", block,
       act: { a: ref.level === 0 ? "castCantrip" : "openCast", name: s.name }, detail: { kind: "spell", name: s.name },
-      conc: !!ref.conc, spell: true });
+      conc: !!ref.conc, ritual: !!ref.ritual || /ritual/i.test(String(ref.time || ref.casting || "")), spell: true });
   });
 
   // Class and subclass features

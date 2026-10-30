@@ -165,7 +165,7 @@ export function hotbar(app, c, d) {
         <button class="btn sm ${edit ? "pri" : ""}" data-a="toggleHotbarEdit" ${(c.hotbar || []).length ? "" : "disabled"}>${edit ? "Done" : "Edit"}</button>
       </span></div>
     <div class="panel-body">
-      ${(c.hotbar || []).length ? `<div class="hotbar">${slots}</div>` : `<p class="muted small" style="padding:0">Your go-to attacks, spells and items for one-tap use. Tap Add.</p>`}
+      ${(c.hotbar || []).length ? `<div class="hotbar">${slots}</div>` : `<p class="muted small" style="padding:0">Hotbar empty.</p>`}
     </div></div>`;
 }
 
@@ -215,7 +215,7 @@ export function spellsTab(app, c, d) {
             ${info && (lv === 0 || s.prepared || s.always) ? `<button class="btn sm ${lv === 0 ? "" : "pri"}" data-a="${lv === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
             ${!s.always ? `<button class="iconbtn sp2-x" data-a="askRemove" data-do="removeSpell" data-what="spell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}`
         });
-      }).join("") + "</div>").join("") : `<p class="muted small" style="padding:12px 0">No spells yet. Tap "Add spells" to pick from your class list.</p>`}
+      }).join("") + "</div>").join("") : `<p class="muted small" style="padding:12px 0">No spells.</p>`}
     </div></div>`;
 }
 
@@ -349,7 +349,7 @@ export function acBody(c, d) {
   return `
         <div class="small">${ac.parts.map(([k, v]) => `<div class="rowline" style="min-height:34px;padding:4px 0"><span class="nm">${esc(k)}</span><span class="val">${k === ac.parts[0][0] ? v : fmtMod(v)}</span></div>`).join("")}</div>
         ${ac.warn ? `<p class="small" style="color:var(--red)">${esc(ac.warn)}</p>` : ""}
-        ${ac.mode === "manual" ? `<p class="sub2">Nothing worn yet, so this uses the numbers below. Equip armor or a shield and it calculates itself.</p>
+        ${ac.mode === "manual" ? `<p class="sub2">Nothing worn. AC from the values below.</p>
           <div class="grid3">
             <div class="field"><label>Base AC</label><input class="f num" type="number" inputmode="numeric" data-ac="base" value="${c.ac.base ?? 10}"></div>
             <div class="field"><label>Max Dex</label><input class="f num" type="number" inputmode="numeric" data-ac="dexCap" value="${c.ac.dexCap ?? ""}" placeholder="none"></div>

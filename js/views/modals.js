@@ -43,7 +43,7 @@ export function renderModal(app) {
 
     case "ac": {
       const d = deriveCharacter(c);
-      return modalShell(`Armor class ${d.ac}`, `<p class="sub2" style="margin-bottom:8px">Where your armor class comes from. Armor and shields you wear are added automatically.</p>${acBody(c, d)}`, `<button class="btn pri" data-a="closeModal">Done</button>`);
+      return modalShell(`Armor class ${d.ac}`, `<p class="sub2" style="margin-bottom:8px">AC sources. Worn armor and shields are included.</p>${acBody(c, d)}`, `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
     case "tile": {
@@ -56,7 +56,7 @@ export function renderModal(app) {
       const canToggle = e.cost !== "Passive" && !e.spell && e.src !== "Attack" && (isOn || isSustained(e.text));
       const body = `<div class="tilehead"><span class="tag amber">${COST_LABEL[e.cost]}</span><span class="tag">${esc(e.src)}</span>${e.conc ? `<span class="tag blue">Concentration</span>` : ""}${isOn ? `<span class="tag green">Active</span>` : ""}${e.res && e.res.max != null ? `<span class="tag">${e.res.cur}/${e.res.max} left</span>` : ""}</div>
         ${e.block ? `<div class="tilewhy" role="note"><b>Can't use this right now</b><span>${esc(e.block)}</span></div>` : ""}
-        ${text}${e.cost !== "Passive" && !e.detail ? `<p class="sub2" style="margin-top:10px">The action type is the app's reading of the text above.</p>` : ""}`;
+        ${text}${e.cost !== "Passive" && !e.detail ? `<p class="sub2" style="margin-top:10px">Action type is read from the text.</p>` : ""}`;
       return modalShell(e.name, body, `<button class="btn" data-a="closeModal">Done</button>${isOn ? `<button class="btn pri" data-a="toggleActive">End</button>` : usable ? `<button class="btn pri" data-a="tileUse" ${e.block ? "disabled" : ""}>${canToggle ? "Activate" : verb}</button>` : ""}`);
     }
 
@@ -67,7 +67,7 @@ export function renderModal(app) {
         return `<button class="optcard" data-a="swapTo" data-id="${esc(it.id)}" ${it.id === cur ? "disabled" : ""}>
           <span class="grow"><b>${esc(it.name)}${it.id === cur ? " (in hand)" : ""}</b><span>${fmtMod(n.toHit)} to hit \u00b7 ${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""} ${esc(String(w.dtype || "").toLowerCase())}</span></span></button>`;
       }).join("");
-      return modalShell("Swap weapon", `<p class="sub2" style="margin-bottom:8px">Drawing a weapon takes a Bonus Action. You can only attack with the weapon in your hand.</p><div class="optlist" style="margin-top:0">${rows}</div>`, `<button class="btn" data-a="closeModal">Cancel</button>`);
+      return modalShell("Swap weapon", `<p class="sub2" style="margin-bottom:8px">Swapping weapons costs a Bonus Action. Only the held weapon attacks.</p><div class="optlist" style="margin-top:0">${rows}</div>`, `<button class="btn" data-a="closeModal">Cancel</button>`);
     }
 
     case "picker": {
@@ -114,7 +114,7 @@ export function renderModal(app) {
          ${searchBox("shop", app.shopQuery, "Search the shop")}
          <div class="seg" style="margin-top:10px" role="group" aria-label="Category">${cats.map(k => `<button data-a="shopCat" data-cat="${esc(k)}" aria-pressed="${cat === k}">${esc(k === "Magic & potions" ? "Magic" : k)}</button>`).join("")}</div>
          <div class="results" id="results-shop">${renderShopResults(app)}</div>
-         <p class="sub2" style="margin-top:8px">Gear prices come from your DM's rules file; weapons and armor use the Player's Handbook list.</p>`,
+         <p class="sub2" style="margin-top:8px">Prices: DM rules file, else Player's Handbook.</p>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
@@ -243,7 +243,7 @@ export function renderModal(app) {
           const k = slotOf(c, it.id);
           return `<button class="optcard" data-a="equipHere" data-id="${it.id}" data-slot="${m.slot}"><span class="grow"><b>${esc(it.name)}</b>
             <span>${k ? ((it.qty || 1) > slotsOf(c, it.id).length ? "Equip another (" + (slotsOf(c, it.id).length + 1) + " of " + (it.qty || 1) + ")" : "Move from " + esc(SLOTS.find(s => s.key === k).label.toLowerCase())) : it.attune && !it.attuned ? "Needs attunement" : "Equip"}</span></span></button>`;
-        }).join("") || `<p class="muted small">Nothing in your bag fits here. Add items from the Bag section, or tap an item there and set what it's worn on.</p>`}</div>`;
+        }).join("") || `<p class="muted small">No matching items.</p>`}</div>`;
       return modalShell(label, body, `${cur ? `<button class="btn" data-a="unequip" data-id="${cur.id}" data-slot="${m.slot}">Take off</button>` : ""}<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
@@ -299,7 +299,7 @@ export function renderModal(app) {
     case "conditions": {
       const firstLine = n => { const g = glossaryEntry(n); return g ? esc(g.text.split(/(?<=\.)\s/)[0]).slice(0, 110) : ""; };
       return modalShell("Conditions",
-        `<p class="small muted" style="margin-bottom:10px">Tap to turn a condition on or off. Tap (i) to read the full rule.</p>
+        `<p class="small muted" style="margin-bottom:10px">Tap to toggle. (i) for the rule.</p>
         <div class="condgrid">${CONDITIONS.map(x => {
           const on = c.conditions.includes(x), key = "condition:" + x;
           return infoRow({ key, action: "toggleCondition", data: { name: x }, title: x, sub: firstLine(x), pressed: on, open: app.info.has(key),
@@ -334,7 +334,7 @@ export function renderModal(app) {
         block("Armor Class", d.ac, d.acInfo.parts) +
         block("Speed", d.speed + " ft", [["Base", (Number(c.speed) || 30) + " ft"], ...d.speedFx.map(x => [x.src, sg(x.v) + " ft"])]) +
         block("Initiative", sg(d.initiative), [["Dexterity", dex], ...(c.initBonus ? [["Set by hand", c.initBonus]] : []), ...d.initFx.map(x => [x.src, x.v])]) +
-        `<p class="sub2" style="margin-top:12px">Add or fix a number yourself under Edit character, Custom bonuses.</p>`,
+        `<p class="sub2" style="margin-top:12px">Custom bonuses: Edit character.</p>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
     case "edit": {
@@ -374,7 +374,7 @@ export function renderModal(app) {
           <button class="btn block" data-a="openBreakdown">How HP, AC, speed and initiative are worked out</button>
           <p class="lab" style="margin-top:6px">Sheet style</p>
           <div class="seg" role="group" aria-label="Sheet style">${[["classic", "Classic"], ["advanced", "Advanced"]].map(([v, l]) => `<button data-a="setPrefV" data-k="sheetStyle" data-v="${v}" aria-pressed="${(app.prefs.sheetStyle || "classic") === v}">${l}</button>`).join("")}</div>
-          <p class="sub2">Switching asks you to confirm. Your character is not changed.</p>
+          <p class="sub2">Character data is unchanged.</p>
           <div class="panel" style="margin-top:10px"><div class="panel-body stack">
             <button class="btn block" data-a="downloadPdf">Download character sheet (PDF)</button>
             <button class="btn block" data-a="exportOne">Save a backup of this character</button>
@@ -407,7 +407,7 @@ export function renderModal(app) {
             <button class="btn" data-a="hpApply" data-mode="heal" style="border-color:var(--green);color:var(--green)">Heal</button>
             <button class="btn" data-a="hpApply" data-mode="temp" style="border-color:var(--blue);color:var(--blue)">Temp HP</button>
           </div>
-          ${hp.cur <= 0 ? `<p class="small muted">At 0 HP, damage adds a death-save failure and healing brings you back up. Death saves are on the Stats tab.</p>` : ""}
+          ${hp.cur <= 0 ? `<p class="small muted">At 0 HP: damage adds a death-save failure, healing restores you.</p>` : ""}
         </div>`,
         "").replace('class="modal-back"', 'class="modal-back top"');
     }

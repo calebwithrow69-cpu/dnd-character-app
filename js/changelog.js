@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.22";
+export const VERSION = "0.1.23";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.23",
+    date: "2026-10-29",
+    stage: "Pre-build",
+    blurb: "Plainer wording, icon assists.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Play Mode: the turn tracker is now one button that reads Turn tracker: Off or Turn tracker: On, with no explanation text.",
+          "Play Mode rows: ranged attacks show a bow and melee a sword; spells show their level in a badge, with C for concentration and R for ritual beside the name.",
+          "Shorter, plainer wording across hints and empty states."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.22",
     date: "2026-10-30",

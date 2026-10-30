@@ -163,7 +163,7 @@ export function levelBody(app) {
         return kRow({ icon: ICONS.star, tone: "amber", title: f.name, cap: f.from === c.class ? "Class feature" : f.from, status: open ? "\u25b4" : "\u25be",
           mainAttrs: `data-a="lvlGainOpen" data-name="${esc(f.name)}" aria-expanded="${open}"`, extra: "" }) + (open ? `<div class="about" style="margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius-sm)">${formatText(f.text || "")}</div>` : "");
       }).join("")}</div>`
-        : p.open ? `<p class="sub2">Your rules data stops at level 10, so new features for level ${d.next} aren't listed. Add them from your book.</p>` : `<p class="sub2">No new class features at this level. Your choices come next.</p>`}`;
+        : p.open ? `<p class="sub2">Your rules data stops at level 10, so new features for level ${d.next} aren't listed. Add them from your book.</p>` : `<p class="sub2">No new class features.</p>`}`;
   }
 
   else if (step.id === "hp") {
@@ -173,7 +173,7 @@ export function levelBody(app) {
         <button class="bigchoice" data-a="lvlHp" data-mode="avg" aria-pressed="${d.hpMode === "avg"}" ${d.rolled ? "disabled" : ""}><b>+${hpAverageGain(die, conMod)}</b><span>Take the average</span></button>
         <button class="bigchoice" data-a="lvlHp" data-mode="roll" aria-pressed="${d.hpMode === "roll"}"><b>${d.rolled ? "+" + Math.max(1, d.rolled + conMod) : "d" + die}</b><span>${d.rolled ? `Rolled ${d.rolled} ${fmtMod(conMod)}` : "Roll for it"}</span></button>
       </div>
-      <p class="sub2" style="margin-top:10px">Rolling can beat the average or fall short. Once you roll, that result is locked in.</p>`;
+      <p class="sub2" style="margin-top:10px">Roll is final once made.</p>`;
   }
 
   else if (step.id === "subclass") {

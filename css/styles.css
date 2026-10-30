@@ -1675,3 +1675,7 @@ html.dead{filter:grayscale(1);transition:filter 1.6s ease}
   .sb-pill i{font:600 .6rem var(--display);font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .sheetbar .btn svg{width:16px;height:16px;margin-right:6px}
 }
+
+/* Icon assists: spell level badge, concentration / ritual marks */
+.lvb{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;font:700 .78rem var(--display);line-height:1}
+.mk{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:6px;border-radius:4px;border:1px solid var(--muted);color:var(--muted);font:700 .6rem var(--display);vertical-align:middle}

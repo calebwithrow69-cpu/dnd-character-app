@@ -16,7 +16,7 @@ function equippedStrip(app, c, d) {
   const seen = new Set(), chips = eq.filter(([, it]) => (seen.has(it.id) ? false : seen.add(it.id)))
     .map(([, it]) => `<button class="cg-chip ${app.gearSel === it.id ? "on" : ""}" data-a="gearSel" data-id="${esc(it.id)}"><span>${esc(where(c, it.id))}</span><b>${esc(it.name)}</b></button>`).join("");
   return `<div class="panel cg-equipped"><div class="panel-head"><h2>Equipped</h2><span class="sub2">AC ${d.ac} · ${attunedCount(c)}/3 attuned</span></div>
-    <div class="panel-body">${chips ? `<div class="cg-chips">${chips}</div>` : `<p class="muted small">Nothing equipped yet. Pick an item below and choose Equip.</p>`}</div></div>`;
+    <div class="panel-body">${chips ? `<div class="cg-chips">${chips}</div>` : `<p class="muted small">Nothing equipped.</p>`}</div></div>`;
 }
 
 function listPanel(app, c) {
