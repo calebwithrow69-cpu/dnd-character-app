@@ -271,10 +271,20 @@ export function renderModal(app) {
 
     case "died": {
       const who = esc(c.name);
-      return modalShell(`${c.name} has fallen`,
-        `<p>${who} goes to the Graveyard. You can still open the sheet there, and you can bring them back whenever you like.</p>
+      if (!c.dead) return modalShell(`Mark ${c.name} as dead?`,
+        `<p>${who} goes to the Graveyard. You can still look at the sheet there, and you can bring them back whenever you like.</p>
          <label class="field"><span class="lab">How did they die? (optional)</span><input class="f" id="f-cause" maxlength="300" autocomplete="off" placeholder="Where, and to what"></label>`,
         `<button class="btn" data-a="closeModal">Not dead</button><button class="btn pri" data-a="confirmDead">Lay to rest</button>`);
+      return `<div class="modal-back diedback" data-a="closeModalBackdrop"><div class="modal diedmodal" role="dialog" aria-modal="true" aria-label="${who} has fallen">
+        <div class="diedscene">
+          <div class="dstone" aria-hidden="true"><span>R.I.P.</span></div>
+          <h2 class="dname">${who}</h2>
+          <p class="dfall">has fallen</p>
+          <p class="dmeta">Level ${esc(c.level)} ${esc(c.species)} ${esc(c.class)}${c.subclass ? " \u00b7 " + esc(c.subclass) : ""}</p>
+          <label class="field dcause"><span class="lab">How did they die? (optional)</span><input class="f" id="f-cause" maxlength="300" autocomplete="off" value="${esc(c.dead.cause || "")}" placeholder="Where, and to what"></label>
+          <button class="btn pri dbtn" data-a="confirmDead">Rest in peace</button>
+          <p class="sub2 dnote">${who} can't be played until you revive them from the banner on their sheet, or from the Graveyard.</p>
+        </div></div></div>`;
     }
     case "revive": {
       return modalShell("Bring them back?", `<p>${m.name ? esc(m.name) : "This character"} returns to the character list at 1 hit point, with death saves cleared. The cause of death is forgotten.</p>`,

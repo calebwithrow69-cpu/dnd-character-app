@@ -5,7 +5,8 @@ import { esc, ICONS, searchBox } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, fmtMod, deriveCharacter, PROF_GROUPS } from "../rules.js";
 import { findByName } from "../data.js";
 import { optionNames, optionGroup } from "../progression.js";
-import { attacksPanel, needsFirstChoices, spellsTab, gearTab } from "./sheet.js";
+import { attacksPanel, needsFirstChoices, spellsTab } from "./sheet.js";
+import { classicGear } from "./classicgear.js";
 import { subclassesFor } from "../data.js";
 import { weaponsOf } from "../gear.js";
 
@@ -122,7 +123,7 @@ export function classicBody(app, c, d) {
     </div></div>
     </div></div>`,
     spells: () => (si ? spellsTab(app, c, d) : ""),
-    gear: () => gearTab(app, c, d, { attacks: false }),
+    gear: () => classicGear(app, c, d),
     notes: `<div class="cl-cols3 cl-two"><div>${profsBox}</div><div>
     <div class="panel"><div class="panel-body"><div class="btnrow">
       <button class="btn" data-a="downloadPdf">Download character sheet (PDF)</button></div>

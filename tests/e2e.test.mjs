@@ -48,7 +48,7 @@ const results = [];
 const check = async (name, fn) => {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
   try { await fn(); results.push([true, name]); console.log("PASS", name); }
-  catch (e) { results.push([false, name]); console.log("FAIL", name, "-", String(e.message || e).split("\n")[0]); }
+  catch (e) { results.push([false, name]); console.log("FAIL", name, "-", process.env.FULL ? String(e.message || e) : String(e.message || e).split("\n")[0]); }
 };
 const assert = (c, m) => { if (!c) throw new Error(m || "assertion failed"); };
 const IGNORE = /ERR_TUNNEL_CONNECTION_FAILED|fonts\.(googleapis|gstatic)|ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED/;
@@ -65,7 +65,7 @@ async function open(w, h, { touch = false, dark = false } = {}) {
   return page;
 }
 const hscroll = p => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-const clickA = async (p, a, sel = "") => { await p.locator(`[data-a="${a}"]${sel}`).first().click(); await p.waitForTimeout(350); };
+const clickA = async (p, a, sel = "") => { await p.locator(`[data-a="${a}"]${sel}:visible`).first().click(); await p.waitForTimeout(350); };
 const openSample = async p => {
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector('[data-a="openHp"], .stylefull', { timeout: 10000 });
@@ -206,6 +206,20 @@ await check("random character builds and lands on a sheet", async () => {
   }
   if (await p.locator(".stylefull").count()) { await p.locator('[data-a="setPrefV"][data-v="classic"]').first().click(); await p.waitForTimeout(350); }
   assert(await p.locator('[data-a="openHp"]').count() > 0, "random build did not reach a sheet");
+  noErrs(p); await p.context().close();
+});
+
+await check("a new character always asks which sheet to use, even after a style was chosen (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p);
+  await clickA(p, "backToRoster"); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForTimeout(1500);
+  for (let i = 0; i < 12 && !(await p.locator(".stylefull").count()); i++) {
+    const nxt = p.locator('[data-a="nextStep"], [data-a="finishCreate"]'); if (!(await nxt.count())) break;
+    await nxt.first().click(); await p.waitForTimeout(500);
+  }
+  assert(await p.locator(".stylefull").count() === 1, "no sheet choice after finishing the character");
+  await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(500);
+  assert(await p.locator('[data-a="openHp"]').count() > 0, "choice did not open the sheet");
+  assert(await p.locator('[data-a="charSub"]').count() > 0, "advanced was not applied");
   noErrs(p); await p.context().close();
 });
 
@@ -392,6 +406,43 @@ await check("Graveyard: mark dead (black and white), tombstone, open sheet, revi
   noErrs(p); await p.context().close();
 });
 
+await check("Death: instant death pops the animated screen, the sheet is locked until revived (laptop)", async () => {
+  const p = await open(1280, 800, {}); await openSample(p); await goAdvanced(p);
+  await clickA(p, "openHp"); await p.locator("#hp-amt").fill("999"); await p.locator('[data-a="hpApply"][data-mode="damage"]').click();
+  await p.waitForSelector(".diedmodal", { timeout: 6000 });
+  assert(await p.evaluate(() => document.documentElement.classList.contains("dead")), "not black and white");
+  await p.locator("#f-cause").fill("Meteor"); await p.locator('[data-a="confirmDead"]').click(); await p.waitForTimeout(400);
+  assert(/Meteor/.test(await p.locator(".deadbar").innerText()), "cause missing on the banner");
+  assert(await p.evaluate(() => !!document.querySelector('[data-a="openHp"]').closest("[inert]")), "HP is still usable while dead");
+  assert(await p.evaluate(() => !!document.querySelector('[data-a="charSub"]').closest("[inert]")), "tabs are still usable while dead");
+  await p.reload(); await p.waitForSelector("#home-book", { timeout: 15000 });
+  await clickA(p, "goRoster"); await clickA(p, "goGraveyard"); await p.locator(".stone").click(); await p.waitForSelector(".deadbar");
+  assert(await p.locator(".diedmodal").count() === 0, "the death screen showed again on a later visit");
+  await clickA(p, "reviveAsk"); await clickA(p, "reviveGo"); await p.waitForTimeout(500);
+  assert(await p.evaluate(() => !document.querySelector('[data-a="openHp"]').closest("[inert]")), "still locked after revive");
+  noErrs(p); await p.context().close();
+});
+
+await check("Death save: one die, and the pips do not change until it has landed (laptop)", async () => {
+  const p = await open(1280, 800, {}); await openSample(p); await goAdvanced(p);
+  await p.waitForTimeout(1500);
+  const hp = await p.evaluate(() => document.querySelector('[data-a="openHp"]').getAttribute("aria-label").match(/Hit points (\d+)[^.]*?(?:, (\d+) temporary)?\./).slice(1).reduce((t, x) => t + Number(x || 0), 0));
+  await clickA(p, "openHp"); await p.locator("#hp-amt").fill(String(hp)); await p.locator('[data-a="hpApply"][data-mode="damage"]').click(); await p.waitForTimeout(1800);
+  if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT });
+  const filled = () => p.locator('[data-a="deathSave"]:not(.used)').count();
+  assert(await filled() === 0, "death pips should start empty");
+  await p.locator('[data-a="rollDeathSave"]').first().click(); await p.waitForTimeout(400);
+  assert(await p.locator("#rstage .rs-die:not([hidden])").count() === 1, "should show exactly one die");
+  await p.keyboard.press("Enter"); await p.waitForTimeout(300);
+  assert(await filled() === 0, "a pip changed before the die landed");
+  await p.waitForTimeout(3500);
+  if (await p.locator("#rstage .rs-done:not([hidden])").count()) await p.locator("#rstage .rs-done").click();
+  await p.waitForTimeout(600);
+  const hp2 = await p.evaluate(() => document.querySelector(".hpnum").textContent.trim());
+  assert(await filled() >= 1 || hp2 !== "0" || await p.locator(".deadbar, .diedmodal").count() > 0, "the result never applied");
+  noErrs(p); await p.context().close();
+});
+
 await check("Starry Form: turn on shows an Active chip, survives reload, long rest clears it (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   const use = p.locator('[data-a="playUse"][data-id*="Starry Form"]').first();
@@ -490,7 +541,10 @@ await check("style chooser: shows first, picking applies at once, switching late
   assert(await p.locator('.profchk input:disabled').count() === 6, "training boxes must be read-only");
   assert(await p.locator('.profchk.on').count() >= 2, "a druid should have some training checked");
   await p.locator('[data-a="classicSub"][data-sub="gear"]').click(); await p.waitForTimeout(250);
-  assert(await p.locator(".doll").count() === 1, "classic Equipment sub-tab has no doll");
+  assert(await p.locator(".doll").count() === 0, "classic Gear tab must not have the paper doll");
+  assert(await p.locator(".cg-equipped").count() === 1 && await p.locator(".cg-row").count() >= 1, "classic Gear tab needs an Equipped strip and an item list");
+  assert(await p.locator(".cg-list .w").count() >= 1, "item rows show weight");
+  assert(await p.locator(".coins, .coin-row, [data-a=\"openCoins\"]").count() >= 1 || /\bgp\b/i.test(await p.locator(".cgear").innerText()), "coins shown");
   await p.locator('[data-a="classicSub"][data-sub="sheet"]').click(); await p.waitForTimeout(250);
   await p.locator('[data-query="sheet"]').fill("stealth"); await p.waitForTimeout(250);
   assert(await p.locator('#results-sheet [data-a="rollSkill"]').count() >= 1, "search found no skill");

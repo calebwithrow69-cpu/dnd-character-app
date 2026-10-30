@@ -1615,7 +1615,8 @@ body.cx-on #app{position:relative;z-index:1}
 .subtabs.seg button{font-size:.62rem;letter-spacing:.02em;min-width:0;overflow:hidden;text-overflow:ellipsis}
 
 /* Graveyard and dead characters */
-html.dead{filter:grayscale(1)}
+html.dead{filter:grayscale(1);transition:filter 1.6s ease}
+.deadbar .linkbtn{background:none;border:0;padding:0 2px;font:inherit;text-decoration:underline;color:inherit;cursor:pointer}
 .deadbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
 .deadbar span{min-width:0}
 .tombs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:22px 16px;padding-top:6px}
@@ -1628,3 +1629,49 @@ html.dead{filter:grayscale(1)}
 .stone .lv,.stone .cl{font-size:.78rem;color:#3a3a3a}
 .stone .why{margin-top:6px;font-size:.74rem;font-style:italic;color:#444;overflow-wrap:anywhere}
 .stone .dt{margin-top:auto;font:.68rem var(--mono);color:#555}
+
+/* The moment a character dies */
+.diedback{background:radial-gradient(ellipse at center,rgba(60,0,0,.72),rgba(0,0,0,.94) 70%);animation:died-bg 1.6s ease both}
+.diedmodal{background:transparent!important;border:0!important;box-shadow:none!important;color:#eee;max-width:420px;text-align:center}
+.diedscene{display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 8px 18px}
+.dstone{width:118px;height:150px;display:grid;place-items:start center;padding-top:44px;border-radius:50% 50% 6px 6px / 34% 34% 6px 6px;background:linear-gradient(180deg,#d9d9d5,#8f8f8a);color:#444;font:700 .7rem var(--display);letter-spacing:.3em;box-shadow:0 0 40px rgba(255,255,255,.18),0 8px 0 #5d5d58;animation:died-rise 1.8s cubic-bezier(.2,.9,.2,1) .2s both}
+.dname{font:700 1.7rem var(--display);margin-top:18px;color:#f4f4f4;animation:died-fade 1.2s ease 1.1s both}
+.dfall{font:600 .95rem var(--display);letter-spacing:.5em;text-transform:uppercase;color:#b33;animation:died-track 2.2s ease 1.3s both}
+.dmeta{font-size:.85rem;color:#aaa;animation:died-fade 1s ease 1.9s both}
+.diedscene .dcause,.diedscene .dbtn,.diedscene .dnote{animation:died-fade 1s ease 2.3s both}
+.diedscene .dcause{width:100%;margin-top:10px;text-align:left}
+.diedscene .dcause .lab{color:#bbb}
+.diedscene .dnote{color:#999;margin-top:4px}
+@keyframes died-bg{0%{background:rgba(160,0,0,.9)}100%{background:radial-gradient(ellipse at center,rgba(60,0,0,.72),rgba(0,0,0,.94) 70%)}}
+@keyframes died-rise{0%{opacity:0;transform:translateY(90px) scale(.9)}100%{opacity:1;transform:none}}
+@keyframes died-fade{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:none}}
+@keyframes died-track{0%{opacity:0;letter-spacing:1.4em}100%{opacity:1;letter-spacing:.5em}}
+@media (prefers-reduced-motion:reduce){.diedback,.dstone,.dname,.dfall,.dmeta,.diedscene .dcause,.diedscene .dbtn,.diedscene .dnote{animation:none}}
+
+/* Classic gear tab: a plain list, details beside it on a wide screen */
+.cgear{display:grid;gap:14px}
+.cg-chips{display:flex;flex-wrap:wrap;gap:8px}
+.cg-chip{display:grid;gap:1px;text-align:left;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer;color:inherit}
+.cg-chip span{font:600 .64rem var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.cg-chip.on{border-color:var(--rc,var(--accent));box-shadow:0 0 0 1px var(--rc,var(--accent))}
+.cg-cols{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+.cg-detail{display:none}
+.cg-row{width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+.cg-row.selected{background:rgba(160,120,40,.14)}
+.cg-text{max-height:260px;overflow:auto}
+.cg-ac>summary{cursor:pointer;list-style:none}
+@media (min-width:900px){.cg-cols{grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);align-items:start}.cg-detail{display:block;position:sticky;top:12px}}
+
+/* Sheet header: slim on phones, banner on laptops */
+.sheetbar .sb-wide{display:none}
+@media (min-width:1100px){
+  .sheetbar .sb-phone{display:none}
+  .sheetbar .sb-wide{display:flex;align-items:center;gap:16px;padding-block:6px}
+  .sheetbar h1{font-size:1.5rem}
+  .sheetbar .sub{font-size:.9rem}
+  .sb-pills{display:flex;gap:8px}
+  .sb-pill{display:grid;justify-items:center;min-width:64px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+  .sb-pill b{font:700 1.05rem var(--display)}
+  .sb-pill i{font:600 .6rem var(--display);font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .sheetbar .btn svg{width:16px;height:16px;margin-right:6px}
+}

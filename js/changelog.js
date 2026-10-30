@@ -2,11 +2,29 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.21";
+export const VERSION = "0.1.22";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.22",
+    date: "2026-10-30",
+    stage: "Pre-build",
+    blurb: "Death is final, sheet chooser, simpler Classic gear.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "A dead character can no longer be touched: the whole sheet is locked until you press Revive, and the moment a third death save fails a dramatic death screen appears. Closing it, or editing the saves, cannot get around it.",
+          "After you finish a new character the app always asks whether you want the Classic or Advanced sheet.",
+          "Death saves now show the result only after the die has stopped rolling.",
+          "Classic sheet Gear tab is now a plain list of items with weight and quantity, an Equipped strip on top, coins, and item details beside the list on wide screens. The paper doll stays on the Advanced sheet.",
+          "New sheet header: a slim bar on phones, and a banner on laptops with HP, AC, speed, initiative and proficiency always in view."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.21",
     date: "2026-10-29",

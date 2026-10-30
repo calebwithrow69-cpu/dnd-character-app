@@ -166,7 +166,7 @@ function paint() {
   const st = pending; if (!st || !st.inter) return;
   const sp = st.spec, ph = st.phase, eff = effAdv(st);
   root.querySelectorAll(".rs-adv button").forEach(b => b.classList.toggle("on", b.dataset.m === st.adv));
-  $(".rs-adv").hidden = !(sp.d20 && ph === "ready");
+  $(".rs-adv").hidden = !(sp.d20 && ph === "ready") || !!sp.noAdv;
   const two = !!sp.d20 && (ph === "ready" || st.two) && eff !== "normal";
   if (ph === "ready") { $(".rs-d2").hidden = !two; root.classList.toggle("two", two); }
   const main = $(".rs-main");
@@ -264,6 +264,7 @@ async function rollD20(st) {
   await sleep(st.nat && !calm ? 900 : 250);
   if (!pending || pending.id !== id) return;
   st.rolled = true; st.busy = false;
+  if (sp.onLand && !st.landed) { st.landed = true; sp.onLand(st.pick); } // the result counts only once the die has landed
   const miss = st.nat === "1";
   st.phase = sp.dmg && !miss ? "rolled" : "done";
   paint();

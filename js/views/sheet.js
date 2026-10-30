@@ -22,13 +22,31 @@ export function sheetTabs(app) {
   ];
 }
 
+// Sheet header. Phone: one slim row (name + level line). Laptop: a banner with the name, the full
+// class line, a live read-out of the numbers you check most, and labelled buttons.
+function sheetBar(c, d, meta) {
+  const sub = [c.species, c.class + (c.subclass ? " (" + c.subclass + ")" : "")].filter(Boolean).join(" \u00b7 ");
+  const pill = (v, l) => `<span class="sb-pill"><b>${v}</b><i>${l}</i></span>`;
+  return `<header class="topbar sheetbar"><div class="wrap row sb-phone">
+      <button class="iconbtn" data-a="backToRoster" aria-label="Back">${ICONS.back}</button>
+      <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">${esc(meta)}</div></div>
+      <button class="iconbtn" data-a="openEdit" aria-label="Edit character">${ICONS.edit}</button>
+      <button class="iconbtn" data-a="openSettings" aria-label="Settings">${ICONS.settings}</button></div>
+    <div class="wrap row sb-wide">
+      <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Characters</span></button>
+      <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">Level ${c.level} \u00b7 ${esc(sub)}</div></div>
+      <div class="sb-pills">${pill(c.hp.cur + "/" + c.hp.max, "HP")}${pill(d.ac, "AC")}${pill(d.speed, "Speed")}${pill(fmtMod(d.initiative), "Init")}${pill(fmtMod(d.prof), "Prof")}</div>
+      <button class="btn sm" data-a="openEdit">${ICONS.edit}<span>Edit</span></button>
+      <button class="btn sm" data-a="openSettings">${ICONS.settings}<span>Settings</span></button></div></header>`;
+}
+
 export function renderSheet(app) {
   const c = app.char;
   const d = deriveCharacter(c);
   const tabs = sheetTabs(app);
   if (!tabs.some(t => t[0] === app.sheetTab)) app.sheetTab = "stats";
   const tab = app.sheetTab;
-  if (tab === "stats" && app.prefs.sheetStyle !== "classic" && app.prefs.sheetStyle !== "advanced") return stylePicker(app);
+  if (tab === "stats" && (app.styleAsk === c.id || (app.prefs.sheetStyle !== "classic" && app.prefs.sheetStyle !== "advanced"))) return stylePicker(app);
 
   const pct = Math.max(0, Math.min(100, (c.hp.cur / Math.max(1, c.hp.max)) * 100));
   const hpState = c.hp.cur <= c.hp.max * 0.25 ? "low" : c.hp.cur <= c.hp.max * 0.6 ? "mid" : "";
@@ -55,9 +73,9 @@ export function renderSheet(app) {
   const wide = tab === "stats" && app.prefs.sheetStyle === "advanced" && app.charSub === "gear";
 
   return `<div class="sheetview">
-    ${topbar(c.name, meta, { back: "backToRoster", actions: [{ a: "openEdit", icon: "edit", label: "Edit character" }] })}
+    ${sheetBar(c, d, meta)}
     <main class="wrap page ${wide ? "wide" : ""}">
-      ${c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : ""}</span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
+      ${c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
       <section class="status" aria-label="Status">
         <div class="vitals">
           <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points. Tap to add XP or level up.">
@@ -344,9 +362,9 @@ export function acBody(c, d) {
 }
 
 // ---- the bag: a BG3-style icon grid, sortable, with right-click / long-press menus ----
-const CAT_GLYPH = { weapon: "sword", armor: "shield", shield: "shield", potion: "flask", scroll: "scroll", ring: "ring", wondrous: "spell", ammo: "bolt", focus: "bolt", tool: "gear", gear: "flask" };
-const SORTS = [["type", "Type"], ["name", "Name"], ["weight", "Weight"], ["recent", "Recent"]];
-function sortedInventory(app, c) {
+export const CAT_GLYPH = { weapon: "sword", armor: "shield", shield: "shield", potion: "flask", scroll: "scroll", ring: "ring", wondrous: "spell", ammo: "bolt", focus: "bolt", tool: "gear", gear: "flask" };
+export const SORTS = [["type", "Type"], ["name", "Name"], ["weight", "Weight"], ["recent", "Recent"]];
+export function sortedInventory(app, c) {
   const inv = c.inventory.map((it, i) => ({ it, i }));
   const mode = app.bagSort || "type";
   if (mode === "name") inv.sort((a, b) => a.it.name.localeCompare(b.it.name));
@@ -355,7 +373,7 @@ function sortedInventory(app, c) {
   // "recent" keeps insertion order
   return inv.map(x => x.it);
 }
-function weightBar(c) {
+export function weightBar(c) {
   const w = carried(c), pct = Math.min(100, Math.round(w.total / w.capacity * 100));
   return `<div class="wbar ${w.total > w.capacity ? "over" : ""}"><div class="wl"><span>Carrying <b>${fmtLb(w.total)}</b> of ${w.capacity} lb</span>${w.coins ? `<span class="sub2">coins ${fmtLb(w.coins)}</span>` : ""}</div><div class="track" aria-hidden="true"><i style="width:${pct}%"></i></div>${w.unknown ? `<p class="sub2">${w.unknown} item${w.unknown === 1 ? "" : "s"} with no listed weight are not counted.</p>` : ""}</div>`;
 }

@@ -207,6 +207,15 @@ function render() {
     if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); if (caret && el.setSelectionRange) try { el.setSelectionRange(caret[0], caret[1]); } catch (e) { } }
   }
 }
+function killCharacter(c, cause = "") {
+  c.dead = { cause, at: new Date().toISOString().slice(0, 10) };
+  c.active = []; c.concentration = null; save();
+}
+// A dead character's sheet can be looked at, not used: everything but the banner (Revive) is inert.
+function lockDead() {
+  mount.querySelectorAll(".sheetview main.page > :not(.deadbar), .sheetview [data-a=openEdit], .sheetview nav").forEach(el => el.setAttribute("inert", ""));
+}
+const DEAD_OK = new Set(["reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause"]);
 function renderNow() {
   if (window.__boot) window.__boot(100);
   const mb = modalRoot.querySelector(".modal-body"), rs = document.querySelector(".results");
@@ -220,9 +229,12 @@ function renderNow() {
   else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
   else if (APP.screen === "create") { prepareChoiceContext(APP); mount.innerHTML = renderCreate(APP); if (APP.createDraft) saveDraft(APP.createDraft); }
   else if (APP.screen === "sheet" && APP.char) {
-    if (syncHp(APP.char)) save(); mount.innerHTML = renderSheet(APP);
-    const ch = APP.char; // a third failed death save: ask once whether they have died
-    if (ch.deathSaves.fail >= 3 && !ch.dead && APP._diedAsked !== ch.id) { APP._diedAsked = ch.id; setTimeout(() => { if (APP.char === ch && !APP.modal) openModal({ type: "died" }); }, 700); }
+    const ch = APP.char;
+    // a third failed death save is death, at once and for good: nothing to undo by editing the pips
+    if (ch.deathSaves.fail >= 3 && !ch.dead && !rollStageOpen()) { killCharacter(ch); APP._showDied = ch.id; }
+    if (syncHp(ch)) save(); mount.innerHTML = renderSheet(APP);
+    if (ch.dead) lockDead();
+    if (APP._showDied === ch.id) { APP._showDied = null; setTimeout(() => { if (APP.char === ch && ch.dead) openModal({ type: "died" }); }, 900); }
   }
   else if (APP.screen === "levelup" && APP.char && APP.lvl) mount.innerHTML = renderLevelUp(APP);
 
@@ -557,6 +569,7 @@ function onClick(e) {
   if (el.tagName === "SELECT") return; // a dropdown acts when its value changes, not when it is tapped open
   if (APP._suppressClick && el.dataset.hold === "egg") { APP._suppressClick = false; return; }
   const a = el.dataset.a;
+  if (APP.screen === "sheet" && APP.char && APP.char.dead && !DEAD_OK.has(a)) { toast(`${APP.char.name} is dead. Revive them first.`); return; }
   if ((a === "closeModalBackdrop" || a === "closeProgressBackdrop" || a === "featCloseBackdrop") && e.target !== el) return;
   if (APP.prefs.wake && !wakeLock) syncWake();
   if (a !== "closeModalBackdrop" && a !== "closeProgressBackdrop" && a !== "featCloseBackdrop") feedback(el);
@@ -636,6 +649,7 @@ function refreshWizardChrome() {
 
 // Play Mode keyboard shortcuts (laptop). Settings > Keyboard shortcuts turns them off.
 function playKeys(e) {
+  if (APP.char && APP.char.dead) return;
   if (APP.screen !== "sheet" || APP.prefs.keys === false || APP.modal || rollStageOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
   if ((APP.prefs.sheetStyle || "classic") !== "advanced" || APP.sheetTab !== "stats" || APP.charSub !== "play") return;
   const t = e.target, typing = t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
@@ -947,6 +961,11 @@ const ACTIONS = {
   },
   setPrefV(el) {
     // Changing an already-chosen sheet style asks first; the very first pick applies at once.
+    if (el.dataset.k === "sheetStyle" && APP.styleAsk) { // the "which sheet?" screen after creating a character: apply at once
+      APP.styleAsk = null; APP.prefs.sheetStyle = el.dataset.v; savePrefs(); applyPrefs();
+      if (APP._shopLater) { APP._shopLater = false; APP.charSub = "gear"; APP.classicSub = "gear"; render(); openModal({ type: "shop" }); } else render();
+      window.scrollTo(0, 0); return;
+    }
     if (el.dataset.k === "sheetStyle" && APP.prefs.sheetStyle && APP.prefs.sheetStyle !== el.dataset.v) { APP._style = el.dataset.v; openModal({ type: "confirmStyle" }); return; }
     APP.prefs[el.dataset.k] = el.dataset.v; savePrefs(); applyPrefs();
     el.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === el ? "true" : "false"));
@@ -1129,9 +1148,10 @@ const ACTIONS = {
     store.setActiveId(char.id); APP.prefs.lastChar = char.id; savePrefs();
     clearDraft(); APP.createDraft = null; APP.progressOpen = false; APP.sheetTab = "stats"; APP.roll = null; APP.lvl = null;
     APP.shopAfterChoices = goldOnly;
+    APP.styleAsk = char.id; // every new character gets to pick its sheet style first
     if (cp && cp.steps.length) { APP.lvl = cp.lvl; applyLevelUp(); } // applies subclass, spells, invocations... and opens the sheet
     else {
-      if (goldOnly) { APP.shopAfterChoices = false; APP.charSub = "gear"; openModal({ type: "shop" }); }
+      if (goldOnly) { APP.shopAfterChoices = false; APP._shopLater = true; }
       render(); window.scrollTo(0, 0);
     }
     toast(goldOnly ? "Spend your gold on starting gear" : `${APP.char.name} is ready`);
@@ -1157,17 +1177,17 @@ const ACTIONS = {
   goGraveyard() { APP.screen = "graveyard"; render(); window.scrollTo(0, 0); },
   markDeadAsk() { openModal({ type: "died" }); },
   confirmDead() {
-    const c = APP.char, v = (document.getElementById("f-cause") || {}).value || "";
-    c.dead = { cause: v.trim().slice(0, 300), at: new Date().toISOString().slice(0, 10) };
-    c.active = []; c.concentration = null; APP._diedAsked = c.id;
-    closeModal(); saveAndRender(); toast(`${c.name} has fallen`);
+    const c = APP.char, v = ((document.getElementById("f-cause") || {}).value || "").trim().slice(0, 300);
+    if (c.dead) { c.dead.cause = v; closeModal(); saveAndRender(); return; }
+    killCharacter(c, v); closeModal(); saveAndRender(); toast(`${c.name} has fallen`);
   },
+  editCause() { openModal({ type: "died" }); },
   reviveAsk(el) { openModal({ type: "revive", id: el.dataset.id, name: el.dataset.name }); },
   reviveGo() {
     const id = APP.modal && APP.modal.id, open = APP.char && APP.char.id === id;
     const c = open ? APP.char : (store.getCharacter(id) ? store.normalize(store.getCharacter(id), APP.library) : null);
     if (!c) { closeModal(); return; }
-    c.dead = null; c.hp.cur = Math.max(1, Math.min(c.hp.max, 1)); c.deathSaves = { success: 0, fail: 0 }; APP._diedAsked = null;
+    c.dead = null; c.hp.cur = Math.max(1, Math.min(c.hp.max, 1)); c.deathSaves = { success: 0, fail: 0 };
     if (open) { closeModal(); saveAndRender(); } else { store.saveCharacter(c); closeModal(); render(); }
     toast(`${c.name} is back`);
   },
@@ -1199,14 +1219,21 @@ const ACTIONS = {
     saveAndRender();
   },
   rollDeathSave() {
-    const c = APP.char, v = rollDie(20);
-    let msg;
-    if (v === 20) { c.hp.cur = 1; c.deathSaves = { success: 0, fail: 0 }; msg = "Natural 20 — you're back up with 1 HP!"; }
-    else if (v === 1) { c.deathSaves.fail = Math.min(3, c.deathSaves.fail + 2); msg = "Natural 1 — two failures"; }
-    else if (v >= 10) { c.deathSaves.success = Math.min(3, c.deathSaves.success + 1); msg = c.deathSaves.success >= 3 ? "Third success — you're stable" : "Success"; }
-    else { c.deathSaves.fail = Math.min(3, c.deathSaves.fail + 1); msg = c.deathSaves.fail >= 3 ? "Third failure — that's death" : "Failure"; }
-    save();
-    showRoll("Death save", [{ label: msg, total: v, bd: "10 or higher succeeds", crit: v === 20, fumble: v === 1 }]);
+    const c = APP.char;
+    // the d20 rolls on the roll card; the result is applied (and the pips change) only after it lands
+    rollSpec({
+      title: `${c.name} \u00b7 Death save`, noAdv: true, rerolls: [],
+      d20: { mod: 0, label: "Death save" },
+      notes: "10 or higher succeeds. A 1 is two failures; a 20 brings you back with 1 HP.",
+      onLand: v => {
+        let msg;
+        if (v === 20) { c.hp.cur = 1; c.deathSaves = { success: 0, fail: 0 }; msg = "Natural 20: back up with 1 HP!"; }
+        else if (v === 1) { c.deathSaves.fail = Math.min(3, c.deathSaves.fail + 2); msg = "Natural 1: two failures"; }
+        else if (v >= 10) { c.deathSaves.success = Math.min(3, c.deathSaves.success + 1); msg = c.deathSaves.success >= 3 ? "Third success: stable" : "Success"; }
+        else { c.deathSaves.fail = Math.min(3, c.deathSaves.fail + 1); msg = c.deathSaves.fail >= 3 ? "Third failure: that's death" : "Failure"; }
+        save(); toast(msg);
+      }
+    });
   },
   openShortRest() { openModal({ type: "shortRest", log: [] }); },
   spendHitDie() {
@@ -1513,6 +1540,11 @@ const ACTIONS = {
     APP.selItem = id; render();
   },
   itemMenu(el) { openModal({ type: "itemMenu", id: el.dataset.id }); },
+  gearSel(el) {
+    const id = el.dataset.id;
+    if (matchMedia("(max-width:899px)").matches) { openModal({ type: "itemMenu", id }); return; } // narrow screens: the action menu
+    APP.gearSel = APP.gearSel === id ? null : id; render();
+  },
   bagSort(el) { APP.bagSort = el.value; render(); },
   noop() {},
   useItem(el) {
@@ -1894,7 +1926,7 @@ function applyLevelUp() {
   c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });
   save();
   APP.lvl = null; APP.screen = "sheet"; APP.sheetTab = "stats";
-  if (APP.shopAfterChoices) { APP.shopAfterChoices = false; APP.charSub = "gear"; openModal({ type: "shop" }); }
+  if (APP.shopAfterChoices) { APP.shopAfterChoices = false; if (APP.styleAsk) APP._shopLater = true; else { APP.charSub = "gear"; openModal({ type: "shop" }); } }
   render(); window.scrollTo(0, 0);
   toast(d.fromCreation ? (APP.charSub === "gear" ? "Now spend your gold on starting gear" : "Level 1 choices saved") : `${c.name} is now level ${c.level}!`);
 }
