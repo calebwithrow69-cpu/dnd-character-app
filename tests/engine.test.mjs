@@ -244,6 +244,20 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     const c = hold(["Tavern Brawler"], "longsword");
     eq(weaponNumbers(unarmedWeapons(c)[0].weapon, c).reroll.map(r => r.atMost), [1]); eq(numA(c).reroll.length, 0);
   }));
+  t("real rules: species trackers, Goliath/Azurite boons, Danger Sense", () => withReal(() => {
+    eq(LIB.species.flatMap(sp => (sp.effects || []).flatMap(validateEffect)), []);
+    const gol = mk({ species: "Goliath", level: 5, choices: { "Goliath: Giant Ancestry": ["Fire's Burn"] } });
+    ensureLuck(gol);
+    eq(gol.resources.map(r => [r.name, r.max]), [["Giant Ancestry", 3], ["Large Form", 1]]);
+    const fb = rollMods(gol, "dmg", {}).riders; eq(fb.map(r => [r.src, r.dice, r.res]), [["Fire's Burn", "1d10", "Giant Ancestry"]]);
+    const low = mk({ species: "Goliath", level: 3 }); ensureLuck(low); eq(low.resources.map(r => r.name), ["Giant Ancestry"]);
+    const lf = { ...gol, active: [{ id: "t:Large Form" }] };
+    eq(fxStat(lf, "speed", 35).total, 45); eq(rollMods(lf, "check.str").adv, ["Large Form"]); eq(rollMods(gol, "check.str").adv, []);
+    const az = mk({ species: "Azurite", level: 5, choices: { "Azurite: Gem Origin": ["Diamond"] }, active: [{ id: "t:Gem Origin:Solidify" }] });
+    eq(fxStat(az, "ac", 10).total, 12); eq(grantsOf(az, "resist").map(g => g.name), ["Force"]);
+    eq(rollMods(mk({ class: "Barbarian", level: 3 }), "save.dex").adv, ["Danger Sense"]);
+    eq(rollMods(mk({ class: "Barbarian", level: 3, conditions: ["Incapacitated"] }), "save.dex").adv, []);
+  }));
 }
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);

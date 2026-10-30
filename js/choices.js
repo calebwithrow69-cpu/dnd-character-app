@@ -483,3 +483,17 @@ export function syncLineageSpells(char, L, C) {
   }
   return added;
 }
+
+// ---- species variants: the one choice that defines a species' flavour (lineage, ancestry, legacy, gem...)
+const VARIANT_LABEL = /ancest|lineage|legacy|heritage|origin|bloodline|tribe|gem|variant|subrace|totem|domain/i;
+export function variantDef(sp, L, C) {
+  if (!sp) return null;
+  const defs = speciesChoices(sp, L, C).filter(d => d.kind === "option" && (d.options || []).length >= 2 && traitLevel(sp, d.trait) <= 1);
+  return defs.find(d => VARIANT_LABEL.test(d.label) || VARIANT_LABEL.test(d.trait || "")) || defs.find(d => d.options.length >= 3) || null;
+}
+// A trait's text with the variant option rows taken out (they get shown one at a time instead).
+export function stripVariantText(body, def) {
+  const labels = (def.options || []).flatMap(o => [o.v, o.label]).filter(Boolean).map(s => norm(s).toLowerCase());
+  const startsWithOpt = p => { const t = norm(p).toLowerCase(); return labels.some(l => t === l || t.startsWith(l + ".") || t.startsWith(l + ":") || t.startsWith(l + " ")); };
+  return String(body || "").split(/\n{2,}/).filter(p => p.trim() && !startsWithOpt(p) && !/^[A-Z][A-Za-z' ]{2,40}\s*$/.test(p.trim()) && !/\s{3,}\S/.test(p.trim().split("\n")[0])).join("\n\n");
+}

@@ -2,11 +2,34 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.23";
+export const VERSION = "0.1.24";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.24",
+    date: "2026-10-30",
+    stage: "Pre-build",
+    blurb: "Species variants, Goliath and Azurite boons.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Species variants: open a species with a lineage, ancestry, legacy or gem (Elf, Goliath, Dragonborn, Tiefling, Azurite and others) and a Variants row lets you flip through them. Each one shows its own ability under the species' normal traits. Choosing the species keeps the variant you were looking at.",
+          "Saving throws, skill checks and Strength checks now read your abilities for advantage and disadvantage, so Danger Sense (Dexterity saves), Rage (Strength checks and saves) and similar apply on their own. Resistances show as chips on the sheet.",
+          "Abilities can now define their own limited-use trackers, so Goliath and Azurite get their per-rest uses automatically."
+        ]
+      },
+      {
+        title: "Fixed",
+        items: [
+          "Goliath: Giant Ancestry now shows only the boon you picked as its own ability in Play Mode. Fire's Burn and Frost's Chill appear as damage options on your attack roll and use up a charge. Stone's Endurance and Storm's Thunder are Reactions that roll their dice. Large Form is a toggle that adds Speed and Strength-check advantage.",
+          "Azurite: your gem boon is its own ability (Mindveil, Solidify, Enhance, Ultra Sense or Blast Back). Warding Flesh gives Force resistance and Crystalline Skin sets your AC when unarmored."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.23",
     date: "2026-10-29",

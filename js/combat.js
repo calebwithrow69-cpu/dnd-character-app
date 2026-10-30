@@ -6,6 +6,7 @@ import { findByName, findFeat, enabledSpells, enabledFeats } from "./data.js";
 import { attacksOf } from "./gear.js";
 import { optionNames, optionGroup } from "./progression.js";
 import { parseSpecies, classifyText } from "./species.js";
+import { variantDef, stripVariantText } from "./choices.js";
 
 export const COSTS = ["Action", "Bonus", "Reaction", "Passive"];
 export const COST_LABEL = { Action: "Action", Bonus: "Bonus Action", Reaction: "Reaction", Passive: "Passive", Other: "Other" };
@@ -43,6 +44,18 @@ export function turnBlock(c, turn, cost, isAttack) {
   const s = turn && turn.on ? turn.spent[cost] : null;
   if (s === true || (s === "attack" && !isAttack)) return `${COST_LABEL[cost]} already used this turn. Tap Next turn to reset.`;
   return "";
+}
+
+// A boon whose text rolls dice ("roll 1d12, add your Constitution modifier", "deal 1d8 Thunder damage").
+function boonRoll(text, c) {
+  const t = String(text || "").replace(/\u2019/g, "'");
+  const m = /\b(\d*d\d+)\b/.exec(t);
+  if (!m) return null;
+  const ab = /Add your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier/i.exec(t);
+  const key = ab ? ab[1].slice(0, 3).toLowerCase() : null;
+  const mod = key ? Math.floor((Number((c.abilities || {})[key] || 10) - 10) / 2) : 0;
+  const type = (/(\d*d\d+) (\w+) damage/i.exec(t) || [])[2] || (/reduce the damage/i.test(t) ? "damage reduced" : "");
+  return { dice: m[1], mod, type, label: /reduce the damage/i.test(t) ? "Damage reduced" : "Damage", note: ab ? `includes your ${ab[1]} modifier` : "" };
 }
 
 export function buildCombat(app, c, d) {
@@ -104,7 +117,28 @@ export function buildCombat(app, c, d) {
 
   // Species traits
   const sp = findByName(L.species, c.species);
+  const vd = variantDef(sp, L, app.campaign);
   parseSpecies(sp).traits.filter(t => t.level <= c.level).forEach(t => {
+    // The trait that holds the variant menu (Giant Ancestry, Gem Origin...): show the player's pick as its own ability
+    if (vd && t.name === vd.trait) {
+      const picked = [].concat((c.choices || {})[`${sp.name}: ${vd.label}`] || []);
+      const opts = picked.map(v => vd.options.find(o => o.v === v)).filter(o => o && o.detail && !/^Level \d/.test(o.detail));
+      if (opts.length) {
+        const pres = resFor(t.name);
+        add({ id: "t:" + t.name, name: t.name, cost: "Passive", src: c.species, type: "feature", kind: "Trait", text: stripVariantText(t.body, vd) || t.body });
+        opts.forEach(o => {
+          const lead = /^([A-Z][\w' -]{2,28})\.\s+(?=\S)/.exec(o.detail);
+          const name = lead ? lead[1] : o.v, text = lead ? o.detail.slice(lead[0].length) : o.detail;
+          const cost = classifyText(text).kind === "active" ? costOfText(text) : "Passive";
+          let block = turnBlock(c, turn, cost, false);
+          if (!block && pres && cost !== "Passive" && pres.cur <= 0) block = `No uses left. Back on a ${pres.reset === "short" ? "short or long" : "long"} rest.`;
+          const roll = cost === "Reaction" || cost === "Bonus" ? boonRoll(text, c) : null;
+          add({ id: "t:" + t.name + ":" + name, name, cost, src: `${c.species} \u00b7 ${(/\(([^)]+)\)/.exec(o.label || "") || [])[1] || o.v}`, type: "feature", kind: cost === "Passive" ? "Trait" : "Ability", block, res: pres, text,
+            act: roll ? { a: "rollBoon", ...roll, title: name, res: pres ? pres.i : "" } : pres ? { a: "useRes", i: pres.i } : null });
+        });
+        return;
+      }
+    }
     const cost = t.kind === "active" ? costOfText(t.body) : "Passive", res = resFor(t.name);
     let block = turnBlock(c, turn, cost, false);
     if (!block && res && res.cur <= 0) block = `No uses left. Back on a ${res.reset === "short" ? "short or long" : "long"} rest.`;

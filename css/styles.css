@@ -1679,3 +1679,10 @@ html.dead{filter:grayscale(1);transition:filter 1.6s ease}
 /* Icon assists: spell level badge, concentration / ritual marks */
 .lvb{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;font:700 .78rem var(--display);line-height:1}
 .mk{display:inline-grid;place-items:center;width:15px;height:15px;margin-left:6px;border-radius:4px;border:1px solid var(--muted);color:var(--muted);font:700 .6rem var(--display);vertical-align:middle}
+
+/* Species variants */
+.sp-variants{margin:6px 0 10px}
+.vchips{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0}
+.vchip{padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);color:var(--ink);font:600 .85rem var(--display);cursor:pointer}
+.vchip[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.sp-trait.variant{border-left:3px solid var(--amber)}

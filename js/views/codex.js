@@ -16,7 +16,7 @@ const I = {
 export const favKey = kind => kind === "species" ? "favSpecies" : kind === "class" ? "favClass" : "favBackground";
 export const spUiDefault = () => ({
   k: { species: { sort: "az", filter: "All", open: null }, class: { sort: "az", filter: "All", open: null }, background: { sort: "az", filter: "All", open: null } },
-  traits: new Set()
+  traits: new Set(), variant: {}
 });
 const favs = (app, kind) => app.prefs[favKey(kind)] || [];
 
@@ -45,7 +45,7 @@ export function renderControls(app, cfg) {
 function traitRow(app, o, t, kind) {
   const key = kind + ":" + o.name + ":" + t.name, open = app.spUi.traits.has(key);
   const act = t.kind === "active";
-  return `<div class="sp-trait ${open ? "open" : ""} ${t.level > 1 ? "later" : ""}">
+  return `<div class="sp-trait ${open ? "open" : ""} ${t.level > 1 ? "later" : ""} ${t.variant ? "variant" : ""}">
     <button class="sp-tbtn" data-a="cxTrait" data-key="${esc(key)}" aria-expanded="${open}">
       <span class="grow"><b>${esc(t.name)}</b><small>${esc(t.level > 1 ? "Level " + t.level + (act && t.usage !== "Always on" ? " · " + t.usage : "") : t.usage)}</small></span>
       <span class="flag ${act ? "act" : "pas"}">${act ? "Ability" : "Trait"}</span>
@@ -66,6 +66,7 @@ function detail(app, cfg, o, chosenHtml) {
   const has = !!portraitFor(o.name), on = cfg.selected === o.name;
   const facts = cfg.facts(o);
   const all = cfg.traits(o);
+  const vr = cfg.variants ? cfg.variants(o) : null;
   const now = cfg.laterCollapsed ? all.filter(t => t.level <= 1) : all;
   const later = cfg.laterCollapsed ? all.filter(t => t.level > 1) : [];
   const lk = cfg.kind + ":" + o.name + ":~later", lopen = app.spUi.traits.has(lk);
@@ -75,6 +76,8 @@ function detail(app, cfg, o, chosenHtml) {
     ${on && chosenHtml ? `<div class="sp-choices">${chosenHtml}</div>` : ""}
     ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${cfg.synergy && cfg.synergy(o) ? `<p class="cx-syn"><b>For your ${esc(cfg.synergyFor || "character")}</b>${esc(cfg.synergy(o))}</p>` : ""}${upload}</div></div>`}
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
+    ${vr ? `<div class="sp-variants"><div class="sp-sechead"><h3>Variants</h3><span class="sub2">${esc(vr.label)}</span></div>
+      <div class="vchips" role="group" aria-label="${esc(vr.label)}">${vr.options.map(v => `<button class="vchip" data-a="cxVariant" data-name="${esc(o.name)}" data-v="${esc(v.v)}" aria-pressed="${vr.cur === v.v}">${esc(v.label)}</button>`).join("")}</div></div>` : ""}
     <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Tap one to read it</span></div>
     <div class="sp-traits">
       ${cfg.intro(o) ? plainRow(app, o, cfg.kind, "~intro", "Overview", cfg.intro(o)) : ""}

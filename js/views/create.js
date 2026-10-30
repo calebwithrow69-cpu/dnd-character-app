@@ -5,7 +5,7 @@
 import { esc, topbar, formatText, searchBox, infoRow } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize } from "../rules.js";
-import { draftChoices, optionsFor, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
+import { variantDef, stripVariantText, draftChoices, optionsFor, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
 import { fmtPrice } from "../equipment.js";
 import { parseSpecies, classifyText } from "../species.js";
 import { renderCodexList, renderControls } from "./codex.js";
@@ -126,6 +126,12 @@ function renderEquipGroup(app, d, which) {
 
 
 
+// The variant shown for a species: the pick when it is the chosen species, else what was last previewed.
+function selectedVariant(app, d, s, vd) {
+  if (d.species === s.name) return [].concat(d.picks[vd.id] || [])[0] || null;
+  return (app.spUi.variant && app.spUi.variant[s.name]) || null;
+}
+
 // ---- the three codex lists
 function cfgFor(app, d, kind) {
   const { library: L, campaign: C } = app;
@@ -139,9 +145,26 @@ function cfgFor(app, d, kind) {
       sub: s => [speciesSize(s.traits), `speed ${speciesSpeed(s.traits)} ft`, s.source].filter(Boolean).join(" \u00b7 "),
       facts: s => parseSpecies(s).facts.map(f => [f.k, f.v]),
       intro: s => parseSpecies(s).intro.join("\n\n"), lore: s => s.desc || "",
-      traits: s => parseSpecies(s).traits.map(t => ({ name: t.name, kind: t.kind, usage: t.usage, level: t.level, body: t.body })),
+      traits: s => {
+        const vd = variantDef(s, L, C), sel = vd && selectedVariant(app, d, s, vd);
+        const out = [];
+        parseSpecies(s).traits.forEach(t => {
+          if (vd && t.name === vd.trait) {
+            out.push({ name: t.name, kind: t.kind === "active" && sel ? "passive" : t.kind, usage: sel ? "Pick a variant below" : t.usage, level: t.level, body: stripVariantText(t.body, vd) || t.body });
+            if (sel) {
+              const o = vd.options.find(x => x.v === sel), det = String((o && o.detail) || ""), cl = classifyText(det);
+              out.push({ name: (o && o.label) || sel, variant: true, kind: /^Level \d/.test(det) ? "passive" : cl.kind, usage: /^Level \d/.test(det) ? vd.label : cl.usage, level: 1, body: det || "No description." });
+            }
+          } else out.push({ name: t.name, kind: t.kind, usage: t.usage, level: t.level, body: t.body });
+        });
+        return out;
+      },
+      variants: s => {
+        const vd = variantDef(s, L, C); if (!vd) return null;
+        return { label: vd.label, cur: selectedVariant(app, d, s, vd), options: vd.options.map(o => ({ v: o.v, label: o.v })) };
+      },
       traitsTitle: "Traits and abilities",
-      chosen: () => draftChoices(app, d, "species").map(def => renderTileChoice(app, d, def)).join("")
+      chosen: () => { const vd = variantDef(findByName(L.species, d.species), L, C); const hint = vd && !d.picks[vd.id] ? `<p class="sub2">Pick a variant (${esc(vd.label)}) above.</p>` : ""; return hint + draftChoices(app, d, "species").filter(def => !vd || def.id !== vd.id).map(def => renderTileChoice(app, d, def)).join(""); }
     };
   }
   if (kind === "class") {

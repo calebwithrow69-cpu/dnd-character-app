@@ -197,6 +197,57 @@ await check("new character: creation flow loads class list, picks a class, advan
   noErrs(p); await p.context().close();
 });
 
+await check("species variants: header lists the variants, tapping one swaps its ability in, Choose keeps the pick (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(400);
+  await p.locator('[data-a="cxOpen"]').first().click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="cxChoose"]').first().click(); await p.waitForTimeout(500);
+  await clickA(p, "nextStep"); await p.waitForTimeout(500);
+  await p.locator('[data-a="cxOpen"][data-name="Goliath"]').click(); await p.waitForTimeout(400);
+  assert(await p.locator(".vchip").count() === 7, "Goliath should list 7 variants");
+  assert(await p.locator(".sp-trait.variant").count() === 0, "nothing should be preselected");
+  await p.locator('.vchip', { hasText: "Fire" }).click(); await p.waitForTimeout(300);
+  assert(await p.locator(".sp-trait.variant").count() === 1 && /Fire/.test(await p.locator(".sp-trait.variant").innerText()), "the Fire variant ability did not appear");
+  await p.locator('.vchip', { hasText: "Frost" }).click(); await p.waitForTimeout(300);
+  assert(/Frost/.test(await p.locator(".sp-trait.variant").innerText()) && await p.locator(".sp-trait.variant").count() === 1, "switching variants should swap the ability");
+  await p.locator('[data-a="cxChoose"][data-name="Goliath"]').click(); await p.waitForTimeout(600);
+  assert(await p.evaluate(() => Object.values(APP.createDraft.picks).includes("Frost's Chill")), "the previewed variant was not kept when choosing the species");
+  assert(await p.locator('.vchip[aria-pressed="true"]').innerText().then(t => /Frost/.test(t)), "chosen variant not highlighted");
+  noErrs(p); await p.context().close();
+});
+
+await check("Goliath on the sheet: the chosen boon is its own ability and Fire's Burn rides the attack roll (laptop)", async () => {
+  const p = await open(1280, 800, {}); await openSample(p);
+  await p.evaluate(() => { const c = APP.char; c.species = "Goliath"; c.level = 5; c.choices = { "Goliath: Giant Ancestry": ["Fire's Burn"] }; c.resources = []; });
+  await p.evaluate(() => { APP.char.inventory.length || 0; });
+  await goAdvanced(p); await p.waitForTimeout(500);
+  await p.evaluate(() => { document.querySelector('[data-a="charSub"][data-sub="play"]')?.click(); }); await p.waitForTimeout(500);
+  if (await p.locator('[data-a="playPassive"][aria-expanded="false"]').count()) { await p.locator('[data-a="playPassive"]').click(); await p.waitForTimeout(300); }
+  const txt = await p.locator(".pm").innerText();
+  assert(/Fire's Burn/i.test(txt), "Fire's Burn is not listed as an ability: " + txt.slice(0, 200));
+  assert(!/Cloud's Jaunt/i.test(txt), "unchosen boons should not be listed");
+  assert(/Large Form/i.test(txt), "Large Form missing at level 5");
+  await p.locator('[data-row^="w:"] [data-a="playUse"]:not(.dim)').first().click(); await p.waitForTimeout(700);
+  await p.waitForSelector("#rstage.on", { timeout: 4000 });
+  await p.locator("#rstage .rs-main:not([hidden])").click(); await p.waitForTimeout(3000); await p.locator("#rstage .rs-main:not([hidden])").click(); await p.waitForTimeout(3000);
+  assert(/Fire's Burn/i.test(await p.locator("#rstage").innerText()), "Fire's Burn is not offered on the attack roll card: " + (await p.locator("#rstage").innerText()).replace(/\s+/g, " ").slice(0, 300));
+  noErrs(p); await p.context().close();
+});
+
+await check("Goliath Stone's Endurance is a Reaction that rolls 1d12 + Con and spends a Giant Ancestry use (laptop)", async () => {
+  const p = await open(1280, 800, {}); await openSample(p);
+  await p.evaluate(() => { const c = APP.char; c.species = "Goliath"; c.level = 5; c.choices = { "Goliath: Giant Ancestry": ["Stone's Endurance"] }; c.resources = []; });
+  await goAdvanced(p); await p.waitForTimeout(500);
+  await p.evaluate(() => { document.querySelector('[data-a="charSub"][data-sub="play"]')?.click(); }); await p.waitForTimeout(500);
+  const row = p.locator('[data-row="t:Giant Ancestry:Stone\'s Endurance"]');
+  assert(await row.count() === 1 && (await row.getAttribute("data-cost")) === "Reaction", "Stone's Endurance should be its own Reaction row");
+  await row.locator('[data-a="playUse"]').click(); await p.waitForTimeout(500);
+  if (await p.locator('[data-a="confirmUseGo"]').count()) await p.locator('[data-a="confirmUseGo"]').click();
+  await p.waitForSelector("#rstage.on", { timeout: 4000 });
+  assert(/1d12/i.test(await p.locator("#rstage").innerText()) || /Stone/i.test(await p.locator("#rstage").innerText()), "roll card did not show the 1d12 boon");
+  assert(await p.evaluate(() => APP.char.resources.find(r => r.name === "Giant Ancestry").used) === 1, "the use was not spent");
+  noErrs(p); await p.context().close();
+});
+
 await check("random character builds and lands on a sheet", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "newChar");
   await clickA(p, "randomAll"); await p.waitForTimeout(1500);

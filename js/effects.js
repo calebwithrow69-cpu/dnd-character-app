@@ -19,7 +19,7 @@ const baseName = n => String(n || "").replace(/\s*\(.*$/, "");
 // player's custom bonus) carries `effects: [Effect]`. An Effect is
 //   { t: target, op?: "add"|"set"|"max"|"min"|"adv"|"dis"|"reroll"|"grant", v?: Expr, when?: Cond, lv?: n, name?: label }
 // Targets (stat):  ac  ac.base  speed  init  hp.max  pp  save.<ab>|save.all  skill.<id>|skill.all|skill.nonprof  spell.dc  spell.atk
-// Targets (roll):  atk  dmg  (use `when` with {attack:..} / {wield:..} to narrow them), plus save.* skill.* init for adv/dis
+// Targets (roll):  atk  dmg  check.<ab> (ability checks; skills also read their ability)  (use `when` with {attack:..} / {wield:..} to narrow them), plus save.* skill.* init for adv/dis
 // Targets (grant): grant.resist.<type>  grant.immune.<type>  grant.prof.<skill|save|armor|weapon|tool>.<name>  grant.sense.<name>  grant.language.<name>
 // Expr:   a number, or { perLevel } { lvl } { prof } { halfProf } { abil, min } { classLevel } { steps:[[lvl,n]..] }
 //         { add:[..] } { mul:[a,b] } { half:e } { neg:e } { max:[..] } { min:[..] } { if:Cond, then:e, else:e }
@@ -27,6 +27,7 @@ const baseName = n => String(n || "").replace(/\s*\(.*$/, "");
 // Cond:   "armored"|"unarmored"|"notHeavy"|"unarmoredNoShield" (older strings) or
 //         { all:[..] } { any:[..] } { not:c } { armor:"none|any|light|medium|heavy" } { shield:bool }
 //         { wield:"melee|ranged|twoHanded|oneHanded|alone|light|finesse|thrown|versatile|dual|unarmed" } { abil:"str|dex|..." } { pick:[choiceLabel, option] } { attack:"melee|ranged|spell|weapon|unarmed|cantrip" }
+//         (a species/feat/feature entry may also carry trackers:[{name,max:Expr,reset,lv?,when?}]; rider effects may carry res:"Tracker name")
 //         { hpBelow:fraction } { level:{gte,lte} } { class:name } { toggle:id } { condition:name } { uses:{id,gte} }
 // The engine is the one place that knows how to read all this; the DM block editor will only ever
 // write and read this same JSON. No DOM in here. ASCII only.
@@ -36,7 +37,7 @@ export const FX_TARGETS = [
   ["save.all", "All saving throws"], ["skill.all", "All skills"], ["spell.dc", "Spell save DC"], ["spell.atk", "Spell attack"]
 ];
 const ABS = "str|dex|con|int|wis|cha";
-const TARGET_RES = [/^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
+const TARGET_RES = [new RegExp("^check\\.(" + ABS + ")$"), /^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
   /^grant\.(resist|immune|prof|sense|language)\.[A-Za-z. ]+$/];
 const OPS = ["add", "set", "max", "min", "adv", "dis", "reroll", "grant"];
 const EXPR_KEYS = ["ctx", "perLevel", "lvl", "prof", "halfProf", "abil", "classLevel", "steps", "add", "mul", "half", "neg", "max", "min", "if", "dice"];
@@ -58,6 +59,7 @@ export function validateEffect(e) {
     if (!k.length) return false;
     for (const key of k) {
       const v = x[key];
+      if (key === "min" && x.abil && typeof v === "number") continue; // { abil, min } = at least this much
       if (["add", "max", "min"].includes(key)) { if (!Array.isArray(v) || !v.every(exprOk)) return false; }
       else if (key === "mul") { if (!Array.isArray(v) || v.length !== 2 || !v.every(exprOk)) return false; }
       else if (key === "half" || key === "neg") { if (!exprOk(v)) return false; }
@@ -209,7 +211,7 @@ export function rollMods(c, target, ctx = {}) {
   collectEffects(c).filter(e => e.t === target && applies(e, c, ctx)).forEach(e => {
     const op = e.op || "add";
     // rider: the player decides on the roll (once-per-turn extras, "if thrown", "if within 5 feet")
-    if (e.rider && op === "add") { const d = evalDice(e.v, c); out.riders.push({ src: e.src, dice: d || null, flat: d ? 0 : evalExpr(e.v, c, ctx), once: !!e.once, note: e.note || "" }); return; }
+    if (e.rider && op === "add") { const d = evalDice(e.v, c); out.riders.push({ src: e.src, dice: d || null, flat: d ? 0 : evalExpr(e.v, c, ctx), once: !!e.once, note: e.note || "", res: e.res || null }); return; }
     if (op === "adv") out.adv.push(e.src);
     else if (op === "dis") out.dis.push(e.src);
     else if (op === "reroll") out.reroll.push({ src: e.src, ...(typeof e.v === "object" ? e.v : {}) });
@@ -219,6 +221,21 @@ export function rollMods(c, target, ctx = {}) {
       else { const v = evalExpr(e.v, c, ctx); out.flat += v; out.parts.push([e.src, v]); }
     }
   });
+  return out;
+}
+
+// Limited-use trackers an entry asks for: `trackers: [{name, max: Expr, reset: "long"|"short", lv?, when?, note?}]`.
+export function trackersOf(c) {
+  const s = SRC(), out = [];
+  if (!s) return out;
+  const add = (label, list) => (list || []).forEach(t => { if (t && t.name && (t.lv || 0) <= (c.level || 1) && evalCond(t.when, {}, c)) out.push({ ...t, max: Math.max(1, evalExpr(t.max == null ? 1 : t.max, c)) }); });
+  (c.feats || []).forEach(f => { const b = baseName(f), e = s.feats.find(x => x.name === f) || s.feats.find(x => x.name === b); if (e) add(b, e.trackers); });
+  const cls = s.classes.find(x => x.name === c.class);
+  ((cls && cls.features) || []).forEach(f => { if (f.lv <= (c.level || 1)) add(f.name, f.trackers); });
+  const sub = c.subclass ? s.subclasses.find(x => x.name === c.subclass) : null;
+  ((sub && sub.features) || []).forEach(f => { if (f.lv <= (c.level || 1)) add(f.name, f.trackers); });
+  const sp = s.species.find(x => x.name === c.species);
+  if (sp) add(sp.name, sp.trackers);
   return out;
 }
 

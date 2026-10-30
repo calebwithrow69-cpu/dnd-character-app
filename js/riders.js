@@ -3,6 +3,7 @@
 // reading of the rules text; the player can always ignore it. No DOM in here.
 // ASCII only.
 import { findByName } from "./data.js";
+import { trackersOf } from "./effects.js";
 
 export const pbOf = level => Math.ceil((level || 1) / 4) + 1;
 const modOf = s => Math.floor((Number(s || 10) - 10) / 2);
@@ -14,6 +15,11 @@ const PB_TRACKERS = [
 ];
 export function ensureLuck(c) {
   const pb = pbOf(c.level);
+  trackersOf(c).forEach(t => {
+    const r = (c.resources || []).find(x => x.name === t.name);
+    if (!r) c.resources.push({ name: t.name, max: t.max, used: 0, reset: t.reset || "long", note: t.note || "" });
+    else if (r.max !== t.max) { r.max = t.max; r.used = Math.min(r.used, t.max); }
+  });
   PB_TRACKERS.forEach(t => {
     if (!t.when(c)) return;
     const r = (c.resources || []).find(x => x.name === t.name);

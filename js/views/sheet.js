@@ -10,6 +10,7 @@ import { characterBody, concBanner } from "./character.js";
 import { classicBody } from "./classic.js";
 import { stylePicker } from "./stylepick.js";
 import { xpForLevel } from "../rules.js";
+import { grantsOf } from "../effects.js";
 import { shieldSvg, armorTier } from "../shield.js";
 import { unitWeight, carried, fmtLb } from "../weights.js";
 
@@ -56,6 +57,7 @@ export function renderSheet(app) {
 
   const chips = [
     activeChips(c, true),
+    ...grantsOf(c, "resist").map(g => `<span class="chip"><span class="chip-main" title="${esc(g.src || "")}">Resist ${esc(g.name)}</span></span>`),
     c.concentration ? `<span class="chip conc"><button class="chip-main" data-term="spell:${esc(c.concentration)}"><span class="sub2" style="color:inherit">Concentrating</span> ${esc(c.concentration)}</button><button class="chip-x" data-a="endConc" aria-label="End concentration">${ICONS.close}</button></span>` : "",
     ...c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button><button class="chip-x" data-a="removeCondition" data-name="${esc(x)}" aria-label="Remove ${esc(x)}">${ICONS.close}</button></span>`),
     c.exhaustion > 0 ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion} <span class="sub2" style="color:inherit">−${c.exhaustion * 2} to d20s</span></button></span>` : "",

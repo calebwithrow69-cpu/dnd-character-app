@@ -28,7 +28,8 @@ import {
   choicePlan, rollAndLock, applySuggestedArray, applyStandardArray, generateRandom, randomizeStep, startPointBuy, pointBuyStep, PB_BUDGET, pbSpent,
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
 } from "./creation.js";
-import { draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
+import { rollMods } from "./effects.js";
+import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { renderSheetSearch } from "./views/classic.js";
 import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { flourish, toneFor } from "./subtone.js";
@@ -332,10 +333,14 @@ function rollSpec(spec, hooks = {}) {
     onRoll: hooks.onRoll
   });
 }
-function d20Test(title, mod) {
+function d20Test(title, mod, targets = []) {
   const c = APP.char, d = deriveCharacter(c);
   const exh = c.exhaustion * 2;
-  rollSpec({ title, d20: { mod: mod - exh, label: "Result" }, riders: ridersFor(APP, c, d, { kind: "check" }), notes: exh ? `includes \u2212${exh} exhaustion` : "" });
+  const adv = [], dis = [];
+  targets.forEach(t => { const m = rollMods(c, t); adv.push(...m.adv); dis.push(...m.dis); });
+  const mode = adv.length && !dis.length ? "adv" : dis.length && !adv.length ? "dis" : null;
+  const fx = mode ? `${(mode === "adv" ? adv : dis).join(", ")}: ${mode === "adv" ? "advantage" : "disadvantage"}` : "";
+  rollSpec({ title, d20: { mod: mod - exh, label: "Result", adv: mode }, riders: ridersFor(APP, c, d, { kind: "check" }), notes: [exh ? `includes \u2212${exh} exhaustion` : "", fx].filter(Boolean).join(" \u00b7 ") });
 }
 
 // ---------------- settings toggles ----------------
@@ -386,6 +391,7 @@ function useEntry(e) {
   }
   if (e.act && ACTIONS[e.act.a]) {
     if (e.act.a === "useRes") { ACTIONS.useRes({ dataset: { i: e.act.i } }); toast(`Used ${e.name}`); render(); }
+    else if (e.act.a === "rollBoon") ACTIONS.rollBoon({ dataset: { ...e.act } });
     else ACTIONS[e.act.a]({ dataset: { id: e.act.id, name: e.act.name, close: "1" } });
   } else { toast(`Used ${e.name}`); render(); }
 }
@@ -1046,9 +1052,21 @@ const ACTIONS = {
     u.open = opening ? el.dataset.name : null; spRefresh();
     if (opening) { const r = mount.querySelector(".sp-row.open"); if (r) r.scrollIntoView({ block: "start" }); }
   },
+  cxVariant(el) {
+    const name = el.dataset.name, v = el.dataset.v, d = APP.createDraft;
+    const vd = variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
+    if (!vd) return;
+    if (d && d.species === name) { ACTIONS.pick({ dataset: { id: vd.id, v } }); return; }
+    APP.spUi.variant = APP.spUi.variant || {};
+    APP.spUi.variant[name] = APP.spUi.variant[name] === v ? null : v; spRefresh();
+  },
   cxChoose(el) {
     const kind = el.dataset.kind, name = el.dataset.name;
     ACTIONS[{ species: "pickSpecies", class: "pickClass", background: "pickBackground" }[kind]]({ dataset: { name } });
+    if (kind === "species") {
+      const pv = APP.spUi.variant && APP.spUi.variant[name], vd = pv && variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
+      if (vd && APP.createDraft.species === name && vd.options.some(o => o.v === pv)) { APP.createDraft.picks[vd.id] = pv; render(); }
+    }
     celebrate();
   },
   cxTrait(el) { const t = APP.spUi.traits, k = el.dataset.key; if (t.has(k)) t.delete(k); else t.add(k); spRefresh(); },
@@ -1405,10 +1423,16 @@ const ACTIONS = {
     else if (p && !x) { c.skillProf.push(id); c.skillExpertise.push(id); }
     saveAndRender();
   },
-  rollSkill(el) { const s = deriveCharacter(APP.char).skills.find(x => x.id === el.dataset.id); d20Test(`${s.label} check`, s.bonus); },
-  rollSave(el) { const a = el.dataset.ab; d20Test(`${ABILITY_LABEL[a]} save`, deriveCharacter(APP.char).saves[a]); },
-  rollAbility(el) { const a = el.dataset.ab; d20Test(`${ABILITY_LABEL[a]} check`, deriveCharacter(APP.char).mods[a]); },
-  rollInit() { d20Test("Initiative", deriveCharacter(APP.char).initiative); },
+  rollSkill(el) { const s = deriveCharacter(APP.char).skills.find(x => x.id === el.dataset.id); d20Test(`${s.label} check`, s.bonus, ["skill." + s.id, "skill.all", ...(s.ability ? ["check." + s.ability] : [])]); },
+  rollSave(el) { const a = el.dataset.ab; d20Test(`${ABILITY_LABEL[a]} save`, deriveCharacter(APP.char).saves[a], ["save." + a, "save.all"]); },
+  rollAbility(el) { const a = el.dataset.ab; d20Test(`${ABILITY_LABEL[a]} check`, deriveCharacter(APP.char).mods[a], ["check." + a]); },
+  rollInit() { d20Test("Initiative", deriveCharacter(APP.char).initiative, ["init"]); },
+  // a boon that rolls dice when used (Stone's Endurance, Storm's Thunder...)
+  rollBoon(el) {
+    const c = APP.char, d = el.dataset;
+    if (d.res !== "" && d.res != null) { const r = c.resources[+d.res]; if (r) { if (r.max - r.used <= 0) { toast("No uses left"); return; } r.used += 1; save(); } }
+    rollSpec({ title: d.title, dmg: { dice: d.dice, mod: +d.mod || 0, type: d.type || "", label: d.label || "Roll" }, notes: d.note || "" });
+  },
   rollSpellAttack() { d20Test("Spell attack", deriveCharacter(APP.char).spellInfo.attackBonus); },
 
   // spells
@@ -1643,7 +1667,7 @@ const ACTIONS = {
     const pb = APP.gwm && c.feats.includes("Great Weapon Master") && /heavy/i.test(w.props || "") ? d.prof : 0;
     const mastery = w.mastery && (c.masteries || []).includes(it.name) ? `mastery: ${w.mastery}` : (w.via ? `using ${w.via}` : "");
     const rid = ridersFor(APP, c, d, { kind: "weapon" });
-    const asRider = (r, i, k) => ({ id: `fx${k}${i}`, label: r.src, dice: r.dice || undefined, flat: r.flat || undefined, note: r.note || "", once: r.once });
+    const asRider = (r, i, k) => ({ id: `fx${k}${i}`, label: r.src, dice: r.dice || undefined, flat: r.flat || undefined, note: r.note || "", once: r.once, res: r.res || undefined });
     n.riders.atk.forEach((r, i) => rid.attack.push(asRider(r, i, "a")));
     n.riders.dmg.forEach((r, i) => rid.damage.push(asRider(r, i, "d")));
     const adv = n.adv.length && !n.dis.length ? "adv" : n.dis.length && !n.adv.length ? "dis" : null;
