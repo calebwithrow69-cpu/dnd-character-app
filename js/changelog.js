@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.26";
+export const VERSION = "0.1.27";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.27",
+    date: "2026-10-30",
+    stage: "Pre-build",
+    blurb: "Shop in character creation.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Skills and Gear now has a Shop. It lists weapons, armor, shields and tools your class and background train you in, plus ordinary adventuring gear, and spends the gold from your equipment options.",
+          "Magic items are not sold at creation. Changing class, background or equipment trims your shop list to what you can still afford and are trained to use."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.26",
     date: "2026-10-30",

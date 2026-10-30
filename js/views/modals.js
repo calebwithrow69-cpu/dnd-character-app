@@ -22,6 +22,7 @@ import { wieldedId } from "../play.js";
 import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
 import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
+import { renderCxShop } from "./cxshop.js";
 
 export function renderModal(app) {
   const m = app.modal;
@@ -105,6 +106,7 @@ export function renderModal(app) {
     case "customBg": return renderCustomBg(app);
     case "levelMenu": return renderLevelMenu(app);
 
+    case "cxShop": return renderCxShop(app);
     case "shop": {
       const cats = ["All", "Weapons", "Armor", "Gear", "Magic & potions"];
       const cat = app.shopCat || "All";

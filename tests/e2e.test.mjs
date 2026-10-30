@@ -679,6 +679,29 @@ await check("creation: ability scores need a method, and Randomize everything ke
   noErrs(p); await p.context().close();
 });
 
+await check("creation shop: buy trained gear with the gold, see it on the new character", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForTimeout(800);
+  await clickA(p, "openProgress"); await clickA(p, "gotoChapter", '[data-i="4"]'); await p.waitForTimeout(400);
+  assert(await p.locator('[data-a="cxOpenShop"]:visible').count() === 1, "no Shop button on Skills and Gear");
+  // take the gold options so there is plenty to spend
+  for (const k of ["equipClass", "equipBg"]) { const opts = p.locator(`[data-a="pickEquip"][data-which="${k}"]:visible`); const n = await opts.count(); if (n) { await opts.nth(n - 1).click(); await p.waitForTimeout(250); } }
+  await clickA(p, "cxOpenShop"); await p.waitForSelector("#results-cxshop .shopitem", { timeout: 5000 });
+  const before = await p.evaluate(() => ({ cls: APP.createDraft.class, rows: document.querySelectorAll("#results-cxshop .shopitem").length }));
+  assert(before.rows > 3, "shop looks empty for " + before.cls);
+  await clickA(p, "cxShopCat", '[data-cat="Gear"]'); await p.locator('[data-a="cxBuy"]:visible:not([disabled])').first().click(); await p.waitForTimeout(300);
+  const bought = await p.evaluate(() => APP.createDraft.cart.slice());
+  assert(bought.length === 1, "nothing in the list after buying: " + JSON.stringify(bought));
+  await clickA(p, "closeModal"); await p.waitForTimeout(300);
+  assert((await p.locator(".optcard.locked", { hasText: bought[0].name }).count()) >= 1, "purchase not shown on the step");
+  await clickA(p, "openProgress"); await clickA(p, "gotoChapter", '[data-i="6"]'); await p.waitForTimeout(300);
+  const left = await p.evaluate(async () => { const m = await import("/js/creation.js"); return m.walletLeftCp(APP, APP.createDraft); });
+  await clickA(p, "finishCreate"); await p.waitForTimeout(1500);
+  const r = await p.evaluate(n => ({ has: APP.char.inventory.some(i => i.name === n), gp: APP.char.coins.gp }), bought[0].name);
+  assert(r.has, "purchase missing from the character's inventory");
+  assert(Math.abs(r.gp - Math.floor(left / 100)) <= 1, "gold on the character (" + r.gp + ") does not match gold left in the shop (" + left / 100 + ")");
+  noErrs(p); await p.context().close();
+});
+
 await browser.close(); server.close(); rmSync(tmp, { recursive: true, force: true });
 const failed = results.filter(r => !r[0]);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

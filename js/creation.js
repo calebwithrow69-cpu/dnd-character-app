@@ -5,18 +5,18 @@
 
 import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, skillIdByLabel, abilityMod, fmtMod,
   primaryAbility, speciesSpeed, speciesSize, hpAverageGain, standardArray,
-  roll4d6DropLowest, SUGGESTED_ARRAYS } from "./rules.js";
+  roll4d6DropLowest, SUGGESTED_ARRAYS, parseProfs } from "./rules.js";
 import { newId, normalize } from "./store.js";
 import { levelUpPlan, stepValidFor, optionPrereq, spellsFor, expertiseOptions } from "./progression.js";
 import {
   draftChoices, optionsFor, isAnswered, applyChoices, backgroundToolChoice,
   backgroundFeatNames, bgSkillIds, bgAbilityIds, speciesBaseText, grantedSpells,
-  syncLineageSpells, randomize, TOOLS
+  syncLineageSpells, randomize, TOOLS, ALL_TOOLS
 } from "./choices.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, enabledFeats, findByName, subclassesFor,
   allWeapons, allItems } from "./data.js";
-import { parseEquipment, resolveItem } from "./equipment.js";
-import { makeItem, fitsOk, wearKind } from "./gear.js";
+import { parseEquipment, resolveItem, shopStock, pay } from "./equipment.js";
+import { ARMOR, makeItem, fitsOk, wearKind } from "./gear.js";
 
 // \u2500\u2500\u2500 Chapter definitions \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // The manual builder walks these in order. Each chapter groups
@@ -52,6 +52,7 @@ export function blankDraft() {
     picks: {},             // choice answers keyed by choice id
     equipClass: "A",
     equipBg: "A",
+    cart: [],              // gear bought in the creation shop: [{ name, qty }]
     rolls: null,           // { str, dex, ... } locked dice results, null = not rolled
     pointBuy: false,       // true while the scores are being set with the 27-point budget
     scoresSet: false,      // true once the player has chosen how to set the scores (method button or typing)
@@ -84,6 +85,7 @@ export function sanitizeDraft(raw) {
   d.classSkills = Array.isArray(raw.classSkills) ? raw.classSkills.filter(x => typeof x === "string") : [];
   d.rolls = raw.rolls && typeof raw.rolls === "object" ? raw.rolls : null;
   d.pointBuy = raw.pointBuy === true;
+  d.cart = Array.isArray(raw.cart) ? raw.cart.filter(c => c && typeof c.name === "string" && Number.isInteger(c.qty) && c.qty > 0 && c.qty < 100).slice(0, 80).map(c => ({ name: c.name, qty: c.qty })) : [];
   d.lvl = raw.lvl && typeof raw.lvl === "object" && Array.isArray(raw.lvl.expertise) ? raw.lvl : null;
   const ch = Number(raw.chapter);
   d.chapter = Number.isInteger(ch) ? Math.max(0, Math.min(CHAPTERS.length - 1, ch)) : 0;
@@ -298,6 +300,7 @@ export function validateChapter(chapterId, d, app) {
     if (!d.equipBg) reasons.push("Choose your background equipment.");
     const gc = gearChoices(app, d);
     if (gc.some(g => !g.fixed && !d.picks[g.id])) reasons.push("Finish the item picks in your gear.");
+    if (d.class && walletLeftCp(app, d) < 0) reasons.push("Your shopping list costs more than your gold.");
   }
 
   if (chapterId === "species") {
@@ -626,11 +629,102 @@ export function buildCharacter(d, app) {
     char.coins.gp += Math.floor(opt.gp);
     char.coins.sp += Math.round((opt.gp % 1) * 10);
   }
+  // Gear bought in the creation shop comes out of the gold from the equipment options
+  for (const x of cartRows(app, d)) {
+    const paid = pay(char.coins, priceCp(app, d, x.row) * x.qty); if (!paid) continue;
+    char.coins = paid;
+    const it = makeItem(x.name, { weapons: W, items: I }, newId); it.qty = x.qty;
+    const same = char.inventory.find(i => i.name === it.name && !i.weapon === !it.weapon && !it.notes);
+    if (same) same.qty += it.qty; else char.inventory.push(it);
+  }
   syncLineageSpells(char, L, C);
   autoEquip(char);
   if (char.inventory.some(i => i.armor && char.equipment.armor === i.id))
     char.ac.armorName = char.inventory.find(i => i.id === char.equipment.armor).name;
   return char;
+}
+
+// ─── Creation shop ─────────────────────────────────────────────
+// Gold from the chosen equipment options can be spent on gear the character is trained to use. Training comes from the
+// class (armor, weapons, tools) and the background tool. Adventuring gear has no training, so all of it is listed.
+const normTool = s => String(s || "").replace(/[\u2018\u2019]/g, "'").trim().toLowerCase();
+
+export function trainingFor(app, d) {
+  const L = app.library, cls = findByName(L.classes, d.class), bg = findByName(L.backgrounds, d.background);
+  const { profs, rest } = parseProfs([cls?.armorProf, cls?.weaponProf].filter(Boolean).join(". "));
+  const tools = new Set(), addList = list => String(list || "").split(/,/).map(normTool).filter(Boolean).forEach(t => tools.add(t));
+  if (cls && !/^choose/i.test(cls.toolProf || "")) addList(cls.toolProf);
+  if (d.class) for (const def of draftChoices(app, d, "class")) if (def.kind === "tool") [].concat(d.picks[def.id] || []).forEach(t => tools.add(normTool(t)));
+  const bt = bg ? backgroundToolChoice(bg) : null;
+  if (bt && bt.fixed) addList([].concat(bt.fixed)[0]); else if (d.picks["bg:tool"]) tools.add(normTool(d.picks["bg:tool"]));
+  return { armor: new Set(profs.armor), weapons: new Set(profs.weapons), martialFinesseLight: /martial weapons that have[^.]*finesse or light/i.test(rest), tools };
+}
+export function trainingSummary(t) {
+  const names = { light: "Light armor", medium: "Medium armor", heavy: "Heavy armor", shield: "Shields", simple: "Simple weapons", martial: "Martial weapons" };
+  return [...[...t.armor].map(k => names[k]), ...[...t.weapons].map(k => names[k]), ...(t.martialFinesseLight ? ["Martial weapons with Finesse or Light"] : []),
+    ...[...t.tools].map(x => x.replace(/\b\w/g, c => c.toUpperCase()))].filter(Boolean).join(", ") || "no armor or weapons";
+}
+export function weaponTrained(w, t) {
+  if (w.cat === "Simple") return t.weapons.has("simple");
+  if (w.cat === "Martial") return t.weapons.has("martial") || (t.martialFinesseLight && /finesse|light/i.test(w.props || ""));
+  return false;
+}
+const armorSub = n => { const a = ARMOR[n]; return a ? `${a.cat} armor \u00b7 AC ${a.base}${a.dexCap == null ? " + Dex" : a.dexCap ? ` + Dex (max ${a.dexCap})` : ""}${a.str ? ` \u00b7 Str ${a.str}` : ""}` : ""; };
+
+// Everything the player can buy right now: [{ name, gp, group: Weapons | Armor | Tools | Gear, sub }]
+export function creationStock(app, d) {
+  if (!d.class) return [];
+  const L = app.library, C = app.campaign, W = allWeapons(L, C), I = allItems(L, C), t = trainingFor(app, d);
+  const toolNames = new Set(ALL_TOOLS.map(normTool)), out = [];
+  for (const r of shopStock(L, C, W, I, Object.keys(ARMOR).filter(a => a !== "Clothing"))) {
+    if (r.magic || r.cat === "Magic & potions") continue;
+    if (r.cat === "Weapons") { const w = W.find(x => x.name === r.name); if (w && weaponTrained(w, t)) out.push({ ...r, group: "Weapons" }); continue; }
+    if (r.cat === "Armor") {
+      const ok = r.name === "Shield" ? t.armor.has("shield") : t.armor.has(String(ARMOR[r.name]?.cat || "").toLowerCase());
+      if (ok) out.push({ ...r, group: "Armor", sub: r.name === "Shield" ? "Shield \u00b7 +2 AC" : armorSub(r.name) });
+      continue;
+    }
+    if (toolNames.has(normTool(r.name))) { if (t.tools.has(normTool(r.name))) out.push({ ...r, group: "Tools" }); continue; }
+    out.push({ ...r, group: "Gear" });
+  }
+  return out;
+}
+export function priceCp(app, d, row) {
+  const bg = findByName(app.library.backgrounds, d.background);
+  const crafter = bg && backgroundFeatNames(bg).some(f => /^Crafter\b/.test(f));
+  return Math.round((crafter && !row.magic ? Math.round(row.gp * 80) / 100 : row.gp) * 100);
+}
+export function startCp(app, d) {
+  let gp = 0;
+  for (const [which, key] of [["class", d.equipClass], ["bg", d.equipBg]]) { const o = equipOptions(app, which, d).find(x => x.key === key); if (o) gp += o.gp; }
+  return Math.round(gp * 100);
+}
+export function cartRows(app, d) {
+  const by = new Map(creationStock(app, d).map(r => [r.name, r]));
+  return (d.cart || []).map(c => ({ ...c, row: by.get(c.name) })).filter(x => x.row);
+}
+export const cartCp = (app, d) => cartRows(app, d).reduce((t, x) => t + priceCp(app, d, x.row) * x.qty, 0);
+export const walletLeftCp = (app, d) => startCp(app, d) - cartCp(app, d);
+export function cartAdd(app, d, name) {
+  const row = creationStock(app, d).find(r => r.name === name); if (!row) return false;
+  if (priceCp(app, d, row) > walletLeftCp(app, d)) return false;
+  const e = (d.cart = d.cart || []).find(c => c.name === name);
+  if (e) { if (e.qty >= 99) return false; e.qty++; } else d.cart.push({ name, qty: 1 });
+  return true;
+}
+export function cartRemove(d, name) {
+  const i = (d.cart || []).findIndex(c => c.name === name); if (i < 0) return false;
+  if (--d.cart[i].qty <= 0) d.cart.splice(i, 1);
+  return true;
+}
+// After the class, background or equipment option changes: drop anything no longer sold or trained, then trim from the end until it fits the gold.
+export function pruneCart(app, d) {
+  d.cart = d.cart || [];
+  const count = () => d.cart.reduce((t, c) => t + c.qty, 0), before = count();
+  const sold = new Set(creationStock(app, d).map(r => r.name));
+  d.cart = d.cart.filter(c => sold.has(c.name));
+  while (d.cart.length && walletLeftCp(app, d) < 0) { const last = d.cart[d.cart.length - 1]; if (--last.qty <= 0) d.cart.pop(); }
+  return before - count();
 }
 
 // \u2500\u2500\u2500 Random generation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -661,7 +755,7 @@ export function generateRandom(d, app, constraints = {}) {
     const cls = findByName(L.classes, d.class);
     d.base = standardArray(primaryAbility(cls?.primary));
   }
-  d.rolls = null; d.scoresSet = true;
+  d.rolls = null; d.scoresSet = true; d.cart = [];
 
   // Background bonuses
   const bgAb = bgAbilities(app, d);

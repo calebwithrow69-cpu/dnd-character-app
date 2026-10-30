@@ -23,7 +23,7 @@ import { cxStop, cxSeal } from "./cxfx.js";
 import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
 import { emblemFor } from "./emblems.js";
 import {
-  CHAPTERS, ALIGNMENTS, blankDraft, saveDraft, loadDraft, clearDraft, pruneDraftToLibrary, cleanName, validateChapter, validateAll, buildCharacter,
+  CHAPTERS, ALIGNMENTS, blankDraft, saveDraft, loadDraft, clearDraft, pruneDraftToLibrary, cleanName, cartAdd, cartRemove, pruneCart, validateChapter, validateAll, buildCharacter,
   bgAbilities, classSkillOptions, takenSkills, suggestedArray, gearChoices, finalAbilities,
   choicePlan, rollAndLock, applySuggestedArray, applyStandardArray, generateRandom, randomizeStep, startPointBuy, pointBuyStep, PB_BUDGET, pbSpent,
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
@@ -36,6 +36,7 @@ import { flourish, toneFor } from "./subtone.js";
 import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
 import { renderModal, renderRollCard, renderShopResults, shopPrice } from "./views/modals.js";
+import { renderCxShopResults } from "./views/cxshop.js";
 import { shopStock, pay, fmtPrice } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
 import { syncCustom, loadCustom, saveCustom, blankCustom, customValid } from "./custombg.js";
@@ -141,7 +142,7 @@ async function init() {
   // Resume a draft left in progress (saved on this device, kept for 24 hours). A damaged or outdated draft is rebuilt or dropped, never crashes the start.
   { let dr = null; try { dr = loadDraft(); } catch (e) { clearDraft(); }
     if (dr && (dr.class || dr.species || dr.background || cleanName(dr.name))) {
-      try { APP.createDraft = pruneDraftToLibrary(dr, APP); APP.screen = "create"; history.pushState({ cx: 1 }, ""); } catch (e) { APP.createDraft = null; APP.screen = "home"; clearDraft(); }
+      try { APP.createDraft = pruneDraftToLibrary(dr, APP); pruneCart(APP, APP.createDraft); APP.screen = "create"; history.pushState({ cx: 1 }, ""); } catch (e) { APP.createDraft = null; APP.screen = "home"; clearDraft(); }
     } }
 
   if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindContext(); APP._eventsBound = true; }
@@ -723,6 +724,7 @@ function onInput(e) {
     if (r) r.innerHTML = APP.modal.picker === "spells" ? renderSpellResults(APP) : renderGearResults(APP, APP.modal.picker);
     return;
   }
+  if (ds.query === "cxshop") { APP.cxShopQuery = el.value; const r = document.getElementById("results-cxshop"); if (r) r.innerHTML = renderCxShopResults(APP); return; }
   if (ds.query === "shop") { APP.shopQuery = el.value; const r = document.getElementById("results-shop"); if (r) r.innerHTML = renderShopResults(APP); return; }
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
   if (ds.query === "sheet") { APP.sheetQuery = el.value; const r = document.getElementById("results-sheet"); if (r) r.innerHTML = renderSheetSearch(APP); return; }
@@ -1076,6 +1078,9 @@ const ACTIONS = {
       : kind === "background" ? !!(d0.plus2 || d0.plus1) || d0.equipBg !== "A" || keys.some(k => /^(bg:|gear:bg)/.test(k))
       : keys.some(k => k.startsWith("sp:")));
     ACTIONS[{ species: "pickSpecies", class: "pickClass", background: "pickBackground" }[kind]]({ dataset: { name } });
+    const trimmed = pruneCart(APP, APP.createDraft);
+    if (trimmed) render();
+    if (trimmed && !lost) toast("Your shop list was trimmed to fit your gold and training");
     if (lost) toast(kind === "class" ? "Class changed. Class skills and class equipment were reset." : kind === "background" ? "Background changed. Ability increases, background picks and equipment were reset." : "Species changed. Species picks were reset.");
     if (kind === "species") {
       const pv = APP.spUi.variant && APP.spUi.variant[name], vd = pv && variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
@@ -1123,7 +1128,11 @@ const ACTIONS = {
   rollStats() { rollAndLock(APP.createDraft); APP._cxPop = true; render(); toast("Rolled 4d6, dropping the lowest die, for each score"); },
   cxPointBuy() { startPointBuy(APP.createDraft); render(); toast("Point buy: 27 points, scores 8 to 15"); },
   cxPb(el) { if (pointBuyStep(APP.createDraft, el.dataset.ab, +el.dataset.dir)) render(); else toast(+el.dataset.dir > 0 ? "Not enough points left for that" : "Scores start at 8"); },
-  pickEquip(el) { APP.createDraft[el.dataset.which] = el.dataset.k; render(); },
+  pickEquip(el) { const d = APP.createDraft; d[el.dataset.which] = el.dataset.k; const n = pruneCart(APP, d); render(); if (n) toast("Your shop list was trimmed to fit your gold"); },
+  cxOpenShop() { APP.cxShopQuery = ""; APP.cxShopCat = "All"; openModal({ type: "cxShop" }); },
+  cxShopCat(el) { APP.cxShopCat = el.dataset.cat; render(); },
+  cxBuy(el) { if (!cartAdd(APP, APP.createDraft, el.dataset.name)) toast("Not enough gold"); render(); },
+  cxUnbuy(el) { cartRemove(APP.createDraft, el.dataset.name); render(); },
   randomGear() { randomGear(APP.createDraft); render(); },
   randomName() { APP.createDraft.name = randomName(); render(); },
   randomPick() {

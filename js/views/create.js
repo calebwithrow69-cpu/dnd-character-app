@@ -17,7 +17,8 @@ import { emblem, emblemFor, emblemIcon } from "../emblems.js";
 import { cxSync } from "../cxfx.js";
 import {
   CHAPTERS, ALIGNMENTS, validateChapter, validateAll, unresolvedDecisions, choicePlan, bgAbilities, takenSkills, classSkillOptions,
-  finalAbilities, suggestedArray, equipOptions, gearChoices, buildCharacter, PB_BUDGET, pbSpent
+  finalAbilities, suggestedArray, equipOptions, gearChoices, buildCharacter, PB_BUDGET, pbSpent,
+  startCp, walletLeftCp, cartRows, priceCp
 } from "../creation.js";
 
 const firstLineOf = t => { const s = String(t || "").split("\n")[0]; return s.length > 90 ? s.slice(0, 88) + "\u2026" : s; };
@@ -117,7 +118,7 @@ function renderEquipGroup(app, d, which) {
       const list = o.items.map((i, k) => { const g = gc.find(x => x.index === k); const nm = g ? (g.fixed || d.picks[g.id] || i.name) : i.name; return `${i.qty > 1 ? i.qty + " \u00d7 " : ""}${nm}`; }).join(", ");
       return `<button class="optcard" data-a="pickEquip" data-which="${key}" data-k="${o.key}" aria-pressed="${on}">
         <span class="grow"><b>${o.items.length ? `Option ${o.key}: gear + ${fmtPrice(o.gp)}` : `Option ${o.key}: ${fmtPrice(o.gp)} to spend`}</b>
-        <span>${esc(list || "No gear. Spend the gold in the Gear tab shop.")}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
+        <span>${esc(list || "No gear. Spend the gold in the shop below.")}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
         ${on ? gearChoices(app, d).filter(g => g.which === which && !g.fixed).map(g => `<div class="field gearpick"><label>Choose: ${esc(g.label)}</label>
           <select class="f" data-gear-pick="${esc(g.id)}"><option value="">Choose\u2026</option>
           ${g.options.map(o => `<option value="${esc(o)}" ${d.picks[g.id] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`).join("") : ""}`;
@@ -280,6 +281,14 @@ function abilitiesBody(app, d) {
     ${renderBonus(app, d) || `<p class="muted small" style="margin-top:12px">Choose a background to see its increases.</p>`}`;
 }
 
+function shopPanel(app, d) {
+  const start = startCp(app, d), left = walletLeftCp(app, d), rows = cartRows(app, d);
+  return `<div class="choice"><div class="choice-head"><h3>Shop</h3><span class="sub2">${esc(fmtPrice(left / 100) || "0 gp")} left of ${esc(fmtPrice(start / 100) || "0 gp")}</span></div>
+    <p class="small muted">Spend your gold on gear you are trained to use.</p>
+    ${rows.length ? `<div class="optlist">${rows.map(x => `<div class="optcard locked"><span class="grow"><b>${esc(x.name)}${x.qty > 1 ? " x" + x.qty : ""}</b><span>${esc(fmtPrice(priceCp(app, d, x.row) * x.qty / 100))}</span></span><button class="btn sm" data-a="cxUnbuy" data-name="${esc(x.name)}" aria-label="Remove one ${esc(x.name)}">Remove</button></div>`).join("")}</div>` : ""}
+    <button class="btn block" data-a="cxOpenShop" style="margin-top:8px">Open shop</button></div>`;
+}
+
 function skillsGearBody(app, d) {
   const taken = takenSkills(app, d), { from, n } = classSkillOptions(app, d);
   const choices = from.filter(id => !taken.includes(id)), need = Math.min(n, choices.length);
@@ -294,6 +303,7 @@ function skillsGearBody(app, d) {
           return `<label class="optcard" aria-pressed="${on}"><input type="checkbox" data-a="toggleSkill" data-id="${id}" ${on ? "checked" : ""} ${!on && d.classSkills.length >= need ? "disabled" : ""}><span class="grow"><b>${esc(s.label)}</b><span>${ABILITY_LABEL[s.ability]}</span></span></label>`; }).join("")}
       </div></div>
     ${renderEquipGroup(app, d, "class")}${renderEquipGroup(app, d, "bg")}
+    ${shopPanel(app, d)}
     <p class="sub2">Equipment goes in your inventory, equipped. Spend gold later in the Gear tab.</p></div>`;
 }
 
