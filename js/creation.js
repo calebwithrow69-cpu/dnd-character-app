@@ -11,7 +11,7 @@ import { levelUpPlan, stepValidFor, optionPrereq, spellsFor, expertiseOptions } 
 import {
   draftChoices, optionsFor, isAnswered, applyChoices, backgroundToolChoice,
   backgroundFeatNames, bgSkillIds, bgAbilityIds, speciesBaseText, grantedSpells,
-  syncLineageSpells, randomize, TOOLS, ALL_TOOLS
+  syncLineageSpells, randomize, TOOLS, ALL_TOOLS, LANGUAGES
 } from "./choices.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, enabledFeats, findByName, subclassesFor,
   allWeapons, allItems } from "./data.js";
@@ -23,11 +23,11 @@ import { ARMOR, makeItem, fitsOk, wearKind } from "./gear.js";
 // related decisions and knows how to validate itself.
 export const CHAPTERS = [
   { id: "class",      title: "Class",           short: "Class", help: "Sets your hit point die, proficiencies and level 1 features." },
+  { id: "classChoices", title: "Class Choices", short: "Class choices", help: "Choose your level 1 class options." },
   { id: "species",    title: "Species",         short: "Species", help: "Sets your size, speed and species traits." },
   { id: "background", title: "Background",      short: "Background", help: "Grants two skills, a tool proficiency, a feat and your ability score increases." },
   { id: "abilities",  title: "Ability Scores",  short: "Abilities", help: "Set your six ability scores, then apply your background increases. A star marks your class\u2019s primary ability." },
   { id: "classOpts",  title: "Skills and Gear", short: "Skills & gear", help: "Choose your class skills and starting equipment." },
-  { id: "classChoices", title: "Class Choices", short: "Class choices", help: "Choose your level 1 class options." },
   { id: "finish",     title: "Name and Finish", short: "Finish", help: "Enter a name and review your character." },
 ];
 export const ALIGNMENTS = ["Lawful Good", "Neutral Good", "Chaotic Good", "Lawful Neutral", "Neutral", "Chaotic Neutral", "Lawful Evil", "Neutral Evil", "Chaotic Evil", "Unaligned"];
@@ -214,28 +214,33 @@ export function gearChoices(app, d) {
 export const blankLevelDraft = level => ({
   next: level, fromCreation: true, step: 0, hpMode: "avg", rolled: null, subclass: "",
   asiMode: "asi", asiSplit: "2", a2: "", a1a: "", a1b: "", feat: "",
-  style: "", expertise: [], mastery: [], options: [], cantrips: [], spells: [],
+  style: "", order: "", language: "", expertise: [], mastery: [], options: [], cantrips: [], spells: [],
   query: "", showAll: false, open: null
 });
 // The character as it stands so far, plus what the class still asks you to choose.
 // Returns null until class, species and background are picked.
 export function choicePlan(d, app) {
-  if (!d.class || !d.species || !d.background) return null;
+  if (!d.class) return null;
   const tmp = normalize(buildCharacter(d, app), app.library);
   if (!d.lvl || d.lvl.forKey !== d.class + "|" + d.species + "|" + d.background + "|" + d.classSkills.join(",")) {
     const keep = d.lvl && d.lvl.forClass === d.class ? d.lvl : null;
     d.lvl = blankLevelDraft(tmp.level);
-    if (keep) { d.lvl.subclass = keep.subclass; d.lvl.style = keep.style; d.lvl.options = keep.options; d.lvl.cantrips = keep.cantrips; d.lvl.spells = keep.spells; d.lvl.mastery = keep.mastery; }
+    if (keep) { d.lvl.subclass = keep.subclass; d.lvl.style = keep.style; d.lvl.options = keep.options; d.lvl.cantrips = keep.cantrips; d.lvl.spells = keep.spells; d.lvl.mastery = keep.mastery; d.lvl.order = keep.order || ""; d.lvl.language = keep.language || ""; }
     d.lvl.forClass = d.class;
     d.lvl.forKey = d.class + "|" + d.species + "|" + d.background + "|" + d.classSkills.join(",");
   }
   const lvl = d.lvl;
   // drop stale expertise picks (the skills they depend on may have changed)
   lvl.expertise = lvl.expertise.filter(id => (tmp.skillProf || []).includes(id));
+  // a cantrip or spell the species, background or a feat now grants is not picked a second time
+  const have = new Set((tmp.spellcasting?.spells || []).map(s => s.name));
+  lvl.cantrips = lvl.cantrips.filter(n => !have.has(n)); lvl.spells = lvl.spells.filter(n => !have.has(n));
   const plan = levelUpPlan(app.library, tmp, tmp.level, lvl, { fromCreation: true });
-  const steps = plan.steps.filter(x => x.id !== "review");
+  // Expertise needs the skills chosen later (Skills and Gear), so it is asked there; every other class choice comes right after Class.
+  const expertise = plan.steps.find(x => x.id === "expertise") || null;
+  const steps = plan.steps.filter(x => x.id !== "review" && x.id !== "expertise");
   lvl.step = Math.max(0, Math.min(lvl.step || 0, Math.max(0, steps.length - 1)));
-  return { tmp, lvl, plan, steps, ok: steps.every(st => stepValidFor(tmp, lvl, st)) };
+  return { tmp, lvl, plan, steps, expertise, ok: steps.every(st => stepValidFor(tmp, lvl, st)), okAll: steps.every(st => stepValidFor(tmp, lvl, st)) && (!expertise || stepValidFor(tmp, lvl, expertise)) };
 }
 
 // Fill ONE class-choice step at random (the Randomize button on each step). Keeps picks already made for spell lists.
@@ -245,6 +250,8 @@ export function randomizeStep(app, tmp, lvl, st) {
   const some = (l, n) => [...l].sort(() => Math.random() - 0.5).slice(0, n);
   if (st.id === "subclass") { const s = subclassesFor(L, tmp.class); if (s.length) lvl.subclass = any(s).name; }
   else if (st.id === "style") { const f = enabledFeats(L, C).filter(f => /^Fighting Style Feat/i.test(f.type || "") && !tmp.feats.includes(f.name)); if (f.length) lvl.style = any(f).name; }
+  else if (st.id === "order") lvl.order = any(st.options).name;
+  else if (st.id === "language") lvl.language = any(LANGUAGES);
   else if (st.id === "expertise") lvl.expertise = some(expertiseOptions(tmp), st.n).map(x => x.id);
   else if (st.id === "mastery") lvl.mastery = some(allWeapons(L, C).filter(w => w.mastery && !(tmp.masteries || []).includes(w.name)), st.n).map(w => w.name);
   else if (st.id === "options") {
@@ -259,8 +266,13 @@ export function randomizeStep(app, tmp, lvl, st) {
 }
 // Fill every class choice at random (used by "make everything random").
 export function randomClassChoices(d, app) {
-  const cp = choicePlan(d, app); if (!cp) return;
-  for (const st of cp.steps) { if (st.id === "cantrips" || st.id === "spells") cp.lvl[st.id] = []; randomizeStep(app, cp.tmp, cp.lvl, st); }
+  // An answer can change how many more picks a later step needs (Magician and Thaumaturge add a cantrip), so look again until nothing is open.
+  for (let pass = 0; pass < 6; pass++) {
+    const cp = choicePlan(d, app); if (!cp) return;
+    const open = [...cp.steps, ...(cp.expertise ? [cp.expertise] : [])].filter(st => !stepValidFor(cp.tmp, cp.lvl, st));
+    if (!open.length) return;
+    for (const st of open) { if (pass === 0 && (st.id === "cantrips" || st.id === "spells")) cp.lvl[st.id] = []; randomizeStep(app, cp.tmp, cp.lvl, st); }
+  }
 }
 
 // \u2500\u2500\u2500 Validation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -301,6 +313,7 @@ export function validateChapter(chapterId, d, app) {
     const gc = gearChoices(app, d);
     if (gc.some(g => !g.fixed && !d.picks[g.id])) reasons.push("Finish the item picks in your gear.");
     if (d.class && walletLeftCp(app, d) < 0) reasons.push("Your shopping list costs more than your gold.");
+    { const cp = d.class ? choicePlan(d, app) : null; if (cp && cp.expertise && !stepValidFor(cp.tmp, cp.lvl, cp.expertise)) reasons.push("Choose your expertise skills."); }
   }
 
   if (chapterId === "species") {
@@ -317,8 +330,8 @@ export function validateChapter(chapterId, d, app) {
 
   if (chapterId === "classChoices") {
     const cp = choicePlan(d, app);
-    if (!cp) reasons.push("Choose a class, species and background first.");
-    else if (!cp.ok) reasons.push("Finish every class pick.");
+    if (!cp) reasons.push("Choose a class first.");
+    else if (!cp.ok) reasons.push("Finish every class choice.");
   }
 
   if (chapterId === "finish") {
@@ -392,9 +405,10 @@ export function unresolvedDecisions(d, app) {
     }
   }
   // Name
-  if (d.class && d.species && d.background) {
+  if (d.class) {
     const cp = choicePlan(d, app);
     if (cp && !cp.ok) push("classChoices", "Class choices", "Make each class choice");
+    if (cp && cp.expertise && !stepValidFor(cp.tmp, cp.lvl, cp.expertise)) push("classOpts", "Expertise", "Choose your expertise skills");
   }
   if (!cleanName(d.name)) push("finish", "Name", "Enter a name");
   if (!d.scoresSet) push("abilities", "Ability scores", "Choose how to set your scores");
@@ -662,7 +676,7 @@ export function trainingFor(app, d) {
 export function trainingSummary(t) {
   const names = { light: "Light armor", medium: "Medium armor", heavy: "Heavy armor", shield: "Shields", simple: "Simple weapons", martial: "Martial weapons" };
   return [...[...t.armor].map(k => names[k]), ...[...t.weapons].map(k => names[k]), ...(t.martialFinesseLight ? ["Martial weapons with Finesse or Light"] : []),
-    ...[...t.tools].map(x => x.replace(/\b\w/g, c => c.toUpperCase()))].filter(Boolean).join(", ") || "no armor or weapons";
+    ...[...t.tools].map(x => x.replace(/(^|\s)(\w)/g, (m, sp, ch) => sp + ch.toUpperCase()))].filter(Boolean).join(", ") || "no armor or weapons";
 }
 export function weaponTrained(w, t) {
   if (w.cat === "Simple") return t.weapons.has("simple");
@@ -671,21 +685,35 @@ export function weaponTrained(w, t) {
 }
 const armorSub = n => { const a = ARMOR[n]; return a ? `${a.cat} armor \u00b7 AC ${a.base}${a.dexCap == null ? " + Dex" : a.dexCap ? ` + Dex (max ${a.dexCap})` : ""}${a.str ? ` \u00b7 Str ${a.str}` : ""}` : ""; };
 
+// Training of an existing character (the shop on the sheet): the armor and weapon boxes plus the tools named in the training line.
+export function trainingFromChar(c) {
+  const p = c.profs || { armor: [], weapons: [] }, text = String(c.profsText || "");
+  const tools = new Set(ALL_TOOLS.filter(t => normTool(text).includes(normTool(t))).map(normTool));
+  return { armor: new Set(p.armor || []), weapons: new Set(p.weapons || []), martialFinesseLight: /martial weapons that have[^.]*finesse or light/i.test(text), tools };
+}
+const toolNameSet = () => new Set(ALL_TOOLS.map(normTool));
+// The shop group of a row: Weapons | Armor | Tools | Gear | Magic.
+export function rowGroup(row) {
+  if (row.magic || row.cat === "Magic & potions") return "Magic";
+  if (row.cat === "Weapons" || row.cat === "Armor") return row.cat;
+  return toolNameSet().has(normTool(row.name)) ? "Tools" : "Gear";
+}
+// Is this row something the trained character may use? Adventuring gear and magic items have no training, so they pass.
+export function isTrained(app, t, row) {
+  const g = rowGroup(row);
+  if (g === "Weapons") { const w = allWeapons(app.library, app.campaign).find(x => x.name === row.name); return !!w && weaponTrained(w, t); }
+  if (g === "Armor") return row.name === "Shield" ? t.armor.has("shield") : t.armor.has(String(ARMOR[row.name]?.cat || "").toLowerCase());
+  if (g === "Tools") return t.tools.has(normTool(row.name));
+  return true;
+}
+
 // Everything the player can buy right now: [{ name, gp, group: Weapons | Armor | Tools | Gear, sub }]
 export function creationStock(app, d) {
   if (!d.class) return [];
-  const L = app.library, C = app.campaign, W = allWeapons(L, C), I = allItems(L, C), t = trainingFor(app, d);
-  const toolNames = new Set(ALL_TOOLS.map(normTool)), out = [];
-  for (const r of shopStock(L, C, W, I, Object.keys(ARMOR).filter(a => a !== "Clothing"))) {
-    if (r.magic || r.cat === "Magic & potions") continue;
-    if (r.cat === "Weapons") { const w = W.find(x => x.name === r.name); if (w && weaponTrained(w, t)) out.push({ ...r, group: "Weapons" }); continue; }
-    if (r.cat === "Armor") {
-      const ok = r.name === "Shield" ? t.armor.has("shield") : t.armor.has(String(ARMOR[r.name]?.cat || "").toLowerCase());
-      if (ok) out.push({ ...r, group: "Armor", sub: r.name === "Shield" ? "Shield \u00b7 +2 AC" : armorSub(r.name) });
-      continue;
-    }
-    if (toolNames.has(normTool(r.name))) { if (t.tools.has(normTool(r.name))) out.push({ ...r, group: "Tools" }); continue; }
-    out.push({ ...r, group: "Gear" });
+  const L = app.library, C = app.campaign, t = trainingFor(app, d), out = [];
+  for (const r of shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing"))) {
+    const g = rowGroup(r); if (g === "Magic" || !isTrained(app, t, r)) continue;
+    out.push({ ...r, group: g, sub: g === "Armor" ? (r.name === "Shield" ? "Shield \u00b7 +2 AC" : armorSub(r.name)) : r.sub });
   }
   return out;
 }

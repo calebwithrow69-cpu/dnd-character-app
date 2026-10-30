@@ -2,11 +2,35 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.27";
+export const VERSION = "0.1.28";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.28",
+    date: "2026-10-30",
+    stage: "Pre-build",
+    blurb: "Class choices right after Class, clearer species and class pages, trained-gear shop.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Class Choices is now the step right after Class. Druid asks for Primal Order, Cleric for Divine Order, Rogue for a language; every class's level 1 picks were checked. Rogue expertise is asked on Skills and Gear, once your skills are chosen.",
+          "Magician and Thaumaturge give one extra cantrip and a Wisdom bonus to their skill checks; Warden and Protector add the weapon and armor training."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Class, species and background pages now read in this order: image, description, facts, variants (A to Z, first one selected), abilities, then Choose at the bottom.",
+          "Abilities that need a choice are marked. Open the ability to read it and make the choice right under it.",
+          "The Shop button on Skills and Gear is a bright button at the top and under your equipment.",
+          "The Shop on the sheet now shows only gear you are trained in. Switch to All gear to see everything."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.27",
     date: "2026-10-30",

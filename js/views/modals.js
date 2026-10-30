@@ -23,6 +23,7 @@ import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
 import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
+import { trainingFromChar, trainingSummary, isTrained } from "../creation.js";
 
 export function renderModal(app) {
   const m = app.modal;
@@ -113,6 +114,8 @@ export function renderModal(app) {
       const discount = (c.feats || []).some(f => /^Crafter\b/.test(f));
       return modalShell("Shop",
         `<p class="small">You have <b class="num">${esc(fmtWallet(c.coins))}</b>.${discount ? ` <span class="tag green">Crafter: 20% off nonmagical</span>` : ""}</p>
+         <div class="seg" style="margin-top:8px" role="group" aria-label="Gear shown"><button data-a="shopTrained" data-v="1" aria-pressed="${app.shopTrained !== false}">Gear I am trained in</button><button data-a="shopTrained" data-v="0" aria-pressed="${app.shopTrained === false}">All gear</button></div>
+         ${app.shopTrained !== false ? `<p class="sub2" style="margin-top:6px">Weapons, armor and tools shown: ${esc(trainingSummary(trainingFromChar(c)))}. Adventuring gear and magic items need no training.</p>` : ""}
          ${searchBox("shop", app.shopQuery, "Search the shop")}
          <div class="seg" style="margin-top:10px" role="group" aria-label="Category">${cats.map(k => `<button data-a="shopCat" data-cat="${esc(k)}" aria-pressed="${cat === k}">${esc(k === "Magic & potions" ? "Magic" : k)}</button>`).join("")}</div>
          <div class="results" id="results-shop">${renderShopResults(app)}</div>
@@ -451,7 +454,7 @@ export function renderShopResults(app) {
   const q = (app.shopQuery || "").trim().toLowerCase();
   const cat = app.shopCat || "All";
   const rows = shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing"))
-    .filter(r => (cat === "All" || r.cat === cat) && (!q || r.name.toLowerCase().includes(q)));
+    .filter(r => (cat === "All" || r.cat === cat) && (!q || r.name.toLowerCase().includes(q)) && (app.shopTrained === false || isTrained(app, trainingFromChar(c), r)));
   if (!rows.length) return `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`;
   const have = walletCp(c.coins);
   return rows.slice(0, 120).map(r => {

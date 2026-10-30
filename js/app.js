@@ -18,7 +18,7 @@ import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
 import { renderHome, renderRulesPage, playTomeOpen, lastCharacter } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
-import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet } from "./views/create.js";
+import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits } from "./views/create.js";
 import { cxStop, cxSeal } from "./cxfx.js";
 import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
 import { emblemFor } from "./emblems.js";
@@ -142,7 +142,7 @@ async function init() {
   // Resume a draft left in progress (saved on this device, kept for 24 hours). A damaged or outdated draft is rebuilt or dropped, never crashes the start.
   { let dr = null; try { dr = loadDraft(); } catch (e) { clearDraft(); }
     if (dr && (dr.class || dr.species || dr.background || cleanName(dr.name))) {
-      try { APP.createDraft = pruneDraftToLibrary(dr, APP); pruneCart(APP, APP.createDraft); APP.screen = "create"; history.pushState({ cx: 1 }, ""); } catch (e) { APP.createDraft = null; APP.screen = "home"; clearDraft(); }
+      try { APP.createDraft = pruneDraftToLibrary(dr, APP); pruneCart(APP, APP.createDraft); APP.createDraft.chapter = Math.min(APP.createDraft.chapter, reachIndex(APP, APP.createDraft)); APP.screen = "create"; history.pushState({ cx: 1 }, ""); } catch (e) { APP.createDraft = null; APP.screen = "home"; clearDraft(); }
     } }
 
   if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindContext(); APP._eventsBound = true; }
@@ -1015,7 +1015,9 @@ const ACTIONS = {
   prevStep() {
     const d = APP.createDraft;
     if (chapterId(d) === "classChoices" && d.lvl && d.lvl.step > 0) { d.lvl.step -= 1; d.lvl.query = ""; render(); window.scrollTo(0, 0); return; }
-    d.chapter = Math.max(0, d.chapter - 1); d.query = ""; render(); window.scrollTo(0, 0); },
+    d.chapter = Math.max(0, d.chapter - 1); d.query = "";
+    { const cp = chapterId(d) === "classChoices" ? choicePlan(d, APP) : null; if (cp && !cp.steps.length) d.chapter = Math.max(0, d.chapter - 1); }
+    render(); window.scrollTo(0, 0); },
   nextStep() {
     const d = APP.createDraft;
     if (chapterId(d) === "classChoices") {
@@ -1027,6 +1029,7 @@ const ACTIONS = {
     }
     if (!validateChapter(chapterId(d), d, APP).valid) return;
     d.chapter = Math.min(CHAPTERS.length - 1, d.chapter + 1); d.query = "";
+    { const cp = chapterId(d) === "classChoices" ? choicePlan(d, APP) : null; if (cp && !cp.steps.length) d.chapter = Math.min(CHAPTERS.length - 1, d.chapter + 1); } // nothing to choose: skip the screen
     try { history.pushState({ cx: 1 }, ""); } catch (e) { }
     render(); window.scrollTo(0, 0);
   },
@@ -1083,9 +1086,14 @@ const ACTIONS = {
     if (trimmed && !lost) toast("Your shop list was trimmed to fit your gold and training");
     if (lost) toast(kind === "class" ? "Class changed. Class skills and class equipment were reset." : kind === "background" ? "Background changed. Ability increases, background picks and equipment were reset." : "Species changed. Species picks were reset.");
     if (kind === "species") {
-      const pv = APP.spUi.variant && APP.spUi.variant[name], vd = pv && variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
-      if (vd && APP.createDraft.species === name && vd.options.some(o => o.v === pv)) { APP.createDraft.picks[vd.id] = pv; render(); }
+      const vd = variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
+      if (vd && APP.createDraft.species === name) {
+        const pv = APP.spUi.variant && APP.spUi.variant[name];
+        const pick = pv && vd.options.some(o => o.v === pv) ? pv : [...vd.options].sort((a, b) => String(a.v).localeCompare(String(b.v)))[0].v; // the variant shown is the one you get (first A to Z by default)
+        APP.createDraft.picks[vd.id] = pick; render();
+      }
     }
+    openChoiceTraits(APP); render();
     celebrate();
   },
   cxTrait(el) { const t = APP.spUi.traits, k = el.dataset.key; if (t.has(k)) t.delete(k); else t.add(k); spRefresh(); },
@@ -1192,7 +1200,7 @@ const ACTIONS = {
     clearDraft(); APP.createDraft = null; APP.progressOpen = false; APP.sheetTab = "stats"; APP.roll = null; APP.lvl = null;
     APP.shopAfterChoices = goldOnly;
     APP.styleAsk = char.id; // every new character gets to pick its sheet style first
-    if (cp && cp.steps.length) { APP.lvl = cp.lvl; applyLevelUp(); } // applies subclass, spells, invocations... and opens the sheet
+    if (cp && (cp.steps.length || cp.expertise)) { APP.lvl = cp.lvl; applyLevelUp(); } // applies subclass, spells, invocations... and opens the sheet
     else {
       if (goldOnly) { APP.shopAfterChoices = false; APP._shopLater = true; }
       render(); window.scrollTo(0, 0);
@@ -1389,6 +1397,8 @@ const ACTIONS = {
   lvlFeatAb(el) { APP.lvl.featAb = APP.lvl.featAb === el.dataset.ab ? "" : el.dataset.ab; render(); },
   fxToggle() { APP.lvl.fxOpen = !APP.lvl.fxOpen; render(); },
   lvlStyle(el) { APP.lvl.style = el.dataset.name; render(); },
+  lvlOrder(el) { APP.lvl.order = el.dataset.name; render(); },
+  lvlLanguage(el) { APP.lvl.language = el.dataset.name; render(); },
   lvlExpertise(el) { toggleIn(APP.lvl.expertise, el.dataset.id); render(); },
   lvlMastery(el) { toggleIn(APP.lvl.mastery, el.dataset.name); render(); },
   lvlOption(el) { toggleIn(APP.lvl.options, el.dataset.name); render(); },
@@ -1503,7 +1513,8 @@ const ACTIONS = {
   pickerAllClasses(el) { APP.pickerAllClasses = el.checked; render(); },
 
   // pickers
-  openShop() { APP.shopQuery = ""; APP.shopCat = "All"; openModal({ type: "shop" }); },
+  openShop() { APP.shopQuery = ""; APP.shopCat = "All"; APP.shopTrained = true; openModal({ type: "shop" }); },
+  shopTrained(el) { APP.shopTrained = el.dataset.v !== "0"; render(); },
   shopCat(el) { APP.shopCat = el.dataset.cat; render(); },
   buyItem(el) {
     const c = APP.char, L = APP.library, C = APP.campaign, name = el.dataset.name;
@@ -1963,6 +1974,15 @@ function applyLevelUp() {
   if (c.hp.max !== hpBefore) log.unshift(`${c.hp.max > hpBefore ? "+" : ""}${c.hp.max - hpBefore} HP`);
   if (ids.has("subclass") && d.subclass) { c.subclass = d.subclass; log.push("Subclass: " + d.subclass); }
   if (ids.has("style") && d.style) { c.feats.push(d.style); log.push("Fighting style: " + d.style); }
+  { const os = p.steps.find(s => s.id === "order");
+    if (os && d.order) {
+      c.choices[os.feature] = d.order; log.push(`${os.label}: ${d.order}`);
+      c.profs = c.profs || { armor: [], weapons: [] };
+      const add = (grp, k) => { if (!c.profs[grp].includes(k)) c.profs[grp].push(k); };
+      if (d.order === "Warden") { add("weapons", "martial"); add("armor", "medium"); }
+      if (d.order === "Protector") { add("weapons", "martial"); add("armor", "heavy"); }
+    } }
+  if (ids.has("language") && d.language) { c.languages = [c.languages, d.language].filter(Boolean).join(", "); log.push("Language: " + d.language); }
   if (ids.has("expertise")) d.expertise.forEach(id => { if (!c.skillExpertise.includes(id)) c.skillExpertise.push(id); if (!c.skillProf.includes(id)) c.skillProf.push(id); });
   if (ids.has("mastery")) c.masteries = [...new Set([...(c.masteries || []), ...d.mastery])];
   const og = p.steps.find(s => s.id === "options");

@@ -197,14 +197,16 @@ await check("new character: creation flow loads class list, picks a class, advan
   noErrs(p); await p.context().close();
 });
 
-await check("species variants: header lists the variants, tapping one swaps its ability in, Choose keeps the pick (phone)", async () => {
+await check("species variants: A to Z, the first is preselected, tapping one swaps its ability in, Choose keeps the pick (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(400);
-  await p.locator('[data-a="cxOpen"]').first().click(); await p.waitForTimeout(300);
-  await p.locator('[data-a="cxChoose"]').first().click(); await p.waitForTimeout(500);
-  await clickA(p, "nextStep"); await p.waitForTimeout(500);
+  await p.evaluate(async () => { const m = await import("/js/creation.js"); const d = APP.createDraft; d.class = "Fighter"; d.chapter = 2; });
+  await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Goliath"]').click(); await p.waitForTimeout(400);
-  assert(await p.locator(".vchip").count() === 7, "Goliath should list 7 variants");
-  assert(await p.locator(".sp-trait.variant").count() === 0, "nothing should be preselected");
+  const chips = await p.locator(".vchip").allInnerTexts();
+  assert(chips.length === 7, "Goliath should list 7 variants");
+  assert(JSON.stringify(chips) === JSON.stringify([...chips].sort((a, b) => a.localeCompare(b))), "variants are not A to Z: " + chips.join(","));
+  assert(await p.locator('.vchip').first().getAttribute("aria-pressed") === "true", "the first variant should be preselected");
+  assert(await p.locator(".sp-trait.variant").count() === 1, "the preselected variant ability should show");
   await p.locator('.vchip', { hasText: "Fire" }).click(); await p.waitForTimeout(300);
   assert(await p.locator(".sp-trait.variant").count() === 1 && /Fire/.test(await p.locator(".sp-trait.variant").innerText()), "the Fire variant ability did not appear");
   await p.locator('.vchip', { hasText: "Frost" }).click(); await p.waitForTimeout(300);
@@ -212,6 +214,33 @@ await check("species variants: header lists the variants, tapping one swaps its 
   await p.locator('[data-a="cxChoose"][data-name="Goliath"]').click(); await p.waitForTimeout(600);
   assert(await p.evaluate(() => Object.values(APP.createDraft.picks).includes("Frost's Chill")), "the previewed variant was not kept when choosing the species");
   assert(await p.locator('.vchip[aria-pressed="true"]').innerText().then(t => /Frost/.test(t)), "chosen variant not highlighted");
+  noErrs(p); await p.context().close();
+});
+
+await check("detail pane order: image, description, facts, variants, abilities, then Choose; choices sit under their ability", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(400);
+  await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 2; });
+  await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
+  await p.locator('[data-a="cxOpen"][data-name="Elf"]').click(); await p.waitForTimeout(400);
+  const order = await p.evaluate(() => { const d = document.querySelector(".sp-detail"); const y = sel => { const e = d.querySelector(sel); return e ? e.getBoundingClientRect().top : null; }; return { img: y(".sp-addimg, .sp-hero"), desc: y(".sp-desc"), facts: y(".sp-facts"), vars: y(".sp-variants"), traits: y(".sp-traits"), choose: y(".chooserow") }; });
+  const seq = ["img", "desc", "facts", "vars", "traits", "choose"].filter(k => order[k] != null);
+  assert(seq.length >= 5 && seq.every((k, i) => !i || order[k] >= order[seq[i - 1]]), "wrong order: " + JSON.stringify(order));
+  assert(await p.locator(".sp-trait .flag.need").count() >= 1, "abilities that need a choice are not marked");
+  await p.locator('[data-a="cxChoose"][data-name="Elf"]').click(); await p.waitForTimeout(600);
+  assert(await p.locator(".sp-inline").count() >= 1, "the choice did not open under its ability");
+  const inside = await p.evaluate(() => [...document.querySelectorAll(".sp-inline")].every(e => e.closest(".sp-trait")));
+  assert(inside, "a choice is not inside its ability");
+  noErrs(p); await p.context().close();
+});
+
+await check("class choices come right after Class: Druid is asked for Primal Order, then cantrips and spells", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(400);
+  await p.locator('[data-a="cxOpen"][data-name="Druid"]').click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="cxChoose"][data-name="Druid"]').click(); await p.waitForTimeout(400);
+  await clickA(p, "nextStep"); await p.waitForTimeout(500);
+  assert((await p.locator(".topbar h1").innerText()).trim() === "Class Choices", "next chapter after Class is not Class Choices");
+  assert(/Primal Order/.test(await p.locator(".cx-stage").innerText()), "Primal Order was not asked");
+  assert(/Magician/.test(await p.locator(".cx-stage").innerText()) && /Warden/.test(await p.locator(".cx-stage").innerText()), "options missing");
   noErrs(p); await p.context().close();
 });
 
@@ -681,8 +710,8 @@ await check("creation: ability scores need a method, and Randomize everything ke
 
 await check("creation shop: buy trained gear with the gold, see it on the new character", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForTimeout(800);
-  await clickA(p, "openProgress"); await clickA(p, "gotoChapter", '[data-i="4"]'); await p.waitForTimeout(400);
-  assert(await p.locator('[data-a="cxOpenShop"]:visible').count() === 1, "no Shop button on Skills and Gear");
+  await clickA(p, "openProgress"); await clickA(p, "gotoChapter", '[data-i="5"]'); await p.waitForTimeout(400);
+  assert(await p.locator('[data-a="cxOpenShop"]:visible').count() >= 1, "no Shop button on Skills and Gear");
   // take the gold options so there is plenty to spend
   for (const k of ["equipClass", "equipBg"]) { const opts = p.locator(`[data-a="pickEquip"][data-which="${k}"]:visible`); const n = await opts.count(); if (n) { await opts.nth(n - 1).click(); await p.waitForTimeout(250); } }
   await clickA(p, "cxOpenShop"); await p.waitForSelector("#results-cxshop .shopitem", { timeout: 5000 });

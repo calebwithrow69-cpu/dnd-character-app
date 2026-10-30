@@ -35,6 +35,7 @@ const CLASSES = [
   { name: "Monk", features: [
     { name: "Unarmored Movement", lv: 2, effects: [{ t: "speed", v: { steps: [[2, 10], [6, 15], [10, 20], [14, 25], [18, 30]] }, when: "unarmoredNoShield" }] },
     { name: "Unarmored Defense", lv: 1, effects: [{ t: "ac.base", op: "max", v: { add: [10, { abil: "dex" }, { abil: "wis" }] }, when: { all: [{ armor: "none" }, { shield: false }] } }] } ] },
+  { name: "Druid", features: [{ name: "Primal Order", lv: 1, effects: [{ t: "skill.arcana", v: { abil: "wis", min: 1 }, when: { pick: ["Primal Order", "Magician"] } }, { t: "skill.nature", v: { abil: "wis", min: 1 }, when: { pick: ["Primal Order", "Magician"] } }] }] },
   { name: "Bard", features: [{ name: "Jack of All Trades", lv: 2, effects: [{ t: "skill.nonprof", v: { halfProf: true } }] }] }
 ];
 const SPECIES = [{ name: "Dwarf", effects: [{ t: "hp.max", v: { perLevel: 1 }, name: "Dwarven Toughness" }, { t: "grant.resist.poison", op: "grant" }] }];
@@ -64,6 +65,12 @@ t("Unarmored Defense formulas pick the better base (Barbarian 10+Dex+Con)", () =
   const c = mk({ class: "Barbarian", level: 3 });
   eq(fxStat(c, "ac.base", 12, { armored: false }).total, 10 + 2 + 2);
   eq(fxStat(c, "ac.base", 12, { armored: true }).total, 12);
+});
+t("Primal Order: Magician adds Wisdom modifier (minimum +1) to Arcana and Nature checks, Warden does not", () => {
+  const wis = (w, pick) => mk({ class: "Druid", level: 1, abilities: { str: 10, dex: 10, con: 10, int: 10, wis: w, cha: 10 }, choices: pick ? { "Primal Order": pick } : {} });
+  eq(fxSum(fxList(wis(16, "Magician"), "skill.arcana")), 3); eq(fxSum(fxList(wis(16, "Magician"), "skill.nature")), 3);
+  eq(fxSum(fxList(wis(8, "Magician"), "skill.arcana")), 1, "minimum +1");
+  eq(fxSum(fxList(wis(16, "Warden"), "skill.arcana")), 0); eq(fxSum(fxList(wis(16, null), "skill.nature")), 0);
 });
 t("Monk Unarmored Defense is off with a shield", () => {
   const c = mk({ class: "Monk", level: 3 });

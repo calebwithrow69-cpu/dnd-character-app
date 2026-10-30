@@ -5,7 +5,7 @@ import { detailFor, spellSub } from "./sheet.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, abilityMod, fmtMod, hpAverageGain, slotRows } from "../rules.js";
 import { findByName, findFeat, enabledFeats, allWeapons, subclassesFor } from "../data.js";
 import { levelUpPlan, featEligible, optionPrereq, spellsFor, stepValidFor, expertiseOptions } from "../progression.js";
-import { lineageSpells } from "../choices.js";
+import { lineageSpells, LANGUAGES } from "../choices.js";
 import { renderFeatControls, renderFeatGrid, renderFeatSheet } from "./feats.js";
 import { featAbilityIncrease, previewFeat, ASI_FEAT } from "../featfx.js";
 
@@ -43,7 +43,7 @@ export function hpGain(c, d) {
 
 export function stepValid(app, step) { return stepValidFor(app.char, app.lvl, step); }
 const why = {
-  gains: "", hp: "Roll or take the average.", subclass: "Choose a subclass.", asi: "Choose an ability increase or a feat.",
+  gains: "", order: "Choose one.", language: "Choose a language.", hp: "Roll or take the average.", subclass: "Choose a subclass.", asi: "Choose an ability increase or a feat.",
   style: "Choose a fighting style.", cantrips: "Choose all your cantrips.", expertise: "Choose your expertise skills.", mastery: "Choose your weapons.", options: "Make your picks."
 };
 
@@ -189,6 +189,14 @@ export function levelBody(app) {
       <div id="lvl-results">${renderLevelResults(app)}</div>${renderFeatSheet(app, fi, d.feat, "lvlFeat")}`;
   }
 
+  else if (step.id === "order") {
+    body = `<p class="small muted">${esc(step.label)}: choose one. The text is the book's.</p><div class="optlist" style="margin-top:8px">${step.options.map(o => `<button class="optcard" data-a="lvlOrder" data-name="${esc(o.name)}" aria-pressed="${d.order === o.name}"><span class="grow"><b>${esc(o.name)}</b><span>${esc(o.text)}</span></span>${d.order === o.name ? `<span class="tag amber">Chosen</span>` : ""}</button>`).join("")}</div>`;
+  }
+
+  else if (step.id === "language") {
+    body = `<p class="small muted">You know Thieves' Cant and one other language of your choice.</p><div class="chips" style="margin-top:8px">${LANGUAGES.map(l => `<button class="chipbtn" data-a="lvlLanguage" data-name="${esc(l)}" aria-pressed="${d.language === l}">${esc(l)}</button>`).join("")}</div>`;
+  }
+
   else if (step.id === "style") {
     const si = styleFeatItems(app);
     body = renderFeatControls(app, si) + renderFeatGrid(app, si, d.style) + renderFeatSheet(app, si, d.style, "lvlStyle");
@@ -252,6 +260,8 @@ export function levelBody(app) {
     }
     if (d.feat === ASI_FEAT && (d.a2 || d.a1a)) { const r = asiResult(c, d); lines.push(["Abilities", ABILITIES.filter(a => r[a] !== c.abilities[a]).map(a => `${ABILITY_LABEL[a]} ${c.abilities[a]} → ${r[a]}`).join(", ")]); }
     if (d.style) lines.push(["Fighting style", d.style]);
+    { const os = p.steps.find(s => s.id === "order"); if (os && d.order) lines.push([os.label, d.order]); }
+    if (d.language) lines.push(["Language", d.language]);
     if (d.expertise.length) lines.push(["Expertise", d.expertise.map(id => SKILLS.find(s => s.id === id).label).join(", ")]);
     if (d.mastery.length) lines.push(["Weapon mastery", d.mastery.join(", ")]);
     if (d.options.length) lines.push([p.steps.find(s => s.id === "options")?.label || "Choices", d.options.join(", ")]);

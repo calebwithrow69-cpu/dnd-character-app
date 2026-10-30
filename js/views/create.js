@@ -5,12 +5,12 @@
 import { esc, topbar, formatText, searchBox, infoRow } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize } from "../rules.js";
-import { variantDef, stripVariantText, draftChoices, optionsFor, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
+import { variantDef, stripVariantText, draftChoices, optionsFor, isAnswered, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
 import { fmtPrice } from "../equipment.js";
 import { parseSpecies, classifyText } from "../species.js";
-import { renderCodexList, renderControls } from "./codex.js";
+import { renderCodexList, renderControls, matchChoices } from "./codex.js";
 import { levelBody, levelWhy } from "./levelup.js";
-import { stepValidFor } from "../progression.js";
+import { stepValidFor, expertiseOptions } from "../progression.js";
 import { normalize } from "../store.js";
 import { computeAC } from "../gear.js";
 import { emblem, emblemFor, emblemIcon } from "../emblems.js";
@@ -128,9 +128,26 @@ function renderEquipGroup(app, d, which) {
 
 
 // The variant shown for a species: the pick when it is the chosen species, else what was last previewed.
+export const sortedVariants = vd => [...vd.options].sort((a, b) => String(a.v).localeCompare(String(b.v)));
 function selectedVariant(app, d, s, vd) {
-  if (d.species === s.name) return [].concat(d.picks[vd.id] || [])[0] || null;
-  return (app.spUi.variant && app.spUi.variant[s.name]) || null;
+  const first = sortedVariants(vd)[0];
+  if (d.species === s.name) return [].concat(d.picks[vd.id] || [])[0] || (first && first.v) || null;
+  return (app.spUi.variant && app.spUi.variant[s.name]) || (first && first.v) || null;
+}
+// What a choice screen needs for the item being read: its choices, and how to draw and check each one.
+function choiceBundle(app, d, kind, o) {
+  const field = kind, scope = kind === "background" ? "bg" : kind, on = d[field] === o.name;
+  const dd = on ? d : { ...d, [field]: o.name };
+  const vd = kind === "species" ? variantDef(o, app.library, app.campaign) : null;
+  const defs = draftChoices(app, dd, scope).filter(def => !vd || def.id !== vd.id);
+  return { on, defs, render: def => renderTileChoice(app, d, def), done: def => def.kind === "text" || isAnswered(def, d.picks) };
+}
+// After choosing an item, open the abilities that still need a choice so the choice is in view under the ability.
+export function openChoiceTraits(app) {
+  const d = app.createDraft, id = chapterId(d); if (!LIST_KINDS.includes(id) || !d[id]) return;
+  const cfg = cfgFor(app, d, id), o = cfg.items.find(x => x.name === d[id]); if (!o) return;
+  const b = cfg.choices(o), vd = cfg.variants ? cfg.variants(o) : null, mt = matchChoices(b.defs, cfg.traits(o), vd && vd.trait);
+  for (const [name, defs] of mt.by) if (defs.some(x => !b.done(x))) app.spUi.traits.add(id + ":" + o.name + ":" + name);
 }
 
 // ---- the three codex lists
@@ -162,10 +179,10 @@ function cfgFor(app, d, kind) {
       },
       variants: s => {
         const vd = variantDef(s, L, C); if (!vd) return null;
-        return { label: vd.label, cur: selectedVariant(app, d, s, vd), options: vd.options.map(o => ({ v: o.v, label: o.v })) };
+        return { label: vd.label, trait: vd.trait, cur: selectedVariant(app, d, s, vd), options: sortedVariants(vd).map(o => ({ v: o.v, label: o.v })) };
       },
       traitsTitle: "Traits and abilities",
-      chosen: () => { const vd = variantDef(findByName(L.species, d.species), L, C); const hint = vd && !d.picks[vd.id] ? `<p class="sub2">Choose your ${esc(vd.label.toLowerCase())} below.</p>` : ""; return hint + draftChoices(app, d, "species").filter(def => !vd || def.id !== vd.id).map(def => renderTileChoice(app, d, def)).join(""); }
+      choices: o => choiceBundle(app, d, "species", o)
     };
   }
   if (kind === "class") {
@@ -178,7 +195,7 @@ function cfgFor(app, d, kind) {
       facts: c => [["Hit Point Die", "d" + c.hd], ["Primary ability", c.primary], ["Saving throws", parseList(c.saves).join(", ")],
         ["Armor training", c.armorProf || "None"], ["Weapon training", c.weaponProf], c.toolProf ? ["Tool training", c.toolProf] : null,
         ["Skills", `Choose ${c.skillN}: ${parseList(c.skillFrom).join(", ")}`]].filter(Boolean).filter(f => f[1]),
-      lore: c => c.desc || "", laterCollapsed: true,
+      lore: c => c.desc || "", laterCollapsed: true, choices: o => choiceBundle(app, d, "class", o),
       traits: c => (c.features || []).filter(f => f.lv <= 10).map(f => ({ name: f.name, level: f.lv, body: f.text, ...classifyText(f.text) }))
     };
   }
@@ -212,7 +229,7 @@ function cfgFor(app, d, kind) {
     }),
     traitsTitle: "What you get",
     note: () => "Its bonus goes on your scores in the next step.",
-    chosen: () => draftChoices(app, d, "bg").map(def => renderTileChoice(app, d, def)).join("")
+    choices: o => choiceBundle(app, d, "background", o)
   };
 }
 export function listItems(app, d, kind) { return cfgFor(app, d, kind).items; }
@@ -281,12 +298,22 @@ function abilitiesBody(app, d) {
     ${renderBonus(app, d) || `<p class="muted small" style="margin-top:12px">Choose a background to see its increases.</p>`}`;
 }
 
+// Expertise (Rogue) is chosen from the skills you have, so it is asked here once the class skills are picked.
+function expertisePanel(app, d) {
+  const cp = choicePlan(d, app); if (!cp || !cp.expertise) return "";
+  const st = cp.expertise, opts = expertiseOptions(cp.tmp), have = cp.lvl.expertise, full = have.length >= Math.min(st.n, opts.length);
+  const { n } = classSkillOptions(app, d);
+  return `<div class="choice"><div class="choice-head"><h3>Expertise</h3><span class="sub2">Choose ${st.n} \u00b7 ${have.length}/${Math.min(st.n, opts.length) || st.n}</span></div>
+    ${d.classSkills.length < Math.min(n, classSkillOptions(app, d).from.length) ? `<p class="small muted">Choose your class skills first. Expertise doubles your proficiency bonus for skills you are proficient in.</p>` : `<p class="small muted">Your proficiency bonus is doubled for ${st.n} skills you are proficient in.</p>`}
+    <div class="chips">${opts.map(o => `<button class="chipbtn" data-a="lvlExpertise" data-id="${o.id}" aria-pressed="${have.includes(o.id)}" ${full && !have.includes(o.id) ? "disabled" : ""}>${esc(o.label)}</button>`).join("")}</div></div>`;
+}
+
 function shopPanel(app, d) {
   const start = startCp(app, d), left = walletLeftCp(app, d), rows = cartRows(app, d);
   return `<div class="choice"><div class="choice-head"><h3>Shop</h3><span class="sub2">${esc(fmtPrice(left / 100) || "0 gp")} left of ${esc(fmtPrice(start / 100) || "0 gp")}</span></div>
-    <p class="small muted">Spend your gold on gear you are trained to use.</p>
+    <p class="small">Spend your gold on gear you are trained to use. Choosing gold instead of items gives you more to spend.</p>
     ${rows.length ? `<div class="optlist">${rows.map(x => `<div class="optcard locked"><span class="grow"><b>${esc(x.name)}${x.qty > 1 ? " x" + x.qty : ""}</b><span>${esc(fmtPrice(priceCp(app, d, x.row) * x.qty / 100))}</span></span><button class="btn sm" data-a="cxUnbuy" data-name="${esc(x.name)}" aria-label="Remove one ${esc(x.name)}">Remove</button></div>`).join("")}</div>` : ""}
-    <button class="btn block" data-a="cxOpenShop" style="margin-top:8px">Open shop</button></div>`;
+    <button class="btn pri block" data-a="cxOpenShop" style="margin-top:8px">Open shop</button></div>`;
 }
 
 function skillsGearBody(app, d) {
@@ -302,6 +329,7 @@ function skillsGearBody(app, d) {
         ${choices.map(id => { const on = d.classSkills.includes(id), s = SKILLS.find(x => x.id === id);
           return `<label class="optcard" aria-pressed="${on}"><input type="checkbox" data-a="toggleSkill" data-id="${id}" ${on ? "checked" : ""} ${!on && d.classSkills.length >= need ? "disabled" : ""}><span class="grow"><b>${esc(s.label)}</b><span>${ABILITY_LABEL[s.ability]}</span></span></label>`; }).join("")}
       </div></div>
+    ${expertisePanel(app, d)}
     ${renderEquipGroup(app, d, "class")}${renderEquipGroup(app, d, "bg")}
     ${shopPanel(app, d)}
     <p class="sub2">Equipment goes in your inventory, equipped. Spend gold later in the Gear tab.</p></div>`;
@@ -313,6 +341,8 @@ function choiceLines(app, d) {
   const grp = cp.steps.find(x => x.id === "options");
   if (l.subclass) out.push(["Subclass", l.subclass]);
   if (l.style) out.push(["Fighting style", l.style]);
+  const ord = cp.steps.find(x => x.id === "order"); if (ord && l.order) out.push([ord.label, l.order]);
+  if (l.language) out.push(["Language", l.language]);
   if (l.expertise.length) out.push(["Expertise", l.expertise.map(id => SKILLS.find(x => x.id === id)?.label).filter(Boolean).join(", ")]);
   if (l.mastery.length) out.push(["Weapon mastery", l.mastery.join(", ")]);
   if (l.options.length) out.push([grp ? grp.label : "Choices", l.options.join(", ")]);
@@ -324,7 +354,7 @@ function choiceLines(app, d) {
 // The old "Level 1 choices" screen, now a creation chapter: subclass, spells, invocations and so on.
 function classChoicesBody(app, d) {
   const cp = choicePlan(d, app);
-  if (!cp) return `<p class="muted">Choose a class, species and background first.</p>`;
+  if (!cp) return `<p class="muted">Choose a class first.</p>`;
   if (!cp.steps.length) return `<p>${esc(d.class)} has no level ${cp.tmp.level} picks. Tap Continue.</p>`;
   const { body, step } = levelBody(app);
   const l = cp.lvl;
@@ -349,7 +379,7 @@ function canContinue(app, d, id) {
 // Called before each render: the level-up pickers read app.char / app.lvl, so point them at the draft.
 export function prepareChoiceContext(app) {
   const d = app.createDraft;
-  if (d && chapterId(d) === "classChoices") {
+  if (d && (chapterId(d) === "classChoices" || chapterId(d) === "classOpts")) {
     const cp = choicePlan(d, app);
     app.char = cp ? cp.tmp : null; app.lvl = cp ? cp.lvl : null;
   } else { app.char = null; app.lvl = null; }
@@ -387,7 +417,7 @@ function cxLook(app, d) {
   const kind = { class: "class", species: "species", background: "background" }[id];
   if (pick) { const e = emblemFor(kind, pick); return { hue: e.hue, amb: e.amb }; }
   if (id === "classChoices" || id === "classOpts" || id === "finish" || id === "abilities") {
-    const e = d.species ? emblemFor("species", d.species) : d.class ? emblemFor("class", d.class) : null;
+    const e = id === "classChoices" && d.class ? emblemFor("class", d.class) : d.species ? emblemFor("species", d.species) : d.class ? emblemFor("class", d.class) : null;
     if (e) return { hue: e.hue, amb: e.amb };
   }
   return { hue: 9, amb: "embers" };
@@ -479,7 +509,7 @@ export function renderCreate(app) {
       <div class="sp-list" id="wizard-results">${renderWizardResults(app)}</div>`;
   } else if (id === "abilities") content = abilitiesBody(app, d);
   else if (id === "classOpts") {
-    tools = `<button class="btn sm" data-a="randomSkills">Randomize skills</button>` + (gearChoices(app, d).some(g => !g.fixed) ? ` <button class="btn sm" data-a="randomGear">Randomize equipment</button>` : "");
+    tools = `<button class="btn sm pri" data-a="cxOpenShop">Shop \u00b7 ${esc(fmtPrice(walletLeftCp(app, d) / 100) || "0 gp")}</button> <button class="btn sm" data-a="randomSkills">Randomize skills</button>` + (gearChoices(app, d).some(g => !g.fixed) ? ` <button class="btn sm" data-a="randomGear">Randomize equipment</button>` : "");
     content = skillsGearBody(app, d);
   } else if (id === "classChoices") content = classChoicesBody(app, d);
   else content = finishBody(app, d);

@@ -42,16 +42,31 @@ export function renderControls(app, cfg) {
   </div>`;
 }
 
-function traitRow(app, o, t, kind) {
+// A choice belongs under the ability it comes from. Match on the ability's name (or the feat it comes from); a spellcasting-ability
+// choice with no ability of its own sits under the variant (lineage) ability; anything left over goes to "Other choices".
+const normTrait = s => String(s || "").replace(/^Feat:\s*/i, "").replace(/\s*\(.*$/, "").trim().toLowerCase();
+export function matchChoices(defs, traits, anchor) {
+  const by = new Map(), rest = [], names = new Map(traits.map(t => [normTrait(t.name), t.name]));
+  for (const def of defs) {
+    let name = names.get(normTrait(def.trait)) || names.get(normTrait(def.from));
+    if (!name && def.kind === "ability" && anchor && names.has(normTrait(anchor))) name = names.get(normTrait(anchor));
+    if (name) { if (!by.has(name)) by.set(name, []); by.get(name).push(def); } else rest.push(def);
+  }
+  return { by, rest };
+}
+
+function traitRow(app, o, t, kind, bundle, defs) {
   const key = kind + ":" + o.name + ":" + t.name, open = app.spUi.traits.has(key);
-  const act = t.kind === "active";
-  return `<div class="sp-trait ${open ? "open" : ""} ${t.level > 1 ? "later" : ""} ${t.variant ? "variant" : ""}">
+  const act = t.kind === "active", has = defs && defs.length;
+  const pending = has && bundle.on && defs.some(d => !bundle.done(d));
+  const tag = has ? (bundle.on ? (pending ? `<span class="flag need">Choose</span>` : `<span class="flag done">Chosen</span>`) : `<span class="flag need soft">Choice</span>`) : "";
+  return `<div class="sp-trait ${open ? "open" : ""} ${t.level > 1 ? "later" : ""} ${t.variant ? "variant" : ""} ${pending ? "pending" : ""}">
     <button class="sp-tbtn" data-a="cxTrait" data-key="${esc(key)}" aria-expanded="${open}">
       <span class="grow"><b>${esc(t.name)}</b><small>${esc(t.level > 1 ? "Level " + t.level + (act && t.usage !== "Always on" ? " · " + t.usage : "") : t.usage)}</small></span>
-      <span class="flag ${act ? "act" : "pas"}">${act ? "Ability" : "Trait"}</span>
+      ${tag}<span class="flag ${act ? "act" : "pas"}">${act ? "Ability" : "Trait"}</span>
       <span class="chev">${I.chev}</span>
     </button>
-    ${open ? `<div class="about">${formatText(t.body)}</div>` : ""}
+    ${open ? `<div class="about">${formatText(t.body)}</div>${has ? `<div class="sp-inline">${bundle.on ? defs.map(d => bundle.render(d)).join("") : `<p class="sub2">You make this choice here after you choose ${esc(o.name)} below.</p>`}</div>` : ""}` : ""}
   </div>`;
 }
 function plainRow(app, o, kind, key, title, text) {
@@ -62,35 +77,38 @@ function plainRow(app, o, kind, key, title, text) {
     ${open ? `<div class="about">${formatText(text)}</div>` : ""}</div>`;
 }
 
-function detail(app, cfg, o, chosenHtml) {
+// Order: image, description, facts, variants (A to Z), abilities (a choice sits under its ability), other choices, then Choose.
+function detail(app, cfg, o) {
   const has = !!portraitFor(o.name), on = cfg.selected === o.name;
-  const facts = cfg.facts(o);
-  const all = cfg.traits(o);
-  const vr = cfg.variants ? cfg.variants(o) : null;
+  const facts = cfg.facts(o), all = cfg.traits(o), vr = cfg.variants ? cfg.variants(o) : null;
+  const bundle = cfg.choices ? cfg.choices(o) : null;
+  const mt = bundle ? matchChoices(bundle.defs, all, vr && vr.trait) : { by: new Map(), rest: [] };
   const now = cfg.laterCollapsed ? all.filter(t => t.level <= 1) : all;
   const later = cfg.laterCollapsed ? all.filter(t => t.level > 1) : [];
   const lk = cfg.kind + ":" + o.name + ":~later", lopen = app.spUi.traits.has(lk);
+  const dk = cfg.kind + ":" + o.name + ":~desc", dopen = app.spUi.traits.has(dk);
+  const desc = [cfg.lore(o), cfg.intro(o)].filter(Boolean)[0] || "";
   const upload = `<label class="btn sm sp-up">${I.cam} ${has ? "Change image" : "Add image"}<input type="file" accept="image/*" data-sp-file="${esc(o.name)}" aria-label="Choose an image for ${esc(o.name)}"></label>${has ? `<button class="btn sm" data-a="cxPortraitClear" data-name="${esc(o.name)}">Remove</button>` : ""}`;
+  const row = t => traitRow(app, o, t, cfg.kind, bundle, mt.by.get(t.name));
   return `<div class="sp-detail">
-    <div class="chooserow top"><button class="btn pri block" data-a="cxChoose" data-kind="${cfg.kind}" data-name="${esc(o.name)}" ${on ? "disabled" : ""}>${on ? "Chosen" : "Choose " + esc(o.name)}</button></div>
-    ${on && chosenHtml ? `<div class="sp-choices">${chosenHtml}</div>` : ""}
     ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${cfg.synergy && cfg.synergy(o) ? `<p class="cx-syn"><b>For your ${esc(cfg.synergyFor || "character")}</b>${esc(cfg.synergy(o))}</p>` : ""}${upload}</div></div>`}
+    ${desc ? `<div class="sp-desc ${dopen ? "open" : ""}">${formatText(desc)}</div>${String(desc).length > 420 ? `<button class="sp-more" data-a="cxTrait" data-key="${esc(dk)}" aria-expanded="${dopen}">${dopen ? "Show less" : "Read more"}</button>` : ""}` : ""}
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
     ${vr ? `<div class="sp-variants"><div class="sp-sechead"><h3>Variants</h3><span class="sub2">${esc(vr.label)}</span></div>
       <div class="vchips" role="group" aria-label="${esc(vr.label)}">${vr.options.map(v => `<button class="vchip" data-a="cxVariant" data-name="${esc(o.name)}" data-v="${esc(v.v)}" aria-pressed="${vr.cur === v.v}">${esc(v.label)}</button>`).join("")}</div></div>` : ""}
-    <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Select to read</span></div>
+    <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Select one to read it</span></div>
     <div class="sp-traits">
-      ${cfg.intro(o) ? plainRow(app, o, cfg.kind, "~intro", "Overview", cfg.intro(o)) : ""}
-      ${now.map(t => traitRow(app, o, t, cfg.kind)).join("")}
-      ${later.length ? `<div class="sp-trait ${lopen ? "open" : ""}"><button class="sp-tbtn" data-a="cxTrait" data-key="${esc(lk)}" aria-expanded="${lopen}"><span class="grow"><b>Later levels</b><small>${later.length} more features, levels ${later[0].level} to ${later[later.length - 1].level}</small></span><span class="chev">${I.chev}</span></button>${lopen ? `<div class="sp-later">${later.map(t => traitRow(app, o, t, cfg.kind)).join("")}</div>` : ""}</div>` : ""}
-      ${cfg.lore(o) ? plainRow(app, o, cfg.kind, "~lore", "About " + o.name, cfg.lore(o)) : ""}
+      ${now.map(row).join("")}
+      ${later.length ? `<div class="sp-trait ${lopen ? "open" : ""}"><button class="sp-tbtn" data-a="cxTrait" data-key="${esc(lk)}" aria-expanded="${lopen}"><span class="grow"><b>Later levels</b><small>${later.length} more features, levels ${later[0].level} to ${later[later.length - 1].level}</small></span><span class="chev">${I.chev}</span></button>${lopen ? `<div class="sp-later">${later.map(row).join("")}</div>` : ""}</div>` : ""}
     </div>
+    ${mt.rest.length ? (on ? `<div class="sp-choices"><div class="sp-sechead"><h3>Other choices</h3></div>${mt.rest.map(d => bundle.render(d)).join("")}</div>` : `<p class="sub2 sp-note">After you choose ${esc(o.name)} you also pick: ${esc(mt.rest.map(d => d.label).join(", "))}.</p>`) : ""}
     ${cfg.note ? `<p class="sub2 sp-note">${cfg.note(o)}</p>` : ""}
+    <div class="chooserow"><button class="btn pri block" data-a="cxChoose" data-kind="${cfg.kind}" data-name="${esc(o.name)}" ${on ? "disabled" : ""}>${on ? "Chosen" : "Choose " + esc(o.name)}</button></div>
   </div>`;
 }
 
 // cfg: { kind, noun, items, selected, query, sources, filterLabel, filterOptions, test(o, filter), sub(o),
-//        facts(o), intro(o), lore(o), traits(o), traitsTitle, note(o), chosen() -> html for the picked entry }
+//        facts(o), intro(o), lore(o), traits(o), traitsTitle, note(o), choices(o) -> { on, defs, render(def), done(def) } }
 export function renderCodexList(app, cfg) {
   const u = app.spUi.k[cfg.kind], fav = favs(app, cfg.kind);
   const q = (cfg.query || "").trim().toLowerCase();
@@ -119,7 +137,7 @@ export function renderCodexList(app, cfg) {
         </button>
         <button class="sp-fav" data-pop="fav:${cfg.kind}:${esc(o.name)}" data-a="cxFav" data-kind="${cfg.kind}" data-name="${esc(o.name)}" aria-pressed="${isFav}" aria-label="${isFav ? "Remove " + esc(o.name) + " from favorites" : "Add " + esc(o.name) + " to favorites"}">${I.star}</button>
       </div>
-      ${open ? detail(app, cfg, o, cfg.chosen ? cfg.chosen() : "") : ""}
+      ${open ? detail(app, cfg, o) : ""}
     </div>`;
   }
   return html;

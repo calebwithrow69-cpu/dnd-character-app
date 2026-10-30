@@ -94,6 +94,11 @@ function expertiseCount(cls, level) {
   if (!f) return 0;
   return /\bone of your\b|\bone skill\b/i.test(f.text || "") && !/\btwo\b/i.test(f.text || "") ? 1 : 2;
 }
+// "Divine Order" / "Primal Order": one feature, a few named options written as "Name. Text" paragraphs.
+const ORDER_RE = /^(Divine Order|Primal Order)$/i;
+export function parseOrderOptions(text) {
+  return String(text || "").split(/\n\s*\n/).map(p => /^([A-Z][A-Za-z' ]{2,24})\.\s+([\s\S]+)$/.exec(p.trim())).filter(Boolean).map(m => ({ name: m[1], text: m[2].trim() }));
+}
 const hasFeature = (cls, level, re) => (cls?.features || []).some(f => f.lv === level && re.test(f.name));
 
 // The ordered decisions for going to `next` (fromCreation = first-level
@@ -106,6 +111,10 @@ export function levelUpPlan(L, c, next, draft = {}, { fromCreation = false } = {
   if (next >= 3 && !c.subclass && subs.length) steps.push({ id: "subclass", label: "Subclass" });
   if (isAsiLevel(cls, next)) steps.push({ id: "asi", label: next === 19 ? "Epic boon" : "Ability or feat" });
   if (hasFeature(cls, next, /^Fighting Style$/i)) steps.push({ id: "style", label: "Fighting style" });
+  const orderFeat = (cls?.features || []).find(f => f.lv === next && ORDER_RE.test(f.name));
+  if (orderFeat) { const options = parseOrderOptions(orderFeat.text); if (options.length) steps.push({ id: "order", label: orderFeat.name, feature: orderFeat.name, options }); }
+  const langFeat = (cls?.features || []).find(f => f.lv === next && /one other language of your choice/i.test(f.text || ""));
+  if (langFeat) steps.push({ id: "language", label: "Language", feature: langFeat.name });
   const ex = expertiseCount(cls, next);
   if (ex) steps.push({ id: "expertise", label: "Expertise", n: ex });
 
@@ -121,7 +130,8 @@ export function levelUpPlan(L, c, next, draft = {}, { fromCreation = false } = {
     if (n) steps.push({ id: "options", label: g.label, n, group: g });
   }
   const slotMax = Math.max(0, ...slotRows(c.class, next).map(r => r.level));
-  if (diff("cantrips") || (open && slotMax && cls && TABLE_TAIL[cls.name]?.cantrips)) steps.push({ id: "cantrips", label: "Cantrips", n: open ? null : diff("cantrips") });
+  const extraCantrip = draft.order === "Magician" || draft.order === "Thaumaturge" ? 1 : 0; // the order's extra cantrip
+  if (diff("cantrips") || (open && slotMax && cls && TABLE_TAIL[cls.name]?.cantrips)) steps.push({ id: "cantrips", label: "Cantrips", n: open ? null : diff("cantrips") + extraCantrip });
   if (slotMax && (diff("prepared") || open)) steps.push({ id: "spells", label: "Spells", n: open ? null : diff("prepared"), maxLevel: slotMax });
   steps.push({ id: "review", label: "Review" });
   return { steps, cls, next, open, features: newFeatures(L, cls, c.subclass || draft.subclass, next) };
@@ -168,6 +178,8 @@ export function stepValidFor(c, d, step) {
       if (d.feat !== "Ability Score Improvement") return !d.featNeedsAb || !!d.featAb;
       return d.asiSplit === "2" ? !!d.a2 && c.abilities[d.a2] < 20 : !!d.a1a && !!d.a1b && d.a1a !== d.a1b;
     case "style": return !!d.style;
+    case "order": return !!d.order;
+    case "language": return !!d.language;
     case "expertise": return d.expertise.length === Math.min(step.n, expertiseOptions(c).length);
     case "mastery": return d.mastery.length === step.n;
     case "options": return d.options.length === step.n;
