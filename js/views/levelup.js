@@ -43,8 +43,8 @@ export function hpGain(c, d) {
 
 export function stepValid(app, step) { return stepValidFor(app.char, app.lvl, step); }
 const why = {
-  gains: "", hp: "Roll the die or take the average.", subclass: "Pick a subclass.", asi: "Choose your increase or a feat.",
-  style: "Pick a fighting style.", cantrips: "Pick all your cantrips, or press Randomize.", expertise: "Pick your expertise skills.", mastery: "Pick your weapons.", options: "Make your picks."
+  gains: "", hp: "Roll or take the average.", subclass: "Choose a subclass.", asi: "Choose an ability increase or a feat.",
+  style: "Choose a fighting style.", cantrips: "Choose all your cantrips.", expertise: "Choose your expertise skills.", mastery: "Choose your weapons.", options: "Make your picks."
 };
 
 const expertiseChoices = expertiseOptions;
@@ -183,7 +183,7 @@ export function levelBody(app) {
 
   else if (step.id === "asi") {
     const fi = asiFeatItems(app);
-    body = `<p class="small muted">In the 2024 rules an Ability Score Improvement is a feat. Pick one: a General feat, an Origin feat, or Ability Score Improvement itself. Tap a feat to read it.</p>
+    body = `<p class="small muted">In the 2024 rules an Ability Score Improvement is a feat. Choose one: a General feat, an Origin feat, or Ability Score Improvement itself. Tap a feat to read it.</p>
       ${renderFeatChosen(app)}
       <div style="margin-top:12px">${searchBox("lvl", d.query, "Search feats")}</div>${renderFeatControls(app, fi)}
       <div id="lvl-results">${renderLevelResults(app)}</div>${renderFeatSheet(app, fi, d.feat, "lvlFeat")}`;
@@ -196,7 +196,7 @@ export function levelBody(app) {
 
   else if (step.id === "expertise") {
     const opts = expertiseChoices(c);
-    body = `<p class="small muted">Expertise doubles your proficiency bonus for a skill. Pick ${step.n} you're already proficient in. ${d.expertise.length}/${Math.min(step.n, opts.length)} chosen.</p>
+    body = `<p class="small muted">Expertise doubles your proficiency bonus for a skill. Choose ${step.n} you're already proficient in. ${d.expertise.length}/${Math.min(step.n, opts.length)} chosen.</p>
       <div class="optlist">${opts.map(s => {
         const on = d.expertise.includes(s.id);
         return `<button class="optcard" data-a="lvlExpertise" data-id="${s.id}" aria-pressed="${on}" ${!on && d.expertise.length >= step.n ? "disabled" : ""}>
@@ -207,7 +207,7 @@ export function levelBody(app) {
   else if (step.id === "mastery") {
     const have = c.masteries || [];
     const ws = allWeapons(L, app.campaign).filter(w => w.mastery && !have.includes(w.name)).sort((a, b) => a.name.localeCompare(b.name));
-    body = `<p class="small muted">Mastery unlocks a weapon's special trick (shown on each). Pick ${step.n}. ${d.mastery.length}/${step.n} chosen.</p>
+    body = `<p class="small muted">Mastery unlocks a weapon's special trick (shown on each). Choose ${step.n}. ${d.mastery.length}/${step.n} chosen.</p>
       <div class="optlist">${pickList(ws, d.mastery, "lvlMastery", { kind: "mastery", max: step.n, detail: masteryDetail, render: w => `${esc(w.mastery)} · ${esc(w.cat || "")} ${esc(w.kind || "")}` })}</div>`;
   }
 
@@ -216,7 +216,7 @@ export function levelBody(app) {
     const have = c.choices[g.key] || [];
     const picked = new Set([...have, ...d.options]);
     const opts = g.options.filter(o => !have.includes(o.name));
-    body = `<p class="small muted">Pick ${step.n}. ${d.options.length}/${step.n} chosen. Tap (i) to read any of them, even locked ones.</p>
+    body = `<p class="small muted">Choose ${step.n}. ${d.options.length}/${step.n} chosen. Tap (i) to read any of them, even locked ones.</p>
       <div class="optlist">${opts.map(o => {
         const pre = optionPrereq(o);
         const lockedLevel = pre.level > d.next;
@@ -268,7 +268,7 @@ export function levelBody(app) {
   }
 
   const RAND = { subclass: "subclass", style: "fighting style", expertise: "expertise", mastery: "weapons", options: "picks", cantrips: "cantrips", spells: "spells" };
-  if (RAND[step.id]) body = `<div class="randrow"><button class="btn sm" data-a="lvlRandomStep">Randomize ${RAND[step.id]}</button><span class="small muted">Fills this screen. Change anything after.</span></div>` + body;
+  if (RAND[step.id]) body = `<div class="randrow"><button class="btn sm" data-a="lvlRandomStep">Randomize ${RAND[step.id]}</button><span class="small muted">Fills this screen. Editable.</span></div>` + body;
   return { body, step, plan: p };
 }
 export const levelWhy = id => why[id] || "";

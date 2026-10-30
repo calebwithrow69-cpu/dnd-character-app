@@ -22,13 +22,13 @@ import { makeItem, fitsOk, wearKind } from "./gear.js";
 // The manual builder walks these in order. Each chapter groups
 // related decisions and knows how to validate itself.
 export const CHAPTERS = [
-  { id: "class",      title: "Class",           short: "Class" },
-  { id: "species",    title: "Species",         short: "Species" },
-  { id: "background", title: "Background",      short: "Background" },
-  { id: "abilities",  title: "Ability Scores",  short: "Abilities" },
-  { id: "classOpts",  title: "Skills and Gear", short: "Skills & gear" },
-  { id: "classChoices", title: "Class Choices", short: "Class choices" },
-  { id: "finish",     title: "Name and Finish", short: "Finish" },
+  { id: "class",      title: "Class",           short: "Class", help: "Sets your hit point die, proficiencies and level 1 features." },
+  { id: "species",    title: "Species",         short: "Species", help: "Sets your size, speed and species traits." },
+  { id: "background", title: "Background",      short: "Background", help: "Grants two skills, a tool proficiency, a feat and your ability score increases." },
+  { id: "abilities",  title: "Ability Scores",  short: "Abilities", help: "Set your six ability scores, then apply your background increases. A star marks your class\u2019s primary ability." },
+  { id: "classOpts",  title: "Skills and Gear", short: "Skills & gear", help: "Choose your class skills and starting equipment." },
+  { id: "classChoices", title: "Class Choices", short: "Class choices", help: "Choose your level 1 class options." },
+  { id: "finish",     title: "Name and Finish", short: "Finish", help: "Enter a name and review your character." },
 ];
 export const ALIGNMENTS = ["Lawful Good", "Neutral Good", "Chaotic Good", "Lawful Neutral", "Neutral", "Chaotic Neutral", "Lawful Evil", "Neutral Evil", "Chaotic Evil", "Unaligned"];
 
@@ -222,13 +222,13 @@ export function validateChapter(chapterId, d, app) {
 
   if (chapterId === "abilities") {
     const vals = Object.values(d.base);
-    if (vals.some(v => v < 3 || v > 20)) reasons.push("Each ability score must be 3\u201320.");
-    if (d.pointBuy && pbSpent(d) > PB_BUDGET) reasons.push(`Point buy allows ${PB_BUDGET} points; you have spent ${pbSpent(d)}.`);
+    if (vals.some(v => v < 3 || v > 20)) reasons.push("Scores must be 3 to 20.");
+    if (d.pointBuy && pbSpent(d) > PB_BUDGET) reasons.push(`Over budget: ${pbSpent(d)} of ${PB_BUDGET} points spent.`);
     if (!d.background) reasons.push("Choose a background first.");
     else {
       const bonusOk = !bgAbilities(app, d).length || d.bonusMode === "111" ||
         (!!d.plus2 && !!d.plus1 && d.plus1 !== d.plus2);
-      if (!bonusOk) reasons.push("Choose your background ability bonuses.");
+      if (!bonusOk) reasons.push("Choose your background increases.");
     }
   }
 
@@ -237,44 +237,41 @@ export function validateChapter(chapterId, d, app) {
   }
 
   if (chapterId === "classOpts") {
-    if (!choicesDone(app, d, "class")) reasons.push("Finish your class tool choices.");
+    if (!choicesDone(app, d, "class")) reasons.push("Choose your class tool.");
     const { from, n } = classSkillOptions(app, d);
     const avail = from.filter(id => !takenSkills(app, d).includes(id)).length;
-    if (d.classSkills.length !== Math.min(n, avail)) reasons.push(`Pick ${Math.min(n, avail)} class skill${n > 1 ? "s" : ""}.`);
+    if (d.classSkills.length !== Math.min(n, avail)) reasons.push(`Choose ${Math.min(n, avail)} class skill${n > 1 ? "s" : ""}.`);
     // equipment
-    if (!d.equipClass) reasons.push("Choose your class starting gear.");
-    if (!d.equipBg) reasons.push("Choose your background starting gear.");
+    if (!d.equipClass) reasons.push("Choose your class equipment.");
+    if (!d.equipBg) reasons.push("Choose your background equipment.");
     const gc = gearChoices(app, d);
-    if (gc.some(g => !g.fixed && !d.picks[g.id])) reasons.push("Pick each item marked \u201cchoose\u201d in your gear.");
+    if (gc.some(g => !g.fixed && !d.picks[g.id])) reasons.push("Finish the item picks in your gear.");
   }
 
   if (chapterId === "species") {
     if (!d.species) reasons.push("Choose a species.");
-    if (d.species && !choicesDone(app, d, "species")) reasons.push("Finish your species choices.");
+    if (d.species && !choicesDone(app, d, "species")) reasons.push("Finish the picks under your species.");
   }
 
   if (chapterId === "background") {
     if (!d.background) reasons.push("Choose a background.");
     if (d.background) {
-      if (!choicesDone(app, d, "bg")) reasons.push("Finish your background choices.");
+      if (!choicesDone(app, d, "bg")) reasons.push("Finish the picks under your background.");
     }
   }
 
   if (chapterId === "classChoices") {
     const cp = choicePlan(d, app);
     if (!cp) reasons.push("Choose a class, species and background first.");
-    else if (!cp.ok) reasons.push("Make each class choice to continue.");
+    else if (!cp.ok) reasons.push("Finish every class pick.");
   }
 
   if (chapterId === "finish") {
     for (const ch of CHAPTERS) {
       if (ch.id === "finish") break;
-      if (!validateChapter(ch.id, d, app).valid) reasons.push(`${ch.short}: still incomplete.`);
+      if (!validateChapter(ch.id, d, app).valid) reasons.push(`${ch.short}: unfinished.`);
     }
-    if (!d.name.trim()) reasons.push("Give your character a name.");
-    if (!d.alignment) reasons.push("Choose an alignment.");
-    if (!(d.appearance || "").trim()) reasons.push("Describe your character's appearance.");
-    if (!(d.backstory || "").trim()) reasons.push("Write a short backstory and personality.");
+    if (!d.name.trim()) reasons.push("Enter a name.");
   }
 
   return { valid: reasons.length === 0, reasons };
@@ -312,7 +309,7 @@ export function unresolvedDecisions(d, app) {
     const avail = from.filter(id => !takenSkills(app, d).includes(id)).length;
     const need = Math.min(n, avail);
     if (d.classSkills.length < need)
-      push("classOpts", "Class skills", `Pick ${need - d.classSkills.length} more skill${need - d.classSkills.length > 1 ? "s" : ""}`);
+      push("classOpts", "Class skills", `Choose ${need - d.classSkills.length} more skill${need - d.classSkills.length > 1 ? "s" : ""}`);
     if (!d.equipClass) push("classOpts", "Class gear", "Choose starting gear option");
     if (!d.equipBg) push("classOpts", "Background gear", "Choose starting gear option");
     gearChoices(app, d).forEach(g => {
@@ -344,9 +341,6 @@ export function unresolvedDecisions(d, app) {
     if (cp && !cp.ok) push("classChoices", "Class choices", "Make each class choice");
   }
   if (!d.name.trim()) push("finish", "Name", "Give your character a name");
-  if (!d.alignment) push("finish", "Alignment", "Choose an alignment");
-  if (!(d.appearance || "").trim()) push("finish", "Appearance", "Describe your character");
-  if (!(d.backstory || "").trim()) push("finish", "Backstory", "Write a short backstory");
 
   return out;
 }

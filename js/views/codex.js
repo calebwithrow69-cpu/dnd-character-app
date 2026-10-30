@@ -78,7 +78,7 @@ function detail(app, cfg, o, chosenHtml) {
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
     ${vr ? `<div class="sp-variants"><div class="sp-sechead"><h3>Variants</h3><span class="sub2">${esc(vr.label)}</span></div>
       <div class="vchips" role="group" aria-label="${esc(vr.label)}">${vr.options.map(v => `<button class="vchip" data-a="cxVariant" data-name="${esc(o.name)}" data-v="${esc(v.v)}" aria-pressed="${vr.cur === v.v}">${esc(v.label)}</button>`).join("")}</div></div>` : ""}
-    <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Tap one to read it</span></div>
+    <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Select to read</span></div>
     <div class="sp-traits">
       ${cfg.intro(o) ? plainRow(app, o, cfg.kind, "~intro", "Overview", cfg.intro(o)) : ""}
       ${now.map(t => traitRow(app, o, t, cfg.kind)).join("")}
@@ -95,7 +95,7 @@ export function renderCodexList(app, cfg) {
   const u = app.spUi.k[cfg.kind], fav = favs(app, cfg.kind);
   const q = (cfg.query || "").trim().toLowerCase();
   let items = cfg.items.filter(o => (u.filter === "All" || cfg.test(o, u.filter)) && (!q || o.name.toLowerCase().includes(q)));
-  if (!items.length) return `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`;
+  if (!items.length) return `<p class="muted small" style="padding:12px 0">No matches.</p>`;
   const src = s => s || "No source";
   const by = (a, b) => a.name.localeCompare(b.name);
   const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : o.name[0].toUpperCase();

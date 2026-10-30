@@ -23,7 +23,7 @@ import {
 const firstLineOf = t => { const s = String(t || "").split("\n")[0]; return s.length > 90 ? s.slice(0, 88) + "\u2026" : s; };
 const LIST_KINDS = ["class", "species", "background"];
 export const chapterId = d => CHAPTERS[d.chapter] ? CHAPTERS[d.chapter].id : CHAPTERS[0].id;
-const NOTE = "A Trait is always on. An Ability takes an action or has limited uses. Those two tags and the usage line are this app's reading of the text; the words inside each one are the book's, unchanged.";
+const NOTE = "Trait: always on. Ability: you use it. Tags are this app's reading; the text is the book's.";
 
 
 // ---- one choice (skill, feat, lineage, spell\u2026)
@@ -42,13 +42,13 @@ export function renderChoice(app, d, def) {
   const cur = [].concat(d.picks[def.id] || []);
   const full = cur.length >= def.n;
   const head = `<div class="choice-head"><h3>${esc(def.label)}</h3>
-      <span class="sub2">${esc(def.trait && def.trait !== def.label ? def.trait + " \u00b7 " : "")}${esc(def.from)}${def.n > 1 ? ` \u00b7 pick ${def.n} (${cur.length}/${def.n})` : ""}</span></div>
+      <span class="sub2">${esc(def.trait && def.trait !== def.label ? def.trait + " \u00b7 " : "")}${esc(def.from)}${def.n > 1 ? ` \u00b7 choose ${def.n} (${cur.length}/${def.n})` : ""}</span></div>
       ${def.hint ? `<p class="small muted">${esc(def.hint)}</p>` : ""}`;
   if (def.kind === "text") {
-    return `<div class="choice">${head}<input class="f" data-pick-text="${esc(def.id)}" value="${esc(d.picks[def.id] || "")}" placeholder="${esc(def.placeholder || "Your choice")}" autocomplete="off">
+    return `<div class="choice">${head}<input class="f" data-pick-text="${esc(def.id)}" value="${esc(d.picks[def.id] || "")}" placeholder="${esc(def.placeholder || "Type here")}" autocomplete="off">
       <p class="sub2" style="margin-top:4px">Optional.</p></div>`;
   }
-  if (!opts.length) return `<div class="choice">${head}<p class="small muted">${def.kind === "spell" ? "Choose the spell list above first." : "No options available."}</p></div>`;
+  if (!opts.length) return `<div class="choice">${head}<p class="small muted">${def.kind === "spell" ? "Choose the spell list first." : "No options available."}</p></div>`;
   const rich = opts.some(o => o.detail || o.term);
   if (!rich) {
     return `<div class="choice">${head}<div class="chips">${opts.map(o => {
@@ -71,7 +71,7 @@ export function renderTileChoice(app, d, def) {
   const cur = [].concat(d.picks[def.id] || []);
   const full = cur.length >= def.n;
   const head = `<div class="choice-head"><h3>${esc(def.label)}</h3>
-      <span class="sub2">${esc(def.trait && def.trait !== def.label ? def.trait + " \u00b7 " : "")}${def.n > 1 ? `pick ${def.n} (${cur.length}/${def.n})` : "pick one"}</span></div>
+      <span class="sub2">${esc(def.trait && def.trait !== def.label ? def.trait + " \u00b7 " : "")}${def.n > 1 ? `choose ${def.n} (${cur.length}/${def.n})` : "choose one"}</span></div>
       ${def.hint && def.kind !== "text" ? `<p class="small muted">${esc(def.hint)}</p>` : ""}`;
   if (def.kind === "text") return renderChoice(app, d, def);
   if (!opts.length) return renderChoice(app, d, def);
@@ -94,7 +94,7 @@ function renderBonus(app, d) {
       ${opts.filter(a => a !== exclude).map(a => `<option value="${a}" ${d[key] === a ? "selected" : ""}>${ABILITY_LABEL[a]}</option>`).join("")}
     </select>`;
   return `<div class="choice"><div class="choice-head"><h3>Ability score increases</h3><span class="sub2">${esc(d.background)}</span></div>
-    <p class="small">Raise ${opts.map(a => ABILITY_LABEL[a]).join(", ")}.${cls ? ` ${esc(cls.name)}s rely most on <b>${esc(cls.primary)}</b>.` : ""}</p>
+    <p class="small">Raise ${opts.map(a => ABILITY_LABEL[a]).join(", ")}.${cls ? ` ${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
     <div class="seg" role="group" aria-label="Bonus type" style="margin-top:8px">
       <button data-a="bonusMode" data-mode="21" aria-pressed="${d.bonusMode === "21"}">+2 and +1</button>
       <button data-a="bonusMode" data-mode="111" aria-pressed="${d.bonusMode === "111"}">+1 to all three</button>
@@ -117,7 +117,7 @@ function renderEquipGroup(app, d, which) {
       const list = o.items.map((i, k) => { const g = gc.find(x => x.index === k); const nm = g ? (g.fixed || d.picks[g.id] || i.name) : i.name; return `${i.qty > 1 ? i.qty + " \u00d7 " : ""}${nm}`; }).join(", ");
       return `<button class="optcard" data-a="pickEquip" data-which="${key}" data-k="${o.key}" aria-pressed="${on}">
         <span class="grow"><b>${o.items.length ? `Option ${o.key}: gear + ${fmtPrice(o.gp)}` : `Option ${o.key}: ${fmtPrice(o.gp)} to spend`}</b>
-        <span>${esc(list || "Buy your own gear in the shop after you finish.")}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
+        <span>${esc(list || "No gear. Spend the gold in the Gear tab shop.")}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
         ${on ? gearChoices(app, d).filter(g => g.which === which && !g.fixed).map(g => `<div class="field gearpick"><label>Choose: ${esc(g.label)}</label>
           <select class="f" data-gear-pick="${esc(g.id)}"><option value="">Choose\u2026</option>
           ${g.options.map(o => `<option value="${esc(o)}" ${d.picks[g.id] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`).join("") : ""}`;
@@ -150,7 +150,7 @@ function cfgFor(app, d, kind) {
         const out = [];
         parseSpecies(s).traits.forEach(t => {
           if (vd && t.name === vd.trait) {
-            out.push({ name: t.name, kind: t.kind === "active" && sel ? "passive" : t.kind, usage: sel ? "Pick a variant below" : t.usage, level: t.level, body: stripVariantText(t.body, vd) || t.body });
+            out.push({ name: t.name, kind: t.kind === "active" && sel ? "passive" : t.kind, usage: sel ? "Choose a variant below" : t.usage, level: t.level, body: stripVariantText(t.body, vd) || t.body });
             if (sel) {
               const o = vd.options.find(x => x.v === sel), det = String((o && o.detail) || ""), cl = classifyText(det);
               out.push({ name: (o && o.label) || sel, variant: true, kind: /^Level \d/.test(det) ? "passive" : cl.kind, usage: /^Level \d/.test(det) ? vd.label : cl.usage, level: 1, body: det || "No description." });
@@ -164,17 +164,17 @@ function cfgFor(app, d, kind) {
         return { label: vd.label, cur: selectedVariant(app, d, s, vd), options: vd.options.map(o => ({ v: o.v, label: o.v })) };
       },
       traitsTitle: "Traits and abilities",
-      chosen: () => { const vd = variantDef(findByName(L.species, d.species), L, C); const hint = vd && !d.picks[vd.id] ? `<p class="sub2">Pick a variant (${esc(vd.label)}) above.</p>` : ""; return hint + draftChoices(app, d, "species").filter(def => !vd || def.id !== vd.id).map(def => renderTileChoice(app, d, def)).join(""); }
+      chosen: () => { const vd = variantDef(findByName(L.species, d.species), L, C); const hint = vd && !d.picks[vd.id] ? `<p class="sub2">Choose your ${esc(vd.label.toLowerCase())} below.</p>` : ""; return hint + draftChoices(app, d, "species").filter(def => !vd || def.id !== vd.id).map(def => renderTileChoice(app, d, def)).join(""); }
     };
   }
   if (kind === "class") {
     const items = enabledClasses(L, C);
     const caster = c => (c.features || []).some(f => /^(Spellcasting|Pact Magic)$/i.test(f.name));
     return {
-      ...base, items, selected: d.class, noun: "classes", sources: new Set(items.map(c => c.source)).size > 1, filterLabel: "Type",
-      filterOptions: ["All", "Spellcasters", "Martial"], test: (c, f) => f === "Spellcasters" ? caster(c) : !caster(c),
-      sub: c => `d${c.hd} hit die \u00b7 ${c.primary || ""}${caster(c) ? " \u00b7 Spellcaster" : ""}`,
-      facts: c => [["Hit die", "d" + c.hd], ["Primary ability", c.primary], ["Saving throws", parseList(c.saves).join(", ")],
+      ...base, items, selected: d.class, noun: "classes", sources: new Set(items.map(c => c.source)).size > 1, filterLabel: "Show",
+      filterOptions: ["All", "Spellcasters", "Non-spellcasters"], test: (c, f) => f === "Spellcasters" ? caster(c) : !caster(c),
+      sub: c => `Primary: ${c.primary || "?"} \u00b7 d${c.hd} hit die${caster(c) ? " \u00b7 Spellcaster" : ""}`,
+      facts: c => [["Hit Point Die", "d" + c.hd], ["Primary ability", c.primary], ["Saving throws", parseList(c.saves).join(", ")],
         ["Armor training", c.armorProf || "None"], ["Weapon training", c.weaponProf], c.toolProf ? ["Tool training", c.toolProf] : null,
         ["Skills", `Choose ${c.skillN}: ${parseList(c.skillFrom).join(", ")}`]].filter(Boolean).filter(f => f[1]),
       lore: c => c.desc || "", laterCollapsed: true,
@@ -210,7 +210,7 @@ function cfgFor(app, d, kind) {
       return { name: "Feat: " + n, kind: "passive", usage: "Granted at level 1", level: 1, body: f ? f.text : "Tap the feat name on your sheet to read it." };
     }),
     traitsTitle: "What you get",
-    note: () => "Raise two or three of these ability scores (+2/+1, or +1 each) on the Ability scores step.",
+    note: () => "Its bonus goes on your scores in the next step.",
     chosen: () => draftChoices(app, d, "bg").map(def => renderTileChoice(app, d, def)).join("")
   };
 }
@@ -254,30 +254,30 @@ function progressSheet(app, d) {
   const complete = CHAPTERS.filter(c => validateChapter(c.id, d, app).valid).length;
   return `<div class="modal-back" data-a="closeProgressBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-label="Progress so far">
     <div class="modal-head"><h2>Progress so far</h2><button class="iconbtn" data-a="closeProgress" aria-label="Close">&times;</button></div>
-    <div class="modal-body">${rows}<p class="sub2" style="margin-top:12px">${complete} of ${CHAPTERS.length} chapters complete. Later chapters unlock as you finish the ones before them.</p></div></div></div>`;
+    <div class="modal-body">${rows}<p class="sub2" style="margin-top:12px">${complete} of ${CHAPTERS.length} steps done. Finish a step to unlock the next.</p></div></div></div>`;
 }
 
 // ---- chapter bodies
 function abilitiesBody(app, d) {
   const fin = finalAbilities(app, d), cls = findByName(app.library.classes, d.class);
   const sug = suggestedArray(app, d.class);
-  return `<p class="small muted">${cls ? `${esc(cls.name)}s rely most on <b>${esc(cls.primary)}</b>. ` : ""}Set your base scores first, then apply your background's bonus below.</p>
+  return `<p class="small muted">${cls ? `${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>. ` : ""}Set base scores here. Background bonus is below.</p>
     <div class="btnrow" style="margin-top:10px">
       ${sug ? `<button class="btn sm pri" data-a="suggestedArray">Suggested for ${esc(d.class)}</button>` : ""}
       <button class="btn sm" data-a="standardArray">Standard array</button>
       <button class="btn sm${d.pointBuy ? " pri" : ""}" data-a="cxPointBuy">Point buy</button>
       <button class="btn sm" data-a="rollStats">Roll 4d6 for each</button>
     </div>
-    ${d.pointBuy ? `<p class="cx-budget"><b class="num" id="cx-pbleft">${PB_BUDGET - pbSpent(d)}</b> of ${PB_BUDGET} points left. Scores run 8 to 15 before your background bonus.</p>` : ""}
-    ${d.rolls ? `<p class="sub2" style="margin-top:6px">Your roll is saved: ${ABILITIES.map(a => d.rolls[a]).join(", ")}. Reloading will not roll again.</p>` : ""}
+    ${d.pointBuy ? `<p class="cx-budget"><b class="num" id="cx-pbleft">${PB_BUDGET - pbSpent(d)}</b> of ${PB_BUDGET} points left. Scores run 8 to 15 before the background bonus.</p>` : ""}
+    ${d.rolls ? `<p class="sub2" style="margin-top:6px">Rolled: ${ABILITIES.map(a => d.rolls[a]).join(", ")}. Saved.</p>` : ""}
     <div class="grid3 ${app._cxPop ? "cx-pop" : ""}" style="margin-top:12px">
       ${ABILITIES.map((a, i) => `<div class="abil ${cls && String(cls.primary || "").includes(ABILITY_LABEL[a]) ? "cx-prime" : ""}" style="--i:${i}"><label><span class="an">${ABILITY_LABEL[a]}${cls && String(cls.primary || "").includes(ABILITY_LABEL[a]) ? ' <i title="Primary ability for ' + esc(cls.name) + '">&#9733;</i>' : ""}</span>
         <input type="number" inputmode="numeric" min="3" max="20" data-draft-ability="${a}" value="${d.base[a]}" aria-label="${ABILITY_LABEL[a]} base score">
         <span class="as" data-final="${a}">${fin[a] !== d.base[a] ? "\u2192 " + fin[a] + " " : ""}(${fmtMod(abilityMod(fin[a]))})</span></label>
         ${d.pointBuy ? `<div class="cx-pb"><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="-1" aria-label="Lower ${ABILITY_LABEL[a]}" ${d.base[a] <= 8 ? "disabled" : ""}>-</button><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="1" aria-label="Raise ${ABILITY_LABEL[a]}" ${d.base[a] >= 15 ? "disabled" : ""}>+</button></div>` : ""}</div>`).join("")}
     </div>
-    <p class="sub2" style="margin-top:8px">Under each score: final score and modifier.</p>
-    ${renderBonus(app, d) || `<p class="muted small" style="margin-top:12px">Choose a background first to see its bonus.</p>`}`;
+    <p class="sub2" style="margin-top:8px">Under each score: final score (modifier).</p>
+    ${renderBonus(app, d) || `<p class="muted small" style="margin-top:12px">Choose a background to see its increases.</p>`}`;
 }
 
 function skillsGearBody(app, d) {
@@ -287,14 +287,14 @@ function skillsGearBody(app, d) {
   const subs = subclassesFor(app.library, d.class), lvl = app.campaign.startingLevel || 1;
   return `<div class="stack">
     ${toolDefs.map(def => renderChoice(app, d, def)).join("")}
-    <div class="choice"><div class="choice-head"><h3>Class skills</h3><span class="sub2">Pick ${need} \u00b7 ${d.classSkills.length}/${need} chosen</span></div>
+    <div class="choice"><div class="choice-head"><h3>Class skills</h3><span class="sub2">Choose ${need} \u00b7 ${d.classSkills.length}/${need}</span></div>
       <div class="optlist">
-        ${taken.map(id => `<div class="optcard locked" aria-pressed="true"><input type="checkbox" checked disabled><span class="grow"><b>${esc(SKILLS.find(s => s.id === id).label)}</b><span>Already yours</span></span></div>`).join("")}
+        ${taken.map(id => `<div class="optcard locked" aria-pressed="true"><input type="checkbox" checked disabled><span class="grow"><b>${esc(SKILLS.find(s => s.id === id).label)}</b><span>You have this</span></span></div>`).join("")}
         ${choices.map(id => { const on = d.classSkills.includes(id), s = SKILLS.find(x => x.id === id);
           return `<label class="optcard" aria-pressed="${on}"><input type="checkbox" data-a="toggleSkill" data-id="${id}" ${on ? "checked" : ""} ${!on && d.classSkills.length >= need ? "disabled" : ""}><span class="grow"><b>${esc(s.label)}</b><span>${ABILITY_LABEL[s.ability]}</span></span></label>`; }).join("")}
       </div></div>
     ${renderEquipGroup(app, d, "class")}${renderEquipGroup(app, d, "bg")}
-    <p class="sub2">Gear is added to inventory and equipped. Spend gold in the Gear tab shop.</p></div>`;
+    <p class="sub2">Equipment goes in your inventory, equipped. Spend gold later in the Gear tab.</p></div>`;
 }
 
 function choiceLines(app, d) {
@@ -315,7 +315,7 @@ function choiceLines(app, d) {
 function classChoicesBody(app, d) {
   const cp = choicePlan(d, app);
   if (!cp) return `<p class="muted">Choose a class, species and background first.</p>`;
-  if (!cp.steps.length) return `<p>${esc(d.class)} has nothing to choose at level ${cp.tmp.level}. Continue to the last step.</p>`;
+  if (!cp.steps.length) return `<p>${esc(d.class)} has no level ${cp.tmp.level} picks. Tap Continue.</p>`;
   const { body, step } = levelBody(app);
   const l = cp.lvl;
   const pills = cp.steps.map((st, i) => {
@@ -354,11 +354,11 @@ function finishBody(app, d) {
       <input class="f" id="f-name" value="${esc(d.name)}" placeholder="e.g. Gandork the Green" autocomplete="off" enterkeyhint="next"></div>
     <div class="btnrow" style="margin-top:8px"><button class="btn sm" data-a="randomName">Random name</button></div>
     <div class="grid2" style="margin-top:12px">
-      <div class="field"><label for="f-align">Alignment</label><select class="f" id="f-align" data-draft="alignment"><option value="">Choose...</option>${ALIGNMENTS.map(a => `<option ${d.alignment === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
+      <div class="field"><label for="f-align">Alignment (optional)</label><select class="f" id="f-align" data-draft="alignment"><option value="">Choose...</option>${ALIGNMENTS.map(a => `<option ${d.alignment === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
       <div class="field"><label>Languages</label><input class="f" value="${esc(["Common", ...[].concat(d.picks["bg:lang"] || [])].join(", "))}" disabled aria-label="Languages from your background"></div>
     </div>
-    <div class="field" style="margin-top:12px"><label for="f-look">Appearance</label><textarea class="f" id="f-look" rows="3" data-draft-text="appearance" placeholder="Height, build, hair, scars, clothing">${esc(d.appearance || "")}</textarea></div>
-    <div class="field" style="margin-top:12px"><label for="f-story">Backstory and personality</label><textarea class="f" id="f-story" rows="5" data-draft-text="backstory" placeholder="Where you come from, what you want, how you act">${esc(d.backstory || "")}</textarea></div>
+    <div class="field" style="margin-top:12px"><label for="f-look">Appearance (optional)</label><textarea class="f" id="f-look" rows="3" data-draft-text="appearance" placeholder="Height, build, hair, scars, clothing">${esc(d.appearance || "")}</textarea></div>
+    <div class="field" style="margin-top:12px"><label for="f-story">Backstory and personality (optional)</label><textarea class="f" id="f-story" rows="5" data-draft-text="backstory" placeholder="Where from, what they want, how they act">${esc(d.backstory || "")}</textarea></div>
     <div class="choice"><div class="choice-head"><h3>Summary</h3></div><dl class="kv">
       <dt>Class</dt><dd>${esc(d.class)}, level ${lvl}</dd><dt>Species</dt><dd>${esc(d.species)}</dd><dt>Background</dt><dd>${esc(d.background)}</dd>
       <dt>Abilities</dt><dd class="num">${ABILITIES.map(a => `${a.toUpperCase()} ${fin[a]}`).join(" \u00b7 ")}</dd>
@@ -461,15 +461,15 @@ export function renderCreate(app) {
   let tools = "", content = "";
   if (LIST_KINDS.includes(id)) {
     const cfg = cfgFor(app, d, id);
-    tools = `<button class="btn sm" data-a="randomPick">Surprise me</button>`;
-    if (id !== "class" && d[id] && draftChoices(app, d, id === "species" ? "species" : "bg").length) tools += ` <button class="btn sm" data-a="randomChoices">Pick my choices</button>`;
-    if (id === "class") tools += ` <button class="btn sm" data-a="randomAll">Make everything random</button>`;
+    tools = `<button class="btn sm" data-a="randomPick">Randomize</button>`;
+    if (id !== "class" && d[id] && draftChoices(app, d, id === "species" ? "species" : "bg").length) tools += ` <button class="btn sm" data-a="randomChoices">Randomize choices</button>`;
+    if (id === "class") tools += ` <button class="btn sm" data-a="randomAll">Randomize everything</button>`;
     if (id === "background") tools += ` <button class="btn sm" data-a="openCustomBg">Custom background</button>`;
     content = `${renderControls(app, cfg)}${searchBox("wizard", d.query, `Search ${cfg.items.length} ${cfg.noun}`)}
       <div class="sp-list" id="wizard-results">${renderWizardResults(app)}</div>`;
   } else if (id === "abilities") content = abilitiesBody(app, d);
   else if (id === "classOpts") {
-    tools = `<button class="btn sm" data-a="randomSkills">Pick skills for me</button>` + (gearChoices(app, d).some(g => !g.fixed) ? ` <button class="btn sm" data-a="randomGear">Pick gear for me</button>` : "");
+    tools = `<button class="btn sm" data-a="randomSkills">Randomize skills</button>` + (gearChoices(app, d).some(g => !g.fixed) ? ` <button class="btn sm" data-a="randomGear">Randomize equipment</button>` : "");
     content = skillsGearBody(app, d);
   } else if (id === "classChoices") content = classChoicesBody(app, d);
   else content = finishBody(app, d);
@@ -483,7 +483,7 @@ export function renderCreate(app) {
         <section class="cx-stage" aria-label="${esc(ch.title)}">
           <div class="steprow" aria-hidden="true">${CHAPTERS.map((_, i) => `<div class="step ${i <= d.chapter ? "done" : ""}"></div>`).join("")}</div>
           ${tools ? `<div class="wiztools">${tools}</div>` : ""}
-          <div class="panel"><div class="panel-body">${content}</div></div>
+          <div class="panel"><div class="panel-body">${ch.help ? `<p class="cx-help">${esc(ch.help)}${LIST_KINDS.includes(id) ? " Select a row to view it, then Choose." : ""}</p>` : ""}${content}</div></div>
         </section>
         <aside class="cx-sheet" aria-label="Your character so far">${sheetInner(app, d, reach)}</aside>
       </div>

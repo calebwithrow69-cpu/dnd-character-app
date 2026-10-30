@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.24";
+export const VERSION = "0.1.25";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.25",
+    date: "2026-10-30",
+    stage: "Pre-build",
+    blurb: "Plainer character creation.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Every creation step now opens with one line saying what it sets, in plain rules terms.",
+          "Class rows read Primary ability, hit die and Spellcaster. The class filter is Spellcasters / Non-spellcasters.",
+          "Shorter, neutral prompts and messages across creation and level-up (Choose, Select, Randomize). Alignment, appearance and backstory are now optional on the last step. Fixed a species hint that said a variant row was above when it is below."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.24",
     date: "2026-10-30",
