@@ -23,7 +23,7 @@ import { cxStop, cxSeal } from "./cxfx.js";
 import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
 import { emblemFor } from "./emblems.js";
 import {
-  CHAPTERS, ALIGNMENTS, blankDraft, saveDraft, loadDraft, clearDraft, validateChapter, validateAll, buildCharacter,
+  CHAPTERS, ALIGNMENTS, blankDraft, saveDraft, loadDraft, clearDraft, pruneDraftToLibrary, cleanName, validateChapter, validateAll, buildCharacter,
   bgAbilities, classSkillOptions, takenSkills, suggestedArray, gearChoices, finalAbilities,
   choicePlan, rollAndLock, applySuggestedArray, applyStandardArray, generateRandom, randomizeStep, startPointBuy, pointBuyStep, PB_BUDGET, pbSpent,
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
@@ -138,7 +138,11 @@ async function init() {
   fetch("data/seed-gandork.json").then(r => (r.ok ? r.json() : null)).then(d => { APP.seedGandork = d; if (APP.screen === "roster" || APP.screen === "home") render(); }).catch(() => { });
 
   APP.screen = "home";
-  { const dr = loadDraft(); if (dr && typeof dr.chapter === "number" && dr.base && dr.picks) { APP.createDraft = dr; APP.screen = "create"; } }
+  // Resume a draft left in progress (saved on this device, kept for 24 hours). A damaged or outdated draft is rebuilt or dropped, never crashes the start.
+  { let dr = null; try { dr = loadDraft(); } catch (e) { clearDraft(); }
+    if (dr && (dr.class || dr.species || dr.background || cleanName(dr.name))) {
+      try { APP.createDraft = pruneDraftToLibrary(dr, APP); APP.screen = "create"; history.pushState({ cx: 1 }, ""); } catch (e) { APP.createDraft = null; APP.screen = "home"; clearDraft(); }
+    } }
 
   if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindContext(); APP._eventsBound = true; }
   render();
@@ -555,7 +559,9 @@ function bindEvents() {
   document.addEventListener("keydown", e => { if (e.key === "Escape" && APP.progressOpen) { APP.progressOpen = false; render(); } else if (e.key === "Escape" && APP.featUi && APP.featUi.open) { APP.featUi.open = null; render(); } else if (e.key === "Escape" && APP.modal) closeModal(); });
   window.addEventListener("popstate", () => {
     if (APP._ignorePop) { APP._ignorePop = false; return; }
-    if (APP.modal) { APP.modal = null; render(); }
+    if (APP.modal) { APP.modal = null; render(); return; }
+    // Back during character creation steps back one chapter instead of leaving the app
+    if (APP.screen === "create" && APP.createDraft && APP.createDraft.chapter > 0) ACTIONS.prevStep();
   });
 
   // Hidden: hold a die for about a second.
@@ -704,7 +710,7 @@ function onInput(e) {
   }
   if (ds.draftAbility && APP.createDraft) {
     const v = parseInt(el.value, 10);
-    if (!isNaN(v)) APP.createDraft.base[ds.draftAbility] = Math.max(1, Math.min(30, v));
+    if (!isNaN(v)) { APP.createDraft.base[ds.draftAbility] = Math.max(1, Math.min(30, v)); APP.createDraft.scoresSet = true; }
     if (APP.createDraft.pointBuy) { APP.createDraft.pointBuy = false; document.querySelectorAll(".cx-pb, .cx-budget").forEach(e => e.remove()); }
     refreshWizardChrome(); return;
   }
@@ -813,7 +819,7 @@ document.addEventListener("focusout", () => setTimeout(flushRender, 0));
 // ---------------- actions ----------------
 const ACTIONS = {
   // roster
-  newChar() { clearDraft(); APP.createDraft = blankDraft(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.screen = "create"; render(); window.scrollTo(0, 0); },
+  newChar() { clearDraft(); APP.createDraft = blankDraft(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.screen = "create"; try { history.pushState({ cx: 1 }, ""); } catch (e) { } render(); window.scrollTo(0, 0); },
   importGandork() {
     if (!APP.seedGandork) return;
     store.saveCharacter(store.normalize(APP.seedGandork, APP.library));
@@ -1014,17 +1020,19 @@ const ACTIONS = {
       const cp = choicePlan(d, APP);
       if (cp && cp.lvl.step < cp.steps.length - 1) {
         if (!stepValidFor(cp.tmp, cp.lvl, cp.steps[cp.lvl.step])) return;
-        cp.lvl.step += 1; cp.lvl.query = ""; render(); window.scrollTo(0, 0); return;
+        cp.lvl.step += 1; cp.lvl.query = ""; try { history.pushState({ cx: 1 }, ""); } catch (e) { } render(); window.scrollTo(0, 0); return;
       }
     }
     if (!validateChapter(chapterId(d), d, APP).valid) return;
     d.chapter = Math.min(CHAPTERS.length - 1, d.chapter + 1); d.query = "";
+    try { history.pushState({ cx: 1 }, ""); } catch (e) { }
     render(); window.scrollTo(0, 0);
   },
   gotoChapter(el) {
     const d = APP.createDraft;
     const i = el.dataset.id != null ? CHAPTERS.findIndex(c => c.id === el.dataset.id) : +el.dataset.i;
     if (i < 0 || i > reachIndex(APP, d)) return;
+    if (i > d.chapter) { try { history.pushState({ cx: 1 }, ""); } catch (e) { } }
     d.chapter = i; d.query = ""; APP.progressOpen = false; render(); window.scrollTo(0, 0);
   },
   openProgress() { APP.progressOpen = true; render(); },
@@ -1061,8 +1069,14 @@ const ACTIONS = {
     APP.spUi.variant[name] = APP.spUi.variant[name] === v ? null : v; spRefresh();
   },
   cxChoose(el) {
-    const kind = el.dataset.kind, name = el.dataset.name;
+    const kind = el.dataset.kind, name = el.dataset.name, d0 = APP.createDraft;
+    const field = { species: "species", class: "class", background: "background" }[kind];
+    const keys = Object.keys(d0.picks), changed = d0[field] && d0[field] !== name;
+    const lost = changed && (kind === "class" ? d0.classSkills.length > 0 || d0.equipClass !== "A" || keys.some(k => /^(cls:|gear:class)/.test(k))
+      : kind === "background" ? !!(d0.plus2 || d0.plus1) || d0.equipBg !== "A" || keys.some(k => /^(bg:|gear:bg)/.test(k))
+      : keys.some(k => k.startsWith("sp:")));
     ACTIONS[{ species: "pickSpecies", class: "pickClass", background: "pickBackground" }[kind]]({ dataset: { name } });
+    if (lost) toast(kind === "class" ? "Class changed. Class skills and class equipment were reset." : kind === "background" ? "Background changed. Ability increases, background picks and equipment were reset." : "Species changed. Species picks were reset.");
     if (kind === "species") {
       const pv = APP.spUi.variant && APP.spUi.variant[name], vd = pv && variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
       if (vd && APP.createDraft.species === name && vd.options.some(o => o.v === pv)) { APP.createDraft.picks[vd.id] = pv; render(); }
@@ -1143,11 +1157,12 @@ const ACTIONS = {
   },
   randomAll() {
     const d = APP.createDraft, any = l => l[Math.floor(Math.random() * l.length)];
+    const typed = { name: cleanName(d.name), alignment: d.alignment, appearance: (d.appearance || "").trim(), backstory: (d.backstory || "").trim() };
     generateRandom(d, APP, {});
-    if (!d.name.trim()) d.name = randomName();
-    d.alignment = any(ALIGNMENTS);
-    d.appearance = `${any(["Tall and lean", "Short and sturdy", "Broad-shouldered", "Slight and quick", "Weathered and wiry"])}, with ${any(["close-cropped", "braided", "wild", "silver-streaked", "dark and tied-back"])} hair and ${any(["a scar across one brow", "ink-stained fingers", "a crooked grin", "calloused hands", "mismatched eyes"])}.`;
-    d.backstory = `A ${d.background.toLowerCase()} turned adventurer, ${d.name.split(" ")[0]} left home ${any(["after a debt came due", "chasing a rumor", "to keep a promise", "when the harvest failed", "with nothing left to lose"])}. ${any(["Blunt and loyal", "Curious to a fault", "Wary of strangers but fiercely protective of friends", "Cheerful, even when it is unwise", "Quiet, watchful and slow to trust"])}.`;
+    d.name = typed.name || randomName();
+    d.alignment = typed.alignment || any(ALIGNMENTS);
+    d.appearance = typed.appearance || `${any(["Tall and lean", "Short and sturdy", "Broad-shouldered", "Slight and quick", "Weathered and wiry"])}, with ${any(["close-cropped", "braided", "wild", "silver-streaked", "dark and tied-back"])} hair and ${any(["a scar across one brow", "ink-stained fingers", "a crooked grin", "calloused hands", "mismatched eyes"])}.`;
+    d.backstory = typed.backstory || `A ${d.background.toLowerCase()} turned adventurer, ${d.name.split(" ")[0]} left home ${any(["after a debt came due", "chasing a rumor", "to keep a promise", "when the harvest failed", "with nothing left to lose"])}. ${any(["Blunt and loyal", "Curious to a fault", "Wary of strangers but fiercely protective of friends", "Cheerful, even when it is unwise", "Quiet, watchful and slow to trust"])}.`;
     d.chapter = CHAPTERS.length - 1; d.query = "";
     render(); window.scrollTo(0, 0); toast("Random character ready. Review it and change anything you like");
   },
@@ -1158,6 +1173,7 @@ const ACTIONS = {
   },
   finishCreate() {
     const d = APP.createDraft;
+    if (!d || !validateAll(d, APP).valid) { toast("Finish every step before creating the character"); return; } // also stops a second tap while the sheet opens
     const cp = choicePlan(d, APP);
     const char = store.normalize(buildCharacter(d, APP), APP.library);
     const sealHue = (d.species ? emblemFor("species", d.species) : emblemFor("class", d.class)).hue;

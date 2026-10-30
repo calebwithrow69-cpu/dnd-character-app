@@ -54,6 +54,7 @@ export function blankDraft() {
     equipBg: "A",
     rolls: null,           // { str, dex, ... } locked dice results, null = not rolled
     pointBuy: false,       // true while the scores are being set with the 27-point budget
+    scoresSet: false,      // true once the player has chosen how to set the scores (method button or typing)
     mode: "manual",        // "manual" | "generate" | "template"
     templateId: null,
     lvl: null,             // level-1 class choices (subclass, spells, invocations...), same shape as the level-up draft
@@ -64,16 +65,65 @@ export function blankDraft() {
 // \u2500\u2500\u2500 Persistence \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const STORAGE_KEY = "dnd-creation-draft-v1";
 
-export function saveDraft(draft) {
-  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft)); } catch (e) { /* quota */ }
+const DRAFT_MAX_AGE = 24 * 3600 * 1000; // a draft older than a day is dropped, not reopened
+// Zero-width and soft-hyphen characters make a name look blank while passing a plain trim().
+export const cleanName = s => String(s == null ? "" : s).replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "").replace(/\s+/g, " ").trim();
+
+// A saved draft can come from an older version of the app or be damaged. Rebuild it on top of a blank draft so every
+// field exists with the right type; anything unusable falls back to blank. Returns null when it is not a draft at all.
+export function sanitizeDraft(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const d = blankDraft(), str = v => (typeof v === "string" ? v : "");
+  for (const k of ["name", "alignment", "appearance", "backstory", "species", "class", "background", "subclass", "plus2", "plus1", "equipClass", "equipBg"]) {
+    if (typeof raw[k] === "string") d[k] = raw[k];
+  }
+  d.bonusMode = raw.bonusMode === "111" ? "111" : "21";
+  const base = raw.base && typeof raw.base === "object" ? raw.base : {};
+  for (const a of ABILITIES) { const v = Number(base[a]); d.base[a] = Number.isInteger(v) && v >= 3 && v <= 20 ? v : 10; }
+  d.picks = raw.picks && typeof raw.picks === "object" && !Array.isArray(raw.picks) ? { ...raw.picks } : {};
+  d.classSkills = Array.isArray(raw.classSkills) ? raw.classSkills.filter(x => typeof x === "string") : [];
+  d.rolls = raw.rolls && typeof raw.rolls === "object" ? raw.rolls : null;
+  d.pointBuy = raw.pointBuy === true;
+  d.lvl = raw.lvl && typeof raw.lvl === "object" && Array.isArray(raw.lvl.expertise) ? raw.lvl : null;
+  const ch = Number(raw.chapter);
+  d.chapter = Number.isInteger(ch) ? Math.max(0, Math.min(CHAPTERS.length - 1, ch)) : 0;
+  d.scoresSet = typeof raw.scoresSet === "boolean" ? raw.scoresSet : ABILITIES.some(a => d.base[a] !== 10);
+  d.ts = Number(raw.ts) || Date.now();
+  d.savedAt = Number(raw.savedAt) || 0;
+  d.query = "";
+  return d;
 }
+// The rules file can change between sessions (a class removed from the allowlist, say). Drop picks that no longer exist.
+export function pruneDraftToLibrary(d, app) {
+  const L = app.library;
+  const fix = (field, list, chapterId) => {
+    if (d[field] && !findByName(list, d[field])) {
+      d[field] = "";
+      const i = CHAPTERS.findIndex(c => c.id === chapterId); if (d.chapter > i) d.chapter = i;
+    }
+  };
+  fix("class", L.classes, "class"); fix("species", L.species, "species"); fix("background", L.backgrounds, "background");
+  return d;
+}
+
+export function saveDraft(draft) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...draft, savedAt: Date.now() })); } catch (e) { /* quota */ }
+}
+// Drafts live in localStorage so closing the app or switching apps mid-creation does not lose the character.
+// An older draft in sessionStorage is still picked up once.
 export function loadDraft() {
+  let raw = null;
+  try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { /* blocked */ }
+  if (!raw) { try { raw = sessionStorage.getItem(STORAGE_KEY); } catch (e) { /* blocked */ } }
+  if (!raw) return null;
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) { return null; }
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.savedAt && Date.now() - parsed.savedAt > DRAFT_MAX_AGE) { clearDraft(); return null; }
+    return sanitizeDraft(parsed);
+  } catch (e) { clearDraft(); return null; }
 }
 export function clearDraft() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ok */ }
   try { sessionStorage.removeItem(STORAGE_KEY); } catch (e) { /* ok */ }
 }
 
@@ -90,6 +140,7 @@ export function finalAbilities(app, d) {
     if (d.plus2) out[d.plus2] += 2;
     if (d.plus1 && d.plus1 !== d.plus2) out[d.plus1] += 1;
   }
+  for (const a of ABILITIES) out[a] = Math.min(20, out[a]); // background increases cannot raise a score above 20
   return out;
 }
 
@@ -224,6 +275,7 @@ export function validateChapter(chapterId, d, app) {
     const vals = Object.values(d.base);
     if (vals.some(v => v < 3 || v > 20)) reasons.push("Scores must be 3 to 20.");
     if (d.pointBuy && pbSpent(d) > PB_BUDGET) reasons.push(`Over budget: ${pbSpent(d)} of ${PB_BUDGET} points spent.`);
+    if (!d.scoresSet) reasons.push("Choose how to set your ability scores.");
     if (!d.background) reasons.push("Choose a background first.");
     else {
       const bonusOk = !bgAbilities(app, d).length || d.bonusMode === "111" ||
@@ -269,9 +321,10 @@ export function validateChapter(chapterId, d, app) {
   if (chapterId === "finish") {
     for (const ch of CHAPTERS) {
       if (ch.id === "finish") break;
-      if (!validateChapter(ch.id, d, app).valid) reasons.push(`${ch.short}: unfinished.`);
+      const r = validateChapter(ch.id, d, app);
+      if (!r.valid) reasons.push(`${ch.short}: ${(r.reasons[0] || "unfinished").replace(/\.$/, "")}.`);
     }
-    if (!d.name.trim()) reasons.push("Enter a name.");
+    if (!cleanName(d.name)) reasons.push("Enter a name.");
   }
 
   return { valid: reasons.length === 0, reasons };
@@ -340,7 +393,8 @@ export function unresolvedDecisions(d, app) {
     const cp = choicePlan(d, app);
     if (cp && !cp.ok) push("classChoices", "Class choices", "Make each class choice");
   }
-  if (!d.name.trim()) push("finish", "Name", "Give your character a name");
+  if (!cleanName(d.name)) push("finish", "Name", "Enter a name");
+  if (!d.scoresSet) push("abilities", "Ability scores", "Choose how to set your scores");
 
   return out;
 }
@@ -457,18 +511,18 @@ export function pickBackground(d, app, name) {
 export const PB_BUDGET = 27;
 export const PB_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 export const pbSpent = d => ABILITIES.reduce((n, a) => n + (PB_COST[d.base[a]] ?? 0), 0);
-export function startPointBuy(d) { d.base = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 }; d.rolls = null; d.pointBuy = true; }
+export function startPointBuy(d) { d.base = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 }; d.rolls = null; d.pointBuy = true; d.scoresSet = true; }
 export function pointBuyStep(d, a, dir) {
   const v = d.base[a], n = v + dir;
   if (!(n in PB_COST) || !d.pointBuy) return false;
   if (dir > 0 && pbSpent(d) - PB_COST[v] + PB_COST[n] > PB_BUDGET) return false;
-  d.base[a] = n; return true;
+  d.base[a] = n; d.scoresSet = true; return true;
 }
 export function rollAndLock(d) {
   const rolls = {};
   for (const a of ABILITIES) rolls[a] = roll4d6DropLowest();
   d.rolls = rolls;
-  d.pointBuy = false;
+  d.pointBuy = false; d.scoresSet = true;
   d.base = { ...rolls };
   return rolls;
 }
@@ -476,7 +530,7 @@ export function rollAndLock(d) {
 export function applySuggestedArray(d, app) {
   const sug = suggestedArray(app, d.class);
   if (sug) {
-    d.base = { ...sug };
+    d.base = { ...sug }; d.scoresSet = true;
     d.rolls = null; // suggested array replaces any roll
     d.pointBuy = false;
   }
@@ -486,7 +540,7 @@ export function applySuggestedArray(d, app) {
 export function applyStandardArray(d, app) {
   const cls = findByName(app.library.classes, d.class);
   d.base = standardArray(primaryAbility(cls?.primary));
-  d.rolls = null; d.pointBuy = false;
+  d.rolls = null; d.pointBuy = false; d.scoresSet = true;
 }
 
 // \u2500\u2500\u2500 Auto-equip (from create.js, now shared) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -528,7 +582,7 @@ export function buildCharacter(d, app) {
   const bgFeat = feats.length > 1 ? d.picks["bg:feat"] : feats[0];
 
   const char = {
-    schema: 2, id: newId(), name: d.name.trim(), species: d.species, class: d.class,
+    schema: 2, id: newId(), name: cleanName(d.name).slice(0, 60), species: d.species, class: d.class,
     subclass: d.subclass || "", level, background: d.background,
     abilities, saveProf: saves,
     skillProf: [...new Set([...bgSkills(app, d), ...d.classSkills])], skillExpertise: [],
@@ -607,7 +661,7 @@ export function generateRandom(d, app, constraints = {}) {
     const cls = findByName(L.classes, d.class);
     d.base = standardArray(primaryAbility(cls?.primary));
   }
-  d.rolls = null;
+  d.rolls = null; d.scoresSet = true;
 
   // Background bonuses
   const bgAb = bgAbilities(app, d);

@@ -2,11 +2,33 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.25";
+export const VERSION = "0.1.26";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.26",
+    date: "2026-10-30",
+    stage: "Pre-build",
+    blurb: "Character creation no longer loses or breaks characters.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "A character in progress is kept on this device for 24 hours, so closing the app or switching apps no longer loses it.",
+          "A damaged or outdated saved draft is repaired or dropped instead of leaving a blank screen.",
+          "The Back button steps back one creation step instead of leaving the app.",
+          "Ability scores can no longer be left at the default 10s: choose Suggested, Standard array, Point buy, Roll, or type your own.",
+          "Background increases can no longer push a score above 20.",
+          "Randomize everything keeps the name, alignment, appearance and backstory you already wrote.",
+          "Changing class, species or background after making picks now says what was reset.",
+          "Names made only of invisible characters are rejected, and names are limited to 60 characters.",
+          "Create character checks every step again before it builds the character."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.25",
     date: "2026-10-30",

@@ -351,7 +351,7 @@ function finishBody(app, d) {
   const open = unresolvedDecisions(d, app).filter(x => x.chapter !== "finish");
   const picks = choiceLines(app, d);
   return `<div class="field"><label for="f-name">Character name</label>
-      <input class="f" id="f-name" value="${esc(d.name)}" placeholder="e.g. Gandork the Green" autocomplete="off" enterkeyhint="next"></div>
+      <input class="f" id="f-name" value="${esc(d.name)}" placeholder="e.g. Gandork the Green" maxlength="60" autocomplete="off" enterkeyhint="next"></div>
     <div class="btnrow" style="margin-top:8px"><button class="btn sm" data-a="randomName">Random name</button></div>
     <div class="grid2" style="margin-top:12px">
       <div class="field"><label for="f-align">Alignment (optional)</label><select class="f" id="f-align" data-draft="alignment"><option value="">Choose...</option>${ALIGNMENTS.map(a => `<option ${d.alignment === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>

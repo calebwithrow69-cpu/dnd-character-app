@@ -637,6 +637,48 @@ await check("characters survive a reload", async () => {
   noErrs(p); await p.context().close();
 });
 
+await check("creation: a damaged or outdated saved draft opens cleanly instead of a blank screen", async () => {
+  for (const draft of [{ chapter: 99, base: {}, picks: {}, class: "Fighter" }, { chapter: 3, base: {}, picks: {}, class: "Fighter", species: "Human", background: "Soldier" }, { chapter: 4, base: {}, picks: {}, class: "Nonexistent" }]) {
+    const p = await open(390, 844, { touch: true });
+    await p.evaluate(d => localStorage.setItem("dnd-creation-draft-v1", JSON.stringify({ ...d, savedAt: Date.now() })), draft);
+    await p.reload(); await p.waitForTimeout(1500);
+    assert((await p.evaluate(() => document.body.innerText.trim().length)) > 40, "blank screen for draft " + JSON.stringify(draft));
+    noErrs(p); await p.context().close();
+  }
+});
+
+await check("creation: a character in progress survives closing and reopening the app", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar");
+  await p.locator('[data-a="cxOpen"][data-kind="class"]').first().click(); await p.waitForTimeout(300); await clickA(p, "cxChoose");
+  const cls = await p.evaluate(() => APP.createDraft.class); assert(cls, "no class chosen");
+  const ctx = p.context(), store = await p.evaluate(() => JSON.stringify(localStorage));
+  await p.close(); const q = await ctx.newPage(); await q.goto(URL_); await q.waitForSelector('[data-a="nextStep"], #home-book', { timeout: 15000 });
+  assert((await q.evaluate(() => APP.createDraft && APP.createDraft.class)) === cls, "draft not restored; storage: " + store.slice(0, 80));
+  await ctx.close();
+});
+
+await check("creation: the Back button steps back one chapter", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForTimeout(800);
+  const last = await p.evaluate(() => APP.createDraft.chapter); assert(last >= 5, "random did not reach the last chapter");
+  await p.evaluate(() => { APP.createDraft.chapter = 2; }); await clickA(p, "nextStep").catch(() => {}); // pushes a history entry
+  const at = await p.evaluate(() => APP.createDraft.chapter); await p.goBack(); await p.waitForTimeout(500);
+  assert((await p.evaluate(() => APP.createDraft.chapter)) === at - 1 && await p.evaluate(() => APP.screen === "create"), "Back left creation or did not step back");
+  noErrs(p); await p.context().close();
+});
+
+await check("creation: ability scores need a method, and Randomize everything keeps typed text", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar");
+  const r = await p.evaluate(async () => { const m = await import("/js/creation.js"); const d = APP.createDraft; d.class = "Fighter"; d.species = "Human"; d.background = "Soldier"; d.plus2 = "str"; d.plus1 = "dex";
+    const before = m.validateChapter("abilities", d, APP).valid; m.applyStandardArray(d, APP); return { before, after: m.validateChapter("abilities", d, APP).valid }; });
+  assert(!r.before && r.after, "default scores passed or standard array did not: " + JSON.stringify(r));
+  await p.evaluate(() => { const d = APP.createDraft; d.name = "Zed the Careful"; d.backstory = "Typed by hand."; d.appearance = "Typed look"; d.alignment = "Lawful Good"; d.chapter = 0; });
+  await p.evaluate(() => { window.dispatchEvent(new Event("resize")); }); await clickA(p, "openProgress").catch(() => {}); await clickA(p, "closeProgress").catch(() => {});
+  await clickA(p, "randomAll"); await p.waitForTimeout(1200);
+  const t = await p.evaluate(() => ({ n: APP.createDraft.name, b: APP.createDraft.backstory, a: APP.createDraft.appearance, al: APP.createDraft.alignment }));
+  assert(t.n === "Zed the Careful" && t.b === "Typed by hand." && t.a === "Typed look" && t.al === "Lawful Good", "typed text overwritten: " + JSON.stringify(t));
+  noErrs(p); await p.context().close();
+});
+
 await browser.close(); server.close(); rmSync(tmp, { recursive: true, force: true });
 const failed = results.filter(r => !r[0]);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
