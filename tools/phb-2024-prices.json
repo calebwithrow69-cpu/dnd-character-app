@@ -1,0 +1,57 @@
+{
+  "_comment": "2024 Player's Handbook / SRD 5.2 equipment prices in gold pieces. Applied to data/library.json by tools/apply-phb-prices.mjs. Aliases are other names the rules file uses for the same item.",
+  "gear": {
+    "Acid": { "gp": 25, "aliases": ["Acid Vial"] }, "Alchemist's Fire": { "gp": 50 }, "Antitoxin": { "gp": 50 }, "Backpack": { "gp": 2 },
+    "Ball Bearings": { "gp": 1 }, "Barrel": { "gp": 2 }, "Basket": { "gp": 0.4 }, "Bedroll": { "gp": 1 }, "Bell": { "gp": 1 }, "Blanket": { "gp": 0.5 },
+    "Block and Tackle": { "gp": 1 }, "Book": { "gp": 25 }, "Bottle, Glass": { "gp": 2, "aliases": ["Glass Bottle"] }, "Bucket": { "gp": 0.05 },
+    "Caltrops": { "gp": 1 }, "Candle": { "gp": 0.01 }, "Chain": { "gp": 5 }, "Chest": { "gp": 5 }, "Climber's Kit": { "gp": 25 },
+    "Clothes, Fine": { "gp": 15, "aliases": ["Fine Clothes"] }, "Clothes, Traveler's": { "gp": 2, "aliases": ["Traveler's Clothes"] },
+    "Component Pouch": { "gp": 25 }, "Costume": { "gp": 5 }, "Crowbar": { "gp": 2 }, "Flask": { "gp": 0.02 }, "Grappling Hook": { "gp": 2 },
+    "Healer's Kit": { "gp": 5 }, "Holy Water": { "gp": 25 }, "Hunting Trap": { "gp": 5 }, "Ink": { "gp": 10 }, "Ink Pen": { "gp": 0.02 }, "Jug": { "gp": 0.02 },
+    "Ladder": { "gp": 0.1 }, "Lamp": { "gp": 0.5 }, "Lantern, Bullseye": { "gp": 10, "aliases": ["Bullseye Lantern"] }, "Lantern, Hooded": { "gp": 5, "aliases": ["Hooded Lantern"] },
+    "Lock": { "gp": 10 }, "Magnifying Glass": { "gp": 100 }, "Manacles": { "gp": 2 }, "Map": { "gp": 1 }, "Map or Scroll Case": { "gp": 1 }, "Mirror": { "gp": 5 },
+    "Net": { "gp": 1 }, "Oil": { "gp": 0.1 }, "Paper": { "gp": 0.2 }, "Parchment": { "gp": 0.1 }, "Perfume": { "gp": 5 }, "Poison, Basic": { "gp": 100, "aliases": ["Basic Poison"] },
+    "Pole": { "gp": 0.05 }, "Pot, Iron": { "gp": 2, "aliases": ["Iron pot"] }, "Pouch": { "gp": 0.5 }, "Quiver": { "gp": 1 }, "Crossbow Bolt Case": { "gp": 1 },
+    "Ram, Portable": { "gp": 4, "aliases": ["Portable Ram"] }, "Rations": { "gp": 0.5 }, "Robe": { "gp": 1 }, "Rope": { "gp": 1 }, "Sack": { "gp": 0.01 }, "Shovel": { "gp": 2 },
+    "Signal Whistle": { "gp": 0.05, "aliases": ["Signal Wistle"] }, "Spellbook": { "gp": 50 }, "Spell Scroll, Cantrip": { "gp": 30, "aliases": ["Spell Scroll (Cantrip)"] },
+    "Spell Scroll, Level 1": { "gp": 50, "aliases": ["Spell Scroll (Level 1)"] }, "Spikes, Iron": { "gp": 1, "aliases": ["Iron Spike", "Iron Spikes"] }, "Spyglass": { "gp": 1000 },
+    "String": { "gp": 0.1 }, "Tent": { "gp": 2 }, "Tinderbox": { "gp": 0.5 }, "Torch": { "gp": 0.01 }, "Vial": { "gp": 1 }, "Waterskin": { "gp": 0.2 }
+  },
+  "packs": {
+    "Burglar's Pack": { "gp": 16 }, "Diplomat's Pack": { "gp": 39 }, "Dungeoneer's Pack": { "gp": 12 }, "Entertainer's Pack": { "gp": 40 },
+    "Explorer's Pack": { "gp": 10 }, "Priest's Pack": { "gp": 33 }, "Scholar's Pack": { "gp": 40 }
+  },
+  "ammunition": {
+    "Arrows": { "gp": 1 }, "Bolts": { "gp": 1 }, "Firearm Bullets": { "gp": 3, "aliases": ["Bullets, Firearm"] }, "Needles": { "gp": 1 }, "Sling Bullets": { "gp": 0.04, "aliases": ["Bullets, Sling"] }
+  },
+  "focus": {
+    "Crystal": { "gp": 10 }, "Orb": { "gp": 20 }, "Rod": { "gp": 10 }, "Staff": { "gp": 5 }, "Wand": { "gp": 10 },
+    "Sprig of Mistletoe": { "gp": 1 }, "Totem": { "gp": 1 }, "Wooden Staff": { "gp": 5 }, "Yew Wand": { "gp": 10 },
+    "Amulet": { "gp": 5 }, "Emblem": { "gp": 5 }, "Reliquary": { "gp": 5 }
+  },
+  "tools": {
+    "Alchemist's Supplies": { "gp": 50 }, "Brewer's Supplies": { "gp": 20 }, "Calligrapher's Supplies": { "gp": 10 }, "Carpenter's Tools": { "gp": 8 },
+    "Cartographer's Tools": { "gp": 15 }, "Cobbler's Tools": { "gp": 5, "aliases": ["Cobbler's tools"] }, "Cook's Utensils": { "gp": 1 }, "Glassblower's Tools": { "gp": 30 },
+    "Jeweler's Tools": { "gp": 25 }, "Leatherworker's Tools": { "gp": 5 }, "Mason's Tools": { "gp": 10 }, "Painter's Supplies": { "gp": 10 }, "Potter's Tools": { "gp": 10 },
+    "Smith's Tools": { "gp": 20 }, "Tinker's Tools": { "gp": 50 }, "Weaver's Tools": { "gp": 1 }, "Woodcarver's Tools": { "gp": 1 },
+    "Disguise Kit": { "gp": 25 }, "Forgery Kit": { "gp": 15 }, "Herbalism Kit": { "gp": 5 }, "Navigator's Tools": { "gp": 25 }, "Poisoner's Kit": { "gp": 50 }, "Thieves' Tools": { "gp": 25 },
+    "Dice Set": { "gp": 0.1, "aliases": ["Dice", "Gaming Set (Dice)"] }, "Dragonchess Set": { "gp": 1, "aliases": ["Dragonchess"] }, "Playing Card Set": { "gp": 0.5, "aliases": ["Playing Cards"] },
+    "Three-Dragon Ante Set": { "gp": 1, "aliases": ["Three-Dragon Ante"] },
+    "Bagpipes": { "gp": 30 }, "Drum": { "gp": 6 }, "Dulcimer": { "gp": 25 }, "Flute": { "gp": 2 }, "Horn": { "gp": 3 }, "Lute": { "gp": 35 }, "Lyre": { "gp": 30 },
+    "Pan Flute": { "gp": 12 }, "Shawm": { "gp": 2 }, "Viol": { "gp": 30 }
+  },
+  "mounts": {
+    "Pack Saddle": { "gp": 5 }, "Riding Saddle": { "gp": 10 }, "Military Saddle": { "gp": 20 }, "Exotic Saddle": { "gp": 60 }
+  },
+  "weapons": {
+    "Club": 0.1, "Dagger": 2, "Greatclub": 0.2, "Handaxe": 5, "Javelin": 0.5, "Light Hammer": 2, "Mace": 5, "Quarterstaff": 0.2, "Sickle": 1, "Spear": 1,
+    "Dart": 0.05, "Crossbow, Light": 25, "Shortbow": 25, "Sling": 0.1,
+    "Battleaxe": 10, "Flail": 10, "Glaive": 20, "Greataxe": 30, "Greatsword": 50, "Halberd": 20, "Lance": 10, "Longsword": 15, "Maul": 10, "Morningstar": 15,
+    "Pike": 5, "Rapier": 25, "Scimitar": 25, "Shortsword": 10, "Trident": 5, "War Pick": 5, "Warhammer": 15, "Whip": 2,
+    "Blowgun": 10, "Crossbow, Hand": 75, "Crossbow, Heavy": 50, "Longbow": 50, "Musket": 500, "Pistol": 250
+  },
+  "armor": {
+    "Padded Armor": 5, "Leather Armor": 10, "Studded Leather Armor": 45, "Hide Armor": 10, "Chain Shirt": 50, "Scale Mail": 50, "Breastplate": 400,
+    "Half Plate Armor": 750, "Ring Mail": 30, "Chain Mail": 75, "Splint Armor": 200, "Plate Armor": 1500, "Shield": 10
+  }
+}

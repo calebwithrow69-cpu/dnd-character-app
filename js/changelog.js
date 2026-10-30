@@ -19,6 +19,14 @@ export const CHANGELOG = [
           "Skills and Gear now has a Shop. It lists weapons, armor, shields and tools your class and background train you in, plus ordinary adventuring gear, and spends the gold from your equipment options.",
           "Magic items are not sold at creation. Changing class, background or equipment trims your shop list to what you can still afford and are trained to use."
         ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Shop prices now follow the 2024 Player's Handbook. Magic item prices are unchanged.",
+          "Added gear that was missing: Totem, Wooden Staff, and the Pack, Riding and Military saddles. Crossbows now show in the shop, and gear that was listed twice under two names is listed once.",
+          "Nine items named after Elder Scrolls gods were renamed: Crown of Might, Candle of Last Stand, Gambler's Coin, Stormbreath Feather, Inspiring Rose, Scale of Swiftness, Scroll of Wizardry, Radiant Grenade and Tear of Mercy. Characters who already own one keep the old name until you rename it."
+        ]
       }
     ]
   },

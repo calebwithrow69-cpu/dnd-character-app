@@ -81,4 +81,28 @@ test("a shopping list that costs more than the gold blocks Skills and Gear", () 
   const d = draftFor("Fighter"); d.equipClass = "A"; d.equipBg = "A"; d.cart = [{ name: "Plate Armor", qty: 1 }];
   assert(C.validateChapter("classOpts", d, app).reasons.includes("Your shopping list costs more than your gold."));
 });
+test("prices are the 2024 Player's Handbook prices", () => {
+  const price = n => { const i = library.items.find(x => x.name === n); return i && i.price; };
+  const want = { Backpack: 2, Rope: 1, Torch: 0.01, "Thieves' Tools": 25, "Calligrapher's Supplies": 10, Lute: 35, "Burglar's Pack": 16, "Dungeoneer's Pack": 12, Acid: 25, Arrows: 1, Quiver: 1, Spyglass: 1000, "Potion of Healing": 50, "Chain Mail": 75, Longsword: 15 };
+  for (const [n, gp] of Object.entries(want)) assert(price(n) === gp, n + " is " + price(n) + ", expected " + gp);
+  const cross = library.weapons.filter(w => /crossbow/i.test(w.name)).map(w => w.name + "=" + w.price).join(",");
+  assert(cross === "Crossbow, Light=25,Crossbow, Hand=75,Crossbow, Heavy=50", cross);
+});
+test("every weapon has a price and the crossbows are sold", () => {
+  assert(library.weapons.every(w => w.price > 0), "unpriced weapon: " + library.weapons.filter(w => !(w.price > 0)).map(w => w.name));
+  const w = names(draftFor("Fighter"), "Weapons"); assert(w.includes("Crossbow, Light") && w.includes("Crossbow, Heavy") && w.includes("Longbow"), "crossbows or bows missing");
+});
+test("each item is for sale once (no second name for the same gear)", () => {
+  const rows = C.creationStock(app, draftFor("Fighter")).map(r => r.name), dup = rows.filter((n, i) => rows.indexOf(n) !== i);
+  assert(dup.length === 0, "listed twice: " + dup.join(","));
+  for (const n of ["Acid Vial", "Signal Wistle", "Iron Spike", "Battle Axe", "Light Crossbow"]) assert(!rows.includes(n), n + " is still listed");
+});
+test("missing gear was added and is for sale", () => {
+  const rows = C.creationStock(app, draftFor("Fighter")).map(r => r.name);
+  for (const n of ["Totem", "Wooden Staff", "Pack Saddle", "Riding Saddle", "Military Saddle", "Acid", "Arrows", "Quiver", "Spellbook"]) assert(rows.includes(n), n + " not for sale");
+});
+test("no item is named after an Elder Scrolls deity", () => {
+  const re = /Akatosh|Arkay|Dibella|Julianos|Kynareth|\bMara\b|Stendarr|Zenithar|Talos|Azura|Boethiah|Hircine|Mehrunes|Molag|Sheogorath|Vivec|Almalexia/;
+  const bad = library.items.filter(i => re.test(i.name)).map(i => i.name); assert(bad.length === 0, bad.join(", "));
+});
 console.log(`\n${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);
