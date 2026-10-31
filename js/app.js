@@ -562,7 +562,7 @@ function bindEvents() {
     if (APP._ignorePop) { APP._ignorePop = false; return; }
     if (APP.modal) { APP.modal = null; render(); return; }
     // Back during character creation steps back one chapter instead of leaving the app
-    if (APP.screen === "create" && APP.createDraft && APP.createDraft.chapter > 0) ACTIONS.prevStep();
+    if (APP.screen === "create" && APP.createDraft) { if (APP.createDraft.chapter > 0) ACTIONS.prevStep(); else toast("Your character is saved. Press Back again to leave."); }
   });
 
   // Hidden: hold a die for about a second.

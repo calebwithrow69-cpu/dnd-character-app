@@ -495,5 +495,9 @@ export function variantDef(sp, L, C) {
 export function stripVariantText(body, def) {
   const labels = (def.options || []).flatMap(o => [o.v, o.label]).filter(Boolean).map(s => norm(s).toLowerCase());
   const startsWithOpt = p => { const t = norm(p).toLowerCase(); return labels.some(l => t === l || t.startsWith(l + ".") || t.startsWith(l + ":") || t.startsWith(l + " ")); };
-  return String(body || "").split(/\n{2,}/).filter(p => p.trim() && !startsWithOpt(p) && !/^[A-Z][A-Za-z' ]{2,40}\s*$/.test(p.trim()) && !/\s{3,}\S/.test(p.trim().split("\n")[0])).join("\n\n");
+  // The options are listed by the picker, so the book's table (title, header, rows) is dropped from the ability's own text.
+  const tableLines = p => p.split("\n").filter(l => /\S\s{3,}\S/.test(l)).length;
+  return String(body || "").split(/\n{2,}/).filter(p => p.trim() && !startsWithOpt(p) && !/^[A-Z][A-Za-z' ]{2,40}\s*$/.test(p.trim()) && !/^[A-Z0-9' ]{4,50}$/.test(p.trim())
+    && !/\s{3,}\S/.test(p.trim().split("\n")[0]) && tableLines(p) < 2)
+    .map(p => p.split("\n").filter(l => !/^[A-Z0-9' ]{4,50}$/.test(l.trim())).join("\n")).filter(p => p.trim()).join("\n\n");
 }

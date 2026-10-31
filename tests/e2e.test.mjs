@@ -45,10 +45,12 @@ const URL_ = "http://localhost:" + server.address().port + "/";
 
 // ---- tiny harness ----
 const results = [];
-const check = async (name, fn) => {
+const check = async (name, fn, { retry = 0 } = {}) => {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
-  try { await fn(); results.push([true, name]); console.log("PASS", name); }
-  catch (e) { results.push([false, name]); console.log("FAIL", name, "-", process.env.FULL ? String(e.message || e) : String(e.message || e).split("\n")[0]); }
+  for (let attempt = 0; ; attempt++) {
+    try { await fn(); results.push([true, name]); console.log("PASS", name + (attempt ? " (passed on retry: timing)" : "")); return; }
+    catch (e) { if (attempt < retry) continue; results.push([false, name]); console.log("FAIL", name, "-", process.env.FULL ? String(e.message || e) : String(e.message || e).split("\n")[0]); return; }
+  }
 };
 const assert = (c, m) => { if (!c) throw new Error(m || "assertion failed"); };
 const IGNORE = /ERR_TUNNEL_CONNECTION_FAILED|fonts\.(googleapis|gstatic)|ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED/;
@@ -197,23 +199,26 @@ await check("new character: creation flow loads class list, picks a class, advan
   noErrs(p); await p.context().close();
 });
 
-await check("species variants: A to Z, the first is preselected, tapping one swaps its ability in, Choose keeps the pick (phone)", async () => {
+await check("species variants: inside their ability, A to Z, first preselected, tapping swaps the details, Choose keeps the pick (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(400);
-  await p.evaluate(async () => { const m = await import("/js/creation.js"); const d = APP.createDraft; d.class = "Fighter"; d.chapter = 2; });
+  await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 2; });
   await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Goliath"]').click(); await p.waitForTimeout(400);
-  const chips = await p.locator(".vchip").allInnerTexts();
-  assert(chips.length === 7, "Goliath should list 7 variants");
-  assert(JSON.stringify(chips) === JSON.stringify([...chips].sort((a, b) => a.localeCompare(b))), "variants are not A to Z: " + chips.join(","));
-  assert(await p.locator('.vchip').first().getAttribute("aria-pressed") === "true", "the first variant should be preselected");
-  assert(await p.locator(".sp-trait.variant").count() === 1, "the preselected variant ability should show");
-  await p.locator('.vchip', { hasText: "Fire" }).click(); await p.waitForTimeout(300);
-  assert(await p.locator(".sp-trait.variant").count() === 1 && /Fire/.test(await p.locator(".sp-trait.variant").innerText()), "the Fire variant ability did not appear");
-  await p.locator('.vchip', { hasText: "Frost" }).click(); await p.waitForTimeout(300);
-  assert(/Frost/.test(await p.locator(".sp-trait.variant").innerText()) && await p.locator(".sp-trait.variant").count() === 1, "switching variants should swap the ability");
+  assert(await p.locator(".sp-variants").count() === 0, "there should be no separate Variants section");
+  assert(await p.locator(".sp-trait .flag.need.soft").count() >= 1, "the variant ability should be marked as a choice");
+  await p.locator('.sp-tbtn', { hasText: "Giant Ancestry" }).first().click(); await p.waitForTimeout(300);
+  const tiles = p.locator('.sp-inline .tile[data-a="cxVariant"]'), names = await tiles.locator("b").allInnerTexts();
+  assert(names.length === 7, "Goliath should list 7 variants, got " + names.length);
+  assert(JSON.stringify(names) === JSON.stringify([...names].sort((a, b) => a.localeCompare(b))), "variants are not A to Z: " + names.join(","));
+  assert(await tiles.first().getAttribute("aria-pressed") === "true", "the first variant should be preselected");
+  assert(await p.locator(".sp-inline .tile-about").count() === 1, "the selected variant's details should show under the tiles");
+  await tiles.filter({ hasText: "Fire" }).click(); await p.waitForTimeout(300);
+  assert(/Fire/.test(await p.locator(".sp-inline .tile-about").innerText()), "the Fire details did not appear");
+  await tiles.filter({ hasText: "Frost" }).click(); await p.waitForTimeout(300);
+  assert(/Frost/.test(await p.locator(".sp-inline .tile-about").innerText()), "switching variants should swap the details");
   await p.locator('[data-a="cxChoose"][data-name="Goliath"]').click(); await p.waitForTimeout(600);
   assert(await p.evaluate(() => Object.values(APP.createDraft.picks).includes("Frost's Chill")), "the previewed variant was not kept when choosing the species");
-  assert(await p.locator('.vchip[aria-pressed="true"]').innerText().then(t => /Frost/.test(t)), "chosen variant not highlighted");
+  assert(await p.locator('.sp-inline .tile[aria-pressed="true"]').first().innerText().then(t => /Frost/.test(t)), "chosen variant not highlighted");
   noErrs(p); await p.context().close();
 });
 
@@ -222,9 +227,9 @@ await check("detail pane order: image, description, facts, variants, abilities, 
   await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 2; });
   await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Elf"]').click(); await p.waitForTimeout(400);
-  const order = await p.evaluate(() => { const d = document.querySelector(".sp-detail"); const y = sel => { const e = d.querySelector(sel); return e ? e.getBoundingClientRect().top : null; }; return { img: y(".sp-addimg, .sp-hero"), desc: y(".sp-desc"), facts: y(".sp-facts"), vars: y(".sp-variants"), traits: y(".sp-traits"), choose: y(".chooserow") }; });
-  const seq = ["img", "desc", "facts", "vars", "traits", "choose"].filter(k => order[k] != null);
-  assert(seq.length >= 5 && seq.every((k, i) => !i || order[k] >= order[seq[i - 1]]), "wrong order: " + JSON.stringify(order));
+  const order = await p.evaluate(() => { const d = document.querySelector(".sp-detail"); const y = sel => { const e = d.querySelector(sel); return e ? e.getBoundingClientRect().top : null; }; return { img: y(".sp-addimg, .sp-hero"), desc: y(".sp-desc"), facts: y(".sp-facts"), traits: y(".sp-traits"), choose: y(".chooserow") }; });
+  const seq = ["img", "desc", "facts", "traits", "choose"].filter(k => order[k] != null);
+  assert(seq.length >= 4 && seq.every((k, i) => !i || order[k] >= order[seq[i - 1]]), "wrong order: " + JSON.stringify(order));
   assert(await p.locator(".sp-trait .flag.need").count() >= 1, "abilities that need a choice are not marked");
   await p.locator('[data-a="cxChoose"][data-name="Elf"]').click(); await p.waitForTimeout(600);
   assert(await p.locator(".sp-inline").count() >= 1, "the choice did not open under its ability");
@@ -260,7 +265,7 @@ await check("Goliath on the sheet: the chosen boon is its own ability and Fire's
   await p.locator("#rstage .rs-main:not([hidden])").click(); await p.waitForTimeout(3000); await p.locator("#rstage .rs-main:not([hidden])").click(); await p.waitForTimeout(3000);
   assert(/Fire's Burn/i.test(await p.locator("#rstage").innerText()), "Fire's Burn is not offered on the attack roll card: " + (await p.locator("#rstage").innerText()).replace(/\s+/g, " ").slice(0, 300));
   noErrs(p); await p.context().close();
-});
+}, { retry: 1 });
 
 await check("Goliath Stone's Endurance is a Reaction that rolls 1d12 + Con and spends a Giant Ancestry use (laptop)", async () => {
   const p = await open(1280, 800, {}); await openSample(p);

@@ -112,6 +112,7 @@ function renderEquipGroup(app, d, which) {
   const name = which === "class" ? d.class : d.background;
   if (!opts.length) return "";
   return `<div class="choice"><div class="choice-head"><h3>From your ${which === "class" ? "class" : "background"}</h3><span class="sub2">${esc(name)}</span></div>
+    <p class="small muted">Option ${esc(d[key])} is selected. Choose another to change it.</p>
     <div class="optlist">${opts.map(o => {
       const on = d[key] === o.key;
       const gc = on ? gearChoices(app, d).filter(g => g.which === which) : [];
@@ -168,18 +169,14 @@ function cfgFor(app, d, kind) {
         const out = [];
         parseSpecies(s).traits.forEach(t => {
           if (vd && t.name === vd.trait) {
-            out.push({ name: t.name, kind: t.kind === "active" && sel ? "passive" : t.kind, usage: sel ? "Choose a variant below" : t.usage, level: t.level, body: stripVariantText(t.body, vd) || t.body });
-            if (sel) {
-              const o = vd.options.find(x => x.v === sel), det = String((o && o.detail) || ""), cl = classifyText(det);
-              out.push({ name: (o && o.label) || sel, variant: true, kind: /^Level \d/.test(det) ? "passive" : cl.kind, usage: /^Level \d/.test(det) ? vd.label : cl.usage, level: 1, body: det || "No description." });
-            }
+            out.push({ name: t.name, kind: t.kind === "active" && sel ? "passive" : t.kind, usage: sel ? "Choose one \u00b7 " + sel : t.usage, level: t.level, body: stripVariantText(t.body, vd) || t.body, variantTrait: true });
           } else out.push({ name: t.name, kind: t.kind, usage: t.usage, level: t.level, body: t.body });
         });
         return out;
       },
       variants: s => {
         const vd = variantDef(s, L, C); if (!vd) return null;
-        return { label: vd.label, trait: vd.trait, cur: selectedVariant(app, d, s, vd), options: sortedVariants(vd).map(o => ({ v: o.v, label: o.v })) };
+        return { label: vd.label, trait: vd.trait, cur: selectedVariant(app, d, s, vd), options: sortedVariants(vd).map(o => ({ v: o.v, label: o.v, detail: o.detail || "" })), on: d.species === s.name };
       },
       traitsTitle: "Traits and abilities",
       choices: o => choiceBundle(app, d, "species", o)

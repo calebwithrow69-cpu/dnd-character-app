@@ -2,11 +2,36 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.28";
+export const VERSION = "0.1.29";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.29",
+    date: "2026-10-31",
+    stage: "Pre-build",
+    blurb: "Variants live inside their ability; fixes.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Lineage, ancestry, legacy and gem choices are now picked inside their own ability, as a list of options with each option's text under it. The separate Variants row is gone, and the book's table is shown as that list.",
+          "Table leftovers are gone from the ability text (Dragonborn, Tiefling, Azurite). Dragonborn's Breath Weapon is now its own ability, and Ardling can choose Swimmer.",
+          "At creation every prepared spell must be chosen, so a spellcaster can no longer finish with none.",
+          "Warden and Protector training now counts in the creation shop."
+        ]
+      },
+      {
+        title: "Fixed",
+        items: [
+          "Pressing Back on the first creation step tells you your character is saved instead of doing nothing.",
+          "Point buy now rejects scores outside 8 to 15.",
+          "Each equipment group says which option is selected, so it is clear you can change it."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.28",
     date: "2026-10-30",

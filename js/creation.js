@@ -288,6 +288,7 @@ export function validateChapter(chapterId, d, app) {
   if (chapterId === "abilities") {
     const vals = Object.values(d.base);
     if (vals.some(v => v < 3 || v > 20)) reasons.push("Scores must be 3 to 20.");
+    if (d.pointBuy && vals.some(v => !(v in PB_COST))) reasons.push("Point buy scores run from 8 to 15.");
     if (d.pointBuy && pbSpent(d) > PB_BUDGET) reasons.push(`Over budget: ${pbSpent(d)} of ${PB_BUDGET} points spent.`);
     if (!d.scoresSet) reasons.push("Choose how to set your ability scores.");
     if (!d.background) reasons.push("Choose a background first.");
@@ -671,6 +672,8 @@ export function trainingFor(app, d) {
   if (d.class) for (const def of draftChoices(app, d, "class")) if (def.kind === "tool") [].concat(d.picks[def.id] || []).forEach(t => tools.add(normTool(t)));
   const bt = bg ? backgroundToolChoice(bg) : null;
   if (bt && bt.fixed) addList([].concat(bt.fixed)[0]); else if (d.picks["bg:tool"]) tools.add(normTool(d.picks["bg:tool"]));
+  const order = d.lvl && d.lvl.forClass === d.class ? d.lvl.order : ""; // Warden and Protector add training that shows up in the shop
+  if (order === "Warden" || order === "Protector") { profs.weapons.push("martial"); profs.armor.push(order === "Warden" ? "medium" : "heavy"); }
   return { armor: new Set(profs.armor), weapons: new Set(profs.weapons), martialFinesseLight: /martial weapons that have[^.]*finesse or light/i.test(rest), tools };
 }
 export function trainingSummary(t) {

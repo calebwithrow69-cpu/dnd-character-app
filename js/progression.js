@@ -184,6 +184,7 @@ export function stepValidFor(c, d, step) {
     case "mastery": return d.mastery.length === step.n;
     case "options": return d.options.length === step.n;
     case "cantrips": return step.n == null || d.cantrips.length >= step.n; // must learn them all (the Randomize button fills them)
-    default: return true; // spells: picking fewer is allowed
+    case "spells": return d.fromCreation ? (step.n == null || d.spells.length >= step.n) : true; // at creation every prepared spell is chosen; later levels may take fewer
+    default: return true;
   }
 }

@@ -36,7 +36,13 @@ const cache = new WeakMap();
 export function parseSpecies(sp) {
   if (!sp) return { facts: [], intro: [], traits: [] };
   if (cache.has(sp)) return cache.get(sp);
-  const paras = String(sp.traits || "").split(/\n{2,}/).map(p => p.replace(/\s+$/, "")).filter(p => p.trim());
+  // A trait that starts on the line right after a table (no blank line) is its own trait, not part of the one above the table.
+  const paras = String(sp.traits || "").split(/\n{2,}/).map(p => p.replace(/\s+$/, "")).filter(p => p.trim()).flatMap(p => {
+    const lines = p.split("\n"); if (lines.length < 2) return [p];
+    const out = []; let cur = [lines[0]];
+    for (let i = 1; i < lines.length; i++) { if (LEAD.test(lines[i]) && /\S\s{3,}\S/.test(lines[i - 1])) { out.push(cur.join("\n")); cur = [lines[i]]; } else cur.push(lines[i]); }
+    out.push(cur.join("\n")); return out;
+  });
   const facts = [], intro = [], traits = [];
   let cur = null;
   for (const p of paras) {
