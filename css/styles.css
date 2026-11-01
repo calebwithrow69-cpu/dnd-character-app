@@ -1715,3 +1715,7 @@ html.dead{filter:grayscale(1);transition:filter 1.6s ease}
 
 /* scrolling inside a panel never drags the page (or pulls it to refresh) */
 .modal,.modal-body,.scscroll,.optlist{overscroll-behavior:contain}
+
+/* rulesets */
+.rs-card .chip{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.rs-card .btnrow{flex-wrap:wrap}

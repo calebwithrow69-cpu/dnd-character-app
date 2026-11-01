@@ -3,7 +3,7 @@ import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, acti
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
-import { findFeat, enabledSpells, allWeapons, allItems, enabledFeats, findByName, subclassesFor } from "../data.js";
+import { findFeat, enabledSpells, allWeapons, allItems, enabledFeats, findByName, subclassesFor, subclassesAll } from "../data.js";
 import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, weaponsOf, attacksOf, attunedCount, itemCategory, categoryRank, speciesLook } from "../gear.js";
 import { optionGroup, optionNames, levelUpPlan } from "../progression.js";
 import { characterBody, concBanner } from "./character.js";
@@ -493,7 +493,7 @@ function glossaryCatList(app) {
     `<button class="rowline rollable" data-a="${extra || "showDetail"}" data-kind="${kind}" data-name="${esc(name)}"${extra ? ` data-class="${esc(name)}"` : ""}><span class="nm">${esc(name)}</span>${sub ? `<span class="sub2">${esc(sub)}</span>` : ""}</button>`;
 
   if (cat === "class") return L.classes.map(c => {
-    const subs = subclassesFor(L, c.name);
+    const subs = subclassesAll(L, c.name);
     return row("class", c.name, `${subs.length} subclass${subs.length !== 1 ? "es" : ""}`, "glossaryClassView");
   }).join("");
   if (cat === "species") return L.species.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => row("species", s.name)).join("");
@@ -522,7 +522,7 @@ function classDetailView(app) {
   const L = app.library, name = app.glossaryClass;
   const cls = findByName(L.classes, name);
   if (!cls) return `<p class="muted">Class not found.</p>`;
-  const subs = subclassesFor(L, name);
+  const subs = subclassesAll(L, name);
 
   // Parse the plaintext table into rows
   const tableHtml = renderClassTable(cls.table);

@@ -1,6 +1,6 @@
 // DM editor screen + its actions. ASCII-only.
 import { esc, topbar, searchBox } from "../ui.js";
-import { SCHEMA, KIND_ORDER, template, keyOf, labelOf, validate, loadPatch, savePatch, patchCount, checkPin } from "../dm.js";
+import { SCHEMA, KIND_ORDER, template, keyOf, labelOf, validate, loadPatch, savePatch, patchCount } from "../dm.js";
 
 export const dmUiDefault = () => ({ kind: "species", q: "", edit: null });
 
@@ -62,8 +62,9 @@ export function renderDm(app) {
     return `${topbar((ui.edit.isNew ? "New " : "Edit ") + sc.one, sc.label, { back: "dmCancel" })}
       <main class="wrap page">${formHtml(app, ui.edit)}</main>`;
   }
-  return `${topbar("DM editor", n ? `${n} change${n === 1 ? "" : "s"} on this device` : "No changes yet", { back: "dmExit" })}
+  return `${topbar("DM editor", n ? `${n} change${n === 1 ? "" : "s"} on this device` : "Anyone can use this. Changes stay on this device.", { back: "dmExit" })}
     <main class="wrap page">
+      <button class="btn block" data-a="rsOpen" style="margin-bottom:10px">Rulesets: choose which books and entries are allowed</button>
       <div class="dm-f"><select class="f" data-a="dmKind" aria-label="What to edit">${KIND_ORDER.map(k => `<option value="${k}" ${k === ui.kind ? "selected" : ""}>${esc(SCHEMA[k].label)} (${(app.library[k] || []).length})</option>`).join("")}</select></div>
       ${searchBox("dmq", ui.q, "Search " + sc.label.toLowerCase())}
       <button class="btn pri block" style="margin:10px 0" data-a="dmNew">New ${esc(sc.one)} from template</button>
@@ -76,14 +77,6 @@ export function renderDm(app) {
         ${n ? `<button class="btn ghost block" data-a="dmReset">Clear all my changes on this device</button>` : ""}
       </div>
     </main>`;
-}
-
-export function dmPinPanel(app) {
-  if (!app.dmAsk) return "";
-  return `<div class="panel" style="padding:12px;margin-top:10px"><label class="small muted" for="f-dmpin">DM PIN</label>
-    <input class="f" id="f-dmpin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="PIN">
-    ${app.dmErr ? `<div class="small" style="color:var(--bad,#c66);margin-top:6px">${esc(app.dmErr)}</div>` : ""}
-    <button class="btn pri block" style="margin-top:8px" data-a="dmPinGo">Open the DM editor</button></div>`;
 }
 
 // ---- actions ----
@@ -109,12 +102,7 @@ export function dmActions(APP, h) {
   const sync = () => { const f = document.getElementById("dm-form"); if (f && APP.dm.edit) APP.dm.edit.entry = collect(APP.dm.edit.kind, APP.dm.edit.entry, f); };
   const origKey = (p, kind, key) => { const e = Object.entries(pk(p, kind).edit).find(([, v]) => keyOf(kind, v) === key); return e ? e[0] : key; };
   const ACT = {
-    async dmPinGo() {
-      const el = document.getElementById("f-dmpin"), ok = el && await checkPin(el.value);
-      if (!ok) { APP.dmErr = "That PIN is not right."; h.render(); return; }
-      APP.dmAsk = false; APP.dmErr = ""; APP.dm = dmUiDefault(); APP.screen = "dm"; h.render(); window.scrollTo(0, 0);
-    },
-    dmAsk() { APP.dmAsk = !APP.dmAsk; APP.dmErr = ""; h.render(); setTimeout(() => document.getElementById("f-dmpin")?.focus(), 30); },
+    dmOpen() { APP.dm = dmUiDefault(); APP.screen = "dm"; h.render(); window.scrollTo(0, 0); },
     dmExit() { APP.screen = "roster"; APP.dm = null; h.render(); window.scrollTo(0, 0); },
     dmKind(el) { APP.dm.kind = el.value; APP.dm.q = ""; h.render(); },
     dmNew() { APP.dm.edit = { kind: APP.dm.kind, key: null, entry: template(APP.dm.kind), isNew: true }; h.render(); window.scrollTo(0, 0); },

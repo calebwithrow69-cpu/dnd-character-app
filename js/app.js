@@ -1,4 +1,4 @@
-import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword, normalizeSubclass } from "./data.js";
+import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword, normalizeSubclass, setSubclassAllow } from "./data.js";
 import * as store from "./store.js";
 import { feedback, sfx, setSfxEnabled, setHaptics, setVolume, preloadSamples } from "./sfx.js";
 import { mountHp, unmountHp, applyHp as hpFx } from "./hpbar.js";
@@ -12,6 +12,7 @@ import { VERSION } from "./changelog.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
 import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
+import { renderRulesets, rsActions, rsUiDefault } from "./views/rulesets.js";
 import { applyPatch, loadPatch } from "./dm.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
@@ -30,6 +31,7 @@ import {
 } from "./creation.js";
 import { rollMods } from "./effects.js";
 import { syncSubclassSpells } from "./subclassspells.js";
+import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
 import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { renderSheetSearch } from "./views/classic.js";
@@ -183,7 +185,9 @@ function focusSelector(el) {
 function setRules() {
   const r = applyPatch(APP.rawLibrary, APP.rawCampaign, loadPatch());
   APP.library = { ...r.library, subclasses: (r.library.subclasses || []).map(sc => ({ ...sc, features: normalizeSubclass(sc) })) };
-  APP.campaign = r.campaign; APP._rulesIndex = null;
+  APP.rulesets = loadSets(); APP.campaignRaw = r.campaign;
+  APP.campaign = effectiveCampaign(r.campaign, APP.library, activeSet(APP.rulesets, r.campaign, APP.library)); APP._rulesIndex = null;
+  setSubclassAllow(APP.campaign._subAllow);
   syncCustom(APP.library);
   setEffectsSource(() => APP.library ? { feats: [...APP.library.feats, ...((APP.campaign && APP.campaign.homebrew && APP.campaign.homebrew.feats) || [])],
     classes: APP.library.classes, subclasses: APP.library.subclasses, species: APP.library.species, effectsV: APP.library.effectsV || 0 } : null);
@@ -259,6 +263,7 @@ function renderNow() {
   else if (APP.screen === "roster") mount.innerHTML = renderRoster(APP);
   else if (APP.screen === "graveyard") mount.innerHTML = renderGraveyard(APP);
   else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
+  else if (APP.screen === "rulesets" && APP.rs) mount.innerHTML = renderRulesets(APP);
   else if (APP.screen === "create") { prepareChoiceContext(APP); mount.innerHTML = renderCreate(APP); if (APP.createDraft) saveDraft(APP.createDraft); }
   else if (APP.screen === "sheet" && APP.char) {
     const ch = APP.char;
@@ -720,8 +725,9 @@ function onInput(e) {
     if (h) h.textContent = APP.prefs.vol + "%";
     return;
   }
+  if (ds.rsName != null && APP.rs) { ACTIONS.rsRename(el.value); return; }
+  if (ds.query === "rsq" && APP.rs) { APP.rs.q = el.value; render(); return; }
   if (ds.query === "dmq" && APP.dm) { APP.dm.q = el.value; const l = document.getElementById("dm-list"); if (l) l.innerHTML = dmListHtml(APP); return; }
-  if (el.id === "f-dmpin" && el.value.length === 4) { ACTIONS.dmPinGo(); return; }
   if (ds.setSearch) {
     const q = el.value.trim().toLowerCase();
     let any = false;
@@ -2095,6 +2101,7 @@ function bindDrag() {
   });
 }
 
+Object.assign(ACTIONS, rsActions(APP, { render, toast, setRules: () => { setRules(); rebuildGlossary(); } }));
 Object.assign(ACTIONS, dmActions(APP, { render, toast, setRules: () => { setRules(); rebuildGlossary(); } }));
 init();
 window.CR = { ACTIONS, render }; // for the browser tests

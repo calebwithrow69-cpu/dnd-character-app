@@ -1,17 +1,10 @@
-// DM editor data layer: PIN check, the local patch, per-kind templates,
+// DM editor data layer: the local patch, per-kind templates,
 // and applyPatch (also used by tools/apply-dm.mjs). ASCII-only on purpose.
 // A patch is { kind: { add: [entry], edit: { originalKey: entry }, remove: [key] } }.
 // The key is the entry name (subclasses: "Class|Name").
 
 const LS = "dnd-dm-v1";
-const PIN_HASH = "7ce6f95c9c45bcae1b3c7b047f70ab5dc9cf23c61127b753a8f077c63af6cd3f";
 export const NEW_SRC = "Homebrew";
-
-export async function checkPin(pin) {
-  const b = new TextEncoder().encode("cr-dm-v1:" + String(pin).trim());
-  const h = await crypto.subtle.digest("SHA-256", b);
-  return [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, "0")).join("") === PIN_HASH;
-}
 
 export const emptyPatch = () => ({});
 export function loadPatch() { try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch (e) { return {}; } }

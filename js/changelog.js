@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.34";
+export const VERSION = "0.1.35";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.35",
+    date: "2026-11-01",
+    stage: "Pre-build",
+    blurb: "Rulesets; the DM editor is open to everyone.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Rulesets: make your own set of allowed content. Switch whole books on or off, then switch single classes, subclasses, species, backgrounds, feats or spells. A single entry beats its book. Find it on the character list under Rulesets.",
+          "Share a ruleset as a code: tap Share, send the code, and anyone can paste it under Import. Your group's own rules are built in; copy them to start from there.",
+          "The ruleset in use only changes what you can pick. Characters you already made keep everything they have.",
+          "The DM editor no longer asks for a PIN. Anyone can add or change entries, and the changes stay on their device."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.34",
     date: "2026-11-01",

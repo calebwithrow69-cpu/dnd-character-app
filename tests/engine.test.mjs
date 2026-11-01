@@ -6,6 +6,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { isSustained } from "../js/combat.js";
 import { normalizeSubclass, subclassGaps } from "../js/data.js";
 import { newFeatures } from "../js/progression.js";
+import { bookName, bookKey, listBooks, allowed, allowedBy, effectiveCampaign, groupRuleset, blankRuleset, copyRuleset, encodeRuleset, decodeRuleset, clean as cleanRuleset, problems } from "../js/rulesets.js";
 import { rationsHave, rationsNeed, spendRations, restOptions, applyRestPicks } from "../js/rest.js";
 import { subclassSpellGrants, subclassSpellTables, syncSubclassSpells, findSpellName, pickKey } from "../js/subclassspells.js";
 import { rerollsFor, ensureLuck, shortRestRefill } from "../js/riders.js";
@@ -374,6 +375,29 @@ t("long rest: rations come from the bag, picks stay unless changed, a missing re
   const r2 = applyRestPicks(d, L, {}, weapons, () => 0.1); eq([r2.random, r2.log], [[], []]); eq(d.choices["Land spell list"], "Polar Land"); // untouched stays
   applyRestPicks(d, L, { list: "Arid Land", "mastery.drop": "Club", "mastery.add": "Scimitar" }, weapons); eq(d.spellcasting.spells.map(x => x.name), ["Blur", "Fireball"]); eq(d.masteries, ["Scimitar", "Dagger"]);
   applyRestPicks(d, L, { "mastery.drop": "Scimitar", "mastery.add": "Dagger" }, weapons); eq(d.masteries, ["Scimitar", "Dagger"]); // cannot duplicate
+});
+t("rulesets: books, single entries beat books, share codes round-trip, hostile input is cleaned", () => {
+  eq([bookName({ source: "PHB'24 p87" }), bookName({ source: "XGE p37-38" }), bookName({ source: "SRD 5.2" }), bookName({})], ["PHB'24", "XGE", "SRD 5.2", "Unlabelled"]);
+  eq(bookKey({ source: "Phb'24" }), bookKey({ source: "PHB'24 p5" }));
+  const L = { classes: [{ name: "Fighter", source: "PHB'24" }, { name: "Artificer", source: "TCE" }], species: [{ name: "Elf", source: "PHB'24" }], backgrounds: [{ name: "Sage", source: "PHB'24" }],
+    feats: [{ name: "Alert", source: "PHB'24" }, { name: "Tough", source: "PHB'24 p9" }, { name: "Cruel", source: "Homebrew" }], spells: [{ name: "Shield", source: "SRD 5.2" }],
+    subclasses: [{ cls: "Fighter", name: "Champion", source: "PHB'24" }, { cls: "Fighter", name: "Gunslinger", source: "Homebrew" }] };
+  eq(listBooks(L).find(b => b.key === "phb'24").total, 6);
+  const rs = blankRuleset("T"); eq(allowed(rs, "feats", L.feats[0]), true);
+  rs.books["homebrew"] = false; eq([allowed(rs, "feats", L.feats[2]), allowedBy(rs, "feats", L.feats[2])], [false, "book"]);
+  rs.entries.feats = { Cruel: true, Alert: false }; eq([allowed(rs, "feats", L.feats[2]), allowedBy(rs, "feats", L.feats[2]), allowed(rs, "feats", L.feats[0])], [true, "entry", false]);
+  rs.entries.subclasses = { "Fighter|Gunslinger": true }; eq(allowed(rs, "subclasses", L.subclasses[1]), true);
+  const eff = effectiveCampaign({ name: "G", enabled: { feats: ["Nope"] }, homebrew: {} }, L, rs);
+  eq(eff.enabled.feats, ["Tough", "Cruel"]); eq(eff.enabled.classes, ["Fighter", "Artificer"]); eq([...eff._subAllow].sort(), ["Fighter|Champion", "Fighter|Gunslinger"]);
+  const grp = effectiveCampaign({ name: "G", enabled: { feats: ["Alert"] } }, L, groupRuleset({ name: "G" }, L)); eq(grp.enabled.feats, ["Alert"]); eq(grp._subAllow, null); // the group's own rules pass through
+  const gl = groupRuleset({ name: "G", enabled: { feats: ["Alert"] } }, L); eq([allowed(gl, "feats", L.feats[0]), allowed(gl, "feats", L.feats[1])], [true, false]);
+  const code = encodeRuleset(rs); eq(/^CRR1\.[\w-]+$/.test(code), true);
+  const back = decodeRuleset(code); eq([back.name, back.books, back.entries.feats, back.defaultBooks], ["T", { homebrew: false }, { Cruel: true, Alert: false }, true]);
+  eq(back.id === rs.id, false); eq(decodeRuleset("nonsense"), null); eq(decodeRuleset("CRR1.@@@"), null);
+  const evil = cleanRuleset({ id: "<x>", name: "x".repeat(500), books: { a: "yes", b: true, ["k".repeat(200)]: true }, entries: { feats: { A: true, B: 1 }, hax: { Z: true }, spells: null } });
+  eq([evil.name.length, /^[\w-]+$/.test(evil.id), evil.books, evil.entries], [60, true, { b: true }, { feats: { A: true } }]);
+  const none = copyRuleset(rs, "None"); none.books = {}; none.entries = {}; none.defaultBooks = false; eq(problems(none, L).length, 3); eq(problems(rs, L), []);
+  eq(decodeRuleset(encodeRuleset(copyRuleset({ name: "\u00e9 \u2603", entries: { spells: { "Tasha\u2019s": true } } }))).entries.spells, { "Tasha\u2019s": true });
 });
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);

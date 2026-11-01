@@ -191,6 +191,10 @@ export function findByName(list, name) {
 // A character's feat can carry its chosen option, e.g. "Magic Initiate (Cleric)". The rules entry is the base feat.
 export const featBase = n => String(n || "").replace(/\s*\([^)]*\)\s*$/, "");
 export function findFeat(list, name) { return findByName(list, name) || findByName(list, featBase(name)); }
+// Subclasses a player may pick under the ruleset in use (set by the app); the rules glossary lists them all.
+let SUB_ALLOW = null;
+export function setSubclassAllow(set) { SUB_ALLOW = set || null; }
+export function subclassesAll(L, className) { return L.subclasses.filter(s => s.cls === className); }
 export function subclassesFor(L, className) {
-  return L.subclasses.filter(s => s.cls === className);
+  return L.subclasses.filter(s => s.cls === className && (!SUB_ALLOW || SUB_ALLOW.has(`${s.cls}|${s.name}`)));
 }

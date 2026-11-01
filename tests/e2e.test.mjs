@@ -667,6 +667,39 @@ await check("reload: a level-up in progress comes back, and a pull-down cannot r
   noErrs(p); await p.context().close();
 });
 
+await check("rulesets: anyone can open the DM editor, build a ruleset, use it, share and import it", async () => {
+  const p = await open(390, 844, { touch: true });
+  await clickA(p, "goRoster");
+  await clickA(p, "dmOpen"); await p.waitForTimeout(200);
+  assert(await p.evaluate(() => APP.screen === "dm"), "DM editor needs no PIN now");
+  await clickA(p, "dmExit"); await clickA(p, "rsOpen"); await p.waitForTimeout(200);
+  assert(/Rulesets/i.test(await p.locator("main").innerText()) && await p.locator('[data-a="rsNew"]').count() === 1, "rulesets screen missing");
+  await clickA(p, "rsNew"); await p.waitForTimeout(200);
+  await p.locator('[data-a="rsAllBooks"][data-v="0"]').click(); await p.waitForTimeout(150);
+  assert(/no class/i.test(await p.locator("main").innerText()), "an empty ruleset should warn");
+  await p.locator('[data-a="rsBook"][data-key="phb\'24"]').click(); await p.waitForTimeout(150); // the 2024 Player's Handbook back on
+  await p.locator('[data-a="rsBook"][data-key="unlabelled"]').click(); await p.waitForTimeout(150); // backgrounds have no book recorded
+  const first = await p.evaluate(() => { const rs = APP.rulesets.sets[0]; return Object.entries(rs.books).filter(e => e[1]).length; });
+  assert(first === 2, "two books should be on, got " + first);
+  await p.locator('[data-a="rsTab"][data-v="entries"]').click(); await p.waitForTimeout(150);
+  await p.locator('[data-query="rsq"]').fill("Barbarian"); await p.waitForTimeout(250);
+  await p.locator('[data-a="rsEntry"]').first().click(); await p.waitForTimeout(150);
+  assert(await p.evaluate(() => APP.rulesets.sets[0].entries.classes && APP.rulesets.sets[0].entries.classes.Barbarian !== undefined), "entry switch not stored");
+  await clickA(p, "rsBack"); await p.waitForTimeout(150);
+  await p.locator('[data-a="rsUse"][data-id]:not([data-id="group"])').first().click(); await p.waitForTimeout(400);
+  const used = await p.evaluate(async () => { const m = await import("/js/data.js"); return { active: APP.rulesets.active !== "group", classes: m.enabledClasses(APP.library, APP.campaign).length, all: APP.library.classes.length }; });
+  assert(used.active && used.classes >= 1 && used.classes <= used.all, "ruleset not applied: " + JSON.stringify(used));
+  await p.locator('[data-a="rsShare"]:not([data-id="group"])').first().click(); await p.waitForTimeout(200);
+  const code = await p.locator("[data-rs-code]").inputValue(); assert(/^CRR1\./.test(code), "no share code");
+  await p.locator("#rs-import").fill(code); await clickA(p, "rsImport"); await p.waitForTimeout(250);
+  assert(await p.evaluate(() => APP.rulesets.sets.length) === 2, "import did not add a ruleset");
+  await p.locator("#rs-import").fill("garbage"); await clickA(p, "rsImport"); await p.waitForTimeout(150);
+  assert(/not a ruleset code/.test(await p.locator("main").innerText()) && await p.evaluate(() => APP.rulesets.sets.length) === 2, "bad code should be refused");
+  await p.reload(); await p.waitForTimeout(2500);
+  assert(await p.evaluate(() => APP.rulesets.active !== "group" && APP.campaign.rulesetName === APP.rulesets.sets.find(x => x.id === APP.rulesets.active).name), "ruleset not remembered after reload");
+  noErrs(p); await p.context().close();
+});
+
 await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
