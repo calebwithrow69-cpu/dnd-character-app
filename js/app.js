@@ -30,6 +30,7 @@ import {
 } from "./creation.js";
 import { rollMods } from "./effects.js";
 import { syncSubclassSpells } from "./subclassspells.js";
+import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
 import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { renderSheetSearch } from "./views/classic.js";
 import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
@@ -788,6 +789,7 @@ function onChange(e) {
     else c[ds.edit] = v;
     save(); afterFieldChange(el); return;
   }
+  if (ds.modalSel && APP.modal) { (APP.modal.sel = APP.modal.sel || {})[ds.modalSel] = el.value; return; }
   if (ds.modal && APP.modal) { APP.modal[ds.modal] = el.value; return; }
 }
 
@@ -1309,9 +1311,16 @@ const ACTIONS = {
     save(); closeModal();
     toast("Short rest done" + (c.class === "Warlock" ? " — pact slots back" : ""));
   },
-  openLongRest() { openModal({ type: "longRest" }); },
+  openLongRest() { openModal({ type: "longRest", sel: {}, need: rationsNeed(APP.char) }); },
+  lrNeed(el) { const m = APP.modal; m.need = Math.max(0, Math.min(9, (m.need != null ? m.need : rationsNeed(APP.char)) + +el.dataset.n)); render(); },
+  lrPick(el) { const m = APP.modal; m.sel = m.sel || {}; m.sel[el.dataset.id] = el.dataset.v; render(); },
+  lrSpells() { closeModal(); APP.sheetTab = "stats"; APP.charSub = "spells"; APP.classicSub = "spells"; render(); },
   confirmLongRest() {
-    const c = APP.char;
+    const c = APP.char, m = APP.modal || {};
+    const need = m.need != null ? m.need : rationsNeed(c);
+    if (!spendRations(c, need)) { toast("Not enough rations for a long rest"); return; }
+    c.restRations = need; // remembered for next time
+    const picked = applyRestPicks(c, APP.library, m.sel || {}, allWeapons(APP.library, APP.campaign));
     c.hp.cur = c.hp.max; c.hp.temp = 0;
     c.spellcasting.slotsUsed = c.spellcasting.slotsUsed.map(() => 0);
     c.hitDice.spent = 0;
@@ -1321,7 +1330,7 @@ const ACTIONS = {
     c.concentration = null;
     c.active = [];
     save(); closeModal();
-    toast("Long rest: everything restored");
+    toast(picked.random.length ? `Long rest done. Picked at random: ${picked.random.join("; ")}` : need ? `Long rest: everything restored. ${need} ration${need === 1 ? "" : "s"} eaten` : "Long rest: everything restored");
   },
 
   // level up (full screen)
@@ -1449,6 +1458,12 @@ const ACTIONS = {
     const r = APP.char.resources[+el.dataset.i], k = +el.dataset.k, avail = r.max - r.used;
     r.used = k < avail ? r.used + 1 : r.used - 1;
     r.used = Math.max(0, Math.min(r.max, r.used));
+    saveAndRender();
+  },
+  rationStep(el) {
+    const c = APP.char, n = +el.dataset.n, it = (c.inventory || []).find(isRation);
+    if (it) it.qty = Math.max(0, (it.qty || 0) + n);
+    else if (n > 0) c.inventory.push(makeItem("Rations", { weapons: allWeapons(APP.library, APP.campaign), items: allItems(APP.library, APP.campaign) }, store.newId));
     saveAndRender();
   },
   resStep(el) { const r = APP.char.resources[+el.dataset.i]; r.used = Math.max(0, Math.min(r.max, r.used + +el.dataset.n)); saveAndRender(); },

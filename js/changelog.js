@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.32";
+export const VERSION = "0.1.33";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.33",
+    date: "2026-11-01",
+    stage: "Pre-build",
+    blurb: "A real long rest screen.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Long rest now opens one screen. It shows the rations in your pack and how many this rest uses (one by default, change it with the - and + buttons), then lists what you can change after resting: a subclass spell list that you pick between (Circle of the Land, Harvest Domain, Daemonologist) and one weapon mastery. Pressing Long rest without touching anything changes nothing. A spell list you never chose is picked at random.",
+          "You cannot take a long rest without enough rations. Rations are still ordinary items in your pack and still weigh something; the Trackers panel has a Rations counter that adds to or eats from them.",
+          "Cleric, Druid, Paladin, Ranger and Wizard get a shortcut to change their prepared spells."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.32",
     date: "2026-11-01",

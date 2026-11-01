@@ -1701,3 +1701,14 @@ html.dead{filter:grayscale(1);transition:filter 1.6s ease}
 .sp-inline{margin:2px 0 10px;padding:10px 12px;border:1px dashed var(--amber);border-radius:var(--radius-md);background:var(--panel2)}
 .sp-inline .choice{margin:0;padding:0;border:0;background:none}
 .sp-detail .chooserow{margin-top:16px;position:sticky;bottom:0;padding:10px 0 2px;background:linear-gradient(transparent,var(--panel) 30%)}
+
+/* long rest screen */
+.lrrat{margin-bottom:10px}
+.lrwarn{color:var(--amber);margin-top:6px}
+.lrh{font-size:1rem;margin:14px 0 4px}
+.lrrow{padding:8px 0;border-top:1px solid var(--line)}
+.lrrow .lab{margin:0 0 6px;font-weight:600}
+.seg.wrap{flex-wrap:wrap}
+.seg.wrap button{flex:1 1 40%;border-top:1px solid var(--line)}
+.lrswap{display:grid;gap:8px}
+@media (min-width:560px){.lrswap{grid-template-columns:1fr 1fr}}

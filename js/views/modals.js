@@ -16,6 +16,7 @@ import { enabledFeats } from "../data.js";
 import { customValid, loadCustom } from "../custombg.js";
 import { shopStock, walletCp, fmtPrice } from "../equipment.js";
 import { findTile } from "./character.js";
+import { restOptions, rationsHave, rationsNeed } from "../rest.js";
 import { hpParts, FX_TARGETS } from "../effects.js";
 import { COST_LABEL, isSustained } from "../combat.js";
 import { wieldedId } from "../play.js";
@@ -296,10 +297,32 @@ export function renderModal(app) {
         `<button class="btn" data-a="closeModal">Stay buried</button><button class="btn pri" data-a="reviveGo">Revive</button>`);
     }
 
-    case "longRest":
+    case "longRest": {
+      const sel = m.sel || {}, have = rationsHave(c), need = m.need != null ? m.need : rationsNeed(c), short = have < need;
+      const opts = restOptions(app.library, c, allWeapons(app.library, app.campaign));
+      const row = o => {
+        if (o.kind === "pick") {
+          const cur = sel[o.id] || o.current;
+          return `<div class="lrrow"><p class="lab">${esc(o.label)}</p>
+            <div class="seg wrap" role="group" aria-label="${esc(o.label)}">${o.options.map(x => `<button data-a="lrPick" data-id="${o.id}" data-v="${esc(x.v)}" aria-pressed="${cur === x.v}">${esc(x.v)}</button>`).join("")}</div>
+            <p class="sub2">${cur ? esc((o.options.find(x => x.v === cur) || {}).hint || "") : "Nothing chosen yet. If you leave this, one is picked at random."}</p></div>`;
+        }
+        if (o.kind === "swap") {
+          const opt = (list, val, blank) => `<option value="">${blank}</option>${list.map(n => `<option ${val === n ? "selected" : ""}>${esc(n)}</option>`).join("")}`;
+          return `<div class="lrrow"><p class="lab">${esc(o.label)} <span class="sub2">(optional: change one)</span></p>
+            <div class="lrswap"><select class="f" data-modal-sel="mastery.drop" aria-label="Weapon to replace">${opt(o.have, sel["mastery.drop"], "Keep all: " + o.have.join(", "))}</select>
+            <select class="f" data-modal-sel="mastery.add" aria-label="New weapon">${opt(o.choices, sel["mastery.add"], "Replace with...")}</select></div></div>`;
+        }
+        return `<div class="lrrow"><p class="lab">${esc(o.label)}</p><p class="sub2">${esc(o.text)}</p><button class="btn sm" data-a="${o.action}">${esc(o.button)}</button></div>`;
+      };
       return modalShell("Take a long rest?",
-        `<p>This restores all hit points, all spell slots, all Hit Dice and all trackers, ends concentration, and lowers exhaustion by 1.</p>`,
-        `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmLongRest">Long rest</button>`);
+        `<div class="lrrat"><div class="rowline"><span class="nm">Rations in your pack</span><span class="val">${have}</span></div>
+           <div class="rowline"><span class="nm">This rest uses</span><span class="stepper"><button data-a="lrNeed" data-n="-1" aria-label="Use fewer rations" ${need <= 0 ? "disabled" : ""}>\u2212</button><b>${need}</b><button data-a="lrNeed" data-n="1" aria-label="Use more rations" ${need >= 9 ? "disabled" : ""}>+</button></span></div>
+           ${short ? `<p class="sub2 lrwarn">Not enough rations: you have ${have} and this rest needs ${need}. Lower the number if your table allows it, or add rations to your pack.</p>` : ""}</div>
+         ${opts.length ? `<h3 class="lrh">Long rest options</h3>${opts.map(row).join("")}` : ""}
+         <p class="sub2" style="margin-top:12px">Restores all hit points, spell slots, Hit Dice and counters, ends concentration, and lowers exhaustion by 1. Nothing above changes unless you change it.</p>`,
+        `<button class="btn" data-a="closeModal">Go back</button><button class="btn pri" data-a="confirmLongRest" ${short ? "disabled" : ""}>Long rest</button>`);
+    }
 
     case "conditions": {
       const firstLine = n => { const g = glossaryEntry(n); return g ? esc(g.text.split(/(?<=\.)\s/)[0]).slice(0, 110) : ""; };

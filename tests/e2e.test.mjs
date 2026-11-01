@@ -626,6 +626,28 @@ await check("trackers: class counters appear on the Classic sheet, spend, and a 
   noErrs(p); await p.context().close();
 });
 
+await check("long rest: rations are eaten, picks stay unless changed, no rations means no rest", async () => {
+  const p = await open(390, 844, { touch: true });
+  await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
+  await p.waitForSelector(".stylefull", { timeout: 10000 });
+  await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(400);
+  await p.evaluate(() => { APP.char.subclass = "Circle of the Land"; APP.char.hp.cur = 3; });
+  await p.locator('[data-a="openLongRest"]:visible').first().click(); await p.waitForTimeout(300);
+  const txt = await p.locator(".modal-back").innerText();
+  assert(/Rations in your pack/.test(txt) && /Long rest options/.test(txt) && /arid land/i.test(txt) && /random/i.test(txt), "long rest screen incomplete: " + JSON.stringify(txt.slice(0, 400)));
+  await p.locator('[data-a="lrNeed"][data-n="1"]').click(); await p.waitForTimeout(150);
+  await p.locator('[data-a="lrPick"][data-v="Polar Land"]').click(); await p.waitForTimeout(150);
+  await p.locator('[data-a="confirmLongRest"]').click(); await p.waitForTimeout(400);
+  const after = await p.evaluate(() => ({ hp: APP.char.hp.cur === APP.char.hp.max, pick: APP.char.choices["Circle of the Land spell list"], rations: APP.char.inventory.find(i => /^Rations/.test(i.name)).qty, need: APP.char.restRations }));
+  assert(after.hp && after.pick === "Polar Land" && after.rations === 4 && after.need === 2, "unexpected result " + JSON.stringify(after));
+  await p.evaluate(() => { APP.char.inventory.find(i => /^Rations/.test(i.name)).qty = 1; });
+  await p.locator('[data-a="openLongRest"]:visible').first().click(); await p.waitForTimeout(300);
+  assert(await p.locator('[data-a="confirmLongRest"]').isDisabled(), "rest allowed without enough rations");
+  await p.locator('[data-a="lrNeed"][data-n="-1"]').click(); await p.waitForTimeout(150);
+  assert(!(await p.locator('[data-a="confirmLongRest"]').isDisabled()), "lowering the number should allow the rest");
+  noErrs(p); await p.context().close();
+});
+
 await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');

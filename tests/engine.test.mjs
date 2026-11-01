@@ -6,6 +6,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { isSustained } from "../js/combat.js";
 import { normalizeSubclass, subclassGaps } from "../js/data.js";
 import { newFeatures } from "../js/progression.js";
+import { rationsHave, rationsNeed, spendRations, restOptions, applyRestPicks } from "../js/rest.js";
 import { subclassSpellGrants, subclassSpellTables, syncSubclassSpells, findSpellName, pickKey } from "../js/subclassspells.js";
 import { rerollsFor, ensureLuck, shortRestRefill } from "../js/riders.js";
 import { weaponNumbers } from "../js/rules.js";
@@ -359,6 +360,20 @@ t("class trackers: counts from the level, short-rest regain, rest type changes w
     const lowCha = mk({ class: "Bard", level: 1, abilities: { cha: 8 } }); ensureLuck(lowCha); eq(lowCha.resources[0].max, 1);
     const f = mk({ class: "Fighter", level: 1 }); ensureLuck(f); eq(f.resources.length, 0); f.level = 2; ensureLuck(f); eq(f.resources.map(r => [r.name, r.max, r.reset]), [["Action Surge", 1, "short"]]);
   });
+});
+t("long rest: rations come from the bag, picks stay unless changed, a missing required pick is random", () => {
+  const c = { inventory: [{ name: "Rations", qty: 2 }, { name: "Rations (1 day)", qty: 1 }, { name: "Ration Box", qty: 9 }, { name: "Dagger", qty: 1, weapon: {} }] };
+  eq(rationsHave(c), 3); eq(rationsNeed(c), 1); c.restRations = 0; eq(rationsNeed(c), 0); c.restRations = 2; eq(rationsNeed(c), 2);
+  eq(spendRations(c, 4), false); eq(rationsHave(c), 3); eq(spendRations(c, 2), true); eq(rationsHave(c), 1); eq(spendRations(c, 0), true);
+  const L = { spells: ["Blur", "Fireball", "Fog Cloud", "Cone of Cold"].map(name => ({ name })), subclasses: [{ cls: "Druid", name: "Land", features: [{ lv: 3, name: "Land Spells", text: "Arid Land\n\nDruid Level / Circle Spells\n\n3 / Blur\n\n5 / Fireball\n\nPolar Land\n\nDruid Level / Circle Spells\n\n3 / Fog Cloud\n\n5 / Cone of Cold" }] }] };
+  const d = { class: "Druid", subclass: "Land", level: 5, choices: {}, spellcasting: { spells: [] }, masteries: ["Club", "Dagger"] };
+  const weapons = [{ name: "Club", mastery: "Slow" }, { name: "Dagger", mastery: "Nick" }, { name: "Scimitar", mastery: "Nick" }, { name: "Net" }];
+  const o = restOptions(L, d, weapons);
+  eq(o.map(x => x.kind), ["pick", "swap", "note"]); eq(o[0].current, ""); eq(o[0].options.map(x => x.v), ["Arid Land", "Polar Land"]); eq(o[1].choices, ["Scimitar"]);
+  const r = applyRestPicks(d, L, {}, weapons, () => 0.9); eq(r.random.length, 1); eq(d.choices["Land spell list"], "Polar Land"); eq(d.spellcasting.spells.map(x => x.name), ["Fog Cloud", "Cone of Cold"]);
+  const r2 = applyRestPicks(d, L, {}, weapons, () => 0.1); eq([r2.random, r2.log], [[], []]); eq(d.choices["Land spell list"], "Polar Land"); // untouched stays
+  applyRestPicks(d, L, { list: "Arid Land", "mastery.drop": "Club", "mastery.add": "Scimitar" }, weapons); eq(d.spellcasting.spells.map(x => x.name), ["Blur", "Fireball"]); eq(d.masteries, ["Scimitar", "Dagger"]);
+  applyRestPicks(d, L, { "mastery.drop": "Scimitar", "mastery.add": "Dagger" }, weapons); eq(d.masteries, ["Scimitar", "Dagger"]); // cannot duplicate
 });
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);
