@@ -18,7 +18,7 @@ export const CHANGELOG = [
         items: [
           "Every subclass feature the book places before level 3 is now gained at level 3, when the subclass is chosen.",
           "A subclass page says which levels the class expects but your rules file has no feature for.",
-          "Domain, oath, circle and patron spell lists now give you those spells, always prepared, as you reach each class level. Existing characters get them when opened. A few spells the books name are not in your rules file yet and are skipped."
+          "Domain, oath, circle and patron spell lists now give you those spells, always prepared, as you reach each class level, even when the table sits inside another feature's text. Existing characters get them when opened. Spells the books name that are not in your rules file yet are skipped. Lists you choose between (Harvest Domain, Circle of the Land) are read but wait for the long rest screen."
         ]
       }
     ]

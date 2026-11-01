@@ -6,7 +6,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { isSustained } from "../js/combat.js";
 import { normalizeSubclass, subclassGaps } from "../js/data.js";
 import { newFeatures } from "../js/progression.js";
-import { subclassSpellGrants, syncSubclassSpells, findSpellName } from "../js/subclassspells.js";
+import { subclassSpellGrants, subclassSpellTables, syncSubclassSpells, findSpellName, pickKey } from "../js/subclassspells.js";
 import { rerollsFor, ensureLuck } from "../js/riders.js";
 import { weaponNumbers } from "../js/rules.js";
 import { unarmedWeapons, attacksPerAction } from "../js/attackctx.js";
@@ -259,8 +259,12 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     eq(g("Life Domain").map(x => x.lv), [3, 5, 7, 9]); eq(g("Life Domain")[0].spells, ["Aid", "Bless", "Cure Wounds", "Lesser Restoration"]);
     eq(g("Oath of Devotion")[0].spells, ["Protection from Evil and Good", "Shield of Faith"]);
     eq(g("Draconic Sorcery").map(x => x.lv), [3, 5, 7, 9]);
-    const tables = LIB.subclasses.filter(sc => sc.features.some(f => !f.intro && /spells$/i.test(f.name)));
-    eq(tables.filter(sc => subclassSpellGrants(sc, LIB).length).length >= 34, true);
+    const withTable = LIB.subclasses.filter(sc => { const t = subclassSpellTables(sc, LIB); return t.grants.length || t.choices.length; });
+    eq(withTable.length >= 60, true, "subclasses with a spell table: " + withTable.length);
+    eq(subclassSpellTables(LIB.subclasses.find(x => x.name === "Circle of the Land"), LIB).choices.map(o => o.name), ["Arid Land", "Polar Land", "Temperate Land", "Tropical Land"]);
+    eq(subclassSpellTables(LIB.subclasses.find(x => x.name === "Harvest Domain"), LIB).choices.map(o => o.name), ["Sowing", "Growing", "Reaping"]);
+    eq(g("Eldritch Domain")[0].spells, ["Detect Thoughts", "Hideous Laughter", "See Invisibility", "Sleep"]); // table lives inside the intro text
+    eq(g("Circle of the Sea").map(x => x.lv), [3, 5, 7, 9]); eq(g("Shadow Sorcery")[0].spells.includes("Pass without Trace"), true);
   }));
   t("real rules: species trackers, Goliath/Azurite boons, Danger Sense", () => withReal(() => {
     eq(LIB.species.flatMap(sp => (sp.effects || []).flatMap(validateEffect)), []);
@@ -287,8 +291,8 @@ t("subclass features before level 3 arrive at 3; gaps are listed", () => {
 t("subclass spell tables: formats, run-on tables, sync by level", () => {
   const L = { spells: ["Aid", "Bless", "Cure Wounds", "Shield of Faith", "Fly", "Arcane Eye", "Fear"].map(name => ({ name })), subclasses: [] };
   eq(findSpellName(L, "shield of faith*"), "Shield of Faith"); eq(findSpellName(L, "Shielf of Faith"), "Shield of Faith"); eq(findSpellName(L, "Wish"), null);
-  const mk2 = (cls, text) => ({ cls, name: "S", features: [{ lv: 3, name: "S Spells", text }] });
-  eq(subclassSpellGrants(mk2("Cleric", "Cleric Level\tSpells\n3rd\tAid, Bless\n5th\tCure Wounds\n1\tflavour that is not a spell"), L).map(g => [g.lv, g.spells]), [[3, ["Aid", "Bless"]], [5, ["Cure Wounds"]]]);
+  const mk2 = (cls, text) => ({ cls, name: "S", features: [{ lv: 3, name: "S Spells", text: "S Spells\nClass Level\tSpells\n" + text }] });
+  eq(subclassSpellGrants(mk2("Cleric", "3rd\tAid, Bless\n5th\tCure Wounds\n1\tflavour that is not a spell"), L).map(g => [g.lv, g.spells]), [[3, ["Aid", "Bless"]], [5, ["Cure Wounds"]]]);
   eq(subclassSpellGrants(mk2("Paladin", "3 / Shielf of Faith\n5 / Fear, Fly 7 | Arcane Eye"), L).map(g => [g.lv, g.spells]), [[3, ["Shield of Faith"]], [5, ["Fear", "Fly"]], [7, ["Arcane Eye"]]]);
   eq(subclassSpellGrants(mk2("Cleric", "1st level: aid\n3rd level: wish, bless"), L).map(g => [g.lv, g.spells, g.missing]), [[1, ["Aid"], []], [3, ["Bless"], ["wish"]]]);
   L.subclasses.push(mk2("Cleric", "3\tAid, Bless\n5\tCure Wounds"));
@@ -297,6 +301,19 @@ t("subclass spell tables: formats, run-on tables, sync by level", () => {
   c.level = 5; eq(syncSubclassSpells(c, L), ["Cure Wounds"]); eq(syncSubclassSpells(c, L), []);
   c.subclass = "Other"; syncSubclassSpells(c, L); eq(c.spellcasting.spells.filter(s => s.fromSubclass).length, 0);
 });
+  t("subclass spell tables: columns/titled options need a pick; whitespace tables; found inside the intro", () => {
+    const L = { spells: ["Aid", "Bless", "Fireball", "Fog Cloud", "Web", "Blur", "Cone of Cold"].map(name => ({ name })), subclasses: [] };
+    const land = { cls: "Druid", name: "Land", features: [{ lv: 3, name: "Land Spells", text: "Pick one.\n\nArid Land\n\nDruid Level / Circle Spells\n\n3 / Blur\n\n5 / Fireball\n\nPolar Land\n\nDruid Level / Circle Spells\n\n3 / Fog Cloud\n\n5 / Cone of Cold" }] };
+    const harvest = { cls: "Cleric", name: "Harv", features: [{ lv: 3, name: "H", text: "Harv Spells\nCleric Level        Sowing        Growing\n3rd        Aid, Bless        Web" }] };
+    const intro = { cls: "Cleric", name: "Intro", features: [{ lv: 3, name: "", intro: true, text: "Flavour here.\n\nLevel 3: Intro Spells\nSrc p1\nText sentence.\n\nIntro Spells\nCleric Level        Prepared Spells\n3        Aid, Bless\n5        Fireball\nNext feature\nbody" }] };
+    const lt = subclassSpellTables(land, L); eq(lt.grants, []); eq(lt.choices.map(o => [o.name, o.rows.map(r => r.spells)]), [["Arid Land", [["Blur"], ["Fireball"]]], ["Polar Land", [["Fog Cloud"], ["Cone of Cold"]]]]);
+    eq(subclassSpellTables(harvest, L).choices.map(o => [o.name, o.rows[0].spells]), [["Sowing", ["Aid", "Bless"]], ["Growing", ["Web"]]]);
+    eq(subclassSpellGrants(intro, L).map(g => [g.lv, g.spells]), [[3, ["Aid", "Bless"]], [5, ["Fireball"]]]);
+    L.subclasses.push(land);
+    const c = { class: "Druid", subclass: "Land", level: 5, choices: {}, spellcasting: { spells: [] } };
+    eq(syncSubclassSpells(c, L), []); c.choices[pickKey("Land")] = "Polar Land"; eq(syncSubclassSpells(c, L), ["Fog Cloud", "Cone of Cold"]);
+    c.choices[pickKey("Land")] = "Arid Land"; syncSubclassSpells(c, L); eq(c.spellcasting.spells.map(s => s.name), ["Blur", "Fireball"]);
+  });
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);
   eq(isSustained("You regain Hit Points equal to 1d10 plus your Fighter level."), false);
