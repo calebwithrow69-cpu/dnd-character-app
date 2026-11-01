@@ -727,7 +727,7 @@ function onInput(e) {
   }
   if (ds.rsName != null && APP.rs) { ACTIONS.rsRename(el.value); return; }
   if (ds.query === "rsq" && APP.rs) { APP.rs.q = el.value; render(); return; }
-  if (ds.query === "dmq" && APP.dm) { APP.dm.q = el.value; const l = document.getElementById("dm-list"); if (l) l.innerHTML = dmListHtml(APP); return; }
+  if (ds.query === "dmq" && APP.dm) { APP.dm.q = el.value; const l = document.getElementById("dm-list"); if (l) l.innerHTML = dmListHtml(APP); else render(); return; }
   if (ds.setSearch) {
     const q = el.value.trim().toLowerCase();
     let any = false;
@@ -776,6 +776,8 @@ function onChange(e) {
     return;
   }
   if (ds.dmFile != null && el.files && el.files[0]) { ACTIONS.dmImportFile(el.files[0]); el.value = ""; return; }
+  if (ds.dmPick != null) { const inp = el.parentElement && el.parentElement.querySelector("input"); if (inp && el.value) { inp.value = el.value; } el.value = ""; return; }
+  if (ds.dmBulk != null && APP.dm) { ACTIONS.dmBulkSet(ds.kind, ds.key, el.value); return; }
   // a <select> that names an action (e.g. Sort) runs it on change
   if (el.tagName === "SELECT" && ds.a && ACTIONS[ds.a]) { ACTIONS[ds.a](el); return; }
   if (ds.cb != null && APP.customBg) {

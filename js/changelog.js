@@ -2,11 +2,30 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.35";
+export const VERSION = "0.1.36";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.36",
+    date: "2026-11-01",
+    stage: "Pre-build",
+    blurb: "DM editor in blocks, with book pickers and bulk fixes.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Every entry in the DM editor is split into blocks (Basics, Training, Features, Rules text...). Tap a block to open it. Blocks you leave closed are never touched.",
+          "Book, type, damage type and similar fields now let you pick one that already exists or type your own. Backgrounds can have a book too.",
+          "New: Fix books in bulk. Set the book of one entry, or of everything shown, in one go.",
+          "New: a subclass shows which levels its class expects but it lacks (one tap adds a feature at that level), shows the spell list the app reads from it, and can add a spell table to fill in.",
+          "New: a list of spells the subclass tables name that your spell list is missing, each with an Add button that opens a new spell with the name filled in. Spells have Save and add another.",
+          "Counters and sheet effects can be edited as data on any entry or feature (under Other data), and are checked before saving."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.35",
     date: "2026-11-01",

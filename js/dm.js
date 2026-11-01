@@ -34,13 +34,17 @@ export const SCHEMA = {
     { k: "desc", label: "Description", t: "area", rows: 4 },
     { k: "core", label: "Core traits text", t: "area", rows: 6 },
     { k: "table", label: "Class table (monospace, columns separated by spaces)", t: "code", rows: 12, hint: "First line is the header: Level, Proficiency Bonus (or Prof), Features, then your own columns. One row per level." },
-    { k: "features", label: "Features", t: "list", cols: [{ k: "lv", label: "Level", t: "num" }, { k: "name", label: "Name", t: "text" }, { k: "src", label: "Source", t: "text" }, { k: "text", label: "Text", t: "area", rows: 5 }] }] },
+    { k: "features", label: "Features", t: "list", cols: [{ k: "lv", label: "Level", t: "num" }, { k: "name", label: "Name", t: "text" }, { k: "src", label: "Source", t: "text" }, { k: "text", label: "Text", t: "area", rows: 5 },
+      { k: "trackers", label: "Use counters (data, optional)", t: "json", rows: 3, hint: "[{\"name\":\"Rage\",\"max\":{\"prof\":true},\"reset\":\"long\"}]" },
+      { k: "effects", label: "Effects on the sheet (data, optional)", t: "json", rows: 3, hint: "[{\"t\":\"ac\",\"v\":1}]" }] }] },
   subclasses: { label: "Subclasses", one: "subclass", fields: [
     { k: "cls", label: "Class", t: "select", from: "classes" },
     { k: "name", label: "Name", t: "text" }, { k: "source", label: "Source", t: "text" },
-    { k: "features", label: "Features", t: "list", cols: [{ k: "lv", label: "Level", t: "num" }, { k: "name", label: "Name", t: "text" }, { k: "src", label: "Source", t: "text" }, { k: "text", label: "Text", t: "area", rows: 5 }] }] },
+    { k: "features", label: "Features", t: "list", cols: [{ k: "lv", label: "Level", t: "num" }, { k: "name", label: "Name", t: "text" }, { k: "src", label: "Source", t: "text" }, { k: "text", label: "Text", t: "area", rows: 5 },
+      { k: "trackers", label: "Use counters (data, optional)", t: "json", rows: 3, hint: "[{\"name\":\"Rage\",\"max\":{\"prof\":true},\"reset\":\"long\"}]" },
+      { k: "effects", label: "Effects on the sheet (data, optional)", t: "json", rows: 3, hint: "[{\"t\":\"ac\",\"v\":1}]" }] }] },
   backgrounds: { label: "Backgrounds", one: "background", enabled: true, fields: [
-    { k: "name", label: "Name", t: "text" },
+    { k: "name", label: "Name", t: "text" }, { k: "source", label: "Source (book)", t: "text" },
     { k: "abilities", label: "Ability scores (3, comma separated)", t: "csv", hint: ABIL.join(", ") },
     { k: "feat", label: "Origin feat (exact name)", t: "text" },
     { k: "skills", label: "Skill proficiencies (2, comma separated)", t: "csv" },
@@ -63,7 +67,8 @@ export const SCHEMA = {
     { k: "name", label: "Name", t: "text" }, { k: "cat", label: "Category", t: "select", opts: ["Simple", "Martial"] },
     { k: "kind", label: "Melee or ranged", t: "select", opts: ["Melee", "Ranged"] },
     { k: "dice", label: "Damage dice", t: "text", hint: "1d8" }, { k: "dtype", label: "Damage type", t: "text" },
-    { k: "mastery", label: "Mastery property", t: "text" }, { k: "props", label: "Properties", t: "text", hint: "Light, Finesse, Thrown (Range 20/60)" }] },
+    { k: "mastery", label: "Mastery property", t: "text" }, { k: "props", label: "Properties", t: "text", hint: "Light, Finesse, Thrown (Range 20/60)" },
+    { k: "price", label: "Price in copper (100 = 1 gp)", t: "num" }] },
   items: { label: "Items", one: "item", fields: [
     { k: "name", label: "Name", t: "text" }, { k: "type", label: "Type", t: "text", hint: "Mundane Item | Potion, Common | Wondrous Item | Ring | Weapon (Longsword) | Armor (Plate Armor)" },
     { k: "price", label: "Price in copper (100 = 1 gp)", t: "num" }, { k: "priceTxt", label: "Price as shown", t: "text" },
@@ -72,13 +77,30 @@ export const SCHEMA = {
   rules: { label: "Rules glossary", one: "rule", fields: [
     { k: "name", label: "Term", t: "text" }, { k: "text", label: "Text", t: "area", rows: 8 }] }
 };
+
+// How each kind's form is split into blocks: tap a block to open it. `pick` fields offer the values already in the rules.
+export const BLOCKS = {
+  species: [["Basics", ["name", "source", "desc"]], ["Facts and traits", ["traits"]]],
+  classes: [["Basics", ["name", "source", "hd", "primary", "desc"]], ["Training", ["saves", "skillN", "skillFrom", "armorProf", "weaponProf", "toolProf"]], ["Starting equipment", ["equipment"]], ["Core traits text", ["core"]], ["Class table", ["table"]], ["Features", ["features"]]],
+  subclasses: [["Basics", ["cls", "name", "source"]], ["Features", ["features"]]],
+  backgrounds: [["Basics", ["name", "source", "desc"]], ["What it gives", ["abilities", "feat", "skills", "tool"]], ["Rules block", ["effect"]]],
+  feats: [["Basics", ["name", "source", "type"]], ["Rules text", ["text"]]],
+  spells: [["Basics", ["name", "level", "school", "source"]], ["Casting", ["time", "range", "comp", "dur", "conc", "ritual"]], ["Classes", ["classes"]], ["Rules text", ["text"]]],
+  weapons: [["Basics", ["name", "cat", "kind"]], ["Damage", ["dice", "dtype", "mastery", "props"]], ["Price", ["price"]]],
+  items: [["Basics", ["name", "type", "source", "slots"]], ["Price", ["price", "priceTxt", "base"]], ["Description", ["text"]]],
+  rules: [["Rule", ["name", "text"]]]
+};
+// Fields that offer "pick one that exists, or type your own".
+export const PICK_FIELDS = { source: "*", src: "*", type: 1, dtype: 1, mastery: 1, props: 0, primary: 1, armorProf: 1, weaponProf: 1, toolProf: 1, time: 1, range: 1, dur: 1, comp: 1, slots: 1, feat: "feats", tool: 1 };
+// Keys the form does not show (counters, effects, choice fixes, art...): edited as raw data in the last block.
+export const extraKeys = (kind, e) => { const known = new Set(SCHEMA[kind].fields.map(f => f.k)); return Object.keys(e || {}).filter(k => !known.has(k) && k !== "bookLv"); };
 export const KIND_ORDER = ["species", "classes", "subclasses", "backgrounds", "feats", "spells", "weapons", "items", "rules"];
 
 const TEMPLATES = {
   species: () => ({ name: "", source: NEW_SRC, desc: "", traits: "Creature Type: Humanoid\n\nSize: Medium (about 5-7 feet tall)\n\nSpeed: 30 feet\n\nFirst Trait. Describe what it does, how often it can be used, and any save DC.\n\nSecond Trait. Describe it here." }),
   classes: () => ({ name: "", source: NEW_SRC, hd: 8, primary: "", saves: [], skillN: 2, skillFrom: [], armorProf: "", weaponProf: "Simple weapons", toolProf: "", equipment: "Choose A or B: (A) ..., (B) 100 GP", desc: "", core: "Primary Ability: \n\nHit Point Die:\nD8 per level\n\nSaving Throw Proficiencies: ", table: "Level  Proficiency Bonus  Features\n1      +2                 \n2      +2                 \n3      +2                 ", features: [{ lv: 1, name: "", src: NEW_SRC, text: "" }] }),
   subclasses: () => ({ cls: "", name: "", source: NEW_SRC, features: [{ lv: 3, name: "", src: NEW_SRC, text: "" }] }),
-  backgrounds: () => ({ name: "", abilities: [], feat: "", skills: [], tool: "", effect: "Ability Scores: \n\nFeat: \n\nSkill Proficiencies: \n\nTool Proficiency: \n\nEquipment: ", desc: "" }),
+  backgrounds: () => ({ name: "", source: NEW_SRC, abilities: [], feat: "", skills: [], tool: "", effect: "Ability Scores: \n\nFeat: \n\nSkill Proficiencies: \n\nTool Proficiency: \n\nEquipment: ", desc: "" }),
   feats: () => ({ name: "", source: NEW_SRC, type: "General Feat (Prerequisite: Level 4+)", text: "" }),
   spells: () => ({ name: "", level: 1, school: "Evocation", time: "Action", range: "60 feet", comp: "V, S", dur: "Instantaneous", conc: 0, ritual: 0, classes: [], source: NEW_SRC, text: "1st-level Evocation\n" }),
   weapons: () => ({ name: "", cat: "Martial", kind: "Melee", dice: "1d8", dtype: "Slashing", mastery: "", props: "" }),

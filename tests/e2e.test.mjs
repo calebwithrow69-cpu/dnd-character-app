@@ -700,6 +700,51 @@ await check("rulesets: anyone can open the DM editor, build a ruleset, use it, s
   noErrs(p); await p.context().close();
 });
 
+await check("editor: blocks, pick-or-type book, closed blocks keep their data, bad data is refused, bulk books, missing spells", async () => {
+  const p = await open(390, 844, { touch: true });
+  await clickA(p, "goRoster"); await clickA(p, "dmOpen"); await p.waitForTimeout(200);
+  // a background: blocks, then set its book by picking an existing one
+  await p.locator('select[data-a="dmKind"]').selectOption("backgrounds"); await p.waitForTimeout(200);
+  await p.locator('[data-a="dmEdit"]').first().click(); await p.waitForTimeout(250);
+  assert(await p.locator('.dm-block').count() >= 4, "expected blocks in the form");
+  const pick = p.locator('select[data-dm-pick]').first();
+  const first = await pick.locator("option").nth(1).innerText(); await pick.selectOption({ index: 1 }); await p.waitForTimeout(150);
+  assert((await p.locator('[data-dmf="source"]').inputValue()) === first, "picking an existing book did not fill the field");
+  await p.locator('[data-dmf="source"]').fill("My Own Book"); await clickA(p, "dmSave"); await p.waitForTimeout(300);
+  const bg = await p.evaluate(() => APP.library.backgrounds.filter(b => b.source === "My Own Book").length); assert(bg === 1, "book not saved");
+  // a subclass saved with its Features block closed keeps every feature
+  await p.locator('select[data-a="dmKind"]').selectOption("subclasses"); await p.waitForTimeout(200);
+  const before = await p.evaluate(() => APP.library.subclasses[0].features.length);
+  await p.locator('[data-a="dmEdit"]').first().click(); await p.waitForTimeout(250);
+  assert(/Levels this class expects|Features/.test(await p.locator("main").innerText()), "subclass blocks missing");
+  await p.locator('[data-a="dmBlock"][data-b="Features"]').click(); await p.waitForTimeout(150);
+  assert(/Levels this class expects/.test(await p.locator("main").innerText()), "subclass tools missing");
+  await p.locator('[data-a="dmBlock"][data-b="Features"]').click(); await p.waitForTimeout(150); // close it again
+  await clickA(p, "dmSave"); await p.waitForTimeout(300);
+  assert(await p.evaluate(() => APP.library.subclasses.find(s => s.features.length > 0).features.length) >= 1 && (await p.evaluate(() => APP.library.subclasses[0].features.length)) === before, "a closed Features block lost data");
+  // bad effect data is refused
+  await p.locator('select[data-a="dmKind"]').selectOption("feats"); await p.waitForTimeout(200);
+  await p.locator('[data-a="dmEdit"]').first().click(); await p.waitForTimeout(250);
+  await p.locator('[data-a="dmBlock"][data-b="Other data"]').click(); await p.waitForTimeout(150);
+  await p.locator("[data-dmx]").fill('{"effects":[{"t":"nonsense","v":1}]}'); await clickA(p, "dmSave"); await p.waitForTimeout(250);
+  assert(await p.locator('[data-dmx]').count() === 1, "bad effect data was accepted");
+  await p.locator("[data-dmx]").fill('{"effects": [{"t": "ac", "v": 1}'); await clickA(p, "dmSave"); await p.waitForTimeout(250);
+  assert(await p.locator('[data-dmx]').count() === 1, "broken data was accepted");
+  await clickA(p, "dmCancel");
+  // bulk books
+  await clickA(p, "dmBulkOpen"); await p.waitForTimeout(250);
+  await p.locator('select[data-a="dmBulkKind"]').selectOption("backgrounds"); await p.waitForTimeout(250);
+  await p.locator('#dm-bulk-all').fill("Bulk Test Book"); await clickA(p, "dmBulkAll"); await p.waitForTimeout(400);
+  assert(await p.evaluate(() => APP.library.backgrounds.filter(b => b.source === "Bulk Test Book").length) >= 60, "bulk set did not reach the backgrounds");
+  await clickA(p, "dmBulkExit");
+  // missing spells
+  await clickA(p, "dmMissing"); await p.waitForTimeout(250);
+  const addN = await p.locator('[data-a="dmAddSpell"]').count(); assert(addN >= 10, "expected missing spells, got " + addN);
+  await p.locator('[data-a="dmAddSpell"]').first().click(); await p.waitForTimeout(250);
+  assert((await p.locator('[data-dmf="name"]').inputValue()).length > 2, "new spell not prefilled");
+  noErrs(p); await p.context().close();
+});
+
 await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
