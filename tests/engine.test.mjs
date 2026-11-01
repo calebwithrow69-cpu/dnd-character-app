@@ -4,6 +4,8 @@
 //   node tests/engine.test.mjs                (also checks data/library.json effects if unlocked)
 import { readFileSync, existsSync } from "node:fs";
 import { isSustained } from "../js/combat.js";
+import { normalizeSubclass, subclassGaps } from "../js/data.js";
+import { newFeatures } from "../js/progression.js";
 import { rerollsFor, ensureLuck } from "../js/riders.js";
 import { weaponNumbers } from "../js/rules.js";
 import { unarmedWeapons, attacksPerAction } from "../js/attackctx.js";
@@ -266,6 +268,13 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     eq(rollMods(mk({ class: "Barbarian", level: 3, conditions: ["Incapacitated"] }), "save.dex").adv, []);
   }));
 }
+t("subclass features before level 3 arrive at 3; gaps are listed", () => {
+  const sc = { cls: "Cleric", name: "Test Domain", features: [{ lv: 1, name: "Bonus", text: "x" }, { lv: 2, name: "Channel", text: "y" }, { lv: 3, name: "Spells", text: "z" }, { lv: 6, name: "Six", text: "w" }] };
+  const n = { ...sc, features: normalizeSubclass(sc) };
+  eq(n.features.map(f => f.lv), [3, 3, 3, 6]); eq(n.features[0].bookLv, 1);
+  eq(newFeatures({ subclasses: [n] }, { name: "Cleric", features: [] }, "Test Domain", 3).map(f => f.name), ["Bonus", "Channel", "Spells"]);
+  eq(subclassGaps(n), [17]);
+});
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);
   eq(isSustained("You regain Hit Points equal to 1d10 plus your Fighter level."), false);

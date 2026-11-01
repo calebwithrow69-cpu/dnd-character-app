@@ -168,7 +168,21 @@ export function normalizeSubclass(sc) {
     }
     push();
   }
-  return out.filter(f => f.intro || f.name || !/^nothing\.*$/i.test(String(f.text).trim()));
+  // Campaign rule: every subclass is chosen at level 3, so a feature the book places earlier arrives at 3.
+  return out.filter(f => f.intro || f.name || !/^nothing\.*$/i.test(String(f.text).trim()))
+    .map(f => (!f.intro && Number.isFinite(f.lv) && f.lv < SUBCLASS_START ? { ...f, lv: SUBCLASS_START, bookLv: f.lv } : f));
+}
+export const SUBCLASS_START = 3;
+// Levels at which each class's subclass gives something (from the SRD 5.2 subclasses).
+export const SUBCLASS_LEVELS = {
+  Barbarian: [3, 6, 10, 14], Bard: [3, 6, 14], Cleric: [3, 6, 17], Druid: [3, 6, 10, 14],
+  Fighter: [3, 7, 10, 15, 18], Monk: [3, 6, 11, 17], Paladin: [3, 7, 15, 20], Ranger: [3, 7, 11, 15],
+  Rogue: [3, 9, 13, 17], Sorcerer: [3, 6, 14, 18], Warlock: [3, 6, 10, 14], Wizard: [3, 6, 10, 14]
+};
+// Levels the class expects from its subclass that this subclass has no feature for.
+export function subclassGaps(sc) {
+  const have = new Set((sc?.features || []).filter(f => !f.intro).map(f => f.lv));
+  return (SUBCLASS_LEVELS[sc?.cls] || []).filter(l => !have.has(l));
 }
 
 export function findByName(list, name) {

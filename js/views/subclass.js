@@ -2,7 +2,7 @@
 // visible, nothing to expand. Rules text is shown exactly as written; the
 // seal, colour and texture come from the subclass's tone (js/subtone.js).
 import { esc, formatText, ICONS } from "../ui.js";
-import { subclassesFor } from "../data.js";
+import { subclassesFor, subclassGaps } from "../data.js";
 import { toneFor } from "../subtone.js";
 
 export function subList(app) {
@@ -48,6 +48,7 @@ export function renderSubclassPage(app) {
       <div class="scbody">
         ${rest.trim() ? `<div class="about">${formatText(rest)}</div>` : ""}
         ${byLv}
+        ${(() => { const g = subclassGaps(sc); return g.length ? `<p class="sub2">Not in your rules file yet: level ${g.join(", ")} feature${g.length === 1 ? "" : "s"}. The DM can add ${g.length === 1 ? "it" : "them"} in the editor.</p>` : ""; })()}
         ${app.library.credits && /srd|creative commons|CC-BY/i.test(sc.source || "") ? `<p class="sub2">Contains SRD 5.2 content, CC-BY-4.0.</p>` : ""}
       </div>
     </div>
