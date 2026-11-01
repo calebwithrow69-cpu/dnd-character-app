@@ -611,6 +611,21 @@ await check("effects: old characters keep their HP, Hearty adds its level, custo
   noErrs(p); await p.context().close();
 });
 
+await check("trackers: class counters appear on the Classic sheet, spend, and a short rest gives back what the rules say", async () => {
+  const p = await open(390, 844, { touch: true });
+  await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
+  await p.waitForSelector(".stylefull", { timeout: 10000 });
+  await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(400);
+  const res = await p.evaluate(() => APP.char.resources.map(r => [r.name, r.max, r.used, r.reset, r.shortRegain || 0]));
+  assert(res.some(r => r[0] === "Wild Shape" && r[1] >= 2), "Wild Shape counter missing: " + JSON.stringify(res));
+  assert(await p.locator(".classic .rowline", { hasText: "Wild Shape" }).count() >= 1, "Trackers panel does not list Wild Shape");
+  await p.evaluate(() => { const r = APP.char.resources.find(x => x.name === "Wild Shape"); r.used = r.max; });
+  await p.evaluate(async () => { const m = await import("/js/riders.js"); m.shortRestRefill(APP.char.resources); });
+  const after = await p.evaluate(() => { const r = APP.char.resources.find(x => x.name === "Wild Shape"); return [r.max - r.used, r.shortRegain || 0]; });
+  assert(after[1] === 1 && after[0] === 1, "a short rest should give back one Wild Shape use, got " + JSON.stringify(after));
+  noErrs(p); await p.context().close();
+});
+
 await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');

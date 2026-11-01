@@ -7,7 +7,7 @@ import { isSustained } from "../js/combat.js";
 import { normalizeSubclass, subclassGaps } from "../js/data.js";
 import { newFeatures } from "../js/progression.js";
 import { subclassSpellGrants, subclassSpellTables, syncSubclassSpells, findSpellName, pickKey } from "../js/subclassspells.js";
-import { rerollsFor, ensureLuck } from "../js/riders.js";
+import { rerollsFor, ensureLuck, shortRestRefill } from "../js/riders.js";
 import { weaponNumbers } from "../js/rules.js";
 import { unarmedWeapons, attacksPerAction } from "../js/attackctx.js";
 import { computeAC } from "../js/gear.js";
@@ -266,13 +266,35 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     eq(g("Eldritch Domain")[0].spells, ["Detect Thoughts", "Hideous Laughter", "See Invisibility", "Sleep"]); // table lives inside the intro text
     eq(g("Circle of the Sea").map(x => x.lv), [3, 5, 7, 9]); eq(g("Shadow Sorcery")[0].spells.includes("Pass without Trace"), true);
   }));
+  t("real rules: every class and subclass tracker is well formed and gives at least one use at every level", () => withReal(() => {
+    const bad = [], all = [];
+    const walk = (owner, features) => (features || []).forEach(f => (f.trackers || []).forEach(tr => all.push([owner, f.lv, tr])));
+    LIB.classes.forEach(c => walk(c.name, c.features)); LIB.subclasses.forEach(sc => walk(sc.name, sc.features));
+    all.forEach(([owner, lv, tr]) => {
+      if (!tr.name || !["long", "short"].includes(tr.reset)) bad.push(owner + ": " + tr.name + " reset");
+      if (tr.shortRegain != null && !(tr.shortRegain >= 1)) bad.push(owner + ": " + tr.name + " shortRegain");
+      (tr.resetAt || []).forEach(([l, r]) => { if (!(l >= 1) || !["long", "short"].includes(r)) bad.push(owner + ": " + tr.name + " resetAt"); });
+      for (const level of [3, 10, 20]) { const n = evalExpr(tr.max, mk({ level })); if (!(n >= 0) || n > 120) bad.push(`${owner}: ${tr.name} max ${n} at ${level}`); }
+    });
+    eq(bad, []); eq(all.length >= 100, true, "trackers: " + all.length);
+    const rage = LIB.classes.find(c => c.name === "Barbarian").features.find(f => f.name === "Rage").trackers[0];
+    eq([1, 3, 6, 12, 17].map(l => evalExpr(rage.max, mk({ level: l }))), [2, 3, 4, 5, 6]); eq(rage.shortRegain, 1);
+    const cd = LIB.classes.find(c => c.name === "Cleric").features.find(f => f.name === "Channel Divinity").trackers[0];
+    eq([2, 6, 18].map(l => evalExpr(cd.max, mk({ level: l }))), [2, 3, 4]);
+    const mf = LIB.classes.find(c => c.name === "Monk").features.find(f => f.name === "Monk's Focus").trackers[0];
+    eq([2, 9, 20].map(l => evalExpr(mf.max, mk({ level: l }))), [2, 9, 20]); eq(mf.reset, "short");
+    const ba = LIB.classes.find(c => c.name === "Bard").features.find(f => f.name === "Bardic Inspiration").trackers[0];
+    eq(evalExpr(ba.max, mk({ abilities: { cha: 18 } })), 4);
+    const g = mk({ class: "Druid", level: 5, species: "Human" }); ensureLuck(g); eq(g.resources.map(r => r.name), ["Wild Shape", "Wild Resurgence"]);
+    const w = mk({ class: "Fighter", level: 9, subclass: "Battle Master" }); ensureLuck(w); eq(w.resources.map(r => r.name).sort(), ["Action Surge", "Indomitable", "Know Your Enemy", "Second Wind"].sort());
+  }));
   t("real rules: species trackers, Goliath/Azurite boons, Danger Sense", () => withReal(() => {
     eq(LIB.species.flatMap(sp => (sp.effects || []).flatMap(validateEffect)), []);
     const gol = mk({ species: "Goliath", level: 5, choices: { "Goliath: Giant Ancestry": ["Fire's Burn"] } });
     ensureLuck(gol);
-    eq(gol.resources.map(r => [r.name, r.max]), [["Giant Ancestry", 3], ["Large Form", 1]]);
+    eq(gol.resources.filter(r => !/Second Wind|Action Surge/.test(r.name)).map(r => [r.name, r.max]), [["Giant Ancestry", 3], ["Large Form", 1]]);
     const fb = rollMods(gol, "dmg", {}).riders; eq(fb.map(r => [r.src, r.dice, r.res]), [["Fire's Burn", "1d10", "Giant Ancestry"]]);
-    const low = mk({ species: "Goliath", level: 3 }); ensureLuck(low); eq(low.resources.map(r => r.name), ["Giant Ancestry"]);
+    const low = mk({ species: "Goliath", level: 3 }); ensureLuck(low); eq(low.resources.map(r => r.name).filter(n => !/Second Wind|Action Surge/.test(n)), ["Giant Ancestry"]);
     const lf = { ...gol, active: [{ id: "t:Large Form" }] };
     eq(fxStat(lf, "speed", 35).total, 45); eq(rollMods(lf, "check.str").adv, ["Large Form"]); eq(rollMods(gol, "check.str").adv, []);
     const az = mk({ species: "Azurite", level: 5, choices: { "Azurite: Gem Origin": ["Diamond"] }, active: [{ id: "t:Gem Origin:Solidify" }] });
@@ -314,6 +336,21 @@ t("subclass spell tables: formats, run-on tables, sync by level", () => {
     eq(syncSubclassSpells(c, L), []); c.choices[pickKey("Land")] = "Polar Land"; eq(syncSubclassSpells(c, L), ["Fog Cloud", "Cone of Cold"]);
     c.choices[pickKey("Land")] = "Arid Land"; syncSubclassSpells(c, L); eq(c.spellcasting.spells.map(s => s.name), ["Blur", "Fireball"]);
   });
+t("class trackers: counts from the level, short-rest regain, rest type changes with level", () => {
+  const classes = [
+    { name: "Barbarian", features: [{ name: "Rage", lv: 1, trackers: [{ name: "Rage", max: { steps: [[1, 2], [3, 3], [6, 4]] }, reset: "long", shortRegain: 1 }] }] },
+    { name: "Bard", features: [{ name: "Bardic Inspiration", lv: 1, trackers: [{ name: "Bardic Inspiration", max: { abil: "cha", min: 1 }, reset: "long", resetAt: [[5, "short"]] }] }] },
+    { name: "Fighter", features: [{ name: "Action Surge", lv: 2, trackers: [{ name: "Action Surge", max: { steps: [[2, 1], [17, 2]] }, reset: "short" }] }] }];
+  withSource({ ...BASE(), classes }, () => {
+    const b = mk({ class: "Barbarian", level: 3 }); ensureLuck(b); eq(b.resources.map(r => [r.name, r.max, r.reset, r.shortRegain]), [["Rage", 3, "long", 1]]);
+    b.resources[0].used = 3; shortRestRefill(b.resources); eq(b.resources[0].used, 2); shortRestRefill(b.resources); shortRestRefill(b.resources); shortRestRefill(b.resources); eq(b.resources[0].used, 0);
+    b.level = 6; ensureLuck(b); eq(b.resources[0].max, 4);
+    const d = mk({ class: "Bard", level: 4, abilities: { cha: 16 } }); ensureLuck(d); eq([d.resources[0].max, d.resources[0].reset], [3, "long"]);
+    d.level = 5; ensureLuck(d); eq(d.resources[0].reset, "short"); d.resources[0].used = 2; shortRestRefill(d.resources); eq(d.resources[0].used, 0);
+    const lowCha = mk({ class: "Bard", level: 1, abilities: { cha: 8 } }); ensureLuck(lowCha); eq(lowCha.resources[0].max, 1);
+    const f = mk({ class: "Fighter", level: 1 }); ensureLuck(f); eq(f.resources.length, 0); f.level = 2; ensureLuck(f); eq(f.resources.map(r => [r.name, r.max, r.reset]), [["Action Surge", 1, "short"]]);
+  });
+});
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);
   eq(isSustained("You regain Hit Points equal to 1d10 plus your Fighter level."), false);

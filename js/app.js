@@ -7,7 +7,7 @@ import { turnBlock, isSustained } from "./combat.js";
 import { attacksPerAction } from "./attackctx.js";
 import { playRollStage, startRoll, rollStageOpen } from "./rollstage.js";
 import { playShow, healingFormula, SOURCES, wieldedId, playEntries } from "./play.js";
-import { ridersFor, rerollsFor } from "./riders.js";
+import { ridersFor, rerollsFor, ensureLuck, shortRestRefill } from "./riders.js";
 import { VERSION } from "./changelog.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
@@ -844,6 +844,7 @@ const ACTIONS = {
     APP.char = store.normalize(raw, APP.library);
     const gained = syncLineageSpells(APP.char, APP.library, APP.campaign);
     const subGained = syncSubclassSpells(APP.char, APP.library);
+    ensureLuck(APP.char); // class, subclass, feat and species trackers
     save();
     if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
     else if (subGained.length) setTimeout(() => toast(`Added your subclass spells: ${subGained.join(", ")}`), 300);
@@ -1303,7 +1304,7 @@ const ACTIONS = {
   finishShortRest() {
     const c = APP.char;
     slotRows(c.class, c.level).filter(r => r.pact).forEach(r => { c.spellcasting.slotsUsed[r.level - 1] = 0; });
-    c.resources.forEach(r => { if (r.reset === "short") r.used = 0; });
+    shortRestRefill(c.resources);
     c.active = [];
     save(); closeModal();
     toast("Short rest done" + (c.class === "Warlock" ? " — pact slots back" : ""));
@@ -1995,6 +1996,7 @@ function applyLevelUp() {
   });
   const lineage = syncLineageSpells(c, APP.library, APP.campaign);
   if (lineage.length) log.push(`Species spells: ${lineage.join(", ")}`);
+  ensureLuck(c);
   const subSp = syncSubclassSpells(c, APP.library);
   if (subSp.length) log.push(`Subclass spells: ${subSp.join(", ")}`);
   c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });

@@ -17,8 +17,12 @@ export function ensureLuck(c) {
   const pb = pbOf(c.level);
   trackersOf(c).forEach(t => {
     const r = (c.resources || []).find(x => x.name === t.name);
-    if (!r) c.resources.push({ name: t.name, max: t.max, used: 0, reset: t.reset || "long", note: t.note || "" });
-    else if (r.max !== t.max) { r.max = t.max; r.used = Math.min(r.used, t.max); }
+    if (!r) c.resources.push({ name: t.name, max: t.max, used: 0, reset: t.reset || "long", note: t.note || "", ...(t.shortRegain ? { shortRegain: t.shortRegain } : {}) });
+    else {
+      if (r.max !== t.max) { r.max = t.max; r.used = Math.min(r.used, t.max); }
+      if (r.reset !== (t.reset || "long")) r.reset = t.reset || "long"; // e.g. Bardic Inspiration at level 5
+      if ((r.shortRegain || 0) !== (t.shortRegain || 0)) { if (t.shortRegain) r.shortRegain = t.shortRegain; else delete r.shortRegain; }
+    }
   });
   PB_TRACKERS.forEach(t => {
     if (!t.when(c)) return;
@@ -26,6 +30,11 @@ export function ensureLuck(c) {
     if (!r) c.resources.push({ name: t.name, max: pb, used: 0, reset: "long", note: t.note });
     else if (r.max !== pb) { r.max = pb; r.used = Math.min(r.used, pb); }
   });
+}
+
+// What a short rest gives back: "short" counters refill; others with shortRegain come back that many at a time (Rage, Channel Divinity...).
+export function shortRestRefill(resources) {
+  (resources || []).forEach(r => { if (r.reset === "short") r.used = 0; else if (r.shortRegain) r.used = Math.max(0, r.used - r.shortRegain); });
 }
 
 // Ways to reroll a die on this roll. mode "die" = pick one die and reroll it (the new roll stands),

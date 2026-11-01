@@ -9,6 +9,7 @@ import { attacksPanel, needsFirstChoices, spellsTab } from "./sheet.js";
 import { classicGear } from "./classicgear.js";
 import { subclassesFor } from "../data.js";
 import { weaponsOf } from "../gear.js";
+import { trackersPanel } from "./trackers.js";
 
 const row = (name, sub, kind, extra = "") => `<button class="rowline rollable" data-a="showDetail" data-kind="${kind}" ${extra}><span class="nm">${esc(name)}</span><span class="sub2">${esc(sub)}</span></button>`;
 
@@ -104,6 +105,7 @@ export function classicBody(app, c, d) {
     ${attacksPanel(app, c, d, { head: "Weapons and damage" })}
     ${si ? `<div class="panel"><div class="panel-head"><h2>Spellcasting</h2></div><div class="panel-body">
       <div class="cvals three">${val("Ability", ABILITY_LABEL[si.ability])}${val("Modifier", fmtMod(si.mod))}${val("Spell save DC", si.dc)}${val("Spell attack", fmtMod(si.attackBonus))}</div></div></div>` : ""}
+    ${trackersPanel(c)}
       </div>
     </div>`,
     features: `<div class="cl-cols3 cl-two"><div>

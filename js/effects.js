@@ -224,11 +224,13 @@ export function rollMods(c, target, ctx = {}) {
   return out;
 }
 
+// A tracker's rest type can change with level (Bardic Inspiration comes back on a Short Rest from level 5): resetAt [[level, "short"]].
+function resetFor(t, level) { let r = t.reset || "long"; (t.resetAt || []).forEach(([lv, x]) => { if (level >= lv) r = x; }); return r; }
 // Limited-use trackers an entry asks for: `trackers: [{name, max: Expr, reset: "long"|"short", lv?, when?, note?}]`.
 export function trackersOf(c) {
   const s = SRC(), out = [];
   if (!s) return out;
-  const add = (label, list) => (list || []).forEach(t => { if (t && t.name && (t.lv || 0) <= (c.level || 1) && evalCond(t.when, {}, c)) out.push({ ...t, max: Math.max(1, evalExpr(t.max == null ? 1 : t.max, c)) }); });
+  const add = (label, list) => (list || []).forEach(t => { if (t && t.name && (t.lv || 0) <= (c.level || 1) && evalCond(t.when, {}, c)) out.push({ ...t, reset: resetFor(t, c.level || 1), max: Math.max(1, evalExpr(t.max == null ? 1 : t.max, c)) }); });
   (c.feats || []).forEach(f => { const b = baseName(f), e = s.feats.find(x => x.name === f) || s.feats.find(x => x.name === b); if (e) add(b, e.trackers); });
   const cls = s.classes.find(x => x.name === c.class);
   ((cls && cls.features) || []).forEach(f => { if (f.lv <= (c.level || 1)) add(f.name, f.trackers); });

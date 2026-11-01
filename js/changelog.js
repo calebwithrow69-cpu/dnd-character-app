@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.30";
+export const VERSION = "0.1.31";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.31",
+    date: "2026-11-01",
+    stage: "Pre-build",
+    blurb: "Class and subclass counters.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, Sorcery Points, Lay on Hands, Favored Enemy, Mystic Arcanum and about 80 subclass features now keep their own use counters, with the number of uses worked out from your level and abilities.",
+          "A short rest gives back what the book says: Rage, Wild Shape, Channel Divinity and Second Wind return one use, Action Surge and Focus Points return all. Bardic Inspiration changes to a short-rest counter at level 5.",
+          "The Classic sheet now has a Trackers panel. Existing characters get their counters when opened."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.30",
     date: "2026-11-01",
