@@ -692,11 +692,12 @@ await check("creation: a character in progress survives closing and reopening th
 });
 
 await check("creation: the Back button steps back one chapter", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForTimeout(800);
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForFunction(() => APP.createDraft && APP.createDraft.chapter >= 5, null, { timeout: 8000 }).catch(() => {});
   const last = await p.evaluate(() => APP.createDraft.chapter); assert(last >= 5, "random did not reach the last chapter");
   await p.evaluate(() => { APP.createDraft.chapter = 2; }); await clickA(p, "nextStep").catch(() => {}); // pushes a history entry
   const at = await p.evaluate(() => APP.createDraft.chapter); await p.goBack(); await p.waitForTimeout(500);
-  assert((await p.evaluate(() => APP.createDraft.chapter)) === at - 1 && await p.evaluate(() => APP.screen === "create"), "Back left creation or did not step back");
+  const now = await p.evaluate(() => ({ ch: APP.createDraft && APP.createDraft.chapter, screen: APP.screen }));
+  assert(now.ch === at - 1 && now.screen === "create", `Back left creation or did not step back (was ${at}, now ${JSON.stringify(now)}) ${p.errs.join(" || ")}`);
   noErrs(p); await p.context().close();
 });
 

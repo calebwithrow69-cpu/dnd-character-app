@@ -6,6 +6,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { isSustained } from "../js/combat.js";
 import { normalizeSubclass, subclassGaps } from "../js/data.js";
 import { newFeatures } from "../js/progression.js";
+import { subclassSpellGrants, syncSubclassSpells, findSpellName } from "../js/subclassspells.js";
 import { rerollsFor, ensureLuck } from "../js/riders.js";
 import { weaponNumbers } from "../js/rules.js";
 import { unarmedWeapons, attacksPerAction } from "../js/attackctx.js";
@@ -253,6 +254,14 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     const c = hold(["Tavern Brawler"], "longsword");
     eq(weaponNumbers(unarmedWeapons(c)[0].weapon, c).reroll.map(r => r.atMost), [1]); eq(numA(c).reroll.length, 0);
   }));
+  t("real rules: subclass spell tables resolve (Life Domain, Oath of Devotion typo, Draconic run-on)", () => withReal(() => {
+    const g = n => subclassSpellGrants(LIB.subclasses.find(x => x.name === n), LIB);
+    eq(g("Life Domain").map(x => x.lv), [3, 5, 7, 9]); eq(g("Life Domain")[0].spells, ["Aid", "Bless", "Cure Wounds", "Lesser Restoration"]);
+    eq(g("Oath of Devotion")[0].spells, ["Protection from Evil and Good", "Shield of Faith"]);
+    eq(g("Draconic Sorcery").map(x => x.lv), [3, 5, 7, 9]);
+    const tables = LIB.subclasses.filter(sc => sc.features.some(f => !f.intro && /spells$/i.test(f.name)));
+    eq(tables.filter(sc => subclassSpellGrants(sc, LIB).length).length >= 34, true);
+  }));
   t("real rules: species trackers, Goliath/Azurite boons, Danger Sense", () => withReal(() => {
     eq(LIB.species.flatMap(sp => (sp.effects || []).flatMap(validateEffect)), []);
     const gol = mk({ species: "Goliath", level: 5, choices: { "Goliath: Giant Ancestry": ["Fire's Burn"] } });
@@ -274,6 +283,19 @@ t("subclass features before level 3 arrive at 3; gaps are listed", () => {
   eq(n.features.map(f => f.lv), [3, 3, 3, 6]); eq(n.features[0].bookLv, 1);
   eq(newFeatures({ subclasses: [n] }, { name: "Cleric", features: [] }, "Test Domain", 3).map(f => f.name), ["Bonus", "Channel", "Spells"]);
   eq(subclassGaps(n), [17]);
+});
+t("subclass spell tables: formats, run-on tables, sync by level", () => {
+  const L = { spells: ["Aid", "Bless", "Cure Wounds", "Shield of Faith", "Fly", "Arcane Eye", "Fear"].map(name => ({ name })), subclasses: [] };
+  eq(findSpellName(L, "shield of faith*"), "Shield of Faith"); eq(findSpellName(L, "Shielf of Faith"), "Shield of Faith"); eq(findSpellName(L, "Wish"), null);
+  const mk2 = (cls, text) => ({ cls, name: "S", features: [{ lv: 3, name: "S Spells", text }] });
+  eq(subclassSpellGrants(mk2("Cleric", "Cleric Level\tSpells\n3rd\tAid, Bless\n5th\tCure Wounds\n1\tflavour that is not a spell"), L).map(g => [g.lv, g.spells]), [[3, ["Aid", "Bless"]], [5, ["Cure Wounds"]]]);
+  eq(subclassSpellGrants(mk2("Paladin", "3 / Shielf of Faith\n5 / Fear, Fly 7 | Arcane Eye"), L).map(g => [g.lv, g.spells]), [[3, ["Shield of Faith"]], [5, ["Fear", "Fly"]], [7, ["Arcane Eye"]]]);
+  eq(subclassSpellGrants(mk2("Cleric", "1st level: aid\n3rd level: wish, bless"), L).map(g => [g.lv, g.spells, g.missing]), [[1, ["Aid"], []], [3, ["Bless"], ["wish"]]]);
+  L.subclasses.push(mk2("Cleric", "3\tAid, Bless\n5\tCure Wounds"));
+  const c = { class: "Cleric", subclass: "S", level: 3, spellcasting: { spells: [{ name: "Aid", prepared: false, always: false }] } };
+  eq(syncSubclassSpells(c, L), ["Bless"]); eq(c.spellcasting.spells.map(s => [s.name, s.always]), [["Aid", true], ["Bless", true]]);
+  c.level = 5; eq(syncSubclassSpells(c, L), ["Cure Wounds"]); eq(syncSubclassSpells(c, L), []);
+  c.subclass = "Other"; syncSubclassSpells(c, L); eq(c.spellcasting.spells.filter(s => s.fromSubclass).length, 0);
 });
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);

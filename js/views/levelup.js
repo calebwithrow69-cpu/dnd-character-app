@@ -1,4 +1,5 @@
 // Full-screen level-up, one decision per step (Baldur's Gate style).
+import { subclassSpellGrants } from "../subclassspells.js";
 import { subRow } from "./subclass.js";
 import { esc, topbar, formatText, searchBox, infoRow, glossaryEntry, ICONS, kRow, kGroup } from "../ui.js";
 import { detailFor, spellSub } from "./sheet.js";
@@ -269,6 +270,10 @@ export function levelBody(app) {
     if (d.spells.length) lines.push(["Spells", d.spells.join(", ")]);
     const fromSpecies = lineageSpells(c, app.library, app.campaign).filter(x => x.level <= d.next && x.level > c.level && !(c.lineageGranted || []).includes(x.name));
     if (fromSpecies.length) lines.push(["Species spells", fromSpecies.map(x => x.name).join(", ") + " (always prepared)"]);
+    { const sub = d.subclass || c.subclass;
+      const scDef = sub && app.library.subclasses.find(s => s.name === sub && s.cls === c.class);
+      const gain = scDef ? subclassSpellGrants(scDef, app.library).filter(g => g.lv <= d.next && (!c.subclass || c.subclass !== sub || g.lv > c.level)).flatMap(g => g.spells) : [];
+      if (gain.length) lines.push(["Subclass spells", gain.join(", ") + " (always prepared)"]); }
     const oldSlots = slotRows(c.class, c.level).map(r => r.max).join("/"), newSlots = slotRows(c.class, d.next).map(r => r.max).join("/");
     if (!d.fromCreation && oldSlots !== newSlots) lines.push(["Spell slots", `${oldSlots || "none"} → ${newSlots}`]);
     const feats = p.features;

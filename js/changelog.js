@@ -11,13 +11,14 @@ export const CHANGELOG = [
     v: "0.1.30",
     date: "2026-11-01",
     stage: "Pre-build",
-    blurb: "Subclasses start at level 3.",
+    blurb: "Subclasses start at level 3; subclass spells.",
     groups: [
       {
         title: "Changed",
         items: [
           "Every subclass feature the book places before level 3 is now gained at level 3, when the subclass is chosen.",
-          "A subclass page says which levels the class expects but your rules file has no feature for."
+          "A subclass page says which levels the class expects but your rules file has no feature for.",
+          "Domain, oath, circle and patron spell lists now give you those spells, always prepared, as you reach each class level. Existing characters get them when opened. A few spells the books name are not in your rules file yet and are skipped."
         ]
       }
     ]

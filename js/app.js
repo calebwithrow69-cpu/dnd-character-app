@@ -29,6 +29,7 @@ import {
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
 } from "./creation.js";
 import { rollMods } from "./effects.js";
+import { syncSubclassSpells } from "./subclassspells.js";
 import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { renderSheetSearch } from "./views/classic.js";
 import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
@@ -842,8 +843,10 @@ const ACTIONS = {
     if (!raw) return;
     APP.char = store.normalize(raw, APP.library);
     const gained = syncLineageSpells(APP.char, APP.library, APP.campaign);
+    const subGained = syncSubclassSpells(APP.char, APP.library);
     save();
     if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
+    else if (subGained.length) setTimeout(() => toast(`Added your subclass spells: ${subGained.join(", ")}`), 300);
     APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null; APP.turn.round = 0; APP.turn.spent = {}; APP.turn.attacks = 0; APP.concPrompt = null; APP.charSub = "play"; APP.classicSub = "sheet"; preloadSamples();
     store.setActiveId(APP.char.id); APP.prefs.lastChar = APP.char.id; savePrefs();
     APP.screen = "sheet"; render(); window.scrollTo(0, 0);
@@ -1992,6 +1995,8 @@ function applyLevelUp() {
   });
   const lineage = syncLineageSpells(c, APP.library, APP.campaign);
   if (lineage.length) log.push(`Species spells: ${lineage.join(", ")}`);
+  const subSp = syncSubclassSpells(c, APP.library);
+  if (subSp.length) log.push(`Subclass spells: ${subSp.join(", ")}`);
   c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });
   save();
   APP.lvl = null; APP.screen = "sheet"; APP.sheetTab = "stats";
