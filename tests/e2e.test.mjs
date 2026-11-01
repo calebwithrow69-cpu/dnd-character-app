@@ -648,6 +648,25 @@ await check("long rest: rations are eaten, picks stay unless changed, no rations
   noErrs(p); await p.context().close();
 });
 
+await check("reload: a level-up in progress comes back, and a pull-down cannot refresh the page", async () => {
+  const p = await open(390, 844, { touch: true });
+  await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
+  await p.waitForSelector(".stylefull", { timeout: 10000 });
+  await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(400);
+  assert(await p.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY === "none"), "pull-to-refresh is not blocked");
+  await p.evaluate(() => { APP.screen = "levelup"; APP.lvl = null; });
+  await p.evaluate(async () => { const m = await import("/js/views/levelup.js"); APP.lvl = m.newLevelDraft(APP.char); APP.lvl.hpMode = "roll"; APP.lvl.rolled = 5; APP.lvl.step = 1; APP.screen = "levelup"; window.CR.render(); });
+  await p.waitForTimeout(300);
+  const stored = await p.evaluate(() => (localStorage.getItem("dnd-levelup-draft-v1") || "none").slice(0, 120));
+  await p.reload(); await p.waitForTimeout(2500);
+  const back = await p.evaluate(() => ({ screen: APP.screen, step: APP.lvl && APP.lvl.step, rolled: APP.lvl && APP.lvl.rolled, name: APP.char && APP.char.name }));
+  assert(back.screen === "levelup" && back.step === 1 && back.rolled === 5, "level-up not restored: " + JSON.stringify(back) + " stored=" + stored + " errs=" + p.errs.join("|"));
+  await p.evaluate(() => window.CR.ACTIONS.lvlCancel());
+  await p.reload(); await p.waitForTimeout(2000);
+  assert(await p.evaluate(() => APP.screen !== "levelup" && !localStorage.getItem("dnd-levelup-draft-v1")), "cancelled level-up came back");
+  noErrs(p); await p.context().close();
+});
+
 await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');

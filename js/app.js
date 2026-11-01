@@ -124,7 +124,7 @@ async function init() {
   } catch (e) {
     if (e instanceof LockedError) {
       APP.lockErr = e; APP.screen = "locked";
-      if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindContext(); APP._eventsBound = true; }
+  if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindContext(); APP._eventsBound = true; }
       render(); setTimeout(() => document.getElementById("f-pass")?.focus(), 50);
       return;
     }
@@ -147,6 +147,8 @@ async function init() {
       try { APP.createDraft = pruneDraftToLibrary(dr, APP); pruneCart(APP, APP.createDraft); APP.createDraft.chapter = Math.min(APP.createDraft.chapter, reachIndex(APP, APP.createDraft)); APP.screen = "create"; history.pushState({ cx: 1 }, ""); } catch (e) { APP.createDraft = null; APP.screen = "home"; clearDraft(); }
     } }
 
+  if (APP.screen !== "create") restoreLevelUp();
+  APP._lvlChecked = true;
   if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindContext(); APP._eventsBound = true; }
   render();
 
@@ -205,7 +207,29 @@ function applyPops() {
     el.addEventListener("animationend", () => el.classList.remove("pop"), { once: true });
   });
 }
+// A level-up in progress survives a reload (a swipe that refreshes the page, switching apps): kept 24 hours, only for the same character and level.
+const LS_LVL = "dnd-levelup-draft-v1";
+function persistLevelUp() {
+  if (!APP._lvlChecked) return; // not before the saved one has been looked at
+  try {
+    if (APP.screen === "levelup" && APP.lvl && APP.char) localStorage.setItem(LS_LVL, JSON.stringify({ id: APP.char.id, level: APP.char.level, lvl: APP.lvl, savedAt: Date.now() }));
+    else localStorage.removeItem(LS_LVL);
+  } catch (e) { /* quota or blocked */ }
+}
+function restoreLevelUp() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LS_LVL) || "null");
+    if (!d || !d.lvl || Date.now() - d.savedAt > 24 * 3600 * 1000) { localStorage.removeItem(LS_LVL); return false; }
+    const raw = store.getCharacter(d.id);
+    if (!raw || raw.dead) { localStorage.removeItem(LS_LVL); return false; }
+    const c = store.normalize(raw, APP.library);
+    if (c.level !== d.level || !Number.isFinite(d.lvl.next) || d.lvl.next !== (d.lvl.fromCreation ? c.level : c.level + 1)) { localStorage.removeItem(LS_LVL); return false; }
+    APP.char = c; APP.lvl = d.lvl; APP.screen = "levelup"; return true;
+  } catch (e) { try { localStorage.removeItem(LS_LVL); } catch (e2) { } return false; }
+}
+
 function render() {
+  persistLevelUp();
   const ae = document.activeElement, fsel = focusSelector(ae);
   const caret = fsel && isTextish(ae) ? [ae.selectionStart, ae.selectionEnd] : null;
   pendingRender = false;
@@ -2073,3 +2097,4 @@ function bindDrag() {
 
 Object.assign(ACTIONS, dmActions(APP, { render, toast, setRules: () => { setRules(); rebuildGlossary(); } }));
 init();
+window.CR = { ACTIONS, render }; // for the browser tests

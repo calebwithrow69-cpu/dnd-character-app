@@ -43,7 +43,7 @@ html[data-size="large"] body{zoom:1.15}
 html[data-size="xl"] body{zoom:1.3}
 
 *{box-sizing:border-box}
-html,body{margin:0}
+html,body{margin:0;overscroll-behavior-y:none}
 body{
   min-height:100vh; background:radial-gradient(ellipse 120% 50% at 50% 0%,var(--glow),var(--bg) 75%) no-repeat,var(--bg); color:var(--ink); font-family:var(--sans);
   font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
@@ -1712,3 +1712,6 @@ html.dead{filter:grayscale(1);transition:filter 1.6s ease}
 .seg.wrap button{flex:1 1 40%;border-top:1px solid var(--line)}
 .lrswap{display:grid;gap:8px}
 @media (min-width:560px){.lrswap{grid-template-columns:1fr 1fr}}
+
+/* scrolling inside a panel never drags the page (or pulls it to refresh) */
+.modal,.modal-body,.scscroll,.optlist{overscroll-behavior:contain}

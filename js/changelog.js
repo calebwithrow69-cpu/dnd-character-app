@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.33";
+export const VERSION = "0.1.34";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.34",
+    date: "2026-11-01",
+    stage: "Pre-build",
+    blurb: "Pulling down no longer refreshes.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "Swiping down at the top of a page no longer reloads the app, and scrolling inside a panel no longer drags the page behind it.",
+          "A level-up in progress now survives a reload or switching apps (kept for 24 hours). Before, only characters in creation did."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.33",
     date: "2026-11-01",
