@@ -270,13 +270,14 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     const bad = [], all = [];
     const walk = (owner, features) => (features || []).forEach(f => (f.trackers || []).forEach(tr => all.push([owner, f.lv, tr])));
     LIB.classes.forEach(c => walk(c.name, c.features)); LIB.subclasses.forEach(sc => walk(sc.name, sc.features));
+    LIB.species.forEach(sp => (sp.trackers || []).forEach(tr => all.push([sp.name, 1, tr]))); LIB.feats.forEach(ft => (ft.trackers || []).forEach(tr => all.push([ft.name, 1, tr])));
     all.forEach(([owner, lv, tr]) => {
       if (!tr.name || !["long", "short"].includes(tr.reset)) bad.push(owner + ": " + tr.name + " reset");
       if (tr.shortRegain != null && !(tr.shortRegain >= 1)) bad.push(owner + ": " + tr.name + " shortRegain");
       (tr.resetAt || []).forEach(([l, r]) => { if (!(l >= 1) || !["long", "short"].includes(r)) bad.push(owner + ": " + tr.name + " resetAt"); });
       for (const level of [3, 10, 20]) { const n = evalExpr(tr.max, mk({ level })); if (!(n >= 0) || n > 120) bad.push(`${owner}: ${tr.name} max ${n} at ${level}`); }
     });
-    eq(bad, []); eq(all.length >= 100, true, "trackers: " + all.length);
+    eq(bad, []); eq(all.length >= 170, true, "trackers: " + all.length);
     const rage = LIB.classes.find(c => c.name === "Barbarian").features.find(f => f.name === "Rage").trackers[0];
     eq([1, 3, 6, 12, 17].map(l => evalExpr(rage.max, mk({ level: l }))), [2, 3, 4, 5, 6]); eq(rage.shortRegain, 1);
     const cd = LIB.classes.find(c => c.name === "Cleric").features.find(f => f.name === "Channel Divinity").trackers[0];
@@ -285,6 +286,14 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     eq([2, 9, 20].map(l => evalExpr(mf.max, mk({ level: l }))), [2, 9, 20]); eq(mf.reset, "short");
     const ba = LIB.classes.find(c => c.name === "Bard").features.find(f => f.name === "Bardic Inspiration").trackers[0];
     eq(evalExpr(ba.max, mk({ abilities: { cha: 18 } })), 4);
+    const names = c => { ensureLuck(c); return c.resources.map(r => [r.name, r.max, r.reset]); };
+    eq(names(mk({ class: "Wizard", level: 5, species: "Dragonborn" })).filter(r => ["Breath Weapon", "Draconic Flight"].includes(r[0])), [["Breath Weapon", 3, "long"], ["Draconic Flight", 1, "long"]]);
+    eq(names(mk({ class: "Wizard", level: 4, species: "Duergar" })).map(r => [r[0], r[1]]).filter(r => r[0] === "Duergar Magic"), [["Duergar Magic", 1]]);
+    eq(names(mk({ class: "Wizard", level: 5, species: "Duergar" })).filter(r => r[0] === "Duergar Magic")[0][1], 2);
+    eq(names(mk({ class: "Wizard", level: 1, species: "Orc" })).filter(r => r[0] === "Adrenaline Rush"), [["Adrenaline Rush", 2, "short"]]);
+    eq(names(mk({ class: "Wizard", level: 1, feats: ["Fey-Touched"] })).filter(r => r[0] === "Fey Magic"), [["Fey Magic", 2, "long"]]);
+    eq(names(mk({ class: "Wizard", level: 1, feats: ["Hero"] })).filter(r => r[0] === "Heroic Intervention"), [["Heroic Intervention", 2, "short"]]);
+    eq(LIB.species.find(s2 => s2.name === "Goliath").trackers.map(t2 => t2.name), ["Giant Ancestry", "Large Form"]); // hand-made ones are left alone
     const g = mk({ class: "Druid", level: 5, species: "Human" }); ensureLuck(g); eq(g.resources.map(r => r.name), ["Wild Shape", "Wild Resurgence"]);
     const w = mk({ class: "Fighter", level: 9, subclass: "Battle Master" }); ensureLuck(w); eq(w.resources.map(r => r.name).sort(), ["Action Surge", "Indomitable", "Know Your Enemy", "Second Wind"].sort());
   }));

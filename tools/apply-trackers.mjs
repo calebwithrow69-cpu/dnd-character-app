@@ -5,6 +5,7 @@
 // until you finish a Long Rest"...). Idempotent: running it again replaces the trackers it wrote.
 // A tracker: { name, max: Expr, reset: "long"|"short", shortRegain?: n, resetAt?: [[level, reset]], lv?, note? }
 import fs from "node:fs";
+import { parseSpecies } from "../js/species.js";
 const dry = process.argv.includes("--dry");
 const path = "data/library.json";
 const L = JSON.parse(fs.readFileSync(path, "utf8"));
@@ -41,10 +42,12 @@ const CLASS = {
 const OWNED = new Set(["Lay on Hands", "Rage", "Channel Divinity", "Wild Shape", "Second Wind", "Action Surge", "Indomitable", "Bardic Inspiration", "Mystic Arcanum", "Persistent Rage", "Font of Inspiration", "Superior Inspiration", "Favored Enemy", "Monk's Focus", "Font of Magic"]);
 
 // ---- text reader
-const SENT = /number of times equal to your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier|number of times equal to your Proficiency Bonus|can use (?:this feature|it|this ability) (once|twice|two|three|four|five|six) times?|can use (?:this feature|it) (once|twice|two|three|four|five|six)\b|can't (?:do so|use (?:this feature|it|this benefit)|do this) again until you finish a|regain all (?:your )?expended uses|regain one expended use/i;
+const SENT = /number of times equal to your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier|number of times equal to your Proficiency Bonus|can use (?:this feature|it|this ability) (once|twice|two|three|four|five|six) times?|can use (?:this feature|it) (once|twice|two|three|four|five|six)\b|can't (?:do so|use (?:this feature|it|this benefit|this trait)|do this|cast (?:that|the|this|either|it)[^.]{0,40}?) again until you finish a|can't cast (?:that|the) spell[^.]{0,30}again until you finish a|regain all (?:your )?expended uses|regain one expended use/i;
 function readUse(text) {
   const m = SENT.exec(text); if (!m) return null;
-  const win = text.slice(m.index, m.index + 420);
+  // look only at this sentence (and the next one for a count, which is followed by its own "You regain ..." sentence)
+  const sents = text.slice(m.index).split(/(?<=\.)\s+/);
+  const win = (/number of times|can use (?:this|it)/i.test(m[0]) ? sents.slice(0, 2) : sents.slice(0, 1)).join(" ");
   let max;
   if (/Proficiency Bonus/i.test(m[0])) max = { prof: true };
   else if (m[1] && ABIL[m[1].toLowerCase()]) max = { abil: ABIL[m[1].toLowerCase()], min: 1 };
@@ -122,5 +125,43 @@ for (const sc of L.subclasses) {
     attach(f, list); list.forEach(t => made.push(`sub|${sc.name}|L${f.lv}|${f.name}|${t.name}|${JSON.stringify(t.max)}|${t.reset}${t.shortRegain ? "+1short" : ""}${t.lv ? " lv" + t.lv : ""}`));
   }
 }
+
+// ---- species traits and feats (written with auto:true so a hand-made tracker, like Goliath's, is never overwritten)
+const HEAD = /(?:^|\n)((?:[A-Z][a-z'\u2019]+)(?: (?:of|the|a|to|in|on|and|for|from|with|[A-Z][a-z'\u2019]+)){0,4})\.\s/g;
+const leadBefore = (text, idx) => { let last = null; for (const m of text.slice(0, idx).matchAll(HEAD)) last = m[1]; return last; };
+const fromFeat = [], fromSpecies = [];
+// traits that grant two spells, each castable once per long rest (the text says "once you cast either of these")
+const TWO_SPELLS = {
+  "Duergar|Duergar Magic": { max: { steps: [[3, 1], [5, 2]] }, lv: 3 }, "Firbolg|Firbolg Magic": { max: 2 },
+  "Genasi (Air)|Mingle with the Wind": { max: { steps: [[3, 1], [5, 2]] }, lv: 3 }, "Genasi (Fire)|Reach to the Blaze": { max: { steps: [[3, 1], [5, 2]] }, lv: 3 },
+  "Genasi (Water)|Call to the Wave": { max: { steps: [[3, 1], [5, 2]] }, lv: 3 }, "Githyanki|Githyanki Psionics": { max: { steps: [[3, 1], [5, 2]] }, lv: 3 },
+  "Githzerai|Githzerai Psionics": { max: { steps: [[3, 1], [5, 2]] }, lv: 3 }, "Yuan-Ti|Serpentine Spellcasting": { max: 1, lv: 3 } };
+const FEAT_TWO = { "Fey-Touched|Fey Magic": 2, "Shadow-Touched|Shadow Magic": 2 };
+for (const sp of L.species) {
+  if ((sp.trackers || []).some(t => !t.auto)) continue; // hand-made
+  const list = [];
+  for (const tr of parseSpecies(sp).traits) {
+    const u = readUse(tr.body || ""); if (!u) continue;
+    const t = { name: tr.name, max: u.max, reset: u.reset, auto: true };
+    if (u.shortRegain) t.shortRegain = 1; if (tr.level > 1) t.lv = tr.level;
+    const ov = TWO_SPELLS[sp.name + "|" + tr.name]; if (ov) { t.max = ov.max; if (ov.lv) t.lv = ov.lv; }
+    if (!list.some(x => x.name === t.name)) list.push(t);
+  }
+  if (!dry) { if (list.length) sp.trackers = list; else delete sp.trackers; }
+  list.forEach(t => fromSpecies.push(`species|${sp.name}|${t.name}|${JSON.stringify(t.max)}|${t.reset}${t.lv ? " L" + t.lv : ""}`));
+}
+for (const ft of L.feats) {
+  if ((ft.trackers || []).some(t => !t.auto)) continue;
+  const list = []; let text = ft.text || "", off = 0;
+  for (let guard = 0; guard < 4; guard++) {
+    const u = readUse(text); if (!u) break;
+    const name = leadBefore(ft.text, off + u.index) || ft.name;
+    if (!list.some(x => x.name === name)) { const t = { name, max: FEAT_TWO[ft.name + "|" + name] || u.max, reset: u.reset, auto: true }; if (u.shortRegain) t.shortRegain = 1; list.push(t); }
+    off += u.index + 40; text = ft.text.slice(off);
+  }
+  if (!dry) { if (list.length) ft.trackers = list; else delete ft.trackers; }
+  list.forEach(t => fromFeat.push(`feat|${ft.name}|${t.name}|${JSON.stringify(t.max)}|${t.reset}`));
+}
+console.log("\n" + fromSpecies.join("\n") + "\n" + fromFeat.join("\n") + `\nspecies trackers: ${fromSpecies.length}, feat trackers: ${fromFeat.length}`);
 if (!dry) fs.writeFileSync(path, JSON.stringify(L));
 console.log(made.join("\n")); console.log("\ntrackers:", made.length, "\nskipped (no name):", skipped.length ? "\n  " + skipped.join("\n  ") : 0);

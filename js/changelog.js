@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.31";
+export const VERSION = "0.1.32";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.32",
+    date: "2026-11-01",
+    stage: "Pre-build",
+    blurb: "Species and feat counters.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Species traits and feats with limited uses now keep their own counters too: Dragonborn Breath Weapon, Orc Adrenaline Rush, Aasimar Healing Hands, Dwarf Stonecunning, the species spells (Duergar, Firbolg, Genasi, Gith, Yuan-Ti), Fey-Touched, Shadow-Touched, Hero, Crafter and about 30 more.",
+          "Uses come from the trait's own text (a number equal to your Proficiency Bonus, once per rest). Goliath and Azurite keep their hand-made counters."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.31",
     date: "2026-11-01",
