@@ -39,8 +39,8 @@ export function randomScreen(app) {
         ${row("class", "Class", enabledClasses(L, C).map(x => x.name))}
         ${row("species", "Species", enabledSpecies(L, C).map(x => x.name))}
         ${row("background", "Background", enabledBackgrounds(L, C).map(x => x.name))}
-        <div class="rnd-row${nm ? " on" : ""}"><div class="rnd-main"><span class="rnd-k">Name</span>
-          <input class="f" data-rnd-name maxlength="60" value="${esc(d.name)}" autocomplete="off" aria-label="Character name"></div>
+        <div class="rnd-row${nm ? " on" : ""}"><div class="rnd-main"><span class="rnd-k">Name</span></div>
+          <input class="f" data-rnd-name maxlength="60" value="${esc(d.name)}" autocomplete="off" aria-label="Character name">
           <button class="rnd-btn" data-a="rndName" aria-label="Roll a new name" ${nm ? "disabled" : ""}>${ICONS.dice}</button>
           <button class="rnd-btn lock" data-a="rndLock" data-k="name" aria-pressed="${nm}">${nm ? "Locked" : "Lock"}</button></div>
         <div class="rnd-row"><div class="rnd-main"><span class="rnd-k">Ability scores</span></div>
