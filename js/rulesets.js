@@ -85,8 +85,8 @@ export function clean(x) {
 }
 
 // ---- share codes
-const toB64 = s => { const bytes = new TextEncoder().encode(s); let bin = ""; for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
-const fromB64 = t => { const b = atob(String(t).replace(/-/g, "+").replace(/_/g, "/")); const bytes = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) bytes[i] = b.charCodeAt(i); return new TextDecoder().decode(bytes); };
+export const toB64 = s => { const bytes = new TextEncoder().encode(s); let bin = ""; for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+export const fromB64 = t => { const b = atob(String(t).replace(/-/g, "+").replace(/_/g, "/")); const bytes = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) bytes[i] = b.charCodeAt(i); return new TextDecoder().decode(bytes); };
 export const encodeRuleset = rs => "CRR1." + toB64(JSON.stringify({ n: rs.name, d: rs.defaultBooks !== false, b: rs.books || {}, e: rs.entries || {} }));
 export function decodeRuleset(code) {
   try {

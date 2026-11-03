@@ -400,6 +400,8 @@ function finishBody(app, d) {
       <dt>Class</dt><dd>${esc(d.class)}, level ${lvl}</dd><dt>Species</dt><dd>${esc(d.species)}</dd><dt>Background</dt><dd>${esc(d.background)}</dd>
       <dt>Abilities</dt><dd class="num">${ABILITIES.map(a => `${a.toUpperCase()} ${fin[a]}`).join(" \u00b7 ")}</dd>
       <dt>Skills</dt><dd>${esc(skills.join(", "))}</dd>${picks.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
+    <div class="choice"><div class="choice-head"><h3>Save as a template</h3></div><p class="sub2">Keep these choices to start from later, or send them to someone. You can load it from New character.</p>
+      <div class="btnrow"><button class="btn sm" data-a="tplSave">Save a file</button><button class="btn sm" data-a="tplCopy">Copy a code</button></div></div>
     ${open.length ? `<div class="choice"><div class="choice-head"><h3>Still to do</h3></div>${open.map(x => `<button class="optcard" data-a="gotoChapter" data-id="${x.chapter}" style="margin-bottom:6px"><span class="grow"><b>${esc(x.label)}</b><span>${esc(x.reason)}</span></span><span class="sub2">Go</span></button>`).join("")}</div>` : ""}`;
 }
 

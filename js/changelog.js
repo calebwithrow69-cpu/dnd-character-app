@@ -2,11 +2,34 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.36";
+export const VERSION = "0.1.37";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.37",
+    date: "2026-11-02",
+    stage: "Pre-build",
+    blurb: "New character start menu, random character, templates.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "New character now opens a menu with three ways to start: build it step by step, a random character, or load a template or character file.",
+          "Random character: lock the class, species, background or name you want to keep, roll the rest again, roll one part on its own, and pick how ability scores are set (suggested, standard array or 4d6). Then create it, or open it in the builder to change more.",
+          "Templates: on the last step of the builder (and on the random screen), save your choices as a file or copy a short code. Load takes a template file, a code, or a character file, shows a preview, and lets you rename it, change it in the builder, or create it.",
+          "A character file is added as a new character, so it never replaces one you already have."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Choosing a sheet: tap Classic or Advanced to select it (each has a small picture of its layout and what it gives you), then press the button at the bottom to confirm. Nothing applies until you confirm. The wording is shorter and plainer."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.36",
     date: "2026-11-01",

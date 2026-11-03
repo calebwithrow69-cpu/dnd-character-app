@@ -7,6 +7,8 @@ import { isSustained } from "../js/combat.js";
 import { normalizeSubclass, subclassGaps } from "../js/data.js";
 import { newFeatures } from "../js/progression.js";
 import { bookName, bookKey, listBooks, allowed, allowedBy, effectiveCampaign, groupRuleset, blankRuleset, copyRuleset, encodeRuleset, decodeRuleset, clean as cleanRuleset, problems } from "../js/rulesets.js";
+import { templatePayload, templateCode, readShared } from "../js/templates.js";
+import { blankDraft } from "../js/creation.js";
 import { rationsHave, rationsNeed, spendRations, restOptions, applyRestPicks } from "../js/rest.js";
 import { subclassSpellGrants, subclassSpellTables, syncSubclassSpells, findSpellName, pickKey } from "../js/subclassspells.js";
 import { rerollsFor, ensureLuck, shortRestRefill } from "../js/riders.js";
@@ -398,6 +400,19 @@ t("rulesets: books, single entries beat books, share codes round-trip, hostile i
   eq([evil.name.length, /^[\w-]+$/.test(evil.id), evil.books, evil.entries], [60, true, { b: true }, { feats: { A: true } }]);
   const none = copyRuleset(rs, "None"); none.books = {}; none.entries = {}; none.defaultBooks = false; eq(problems(none, L).length, 3); eq(problems(rs, L), []);
   eq(decodeRuleset(encodeRuleset(copyRuleset({ name: "\u00e9 \u2603", entries: { spells: { "Tasha\u2019s": true } } }))).entries.spells, { "Tasha\u2019s": true });
+});
+t("templates: file and code round-trip, hostile input is refused or cleaned, character files are recognised", () => {
+  const app = { library: { classes: [{ name: "Wizard" }], species: [{ name: "Elf" }], backgrounds: [{ name: "Sage" }] }, campaign: {} };
+  const d = blankDraft(); d.class = "Wizard"; d.species = "Elf"; d.background = "Sage"; d.name = "Mira"; d.chapter = 4; d.query = "zzz";
+  const p = templatePayload(d, "Mira the Wise"); eq([p.kind, p.name, p.draft.query], ["template", "Mira the Wise", undefined]);
+  const noChars = () => { throw new Error("no"); };
+  const viaFile = readShared(JSON.stringify(p), app, noChars); eq([viaFile.type, viaFile.name, viaFile.draft.class, viaFile.draft.name, viaFile.draft.query], ["template", "Mira the Wise", "Wizard", "Mira", ""]);
+  const viaCode = readShared(templateCode(p), app, noChars); eq([viaCode.type, viaCode.draft.species, viaCode.draft.chapter], ["template", "Elf", 4]);
+  const gone = readShared(JSON.stringify({ ...p, draft: { ...p.draft, class: "Deleted Class" } }), app, noChars); eq(gone.draft.class, "");
+  const evil = readShared(JSON.stringify({ kind: "template", name: "x".repeat(300), draft: { class: 7, base: { str: 999 }, picks: [], cart: "no", __proto__: { a: 1 } } }), app, noChars);
+  eq([evil.name.length, evil.draft.class, evil.draft.base.str], [60, "", 10]);
+  for (const bad of ["", "   ", "CRT1.@@@", "CRT1.e30", "[1,2", "{\"hello\":1}", "<html>"]) { let e = null; try { readShared(bad, app, noChars); } catch (x) { e = x; } eq(!!e, true, JSON.stringify(bad)); }
+  const ch = readShared(JSON.stringify({ name: "Gandork", abilities: {} }), app, text => { const o = JSON.parse(text); return o.name && o.abilities ? [o] : []; }); eq([ch.type, ch.chars.length], ["characters", 1]);
 });
 t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("On your turn, you can take one additional action, except the Magic action. Once you use this feature, you can't do so again until you finish a Short or Long Rest."), false);

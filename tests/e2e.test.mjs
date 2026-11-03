@@ -71,9 +71,10 @@ const clickA = async (p, a, sel = "") => { await p.locator(`[data-a="${a}"]${sel
 const openSample = async p => {
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector('[data-a="openHp"], .stylefull', { timeout: 10000 });
-  if (await p.locator(".stylefull").count()) { await p.locator('[data-a="setPrefV"][data-v="classic"]').first().click(); await p.waitForTimeout(350); }
+  if (await p.locator(".stylefull").count()) { await pickSheet(p, "classic"); await p.waitForTimeout(350); }
   await p.waitForSelector('[data-a="openHp"]', { timeout: 10000 });
 };
+const pickSheet = async (p, v) => { await p.locator(`[data-a="stylePick"][data-v="${v}"]`).click(); await p.waitForTimeout(150); await p.locator('[data-a="styleConfirm"]').click(); };
 const goAdvanced = async p => { await clickA(p, "openEdit"); await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(300); await clickA(p, "confirmStyle"); };
 const noErrs = p => assert(p.errs.length === 0, p.errs.join(" || "));
 
@@ -193,14 +194,14 @@ await check("Settings opens (phone)", async () => {
 });
 
 await check("new character: creation flow loads class list, picks a class, advances", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(500);
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(500);
   assert(await p.locator('[data-a="cxOpen"]').count() >= 12, "class list short");
   await p.locator('[data-a="cxOpen"]').first().click(); await p.waitForTimeout(500);
   noErrs(p); await p.context().close();
 });
 
 await check("species variants: inside their ability, A to Z, first preselected, tapping swaps the details, Choose keeps the pick (phone)", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(400);
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(400);
   await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 2; });
   await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Goliath"]').click(); await p.waitForTimeout(400);
@@ -223,7 +224,7 @@ await check("species variants: inside their ability, A to Z, first preselected, 
 });
 
 await check("detail pane order: image, description, facts, variants, abilities, then Choose; choices sit under their ability", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(400);
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(400);
   await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 2; });
   await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Elf"]').click(); await p.waitForTimeout(400);
@@ -239,7 +240,7 @@ await check("detail pane order: image, description, facts, variants, abilities, 
 });
 
 await check("class choices come right after Class: Druid is asked for Primal Order, then cantrips and spells", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await p.waitForTimeout(400);
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Druid"]').click(); await p.waitForTimeout(300);
   await p.locator('[data-a="cxChoose"][data-name="Druid"]').click(); await p.waitForTimeout(400);
   await clickA(p, "nextStep"); await p.waitForTimeout(500);
@@ -283,26 +284,26 @@ await check("Goliath Stone's Endurance is a Reaction that rolls 1d12 + Con and s
 });
 
 await check("random character builds and lands on a sheet", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar");
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual");
   await clickA(p, "randomAll"); await p.waitForTimeout(1500);
   for (let i = 0; i < 12 && !(await p.locator('[data-a="openHp"], .stylefull').count()); i++) {
     const nxt = p.locator('[data-a="nextStep"], [data-a="finishCreate"]'); if (!(await nxt.count())) break;
     await nxt.first().click(); await p.waitForTimeout(500);
   }
-  if (await p.locator(".stylefull").count()) { await p.locator('[data-a="setPrefV"][data-v="classic"]').first().click(); await p.waitForTimeout(350); }
+  if (await p.locator(".stylefull").count()) { await pickSheet(p, "classic"); await p.waitForTimeout(350); }
   assert(await p.locator('[data-a="openHp"]').count() > 0, "random build did not reach a sheet");
   noErrs(p); await p.context().close();
 });
 
 await check("a new character always asks which sheet to use, even after a style was chosen (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
-  await clickA(p, "backToRoster"); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForTimeout(1500);
+  await clickA(p, "backToRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await clickA(p, "randomAll"); await p.waitForTimeout(1500);
   for (let i = 0; i < 12 && !(await p.locator(".stylefull").count()); i++) {
     const nxt = p.locator('[data-a="nextStep"], [data-a="finishCreate"]'); if (!(await nxt.count())) break;
     await nxt.first().click(); await p.waitForTimeout(500);
   }
   assert(await p.locator(".stylefull").count() === 1, "no sheet choice after finishing the character");
-  await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(500);
+  await pickSheet(p, "advanced"); await p.waitForTimeout(500);
   assert(await p.locator('[data-a="openHp"]').count() > 0, "choice did not open the sheet");
   assert(await p.locator('[data-a="charSub"]').count() > 0, "advanced was not applied");
   noErrs(p); await p.context().close();
@@ -615,7 +616,7 @@ await check("trackers: class counters appear on the Classic sheet, spend, and a 
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector(".stylefull", { timeout: 10000 });
-  await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(400);
+  await pickSheet(p, "classic"); await p.waitForTimeout(400);
   const res = await p.evaluate(() => APP.char.resources.map(r => [r.name, r.max, r.used, r.reset, r.shortRegain || 0]));
   assert(res.some(r => r[0] === "Wild Shape" && r[1] >= 2), "Wild Shape counter missing: " + JSON.stringify(res));
   assert(await p.locator(".classic .rowline", { hasText: "Wild Shape" }).count() >= 1, "Trackers panel does not list Wild Shape");
@@ -630,7 +631,7 @@ await check("long rest: rations are eaten, picks stay unless changed, no rations
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector(".stylefull", { timeout: 10000 });
-  await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(400);
+  await pickSheet(p, "classic"); await p.waitForTimeout(400);
   await p.evaluate(() => { APP.char.subclass = "Circle of the Land"; APP.char.hp.cur = 3; });
   await p.locator('[data-a="openLongRest"]:visible').first().click(); await p.waitForTimeout(300);
   const txt = await p.locator(".modal-back").innerText();
@@ -652,7 +653,7 @@ await check("reload: a level-up in progress comes back, and a pull-down cannot r
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector(".stylefull", { timeout: 10000 });
-  await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(400);
+  await pickSheet(p, "classic"); await p.waitForTimeout(400);
   assert(await p.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY === "none"), "pull-to-refresh is not blocked");
   await p.evaluate(() => { APP.screen = "levelup"; APP.lvl = null; });
   await p.evaluate(async () => { const m = await import("/js/views/levelup.js"); APP.lvl = m.newLevelDraft(APP.char); APP.lvl.hpMode = "roll"; APP.lvl.rolled = 5; APP.lvl.step = 1; APP.screen = "levelup"; window.CR.render(); });
@@ -745,13 +746,60 @@ await check("editor: blocks, pick-or-type book, closed blocks keep their data, b
   noErrs(p); await p.context().close();
 });
 
+await check("new character: start menu, random with locks, template save and load, character file", async () => {
+  const p = await open(390, 844, { touch: true });
+  await clickA(p, "goRoster"); await clickA(p, "newChar"); await p.waitForTimeout(200);
+  assert(await p.locator(".cx-opt").count() === 3, "start menu should offer three ways");
+  // random with a locked class
+  await clickA(p, "startRandom"); await p.waitForTimeout(300);
+  await p.locator('select[data-a="rndPick"][data-k="class"]').selectOption("Wizard"); await p.waitForTimeout(250);
+  for (let i = 0; i < 4; i++) { await clickA(p, "rndAgain"); await p.waitForTimeout(200); assert(await p.evaluate(() => APP.createDraft.class === "Wizard"), "locked class changed"); }
+  const sp1 = await p.evaluate(() => APP.createDraft.species); let moved = false;
+  for (let i = 0; i < 12 && !moved; i++) { await clickA(p, "rndAgain"); await p.waitForTimeout(120); moved = await p.evaluate(s => APP.createDraft.species !== s, sp1); }
+  assert(moved, "unlocked species never changed");
+  await p.locator('[data-a="rndScores"][data-v="roll"]').click(); await p.waitForTimeout(200);
+  assert(await p.evaluate(() => !!APP.createDraft.rolls), "roll option did not roll");
+  // save as a template (a code), then load it back
+  const draftBefore = await p.evaluate(() => ({ c: APP.createDraft.class, s: APP.createDraft.species, b: APP.createDraft.background }));
+  const code = await p.evaluate(async () => { const m = await import("/js/templates.js"); return m.templateCode(m.templatePayload(APP.createDraft, "T")); });
+  assert(/^CRT1\./.test(code), "no template code");
+  await clickA(p, "startMenu"); await clickA(p, "startLoad"); await p.waitForTimeout(200);
+  await p.locator("#load-code").fill("nonsense"); await clickA(p, "loadCode"); await p.waitForTimeout(200);
+  assert(/not a template/i.test(await p.locator("main").innerText()), "garbage should be refused with a message");
+  await p.locator("#load-code").fill(code); await clickA(p, "loadCode"); await p.waitForTimeout(300);
+  assert(/Template/.test(await p.locator("header").innerText()) && (await p.locator("main").innerText()).includes(draftBefore.c), "preview missing");
+  await p.locator("[data-load-name]").fill("Loaded Hero"); await clickA(p, "loadEdit"); await p.waitForTimeout(300);
+  assert(await p.evaluate(() => APP.screen === "create" && APP.createDraft.name === "Loaded Hero"), "edit did not open the builder with the template");
+  // create straight from a template
+  await clickA(p, "backToRoster").catch(() => {});
+  await p.evaluate(() => { APP.screen = "roster"; window.CR.render(); });
+  await clickA(p, "newChar"); await clickA(p, "startLoad"); await p.locator("#load-code").fill(code); await clickA(p, "loadCode"); await p.waitForTimeout(300);
+  await p.locator("[data-load-name]").fill("Template Tessa"); await clickA(p, "loadCreate"); await p.waitForTimeout(800);
+  assert(await p.evaluate(async () => { const m = await import("/js/store.js"); return m.listCharacters().some(c => c.name === "Template Tessa" && c.level === 1); }), "character was not created from the template");
+  // a character file: preview, then added as a new character with its own id
+  await p.evaluate(() => { APP.screen = "roster"; APP.char = null; window.CR.render(); });
+  await clickA(p, "importGandork"); await p.waitForTimeout(300);
+  const file = await p.evaluate(async () => { const m = await import("/js/store.js"); return JSON.stringify(m.backupPayload(["gandork"])); });
+  const before = await p.evaluate(async () => (await import("/js/store.js")).listCharacters().length);
+  await clickA(p, "newChar"); await clickA(p, "startLoad"); await p.locator("#load-code").fill(file); await clickA(p, "loadCode"); await p.waitForTimeout(300);
+  assert(/Character file/.test(await p.locator("header").innerText()) && /Gandork/.test(await p.locator("main").innerText()), "character preview missing");
+  await clickA(p, "loadAdd"); await p.waitForTimeout(400);
+  const after = await p.evaluate(async () => { const l = (await import("/js/store.js")).listCharacters(); return { n: l.length, ids: new Set(l.map(c => c.id)).size }; });
+  assert(after.n === before + 1 && after.ids === after.n, "character file should add a new character, got " + JSON.stringify(after) + " from " + before);
+  noErrs(p); await p.context().close();
+});
+
 await check("style chooser: shows first, picking applies at once, switching later asks first; classic holds spells, gear and a working search", async () => {
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector(".stylefull", { timeout: 10000 });
   assert(await p.locator(".sp-card").count() === 2 && await p.locator(".sp-cmp .r").count() > 5, "expected two cards and a comparison");
   assert(await p.locator('[data-a="sheetTab"]').count() === 0, "chooser should be full screen");
-  await p.locator('[data-a="setPrefV"][data-v="classic"]').click(); await p.waitForTimeout(350);
+  assert(await p.locator('[data-a="styleConfirm"]').isDisabled(), "confirm should wait for a choice");
+  await p.locator('[data-a="stylePick"][data-v="classic"]').click(); await p.waitForTimeout(150);
+  assert(await p.locator('.sp-card.sel').count() === 1 && /classic/i.test(await p.locator('[data-a="styleConfirm"]').innerText()) && !(await p.locator('[data-a="styleConfirm"]').isDisabled()), "picking a sheet should select it and name it on the confirm button");
+  assert(await p.evaluate(() => !APP.prefs.sheetStyle), "a tap alone must not apply the sheet");
+  await pickSheet(p, "classic"); await p.waitForTimeout(350);
   assert(await p.locator(".classic").count() === 1, "classic sheet missing");
   assert(await p.locator('[data-a="sheetTab"]').count() === 2, "bottom tabs should be Character and Rules only");
   assert(await p.locator('.profchk').count() === 0, "profs belong on the Notes sub-tab");
@@ -816,7 +864,7 @@ await check("creation: a damaged or outdated saved draft opens cleanly instead o
 });
 
 await check("creation: a character in progress survives closing and reopening the app", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar");
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual");
   await p.locator('[data-a="cxOpen"][data-kind="class"]').first().click(); await p.waitForTimeout(300); await clickA(p, "cxChoose");
   const cls = await p.evaluate(() => APP.createDraft.class); assert(cls, "no class chosen");
   const ctx = p.context(), store = await p.evaluate(() => JSON.stringify(localStorage));
@@ -826,7 +874,7 @@ await check("creation: a character in progress survives closing and reopening th
 });
 
 await check("creation: the Back button steps back one chapter", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForFunction(() => APP.createDraft && APP.createDraft.chapter >= 5, null, { timeout: 8000 }).catch(() => {});
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual"); await clickA(p, "randomAll"); await p.waitForFunction(() => APP.createDraft && APP.createDraft.chapter >= 5, null, { timeout: 8000 }).catch(() => {});
   const last = await p.evaluate(() => APP.createDraft.chapter); assert(last >= 5, "random did not reach the last chapter");
   await p.evaluate(() => { APP.createDraft.chapter = 2; }); await clickA(p, "nextStep").catch(() => {}); // pushes a history entry
   const at = await p.evaluate(() => APP.createDraft.chapter); await p.goBack(); await p.waitForTimeout(500);
@@ -836,7 +884,7 @@ await check("creation: the Back button steps back one chapter", async () => {
 });
 
 await check("creation: ability scores need a method, and Randomize everything keeps typed text", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar");
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual");
   const r = await p.evaluate(async () => { const m = await import("/js/creation.js"); const d = APP.createDraft; d.class = "Fighter"; d.species = "Human"; d.background = "Soldier"; d.plus2 = "str"; d.plus1 = "dex";
     const before = m.validateChapter("abilities", d, APP).valid; m.applyStandardArray(d, APP); return { before, after: m.validateChapter("abilities", d, APP).valid }; });
   assert(!r.before && r.after, "default scores passed or standard array did not: " + JSON.stringify(r));
@@ -849,7 +897,7 @@ await check("creation: ability scores need a method, and Randomize everything ke
 });
 
 await check("creation shop: buy trained gear with the gold, see it on the new character", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "randomAll"); await p.waitForTimeout(800);
+  const p = await open(390, 844, { touch: true }); await clickA(p, "newChar"); await clickA(p, "startManual"); await clickA(p, "randomAll"); await p.waitForTimeout(800);
   await clickA(p, "openProgress"); await clickA(p, "gotoChapter", '[data-i="5"]'); await p.waitForTimeout(400);
   assert(await p.locator('[data-a="cxOpenShop"]:visible').count() >= 1, "no Shop button on Skills and Gear");
   // take the gold options so there is plenty to spend

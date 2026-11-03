@@ -32,6 +32,8 @@ import {
 import { rollMods } from "./effects.js";
 import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
+import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./views/start.js";
+import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
 import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { renderSheetSearch } from "./views/classic.js";
@@ -264,6 +266,9 @@ function renderNow() {
   else if (APP.screen === "graveyard") mount.innerHTML = renderGraveyard(APP);
   else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
   else if (APP.screen === "rulesets" && APP.rs) mount.innerHTML = renderRulesets(APP);
+  else if (APP.screen === "start") mount.innerHTML = startMenu(APP);
+  else if (APP.screen === "random" && APP.createDraft && APP.rnd) mount.innerHTML = randomScreen(APP);
+  else if (APP.screen === "load" && APP.load) mount.innerHTML = loadScreen(APP);
   else if (APP.screen === "create") { prepareChoiceContext(APP); mount.innerHTML = renderCreate(APP); if (APP.createDraft) saveDraft(APP.createDraft); }
   else if (APP.screen === "sheet" && APP.char) {
     const ch = APP.char;
@@ -668,6 +673,39 @@ function randomBonus(d) {
 const NAME_A = ["Bram", "Cor", "Dag", "El", "Fen", "Gar", "Hal", "Isk", "Jor", "Kael", "Lir", "Mor", "Nym", "Os", "Pell", "Quin", "Ros", "Syl", "Tor", "Ul", "Vex", "Wren", "Yor", "Zan"];
 const NAME_B = ["a", "en", "ith", "or", "ia", "ric", "wyn", "ak", "is", "ell", "ow", "ra", "un", "ex", "iel", "ard"];
 const NAME_C = ["the Bold", "the Quiet", "of the Vale", "Ashborn", "Thornfield", "Blackwater", "Stonehand", "the Lucky", "Swiftfoot", "Greycloak", "", "", ""];
+// A whole random draft: class, species, background, scores, and the details nobody wants to type. Anything the player already
+// typed (and `keep`) stays. `constraints` pins class/species/background.
+function randomFill(d, gen, constraints = {}, keep = {}) {
+  const any = l => l[Math.floor(Math.random() * l.length)];
+  const typed = { name: keep.name === false ? "" : cleanName(d.name), alignment: d.alignment, appearance: (d.appearance || "").trim(), backstory: (d.backstory || "").trim() };
+  gen(d, APP, constraints);
+  d.name = typed.name || randomName();
+  d.alignment = typed.alignment || any(ALIGNMENTS);
+  d.appearance = typed.appearance || `${any(["Tall and lean", "Short and sturdy", "Broad-shouldered", "Slight and quick", "Weathered and wiry"])}, with ${any(["close-cropped", "braided", "wild", "silver-streaked", "dark and tied-back"])} hair and ${any(["a scar across one brow", "ink-stained fingers", "a crooked grin", "calloused hands", "mismatched eyes"])}.`;
+  d.backstory = typed.backstory || `A ${d.background.toLowerCase()} turned adventurer, ${d.name.split(" ")[0]} left home ${any(["after a debt came due", "chasing a rumor", "to keep a promise", "when the harvest failed", "with nothing left to lose"])}. ${any(["Blunt and loyal", "Curious to a fault", "Wary of strangers but fiercely protective of friends", "Cheerful, even when it is unwise", "Quiet, watchful and slow to trust"])}.`;
+  d.query = "";
+}
+// The random screen: roll everything not locked (or only one part), then apply the chosen way of setting scores.
+function rndRun(only) {
+  const d = APP.createDraft, r = APP.rnd, c = {};
+  ["class", "species", "background"].forEach(k => { if (only ? k !== only : r.lock[k]) c[k] = d[k]; });
+  randomFill(d, generateRandom, c, { name: r.lock.name });
+  if (r.scores === "roll") rollAndLock(d); else if (r.scores === "standard") applyStandardArray(d, APP);
+  d.mode = "generate";
+}
+function openBuilderWith(d, chapter) {
+  APP.createDraft = d; APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.screen = "create";
+  d.chapter = Math.max(0, Math.min(chapter, reachIndex(APP, d)));
+  try { history.pushState({ cx: 1 }, ""); } catch (e) { }
+  render(); window.scrollTo(0, 0);
+}
+function loadText(text) {
+  try { APP.load.preview = readShared(text, APP, store.parseImport); APP.load.error = ""; }
+  catch (e) { APP.load.preview = null; APP.load.error = e.message || "Could not read that."; APP.load.text = String(text || "").length < 4000 ? text : ""; }
+  render(); window.scrollTo(0, 0);
+}
+function templateFile(d) { const p = templatePayload(d, cleanName(d.name) || `${d.species || ""} ${d.class || "character"}`.trim()); const safe = p.name.replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "template"; return { p, safe }; }
+
 function randomName() {
   const r = l => l[Math.floor(Math.random() * l.length)];
   return `${r(NAME_A)}${r(NAME_B)} ${r(NAME_C)}`.trim();
@@ -725,6 +763,8 @@ function onInput(e) {
     if (h) h.textContent = APP.prefs.vol + "%";
     return;
   }
+  if (ds.rndName != null && APP.createDraft && APP.rnd) { APP.createDraft.name = el.value; APP.rnd.lock.name = !!cleanName(el.value); return; }
+  if (ds.loadName != null && APP.load && APP.load.preview && APP.load.preview.draft) { APP.load.preview.draft.name = el.value; return; }
   if (ds.rsName != null && APP.rs) { ACTIONS.rsRename(el.value); return; }
   if (ds.query === "rsq" && APP.rs) { APP.rs.q = el.value; render(); return; }
   if (ds.query === "dmq" && APP.dm) { APP.dm.q = el.value; const l = document.getElementById("dm-list"); if (l) l.innerHTML = dmListHtml(APP); else render(); return; }
@@ -776,6 +816,7 @@ function onChange(e) {
     return;
   }
   if (ds.dmFile != null && el.files && el.files[0]) { ACTIONS.dmImportFile(el.files[0]); el.value = ""; return; }
+  if (ds.loadFile != null && el.files && el.files[0]) { el.files[0].text().then(t => loadText(t), () => { APP.load.error = "Could not open that file."; render(); }); el.value = ""; return; }
   if (ds.dmPick != null) { const inp = el.parentElement && el.parentElement.querySelector("input"); if (inp && el.value) { inp.value = el.value; } el.value = ""; return; }
   if (ds.dmBulk != null && APP.dm) { ACTIONS.dmBulkSet(ds.kind, ds.key, el.value); return; }
   // a <select> that names an action (e.g. Sort) runs it on change
@@ -856,7 +897,41 @@ document.addEventListener("focusout", () => setTimeout(flushRender, 0));
 // ---------------- actions ----------------
 const ACTIONS = {
   // roster
-  newChar() { clearDraft(); APP.createDraft = blankDraft(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.screen = "create"; try { history.pushState({ cx: 1 }, ""); } catch (e) { } render(); window.scrollTo(0, 0); },
+  newChar() { APP.screen = "start"; render(); window.scrollTo(0, 0); },
+  startBack() { APP.screen = "roster"; render(); window.scrollTo(0, 0); },
+  startMenu() { APP.screen = "start"; APP.load = null; render(); window.scrollTo(0, 0); },
+  startManual() { clearDraft(); APP.createDraft = blankDraft(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.screen = "create"; try { history.pushState({ cx: 1 }, ""); } catch (e) { } render(); window.scrollTo(0, 0); },
+  startRandom() { clearDraft(); APP.createDraft = blankDraft(); APP.rnd = rndDefault(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); rndRun(); APP.screen = "random"; render(); window.scrollTo(0, 0); },
+  startLoad() { clearDraft(); APP.load = loadDefault(); APP.screen = "load"; render(); window.scrollTo(0, 0); },
+  rndPick(el) { const d = APP.createDraft, k = el.dataset.k; if (!el.value) return; d[k] = el.value; APP.rnd.lock[k] = true; rndRun(); render(); },
+  rndLock(el) { const r = APP.rnd, k = el.dataset.k; r.lock[k] = !r.lock[k]; render(); },
+  rndReroll(el) { rndRun(el.dataset.k); render(); },
+  rndAgain() { rndRun(); render(); toast("Rolled again. Locked parts stayed"); },
+  rndName() { APP.createDraft.name = randomName(); render(); },
+  rndScores(el) {
+    const d = APP.createDraft; APP.rnd.scores = el.dataset.v;
+    if (el.dataset.v === "roll") rollAndLock(d); else if (el.dataset.v === "standard") applyStandardArray(d, APP); else if (!applySuggestedArray(d, APP)) applyStandardArray(d, APP);
+    render();
+  },
+  rndBuilder() { openBuilderWith(APP.createDraft, CHAPTERS.length - 1); },
+  async tplSave() {
+    const d = APP.createDraft; if (!d) return;
+    const { p, safe } = templateFile(d); await shareOrDownload(`template-${safe}.json`, JSON.stringify(p, null, 1)); toast("Template saved");
+  },
+  async tplCopy() {
+    const d = APP.createDraft; if (!d) return;
+    try { await navigator.clipboard.writeText(templateCode(templateFile(d).p)); toast("Code copied. Send it to someone"); } catch (e) { toast("Your browser would not copy it. Use Save as a template instead"); }
+  },
+  loadCode() { loadText((document.getElementById("load-code") || {}).value); },
+  loadBack() { APP.load = loadDefault(); render(); },
+  loadEdit() { const p = APP.load.preview; if (p && p.type === "template") openBuilderWith(p.draft, p.draft.chapter); },
+  loadCreate() { const p = APP.load.preview; if (!p || p.type !== "template") return; APP.createDraft = p.draft; APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); ACTIONS.finishCreate(); },
+  loadAdd() {
+    const p = APP.load.preview; if (!p || p.type !== "characters") return;
+    p.chars.forEach(c => store.saveCharacter(store.normalize({ ...c, id: store.newId() }, APP.library)));
+    toast(`Added ${p.chars.length} character${p.chars.length === 1 ? "" : "s"}`);
+    APP.load = null; APP.screen = "roster"; render(); window.scrollTo(0, 0);
+  },
   importGandork() {
     if (!APP.seedGandork) return;
     store.saveCharacter(store.normalize(APP.seedGandork, APP.library));
@@ -1023,6 +1098,13 @@ const ACTIONS = {
     el.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === el ? "true" : "false"));
     if (el.dataset.k === "sheetStyle") { render(); window.scrollTo(0, 0); }
     if (el.dataset.k === "startTab") toast("Characters will open on " + el.textContent);
+  },
+  stylePick(el) { APP.stylePending = el.dataset.v; render(); },
+  styleConfirm() {
+    const v = APP.stylePending; if (v !== "classic" && v !== "advanced") return;
+    APP.stylePending = null; APP.styleAsk = null; APP.prefs.sheetStyle = v; savePrefs(); applyPrefs();
+    if (APP._shopLater) { APP._shopLater = false; APP.charSub = "gear"; APP.classicSub = "gear"; render(); openModal({ type: "shop" }); } else render();
+    window.scrollTo(0, 0);
   },
   confirmStyle() {
     APP.prefs.sheetStyle = APP._style; APP._style = null; savePrefs(); closeModal(); render(); window.scrollTo(0, 0);
@@ -1211,14 +1293,8 @@ const ACTIONS = {
     if (applySuggestedArray(d, APP)) { render(); toast(`Suggested ${d.class} scores placed`); }
   },
   randomAll() {
-    const d = APP.createDraft, any = l => l[Math.floor(Math.random() * l.length)];
-    const typed = { name: cleanName(d.name), alignment: d.alignment, appearance: (d.appearance || "").trim(), backstory: (d.backstory || "").trim() };
-    generateRandom(d, APP, {});
-    d.name = typed.name || randomName();
-    d.alignment = typed.alignment || any(ALIGNMENTS);
-    d.appearance = typed.appearance || `${any(["Tall and lean", "Short and sturdy", "Broad-shouldered", "Slight and quick", "Weathered and wiry"])}, with ${any(["close-cropped", "braided", "wild", "silver-streaked", "dark and tied-back"])} hair and ${any(["a scar across one brow", "ink-stained fingers", "a crooked grin", "calloused hands", "mismatched eyes"])}.`;
-    d.backstory = typed.backstory || `A ${d.background.toLowerCase()} turned adventurer, ${d.name.split(" ")[0]} left home ${any(["after a debt came due", "chasing a rumor", "to keep a promise", "when the harvest failed", "with nothing left to lose"])}. ${any(["Blunt and loyal", "Curious to a fault", "Wary of strangers but fiercely protective of friends", "Cheerful, even when it is unwise", "Quiet, watchful and slow to trust"])}.`;
-    d.chapter = CHAPTERS.length - 1; d.query = "";
+    randomFill(APP.createDraft, generateRandom);
+    APP.createDraft.chapter = CHAPTERS.length - 1;
     render(); window.scrollTo(0, 0); toast("Random character ready. Review it and change anything you like");
   },
   toggleSkill(el) {
