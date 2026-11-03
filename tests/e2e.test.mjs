@@ -765,7 +765,7 @@ await check("new character: start menu, random with locks, template save and loa
   assert(/^CRT1\./.test(code), "no template code");
   await clickA(p, "startMenu"); await clickA(p, "startLoad"); await p.waitForTimeout(200);
   await p.locator("#load-code").fill("nonsense"); await clickA(p, "loadCode"); await p.waitForTimeout(200);
-  assert(/not a template/i.test(await p.locator("main").innerText()), "garbage should be refused with a message");
+  assert(/invalid/i.test(await p.locator("main").innerText()), "garbage should be refused with a message");
   await p.locator("#load-code").fill(code); await clickA(p, "loadCode"); await p.waitForTimeout(300);
   assert(/Template/.test(await p.locator("header").innerText()) && (await p.locator("main").innerText()).includes(draftBefore.c), "preview missing");
   await p.locator("[data-load-name]").fill("Loaded Hero"); await clickA(p, "loadEdit"); await p.waitForTimeout(300);
@@ -793,7 +793,7 @@ await check("style chooser: shows first, picking applies at once, switching late
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector(".stylefull", { timeout: 10000 });
-  assert(await p.locator(".sp-card").count() === 2 && await p.locator(".sp-cmp .r").count() > 5, "expected two cards and a comparison");
+  assert(await p.locator(".sp-card").count() === 2, "expected two cards");
   assert(await p.locator('[data-a="sheetTab"]').count() === 0, "chooser should be full screen");
   assert(await p.locator('[data-a="styleConfirm"]').isDisabled(), "confirm should wait for a choice");
   await p.locator('[data-a="stylePick"][data-v="classic"]').click(); await p.waitForTimeout(150);

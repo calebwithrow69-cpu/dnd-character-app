@@ -18,20 +18,11 @@ const MOCK_ADV = `<svg class="sp-mock" viewBox="0 0 120 150" aria-hidden="true" 
   <rect x="28" y="132" width="64" height="10" rx="5" class="bar"/></svg>`;
 
 const SHEETS = {
-  classic: { name: "Classic sheet", what: "One page, like the printed 2024 sheet.", mock: MOCK_CLASSIC, icon: "book",
-    gets: ["Everything on one page, with tabs for Features, Spells, Equipment and Notes", "Tap any score, save or skill to roll it", "Best if you are used to paper sheets"] },
-  advanced: { name: "Advanced sheet", what: "Tabs and tiles for playing at the table.", mock: MOCK_ADV, icon: "bolt",
-    gets: ["Tabs for Play, Spells, Gear, Rolls, Features and More", "Every action is a tile with its cost, plus a turn tracker", "Saved gear loadouts, a hotbar and keyboard shortcuts"] }
+  classic: { name: "Classic", short: "Classic", mock: MOCK_CLASSIC, icon: "book",
+    gets: ["One page", "Tap to roll", "Paper layout"] },
+  advanced: { name: "Advanced", short: "Advanced", mock: MOCK_ADV, icon: "bolt",
+    gets: ["Tabs", "Action tiles, turn tracker", "Loadouts, hotbar, shortcuts"] }
 };
-
-const ROWS = [
-  ["Layout", "One page with sub-tabs", "Separate tabs"],
-  ["Actions", "Read a feature, then roll", "One-tap tiles with their costs"],
-  ["Turn tracker", "no", "yes"],
-  ["Gear", "Slots, bag and coins", "Plus saved loadouts and a preview before you swap"],
-  ["Hotbar and shortcuts", "no", "yes"]
-];
-const cell = v => v === "yes" ? `<span class="yes" aria-label="Yes">✓</span>` : v === "no" ? `<span class="no" aria-label="Not included">—</span>` : v;
 
 export function stylePicker(app) {
   const pend = app.stylePending, p = pend && SHEETS[pend];
@@ -41,22 +32,15 @@ export function stylePicker(app) {
       <span class="sp-check" aria-hidden="true">${on ? "✓" : ""}</span>
       ${s.mock}
       <b>${s.name}</b>
-      <span class="sp-d">${s.what}</span>
       <ul class="sp-gets">${s.gets.map(g => `<li>${g}</li>`).join("")}</ul>
     </button>`;
   };
   return `<div class="sheetview stylefull">
-    ${topbar("Choose your sheet", app.char ? app.char.name : "", { back: "backToRoster" })}
+    ${topbar("Sheet", app.char ? app.char.name : "", { back: "backToRoster" })}
     <main class="wrap page">
-      <p class="sub2" style="margin:6px 0 14px">Both show the same character. Tap one to choose it, then confirm. You can switch later in Edit character.</p>
       <div class="sp-cards">${card("classic")}${card("advanced")}</div>
-      <h2 class="sp-cmp-h">Side by side</h2>
-      <div class="sp-cmp" role="table" aria-label="Classic compared with Advanced">
-        <div class="r head" role="row"><span role="columnheader"></span><span role="columnheader" class="c-classic">Classic</span><span role="columnheader" class="c-advanced">Advanced</span></div>
-        ${ROWS.map(([k, a, b]) => `<div class="r" role="row"><span class="k" role="rowheader">${k}</span><span role="cell">${cell(a)}</span><span role="cell">${cell(b)}</span></div>`).join("")}
-      </div>
     </main>
     <div class="sp-confirm"><div class="wrap">
-      <button class="btn pri block" data-a="styleConfirm" ${p ? "" : "disabled"}>${p ? `Use the ${p.name}` : "Tap a sheet above to choose it"}</button>
+      <button class="btn pri block" data-a="styleConfirm" ${p ? "" : "disabled"}>${p ? `Use ${p.short}` : "Select a sheet"}</button>
     </div></div></div>`;
 }

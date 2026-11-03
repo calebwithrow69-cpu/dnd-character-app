@@ -16,23 +16,23 @@ export const templateCode = payload => "CRT1." + toB64(JSON.stringify({ n: paylo
 // Returns { type: "template", name, draft } or { type: "characters", chars }. Throws an Error with a plain message.
 export function readShared(text, app, parseChars) {
   const t = String(text || "").trim();
-  if (!t) throw new Error("Nothing to read yet. Choose a file or paste a code.");
-  if (t.length > MAX_TEXT) throw new Error("That is too big to be a template.");
+  if (!t) throw new Error("Empty.");
+  if (t.length > MAX_TEXT) throw new Error("Too large.");
   let data = null;
   const m = /^CRT1\.([\w-]+)$/.exec(t);
   if (m) {
-    try { const o = JSON.parse(fromB64(m[1])); data = { kind: "template", name: o.n, draft: o.d }; } catch (e) { throw new Error("That code is damaged. Ask for it again."); }
+    try { const o = JSON.parse(fromB64(m[1])); data = { kind: "template", name: o.n, draft: o.d }; } catch (e) { throw new Error("Invalid code."); }
   } else {
-    try { data = JSON.parse(t); } catch (e) { throw new Error("That is not a template, a code or a character file."); }
+    try { data = JSON.parse(t); } catch (e) { throw new Error("Invalid file or code."); }
   }
   if (data && data.kind === "template" && data.draft) {
     const draft = sanitizeDraft(data.draft);
-    if (!draft) throw new Error("That template is damaged.");
+    if (!draft) throw new Error("Invalid template.");
     pruneDraftToLibrary(draft, app);
     return { type: "template", name: String(data.name || draft.name || "Template").slice(0, 60), draft };
   }
   try { const chars = parseChars(t); if (chars.length) return { type: "characters", chars }; } catch (e) { /* fall through */ }
-  throw new Error("That is not a template, a code or a character file.");
+  throw new Error("Invalid file or code.");
 }
 
 // One-line facts for the preview.
