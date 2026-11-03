@@ -17,7 +17,7 @@ import { applyPatch, loadPatch } from "./dm.js";
 import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
-import { renderHome, renderRulesPage, playTomeOpen, lastCharacter } from "./views/home.js";
+import { renderHome, renderRulesPage, lastCharacter } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
 import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits } from "./views/create.js";
 import { cxStop, cxSeal } from "./cxfx.js";
@@ -941,11 +941,8 @@ const ACTIONS = {
   goRoster() { APP.screen = "roster"; render(); window.scrollTo(0, 0); },
   goRules() { APP.screen = "rules"; render(); window.scrollTo(0, 0); },
   homeContinue() {
-    if (APP._opening) return;
     const last = lastCharacter(APP); if (!last) { ACTIONS.newChar(); return; }
-    const raw = store.getCharacter(last.id); if (!raw) return;
-    APP._opening = true;
-    playTomeOpen(raw, APP.library, () => { ACTIONS.openChar({ dataset: { id: last.id } }); }).then(() => { APP._opening = false; });
+    ACTIONS.openChar({ dataset: { id: last.id } });
   },
   openChar(el) {
     const raw = store.getCharacter(el.dataset.id);

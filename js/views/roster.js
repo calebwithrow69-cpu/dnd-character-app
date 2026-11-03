@@ -1,36 +1,37 @@
-import { esc, topbar, empty } from "../ui.js";
-import { installCard } from "../install.js";
+import { esc } from "../ui.js";
 import { listCharacters } from "../store.js";
+import { emblem, emblemFor } from "../emblems.js";
+import { glance, PLUS } from "./home.js";
+const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 
 export function renderRoster(app) {
   const all = listCharacters(), chars = all.filter(c => !c.dead), fallen = all.length - chars.length;
   const seedAvailable = app.seedGandork && !all.some(c => c.id === app.seedGandork.id);
-
-  const list = chars.length
-    ? `<div class="panel">${chars.map(c => `
-        <button class="rosteritem" data-a="openChar" data-id="${esc(c.id)}">
-          <div class="av">${esc((c.name || "?").trim()[0] || "?")}</div>
-          <div class="grow"><div class="ttl">${esc(c.name || "Unnamed")}</div>
-            <div class="sub">Level ${esc(c.level || 1)} ${esc(c.species || "")} ${esc(c.class || "")}</div></div>
-          <span class="muted" aria-hidden="true">›</span>
-        </button>`).join("")}</div>`
-    : empty("No characters yet", "Make your first character. It takes about two minutes.");
-
-  return `
-    ${topbar("Your characters", app.campaign?.name || "", { back: "goHome", actions: [{ a: "openSettings", icon: "settings", label: "Settings" }] })}
-    <main class="wrap page">
-      ${app.needsNewPassword ? `<div class="callout"><h3>New rules are waiting</h3><p class="small">Your DM changed the group password. Enter the new one to get the latest rules — your characters are safe either way.</p><button class="btn sm pri" style="margin-top:10px" data-a="enterNewPassword">Enter password</button></div>` : ""}
-      ${installCard(app)}
-      ${list}
-      <div class="stack" style="margin-top:14px">
-        <button class="btn pri block" data-a="newChar">New character</button>
-        ${fallen ? `<button class="btn block" data-a="goGraveyard">Graveyard (${fallen})</button>` : ""}
-        <button class="btn block" data-a="importPrompt">Restore backup</button>
-        <button class="btn ghost block" data-a="rsOpen">Rulesets</button>
-        <button class="btn ghost block" data-a="dmOpen">DM editor</button>
-        ${seedAvailable ? `<button class="btn ghost block" data-a="importGandork">Add the sample character (Gandork)</button>` : ""}
-      </div>
-    </main>`;
+  const cards = chars.map(r => {
+    const g = glance(app, r.id), c = g.c, pct = g.max ? Math.max(0, Math.min(100, Math.round(100 * g.hp / g.max))) : 0;
+    const e = emblemFor("class", c.class);
+    return `<button class="ccard rosteritem press" data-a="openChar" data-id="${esc(r.id)}" aria-label="${esc(c.name || "Unnamed")}">
+      <span class="cband" style="--eh:${e.hue}">${emblem("class", c.class)}</span>
+      <span class="cbody"><h3>${esc(c.name || "Unnamed")}</h3>
+        <span class="cl">${esc([`Level ${c.level || 1}`, c.species, c.class].filter(Boolean).join(" "))}</span>
+        <span class="cbar"><i class="${pct < 30 ? "low" : ""}" style="width:${pct}%"></i></span>
+        <span class="cbl"><span>HP</span><span>${esc(g.hp)}/${esc(g.max)}</span></span>
+        <span class="cchips"><div><b>${esc(g.ac)}</b><small>AC</small></div><div><b>${esc(g.speed)}</b><small>SPEED</small></div><div><b>+${g.prof}</b><small>PROF</small></div></span>
+        <span class="copen">OPEN SHEET</span></span></button>`;
+  }).join("");
+  const add = `<button class="ccard new press" data-a="newChar">${PLUS}NEW CHARACTER</button>`;
+  return `<main class="rs" aria-label="Characters">
+    <header class="hh"><button class="ibtn2" data-a="goHome" aria-label="Back">${BACK}</button><h1 class="hh-t">CHARACTERS</h1></header>
+    ${app.needsNewPassword ? `<div class="rs-note"><button class="hwarn" data-a="enterNewPassword">New rules are waiting. Enter the new password.</button></div>` : ""}
+    <div class="deck">${cards}${add}</div>
+    <div class="rs-foot">
+      ${fallen ? `<button class="btn" data-a="goGraveyard">Graveyard (${fallen})</button>` : ""}
+      <button class="btn" data-a="importPrompt">Restore backup</button>
+      <button class="btn" data-a="rsOpen">Rulesets</button>
+      <button class="btn" data-a="dmOpen">DM editor</button>
+      ${seedAvailable ? `<button class="btn" data-a="importGandork">Add Gandork</button>` : ""}
+    </div>
+  </main>`;
 }
 
 export function renderUnlock(app) {
