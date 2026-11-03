@@ -55,12 +55,12 @@ function subclassTools(app, e) {
   const L = app.library, gaps = subclassGaps({ cls: e.cls, features: e.features || [] });
   const t = e.cls ? subclassSpellTables({ cls: e.cls, name: e.name, features: e.features || [] }, L) : { grants: [], choices: [] };
   const missing = [...t.grants.flatMap(g => g.missing), ...t.choices.flatMap(o => o.rows.flatMap(r => r.missing))];
-  return `<div class="dm-f"><label class="small muted">Levels this class expects (${(SUBCLASS_LEVELS[e.cls] || []).join(", ") || "pick a class first"})</label>
+  return `<div class="dm-f"><label class="small muted">Expected levels: ${(SUBCLASS_LEVELS[e.cls] || []).join(", ") || "none"}</label>
       ${gaps.length ? `<p class="small">Missing: ${gaps.map(l => `<button class="btn sm" data-a="dmAddLevel" data-lv="${l}">Add level ${l}</button>`).join(" ")}</p>` : `<p class="small muted">Every expected level has a feature.</p>`}</div>
-    <div class="dm-f"><label class="small muted">Spell list the app reads from this subclass</label>
+    <div class="dm-f"><label class="small muted">Spell list</label>
       ${t.grants.length || t.choices.length ? `<ul class="small">${t.grants.map(g => `<li>Level ${g.lv}: ${esc(g.spells.join(", ") || "none found")}</li>`).join("")}${t.choices.map(o => `<li>Option ${esc(o.name)}: ${o.rows.map(r => `${r.lv}: ${esc(r.spells.join(", "))}`).join("; ")}</li>`).join("")}</ul>` : `<p class="small muted">No spell table found.</p>`}
       ${missing.length ? `<p class="small lrwarn">Not in your spell list yet: ${missing.map(esc).join(", ")}. Add them under Spells.</p>` : ""}
-      <button class="btn sm" data-a="dmAddSpellTable">Add a spell table feature</button></div>`;
+      <button class="btn sm" data-a="dmAddSpellTable">Add spell table</button></div>`;
 }
 
 function formHtml(app, ed) {
@@ -82,7 +82,7 @@ function formHtml(app, ed) {
       <button class="btn pri block" data-a="dmSave">Save ${esc(sc.one)}</button>
       ${ed.kind === "spells" ? `<button class="btn block" data-a="dmSaveNext">Save and add another spell</button>` : ""}
       <button class="btn block" data-a="dmCancel">Cancel</button>
-      ${ed.isNew ? "" : `<button class="btn ghost block" data-a="dmCopy">Save as a copy (use this as a template)</button>
+      ${ed.isNew ? "" : `<button class="btn ghost block" data-a="dmCopy">Save as copy</button>
       <button class="btn ghost block" data-a="dmDelete">${ed.added ? "Delete this entry" : "Remove from the game"}</button>
       ${ed.edited ? `<button class="btn ghost block" data-a="dmRevert">Undo my edits to this entry</button>` : ""}`}
     </div>`;
@@ -107,7 +107,7 @@ function missingSpells(app) {
 function missingHtml(app) {
   const list = missingSpells(app);
   return `${topbar("Missing spells", `${list.length} named in subclass spell lists`, { back: "dmMissingExit" })}
-    <main class="wrap page"><p class="small muted">These spells appear in a subclass spell table but are not in your spell list, so characters do not get them yet. Tap Add to open a new spell with the name filled in.</p>
+    <main class="wrap page">
       <div class="panel">${list.map(x => `<div class="rowline"><span class="nm" style="flex-direction:column;align-items:flex-start;gap:0"><span>${esc(x.name)}</span><span class="sub2">${esc([...new Set(x.subs)].join(", "))}</span></span>
         <button class="btn sm pri" data-a="dmAddSpell" data-name="${esc(x.name)}" data-cls="${esc([...x.classes].join(","))}">Add</button></div>`).join("") || `<p class="muted small" style="padding:12px">Nothing missing. Every spell the tables name is in your list.</p>`}</div></main>`;
 }
@@ -123,7 +123,7 @@ function bulkHtml(app) {
       <div class="dm-f"><select class="f" data-a="dmBulkKind" aria-label="What to fix">${kinds.map(k => `<option value="${k}" ${k === kind ? "selected" : ""}>${esc(SCHEMA[k].label)}</option>`).join("")}</select></div>
       <div class="seg" role="group" aria-label="Show" style="margin:8px 0"><button data-a="dmBulkFilter" data-v="none" aria-pressed="${ui.bulkFilter !== "all"}">No book yet</button><button data-a="dmBulkFilter" data-v="all" aria-pressed="${ui.bulkFilter === "all"}">All</button></div>
       ${searchBox("dmq", ui.q, "Search")}
-      <div class="panel" style="padding:10px;margin:8px 0"><label class="small muted" for="dm-bulk-all">Set every one shown below (${all.length}) to:</label>
+      <div class="panel" style="padding:10px;margin:8px 0"><label class="small muted" for="dm-bulk-all">Set all ${all.length} to</label>
         <input class="f" id="dm-bulk-all" list="dm-books" placeholder="Book name" autocomplete="off"><button class="btn pri block" style="margin-top:8px" data-a="dmBulkAll" data-kind="${kind}">Set all ${all.length}</button></div>
       <div class="panel">${rows.map(x => `<div class="rowline"><span class="nm" style="flex-direction:column;align-items:flex-start;gap:0"><span>${esc(labelOf(kind, x))}</span><span class="sub2">${esc(x.source || "no book")}</span></span>
         <input class="f dm-src" list="dm-books" data-dm-bulk data-kind="${kind}" data-key="${esc(keyOf(kind, x))}" value="${esc(x.source || "")}" placeholder="Book" aria-label="Book for ${esc(labelOf(kind, x))}" autocomplete="off"></div>`).join("") || `<p class="muted small" style="padding:12px">Nothing to fix here.</p>`}
@@ -153,15 +153,15 @@ export function renderDm(app) {
   }
   return `${topbar("DM editor", n ? `${n} change${n === 1 ? "" : "s"} on this device` : "Anyone can use this. Changes stay on this device.", { back: "dmExit" })}
     <main class="wrap page">
-      <button class="btn block" data-a="rsOpen" style="margin-bottom:10px">Rulesets: choose which books and entries are allowed</button>
+      <button class="btn block" data-a="rsOpen" style="margin-bottom:10px">Rulesets</button>
       <div class="dm-f"><select class="f" data-a="dmKind" aria-label="What to edit">${KIND_ORDER.map(k => `<option value="${k}" ${k === ui.kind ? "selected" : ""}>${esc(SCHEMA[k].label)} (${(app.library[k] || []).length})</option>`).join("")}</select></div>
       ${searchBox("dmq", ui.q, "Search " + sc.label.toLowerCase())}
       <button class="btn pri block" style="margin:10px 0" data-a="dmNew">New ${esc(sc.one)} from template</button>
       <button class="btn block" data-a="dmBulkOpen" style="margin-bottom:10px">Fix books in bulk</button>
-      <button class="btn block" data-a="dmMissing" style="margin-bottom:10px">Spells the books name that are missing</button>
+      <button class="btn block" data-a="dmMissing" style="margin-bottom:10px">Missing spells</button>
       <div id="dm-list">${dmListHtml(app)}</div>
       <h3 style="margin-top:18px">Share with your players</h3>
-      <p class="small muted">Edits show up on this device right away. To send them to everyone, export the file, then ask Claude to apply it (or run <code>node tools/apply-dm.mjs</code>). It goes into the locked rules and the app updates itself on every device.</p>
+      
       <div class="stack">
         <button class="btn block" data-a="dmExport" ${n ? "" : "disabled"}>Export my changes</button>
         <label class="btn block" style="text-align:center">Import a changes file<input type="file" accept="application/json,.json" data-dm-file hidden></label>

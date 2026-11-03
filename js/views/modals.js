@@ -95,8 +95,8 @@ export function renderModal(app) {
     case "confirmDelete": return renderConfirmDelete(app);
     case "confirmStyle": {
       const to = app._style === "advanced" ? "advanced" : "classic";
-      return modalShell(`Switch to the ${to} sheet?`, `<p>Are you sure? Your characters are not changed, only how the sheet is laid out.</p><p class="sub2">${to === "advanced" ? "Advanced splits the sheet into tabs and adds Play Mode, loadouts and turn tracking." : "Classic puts everything on one page like the printed 2024 sheet."}</p>`,
-        `<button class="btn" data-a="closeModal">Keep my current sheet</button><button class="btn pri" data-a="confirmStyle">Switch</button>`);
+      return modalShell(`Switch to the ${to} sheet?`, `<p>Characters are not changed.</p>`,
+        `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmStyle">Switch</button>`);
     }
     case "confirmRemove": {
       const r = app._rm || {};
@@ -115,7 +115,7 @@ export function renderModal(app) {
       const discount = (c.feats || []).some(f => /^Crafter\b/.test(f));
       return modalShell("Shop",
         `<p class="small">You have <b class="num">${esc(fmtWallet(c.coins))}</b>.${discount ? ` <span class="tag green">Crafter: 20% off nonmagical</span>` : ""}</p>
-         <div class="seg" style="margin-top:8px" role="group" aria-label="Gear shown"><button data-a="shopTrained" data-v="1" aria-pressed="${app.shopTrained !== false}">Gear I am trained in</button><button data-a="shopTrained" data-v="0" aria-pressed="${app.shopTrained === false}">All gear</button></div>
+         <div class="seg" style="margin-top:8px" role="group" aria-label="Gear shown"><button data-a="shopTrained" data-v="1" aria-pressed="${app.shopTrained !== false}">Trained</button><button data-a="shopTrained" data-v="0" aria-pressed="${app.shopTrained === false}">All gear</button></div>
          ${app.shopTrained !== false ? `<p class="sub2" style="margin-top:6px">Weapons, armor and tools shown: ${esc(trainingSummary(trainingFromChar(c)))}. Adventuring gear and magic items need no training.</p>` : ""}
          ${searchBox("shop", app.shopQuery, "Search the shop")}
          <div class="seg" style="margin-top:10px" role="group" aria-label="Category">${cats.map(k => `<button data-a="shopCat" data-cat="${esc(k)}" aria-pressed="${cat === k}">${esc(k === "Magic & potions" ? "Magic" : k)}</button>`).join("")}</div>
@@ -135,7 +135,7 @@ export function renderModal(app) {
       return modalShell(`Cast ${sp.name}`,
         `${sp.conc && c.concentration && c.concentration !== sp.name ? `<p class="small" style="color:var(--red);margin-bottom:10px">This ends your concentration on ${esc(c.concentration)}.</p>` : ""}
          <div class="optlist" style="margin-top:0">${opts || `<p class="muted">No slot of level ${sp.level} or higher.</p>`}</div>
-         <button class="btn ghost block" style="margin-top:10px" data-a="castWith" data-lvl="0">Cast without a slot (ritual, item, free use)</button>`);
+         <button class="btn ghost block" style="margin-top:10px" data-a="castWith" data-lvl="0">Cast without slot</button>`);
     }
 
     case "item": {
@@ -278,7 +278,7 @@ export function renderModal(app) {
     case "died": {
       const who = esc(c.name);
       if (!c.dead) return modalShell(`Mark ${c.name} as dead?`,
-        `<p>${who} goes to the Graveyard. You can still look at the sheet there, and you can bring them back whenever you like.</p>
+        `<p>${who} goes to the Graveyard.</p>
          <label class="field"><span class="lab">How did they die? (optional)</span><input class="f" id="f-cause" maxlength="300" autocomplete="off" placeholder="Where, and to what"></label>`,
         `<button class="btn" data-a="closeModal">Not dead</button><button class="btn pri" data-a="confirmDead">Lay to rest</button>`);
       return `<div class="modal-back diedback" data-a="closeModalBackdrop"><div class="modal diedmodal" role="dialog" aria-modal="true" aria-label="${who} has fallen">
@@ -289,11 +289,11 @@ export function renderModal(app) {
           <p class="dmeta">Level ${esc(c.level)} ${esc(c.species)} ${esc(c.class)}${c.subclass ? " \u00b7 " + esc(c.subclass) : ""}</p>
           <label class="field dcause"><span class="lab">How did they die? (optional)</span><input class="f" id="f-cause" maxlength="300" autocomplete="off" value="${esc(c.dead.cause || "")}" placeholder="Where, and to what"></label>
           <button class="btn pri dbtn" data-a="confirmDead">Rest in peace</button>
-          <p class="sub2 dnote">${who} can't be played until you revive them from the banner on their sheet, or from the Graveyard.</p>
+          
         </div></div></div>`;
     }
     case "revive": {
-      return modalShell("Bring them back?", `<p>${m.name ? esc(m.name) : "This character"} returns to the character list at 1 hit point, with death saves cleared. The cause of death is forgotten.</p>`,
+      return modalShell("Bring them back?", `<p>${m.name ? esc(m.name) : "This character"} returns at 1 HP. Death saves cleared.</p>`,
         `<button class="btn" data-a="closeModal">Stay buried</button><button class="btn pri" data-a="reviveGo">Revive</button>`);
     }
 
@@ -320,14 +320,14 @@ export function renderModal(app) {
            <div class="rowline"><span class="nm">This rest uses</span><span class="stepper"><button data-a="lrNeed" data-n="-1" aria-label="Use fewer rations" ${need <= 0 ? "disabled" : ""}>\u2212</button><b>${need}</b><button data-a="lrNeed" data-n="1" aria-label="Use more rations" ${need >= 9 ? "disabled" : ""}>+</button></span></div>
            ${short ? `<p class="sub2 lrwarn">Not enough rations: you have ${have} and this rest needs ${need}. Lower the number if your table allows it, or add rations to your pack.</p>` : ""}</div>
          ${opts.length ? `<h3 class="lrh">Long rest options</h3>${opts.map(row).join("")}` : ""}
-         <p class="sub2" style="margin-top:12px">Restores all hit points, spell slots, Hit Dice and counters, ends concentration, and lowers exhaustion by 1. Nothing above changes unless you change it.</p>`,
+         <p class="sub2" style="margin-top:12px">Restores HP, slots, Hit Dice, counters. Exhaustion -1.</p>`,
         `<button class="btn" data-a="closeModal">Go back</button><button class="btn pri" data-a="confirmLongRest" ${short ? "disabled" : ""}>Long rest</button>`);
     }
 
     case "conditions": {
       const firstLine = n => { const g = glossaryEntry(n); return g ? esc(g.text.split(/(?<=\.)\s/)[0]).slice(0, 110) : ""; };
       return modalShell("Conditions",
-        `<p class="small muted" style="margin-bottom:10px">Tap to toggle. (i) for the rule.</p>
+        `
         <div class="condgrid">${CONDITIONS.map(x => {
           const on = c.conditions.includes(x), key = "condition:" + x;
           return infoRow({ key, action: "toggleCondition", data: { name: x }, title: x, sub: firstLine(x), pressed: on, open: app.info.has(key),
@@ -399,13 +399,13 @@ export function renderModal(app) {
             <div class="field"><label for="cb-l">Label</label><input class="f" id="cb-l" maxlength="24" placeholder="Why"></div>
           </div>
           <button class="btn block" data-a="customAdd">Add bonus</button>
-          <button class="btn block" data-a="openBreakdown">How HP, AC, speed and initiative are worked out</button>
+          <button class="btn block" data-a="openBreakdown">Breakdown</button>
           <p class="lab" style="margin-top:6px">Sheet style</p>
           <div class="seg" role="group" aria-label="Sheet style">${[["classic", "Classic"], ["advanced", "Advanced"]].map(([v, l]) => `<button data-a="setPrefV" data-k="sheetStyle" data-v="${v}" aria-pressed="${(app.prefs.sheetStyle || "classic") === v}">${l}</button>`).join("")}</div>
           <p class="sub2">Character data is unchanged.</p>
           <div class="panel" style="margin-top:10px"><div class="panel-body stack">
             <button class="btn block" data-a="downloadPdf">Download character sheet (PDF)</button>
-            <button class="btn block" data-a="exportOne">Save a backup of this character</button>
+            <button class="btn block" data-a="exportOne">Export character</button>
             ${c.dead ? "" : `<button class="btn block" data-a="markDeadAsk">Mark as dead</button>`}
             <button class="btn danger block" data-a="askDelete">Delete character</button>
           </div></div>
@@ -512,7 +512,7 @@ function shopDetail(app, r) {
 // ---- delete: one clear confirmation (the toast afterwards offers Undo)
 function renderConfirmDelete(app) {
   const n = esc(app.char.name);
-  return modalShell(`Delete ${app.char.name}?`, `<p>This removes ${n} from this device. Without a backup file, they're gone for good.</p>`,
+  return modalShell(`Delete ${app.char.name}?`, `<p>Removes ${n} from this device. No undo without a backup.</p>`,
     `<button class="btn" data-a="cancelDelete">Keep</button><button class="btn danger" data-a="deleteChar">Delete</button>`);
 }
 
@@ -523,7 +523,7 @@ function renderCustomBg(app) {
   const reals = app.library.backgrounds.filter(b => !b.custom).sort((a, b) => a.name.localeCompare(b.name));
   const mine = loadCustom();
   return modalShell("Custom background",
-    `<p class="small muted">The 2024 rules let you build your own background. Choose its three ability scores, an Origin feat, two skills and a tool. You then split +2/+1 (or +1 each) among the three scores when you set your ability scores.</p>
+    `
      <div class="field"><label>Name</label><input class="f" data-cb="name" value="${esc(cb.name)}" placeholder="e.g. Caravan Guard" autocomplete="off"></div>
      <div class="field"><label>Three ability scores</label><div class="grid3">${[0, 1, 2].map(i => `<select class="f" data-cb="ab${i}" aria-label="Ability ${i + 1}"><option value="">Choose</option>${ABS.map(a => opt(a, cb.abilities[i], ABL[a])).join("")}</select>`).join("")}</div></div>
      <div class="field"><label>Origin feat</label><select class="f" data-cb="feat"><option value="">Choose</option>${feats.map(f => opt(f.name, cb.feat)).join("")}</select></div>
@@ -537,7 +537,7 @@ function renderCustomBg(app) {
 
 function renderLevelMenu(app) {
   const c = app.char;
-  if (c.level >= 20) return modalShell("Max level", `<p>${esc(c.name)} is level 20, the highest level. There is nothing left to level up to.</p>`, `<button class="btn pri" data-a="closeModal">Done</button>`);
+  if (c.level >= 20) return modalShell("Max level", `<p>${esc(c.name)} is level 20.</p>`, `<button class="btn pri" data-a="closeModal">Done</button>`);
   const next = c.level + 1, need = xpForLevel(next), have = c.xp || 0, mode = c.levelMode || "xp";
   const enough = have >= need, pct = Math.max(0, Math.min(100, Math.round((have - xpForLevel(c.level)) / Math.max(1, need - xpForLevel(c.level)) * 100)));
   const n = v => Number(v).toLocaleString();
@@ -547,11 +547,11 @@ function renderLevelMenu(app) {
     ${mode === "xp" ? `<p style="margin-top:12px"><b class="num">${n(have)}</b> XP in total. Level ${next} starts at <b class="num">${n(need)}</b>.</p>
       <div class="hpbar" style="height:10px;margin:8px 0;border-radius:5px;background:var(--panel2);overflow:hidden"><div style="height:100%;width:${enough ? 100 : pct}%;background:var(--amber)"></div></div>
       <p class="sub2">${enough ? `You have enough XP for level ${next}.` : `The bar is your progress through level ${c.level}: ${n(Math.max(0, have - xpForLevel(c.level)))} of ${n(need - xpForLevel(c.level))} XP. ${n(need - have)} to go.`}</p>
-      <div class="field" style="margin-top:12px"><label>Add the XP you just earned</label>
+      <div class="field" style="margin-top:12px"><label>Add XP</label>
         <div style="display:flex;gap:8px"><input class="f" id="xp-add" type="number" inputmode="numeric" min="0" placeholder="e.g. 450" style="flex:1" aria-label="XP to add"><button class="btn" data-a="addXp">Add</button></div></div>
-      <div class="field"><label>Or set your total XP</label>
+      <div class="field"><label>Set total XP</label>
         <div style="display:flex;gap:8px"><input class="f" id="xp-set" type="number" inputmode="numeric" min="0" value="${have}" style="flex:1" aria-label="Total XP"><button class="btn" data-a="setXp">Set</button></div></div>`
-    : `<p style="margin-top:12px">Your DM decides when the party levels up. Take level ${next} whenever they say so. Your XP is set to ${n(need)} to match.</p>`}`;
+    : `<p style="margin-top:12px">Level ${next}. XP set to ${n(need)}.</p>`}`;
   const foot = `<button class="btn" data-a="closeModal">Not yet</button><button class="btn pri" data-a="startLevelUp" ${mode === "xp" && !enough ? "disabled" : ""}>Level up to ${next}</button>`;
   return modalShell("Level up", body, foot);
 }

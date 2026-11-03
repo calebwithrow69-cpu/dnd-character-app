@@ -11,7 +11,7 @@ export function renderCxShop(app) {
   const cat = app.cxShopCat || "All", t = trainingFor(app, d);
   return modalShell("Shop",
     `<p class="small"><b class="num" id="cxshop-left">${esc(fmtPrice(walletLeftCp(app, d) / 100) || "0 gp")}</b> left of <span class="num">${esc(fmtPrice(startCp(app, d) / 100) || "0 gp")}</span></p>
-     <p class="sub2">Listed: gear ${esc(d.class)} is trained to use (${esc(trainingSummary(t))}). Adventuring gear needs no training, so all of it is listed.</p>
+     <p class="sub2">Trained: ${esc(trainingSummary(t))}</p>
      ${searchBox("cxshop", app.cxShopQuery, "Search the shop")}
      <div class="seg" style="margin-top:10px" role="group" aria-label="Category">${CATS.map(k => `<button data-a="cxShopCat" data-cat="${k}" aria-pressed="${cat === k}">${k}</button>`).join("")}</div>
      <div class="results" id="results-cxshop">${renderCxShopResults(app)}</div>`,

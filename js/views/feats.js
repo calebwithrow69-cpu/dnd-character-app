@@ -136,7 +136,7 @@ export function renderFeatSheet(app, items, selected, pick) {
     <div class="modal-body">
       <div class="fchips"><span class="fpill">${esc(prereqLabel(f))}</span>${p.asi ? `<span class="fpill amber">${esc(p.asi)}</span>` : ""}</div>
       ${ok ? "" : `<p class="small" style="margin-top:10px;color:var(--amber)">Not available yet: ${esc(why || "")}</p>`}
-      <div class="sp-sechead"><h3>Benefits</h3><span class="sub2">Tap one to read it</span></div>
+      <div class="sp-sechead"><h3>Benefits</h3></div>
       <div class="sp-traits">${benefits}</div>
     </div>
     <div class="modal-foot"><button class="btn pri block" data-a="featChoose" data-name="${esc(f.name)}" data-pick="${esc(pick)}" ${ok && !on ? "" : "disabled"}>${on ? "Chosen" : ok ? "Choose " + esc(f.name) : "Not available yet"}</button></div>

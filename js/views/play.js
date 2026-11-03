@@ -183,7 +183,7 @@ export function playTab(app, c, d) {
         <div class="pm-slots">${slotsRail(c, d)}</div>
         ${show.feature ? trackHtml(app, c) : ""}
         ${groups || `<p class="muted small" style="padding:18px 0">Nothing matches. <button class="linkbtn" data-a="playClear">Reset filters</button></p>`}
-        <p class="sub2" style="margin:12px 0">Tap a name to read it. Dimmed = unavailable; tap for why.</p>
+        
       </div>
       ${sideHtml(app, c, d, selE)}
     </div>

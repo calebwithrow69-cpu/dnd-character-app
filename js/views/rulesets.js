@@ -31,14 +31,14 @@ export function renderRulesets(app) {
   };
   return `${topbar("Rulesets", "What players on this device can pick", { back: "rsExit" })}
     <main class="wrap page">
-      <p class="small muted">A ruleset switches whole books, or single classes, subclasses, species, backgrounds, feats and spells, on or off. Characters you already made keep everything they have. The ruleset in use only changes what you can pick from. Rulesets live on this device; use Share to send one to someone else.</p>
+      
       ${[group, ...sets.sets].map(card).join("")}
       <div class="stack" style="margin-top:12px">
         <button class="btn pri block" data-a="rsNew">New ruleset (everything on)</button>
         <label class="field"><span class="lab">Import a ruleset code</span><textarea class="f mono" id="rs-import" rows="3" placeholder="CRR1...." spellcheck="false"></textarea></label>
         <button class="btn block" data-a="rsImport">Import</button>
         ${ui.msg ? `<p class="small">${esc(ui.msg)}</p>` : ""}
-        <button class="btn ghost block" data-a="dmOpen">DM editor (add or change entries)</button>
+        <button class="btn ghost block" data-a="dmOpen">DM editor</button>
       </div>
     </main>`;
 }
@@ -74,7 +74,7 @@ function editor(app, ui, L) {
           <button class="btn sm ${on ? "pri" : ""}" data-a="rsEntry" data-kind="${ui.kind}" data-key="${esc(entryKey(ui.kind, e))}" aria-pressed="${on}" ${dis}>${on ? "On" : "Off"}</button></div>`;
       }).join("") || `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`}
       ${rows.length > LIMIT ? `<p class="sub2" style="padding:8px 0">Showing ${LIMIT} of ${rows.length}. Search to narrow it down.</p>` : ""}</div></div>
-      <p class="sub2">Tap a switch to set that entry by hand. Tap "Clear my changes" to go back to following the books.</p>
+      
       ${ro ? "" : `<button class="btn ghost block" data-a="rsClearEntries">Clear my changes to ${esc((KINDS.find(k => k[0] === ui.kind) || [])[1] || "")}</button>`}`;
   }
   const bad = problems(rs, L);

@@ -17,7 +17,7 @@ function abilityBlock(c, d, a) {
   const skills = d.skills.filter(s => s.ability === a);
   return `<section class="abblk" aria-label="${ABILITY_LABEL[a]}">
     <h3>${ABILITY_LABEL[a]}</h3>
-    <button class="abmod" data-a="rollAbility" data-ab="${a}" aria-label="${ABILITY_LABEL[a]} check ${fmtMod(d.mods[a])}. Tap to roll."><b>${fmtMod(d.mods[a])}</b><span>${c.abilities[a]}</span></button>
+    <button class="abmod" data-a="rollAbility" data-ab="${a}" aria-label="${ABILITY_LABEL[a]} check ${fmtMod(d.mods[a])}"><b>${fmtMod(d.mods[a])}</b><span>${c.abilities[a]}</span></button>
     <button class="abrow save" data-a="rollSave" data-ab="${a}"><span class="dot ${c.saveProf.includes(a) ? "on" : ""}"></span><span class="nm">Save</span><b>${fmtMod(d.saves[a])}</b></button>
     ${skills.map(s => `<div class="abrow"><button class="pip" data-a="cycleSkill" data-id="${s.id}" aria-label="${s.label} proficiency: ${s.expert ? "expertise" : s.proficient ? "proficient" : "none"}"><span class="dot ${s.expert ? "exp" : s.proficient ? "on" : ""}"></span></button>
       <button class="nm linkbtn" data-a="rollSkill" data-id="${s.id}">${s.label}</button><button class="v" data-a="rollSkill" data-id="${s.id}">${fmtMod(s.bonus)}</button></div>`).join("")}

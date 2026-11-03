@@ -40,6 +40,18 @@ Characters live only in each player's browser storage; the repo holds the app an
 - `js/views/*` screens · `js/app.js` events and actions · `service-worker.js` offline cache
 - **Bump `CACHE_VERSION` on every code or style change** (and list new files in `SHELL_FILES`). Players only get new code when it changes; the page then applies it at launch or via the "Update now" bar. Rules/campaign JSON updates live without a bump.
 
+## UI copy (what "AI talk" is, and how to avoid it)
+**Definition.** AI talk is interface text that explains, reassures or converses instead of labelling. Test: delete the sentence; if the screen still works, it was AI talk. Seven tells, all checked by `tools/copy-lint.mjs` (run by `node tests/copy.test.mjs`, must stay at zero):
+1. **tutorial** - tells how to use the screen ("Tap a card to ..."). The control must look usable; if it does not, fix the design.
+2. **reassure** - "Don't worry", "nothing is lost", "safe", "for now".
+3. **hedge** - simply, just, easily, a bit, actually, please.
+4. **marketing** - "!", powerful, perfect, ready to, welcome, special.
+5. **chatty** - asides with dashes, "you'll", "we", "let me", "would you like".
+6. **narrating** - the screen describing itself ("this screen lets you", "the app reads").
+7. **sentence where a label fits** - button/label over 4 words, toast over 9, any text over 12 words ending in a period; "you can ..." permission statements.
+**House style.** Noun or verb labels (Create, Edit, Reroll, Export). Toasts are a result, not advice ("Link copied"). Numbers and states over prose ("0/2", "Locked"). Aria labels name the thing and its value ("Hit points 12 of 20"), never the gesture. Destructive confirmations get one short sentence naming the object and the consequence. Errors: cause, then remedy, 8 words max. Book rules text stays in the rules file and is never edited for tone.
+**Plan.** (1) New or changed visible text must pass `tests/copy.test.mjs` before commit. (2) Write the label first, add a sentence only if a user would get hurt without it. (3) If a screen seems to need a tutorial, change the layout instead. (4) Extend the rules in `tools/copy-lint.mjs` when a new tell shows up (each rule has a one-line reason). (5) Review copy on a screenshot at 390px, not in code.
+
 ## SRD 5.2
 - `tools/srd-import.mjs <5e-database/src/2024/en>` merges the 2024 SRD (from github.com/5e-bits/5e-database) into `data/library.json`: adds only what's missing, rebuilds the 12 SRD subclasses' features, adds class levels 11–20. Content is CC-BY-4.0: the credit is stored in `library.credits` and shown in Settings — keep it.
 

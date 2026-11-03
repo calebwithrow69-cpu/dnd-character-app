@@ -80,21 +80,21 @@ export function renderSheet(app) {
       ${c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
       <section class="status" aria-label="Status">
         <div class="vitals">
-          <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points. Tap to add XP or level up.">
+          <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points">
             <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle cx="50" cy="50" r="45" class="ring-fg" pathLength="100" stroke-dasharray="${xpPct} 100"/></svg>
             <span class="wax"><b>${c.level}</b></span><span class="sealcap">Level</span>
             ${xpReady ? `<span class="canlevel">Level up</span>` : ""}
           </button>
-          <button class="hpwrap hpbtn" data-a="openHp" aria-label="Hit points ${c.hp.cur} of ${c.hp.max}${c.hp.temp ? ", " + c.hp.temp + " temporary" : ""}. Tap to change.">
+          <button class="hpwrap hpbtn" data-a="openHp" aria-label="Hit points ${c.hp.cur} of ${c.hp.max}${c.hp.temp ? ", " + c.hp.temp + " temporary" : ""}">
             <span class="hpstage"><canvas id="hpc" aria-hidden="true"></canvas></span>
             <span class="hptext"><b class="hpnum">${c.hp.cur}</b><span class="muted">/ ${c.hp.max} HP${c.hp.temp ? ` · +${c.hp.temp} temp` : ""}</span><span class="hpedit">${ICONS.edit}Change</span></span>
           </button>
-          <button class="shieldbtn tier-${armorTier(d.ac).key}" data-a="openAc" aria-label="Armor class ${d.ac}, ${armorTier(d.ac).name}. Tap to see and change the bonuses.">${shieldSvg(d.ac)}<b>${d.ac}</b><span>AC</span></button>
+          <button class="shieldbtn tier-${armorTier(d.ac).key}" data-a="openAc" aria-label="Armor class ${d.ac}, ${armorTier(d.ac).name}">${shieldSvg(d.ac)}<b>${d.ac}</b><span>AC</span></button>
         </div>
         <p class="xpline">${c.level >= 20 ? "Max level" : `${(c.xp || 0).toLocaleString()} XP \u00b7 ${xpReady ? "ready for level " + (c.level + 1) : (xpForLevel(c.level + 1) - (c.xp || 0)).toLocaleString() + " to level " + (c.level + 1)}`}</p>
         <div class="quick">
           <button data-a="rollInit"><b>${fmtMod(d.initiative)}</b><span>Initiative · roll</span></button>
-          <button data-a="openBreakdown" aria-label="Speed ${d.speed} feet. Tap to see how it is worked out."><b>${d.speed}</b><span>Speed ft</span></button>
+          <button data-a="openBreakdown" aria-label="Speed ${d.speed} feet"><b>${d.speed}</b><span>Speed ft</span></button>
           <div><b>${fmtMod(d.prof)}</b><span>Proficiency</span></div>
           <button data-term="Passive Perception"><b>${d.passivePerception}</b><span>Passive Perception</span></button>
         </div>
@@ -196,13 +196,13 @@ export function spellsTab(app, c, d) {
       </div></div></div>` : ""}
 
     <div class="sp2">
-    <div class="sp2-side"><h2 class="sec2">Spell slots <small>tap a gem to mark it used</small></h2>
+    <div class="sp2-side"><h2 class="sec2">Spell slots</h2>
       ${info.slots.length ? info.slots.map(r => {
         const used = c.spellcasting.slotsUsed[r.level - 1] || 0;
         return `<div class="sp2-slot"><span class="lv">${r.pact ? `Pact · level ${r.level}` : levelLabel(r.level)}</span>
           <span class="gems">${Array.from({ length: r.max }, (_, i) => `<button class="pip ${i < r.max - used ? "" : "used"}" data-a="toggleSlot" data-lvl="${r.level}" data-i="${i}" data-max="${r.max}" aria-label="${levelLabel(r.level)} slot ${i + 1}, ${i < r.max - used ? "available" : "used"}"></button>`).join("")}</span></div>`;
       }).join("") + (info.slots.some(r => r.pact) ? `<p class="sub2">Pact slots come back on a short rest.</p>` : "") : `<p class="muted small">No spell slots at this level.</p>`}
-      <p class="sub2 sp2-key">✦ always prepared · tap a spell to read it</p></div>
+      <p class="sub2 sp2-key">✦ always prepared</p></div>
     <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><button class="btn sm pri" data-a="openPicker" data-picker="spells">Add spells</button></div>
       ${known.length ? levels.map(lv => kGroup(levelLabel(lv), byLevel[lv].length, { tone: lv === 0 ? "faint" : "amber" }) + `<div class="k-list">` + byLevel[lv].map(s => {
         const r = s.ref;
@@ -401,7 +401,7 @@ function bagGrid(app, c) {
       </div>`;
   }).join("")}</div>
       ${weightBar(c)}
-      <p class="sub2" style="margin-top:8px">Tap an item for actions, or tap the ⋮ button. ${matchMedia("(pointer:fine)").matches ? "Right-click or drag onto a slot." : "Press and hold for the menu."}</p>`
+      `
       : `<p class="muted small" style="padding:12px 0">Your bag is empty.</p>`}
     </div></div>`;
 }
@@ -440,7 +440,7 @@ export function diceTab(app) {
         <button class="diebtn" data-a="quickRoll" data-sides="20" data-count="2"><b>2d20</b></button>
       </div>
       <form data-form="customRoll" class="field" style="margin-top:14px">
-        <label for="f-formula">Any roll, like 2d6+3 or 1d8+1d6+2</label>
+        <label for="f-formula">Formula, e.g. 2d6+3</label>
         <div class="row"><input class="f grow" id="f-formula" value="${esc(app.diceFormula || "")}" placeholder="1d20+5" autocomplete="off" enterkeyhint="go">
           <button class="btn pri" type="submit">Roll</button></div>
       </form>
@@ -670,7 +670,7 @@ export function renderRulesResults(app) {
   // Category listing
   if (app.glossaryCat) return glossaryCatList(app);
   // Default: show the category chips only (no list until a chip is tapped)
-  return `<p class="muted small" style="padding:12px 0">Tap a category above or search to browse the rules.</p>`;
+  return `<p class="muted small" style="padding:12px 0"></p>`;
 }
 
 // ---------------- Detail lookup (shared by every "tap to read") ----------------
@@ -701,7 +701,7 @@ export function detailFor(app, kind, name, i, from) {
     const it = null;
     const ref = findByName(allItems(L, C), it ? it.name : name);
     return { title: it ? it.name : name, removeItem: it ? i : null, itemIndex: it ? i : null,
-      body: (ref ? kv([["Type", ref.type], ["Price", ref.priceTxt ? ref.priceTxt + " gp" : ""]]) + formatText(ref.text) : `<p class="muted">Not in the rules data — it's your own item.</p>`)
+      body: (ref ? kv([["Type", ref.type], ["Price", ref.priceTxt ? ref.priceTxt + " gp" : ""]]) + formatText(ref.text) : `<p class="muted">Custom item</p>`)
         + (it ? `<div class="field" style="margin-top:12px"><label>Your notes</label><textarea class="f" data-item-notes="${i}" style="min-height:70px">${esc(it.notes || "")}</textarea></div>` : "") };
   }
   if (kind === "species") { const s = findByName(L.species, name); return { title: name, body: formatText(s ? (s.desc ? s.desc + "\n\n" : "") + s.traits : "") }; }

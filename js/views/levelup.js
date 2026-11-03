@@ -157,14 +157,14 @@ export function levelBody(app) {
     const os = oldSlots.map(r => r.max).join("/"), ns = newSlots.map(r => r.max).join("/");
     if (ns && os !== ns) facts.push(["Spell slots", `${os || "none"} \u2192 ${ns}`]);
     facts.push(["Hit die gained", `+1d${c.hitDice.die || 8}`]);
-    body = `<p class="small muted">Here is everything level ${d.next} gives you. Tap a feature to read it, then continue to make your choices.</p>
+    body = `
       <div class="quick" style="grid-template-columns:repeat(${facts.length},1fr);margin:12px 0 4px">${facts.map(([k, v]) => `<div><b style="font-size:${String(v).length > 12 ? ".95rem" : "1.15rem"}">${esc(v)}</b><span>${esc(k)}</span></div>`).join("")}</div>
       ${feats.length ? kGroup("New features", feats.length, { tone: "amber" }) + `<div class="k-list">${feats.map(f => {
         const open = d.gainOpen === f.name;
         return kRow({ icon: ICONS.star, tone: "amber", title: f.name, cap: f.from === c.class ? "Class feature" : f.from, status: open ? "\u25b4" : "\u25be",
           mainAttrs: `data-a="lvlGainOpen" data-name="${esc(f.name)}" aria-expanded="${open}"`, extra: "" }) + (open ? `<div class="about" style="margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius-sm)">${formatText(f.text || "")}</div>` : "");
       }).join("")}</div>`
-        : p.open ? `<p class="sub2">Your rules data stops at level 10, so new features for level ${d.next} aren't listed. Add them from your book.</p>` : `<p class="sub2">No new class features.</p>`}`;
+        : p.open ? `<p class="sub2">Rules data ends at level 10.</p>` : `<p class="sub2">No new class features.</p>`}`;
   }
 
   else if (step.id === "hp") {
@@ -179,12 +179,12 @@ export function levelBody(app) {
 
   else if (step.id === "subclass") {
     const subs = subclassesFor(L, c.class).slice().sort((a, b) => a.name.localeCompare(b.name));
-    body = `<p class="small muted">Your subclass shapes the rest of your ${esc(c.class)} levels. Tap one to read all of it, then choose from that page.</p><div class="sclist">` + subs.map(sc => subRow(app, sc)).join("") + `</div>`;
+    body = `<div class="sclist">` + subs.map(sc => subRow(app, sc)).join("") + `</div>`;
   }
 
   else if (step.id === "asi") {
     const fi = asiFeatItems(app);
-    body = `<p class="small muted">In the 2024 rules an Ability Score Improvement is a feat. Choose one: a General feat, an Origin feat, or Ability Score Improvement itself. Tap a feat to read it.</p>
+    body = `
       ${renderFeatChosen(app)}
       <div style="margin-top:12px">${searchBox("lvl", d.query, "Search feats")}</div>${renderFeatControls(app, fi)}
       <div id="lvl-results">${renderLevelResults(app)}</div>${renderFeatSheet(app, fi, d.feat, "lvlFeat")}`;
@@ -205,7 +205,7 @@ export function levelBody(app) {
 
   else if (step.id === "expertise") {
     const opts = expertiseChoices(c);
-    body = `<p class="small muted">Expertise doubles your proficiency bonus for a skill. Choose ${step.n} you're already proficient in. ${d.expertise.length}/${Math.min(step.n, opts.length)} chosen.</p>
+    body = `<p class="small muted">${d.expertise.length}/${Math.min(step.n, opts.length)}</p>
       <div class="optlist">${opts.map(s => {
         const on = d.expertise.includes(s.id);
         return `<button class="optcard" data-a="lvlExpertise" data-id="${s.id}" aria-pressed="${on}" ${!on && d.expertise.length >= step.n ? "disabled" : ""}>
@@ -216,7 +216,7 @@ export function levelBody(app) {
   else if (step.id === "mastery") {
     const have = c.masteries || [];
     const ws = allWeapons(L, app.campaign).filter(w => w.mastery && !have.includes(w.name)).sort((a, b) => a.name.localeCompare(b.name));
-    body = `<p class="small muted">Mastery unlocks a weapon's special trick (shown on each). Choose ${step.n}. ${d.mastery.length}/${step.n} chosen.</p>
+    body = `<p class="small muted">${d.mastery.length}/${step.n}</p>
       <div class="optlist">${pickList(ws, d.mastery, "lvlMastery", { kind: "mastery", max: step.n, detail: masteryDetail, render: w => `${esc(w.mastery)} · ${esc(w.cat || "")} ${esc(w.kind || "")}` })}</div>`;
   }
 
@@ -225,7 +225,7 @@ export function levelBody(app) {
     const have = c.choices[g.key] || [];
     const picked = new Set([...have, ...d.options]);
     const opts = g.options.filter(o => !have.includes(o.name));
-    body = `<p class="small muted">Choose ${step.n}. ${d.options.length}/${step.n} chosen. Tap (i) to read any of them, even locked ones.</p>
+    body = `<p class="small muted">${d.options.length}/${step.n}</p>
       <div class="optlist">${opts.map(o => {
         const pre = optionPrereq(o);
         const lockedLevel = pre.level > d.next;
@@ -279,11 +279,11 @@ export function levelBody(app) {
     const feats = p.features;
     body = `<dl class="kv">${lines.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("") || "<dt>Changes</dt><dd>None to choose this level.</dd>"}</dl>
       ${feats.length ? `<p class="lab" style="margin-top:6px">New features</p><div>${feats.map(f => `<button class="rowline rollable" data-a="showDetail" data-kind="${f.kind}" data-name="${esc(f.name)}" data-from="${esc(f.from)}"><span class="nm">${esc(f.name)}</span><span class="sub2">${f.from === c.class ? "" : esc(f.from)}</span></button>`).join("")}</div>`
-        : p.open ? `<p class="sub2">Your rules data stops at level 10, so new features for level ${d.next} aren't listed. Add them from your book.</p>` : ""}`;
+        : p.open ? `<p class="sub2">Rules data ends at level 10.</p>` : ""}`;
   }
 
   const RAND = { subclass: "subclass", style: "fighting style", expertise: "expertise", mastery: "weapons", options: "picks", cantrips: "cantrips", spells: "spells" };
-  if (RAND[step.id]) body = `<div class="randrow"><button class="btn sm" data-a="lvlRandomStep">Randomize ${RAND[step.id]}</button><span class="small muted">Fills this screen. Editable.</span></div>` + body;
+  if (RAND[step.id]) body = `<div class="randrow"><button class="btn sm" data-a="lvlRandomStep">Randomize ${RAND[step.id]}</button></div>` + body;
   return { body, step, plan: p };
 }
 export const levelWhy = id => why[id] || "";

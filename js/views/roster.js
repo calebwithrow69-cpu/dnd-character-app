@@ -25,7 +25,7 @@ export function renderRoster(app) {
       <div class="stack" style="margin-top:14px">
         <button class="btn pri block" data-a="newChar">New character</button>
         ${fallen ? `<button class="btn block" data-a="goGraveyard">Graveyard (${fallen})</button>` : ""}
-        <button class="btn block" data-a="importPrompt">Restore from a backup file</button>
+        <button class="btn block" data-a="importPrompt">Restore backup</button>
         <button class="btn ghost block" data-a="rsOpen">Rulesets</button>
         <button class="btn ghost block" data-a="dmOpen">DM editor</button>
         ${seedAvailable ? `<button class="btn ghost block" data-a="importGandork">Add the sample character (Gandork)</button>` : ""}
@@ -38,7 +38,7 @@ export function renderUnlock(app) {
     <div style="text-align:center;margin:56px 0 18px">
       <img src="icons/icon-192.png" alt="" width="72" height="72" style="border-radius:16px">
       <h1 style="font-size:1.4rem;margin-top:14px">Character Runner</h1>
-      <p class="muted" style="margin-top:6px">Your DM locked the rules. Type the group password once — this device will remember it.</p>
+      <p class="muted" style="margin-top:6px">Group password</p>
     </div>
     <form class="panel" data-form="unlock"><div class="panel-body stack">
       <div class="field"><label for="f-pass">Group password</label>

@@ -132,7 +132,7 @@ async function init() {
       render(); setTimeout(() => document.getElementById("f-pass")?.focus(), 50);
       return;
     }
-    mount.innerHTML = `<div class="empty"><h3>Can't load the rules yet</h3><p>The very first time, this app needs an internet connection. Connect to Wi-Fi or data and try again — after that it works offline.</p><p style="margin-top:14px"><button class="btn pri" onclick="location.reload()">Try again</button></p></div>`;
+    mount.innerHTML = `<div class="empty"><h3>Can't load the rules yet</h3><p>First load needs a connection.</p><p style="margin-top:14px"><button class="btn pri" onclick="location.reload()">Try again</button></p></div>`;
     return;
   }
 
@@ -489,7 +489,7 @@ function applyHp(mode) {
   if (mode === "damage") {
     APP._hpEvent = { dealt: amt, tempSoaked: Math.min(hp.temp, hp.cur > 0 ? amt : 0) };
     if (hp.cur <= 0) {
-      if (amt >= hp.max) { c.deathSaves.fail = 3; toast("Massive damage — that's death"); }
+      if (amt >= hp.max) { c.deathSaves.fail = 3; toast("Massive damage: dead"); }
       else { c.deathSaves.fail = Math.min(3, c.deathSaves.fail + 1); toast(c.deathSaves.fail >= 3 ? "Third failure — that's death" : "Damage while down: one death save failure"); }
     } else {
       const fromTemp = Math.min(hp.temp, amt);
@@ -499,8 +499,8 @@ function applyHp(mode) {
       hp.cur = Math.max(0, hp.cur - rest);
       if (hp.cur === 0) {
         c.concentration = null; APP.concPrompt = null;
-        if (overflow >= hp.max) { c.deathSaves.fail = 3; toast("Massive damage — instant death"); }
-        else toast("Down to 0 HP — start death saves");
+        if (overflow >= hp.max) { c.deathSaves.fail = 3; toast("Massive damage: dead"); }
+        else toast("0 HP: death saves");
       } else if (c.concentration && rest > 0) {
         const dc = Math.min(30, Math.max(10, Math.floor(amt / 2)));
         if (APP.prefs.concprompt) APP.concPrompt = { dc, conc: c.concentration };
@@ -920,7 +920,7 @@ const ACTIONS = {
   },
   async tplCopy() {
     const d = APP.createDraft; if (!d) return;
-    try { await navigator.clipboard.writeText(templateCode(templateFile(d).p)); toast("Code copied. Send it to someone"); } catch (e) { toast("Your browser would not copy it. Use Save as a template instead"); }
+    try { await navigator.clipboard.writeText(templateCode(templateFile(d).p)); toast("Code copied"); } catch (e) { toast("Copy failed. Use Save"); }
   },
   loadCode() { loadText((document.getElementById("load-code") || {}).value); },
   loadBack() { APP.load = loadDefault(); render(); },
@@ -964,13 +964,13 @@ const ACTIONS = {
   async installApp() {
     const ok = await promptInstall();
     if (ok === null) toast("Use your browser's menu to install");
-    else if (ok) toast("Installed — open it from the new icon");
+    else if (ok) toast("Installed");
     render();
   },
   downloadShortcut() { const n = downloadShortcut(); toast(`Saved "${n}" — move it to your Desktop`); },
   async copyLink() {
     const url = appUrl();
-    try { await navigator.clipboard.writeText(url); toast("Link copied — text it to your phone"); }
+    try { await navigator.clipboard.writeText(url); toast("Link copied"); }
     catch (e) { const el = mount.querySelector("[data-copy-src]"); if (el) { el.select(); try { document.execCommand("copy"); toast("Link copied"); } catch (e2) { toast("Select the link and copy it"); } } }
   },
   dismissInstall() { APP.installDismissed = true; try { localStorage.setItem(LS_INSTALL, "1"); } catch (e) { } render(); },
@@ -1203,7 +1203,7 @@ const ACTIONS = {
     ACTIONS[{ species: "pickSpecies", class: "pickClass", background: "pickBackground" }[kind]]({ dataset: { name } });
     const trimmed = pruneCart(APP, APP.createDraft);
     if (trimmed) render();
-    if (trimmed && !lost) toast("Your shop list was trimmed to fit your gold and training");
+    if (trimmed && !lost) toast("Shop list trimmed");
     if (lost) toast(kind === "class" ? "Class changed. Class skills and class equipment were reset." : kind === "background" ? "Background changed. Ability increases, background picks and equipment were reset." : "Species changed. Species picks were reset.");
     if (kind === "species") {
       const vd = variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
@@ -1234,7 +1234,7 @@ const ACTIONS = {
     let next;
     if (def.n > 1) {
       next = cur.includes(v) ? cur.filter(x => x !== v) : cur.length < def.n ? [...cur, v] : cur;
-      if (next === cur) { toast(`You can pick ${def.n} — tap one to swap it out`); return; }
+      if (next === cur) { toast(`${def.n} max`); return; }
     } else next = cur[0] === v ? null : v;
     if (next == null || (Array.isArray(next) && !next.length)) delete d.picks[id]; else d.picks[id] = next;
     // answers that depended on the old pick (a feat's own choices, a lineage's traits) no longer apply
@@ -1295,7 +1295,7 @@ const ACTIONS = {
   randomAll() {
     randomFill(APP.createDraft, generateRandom);
     APP.createDraft.chapter = CHAPTERS.length - 1;
-    render(); window.scrollTo(0, 0); toast("Random character ready. Review it and change anything you like");
+    render(); window.scrollTo(0, 0); toast("Random character ready");
   },
   toggleSkill(el) {
     const d = APP.createDraft, id = el.dataset.id, i = d.classSkills.indexOf(id);
@@ -1367,7 +1367,7 @@ const ACTIONS = {
     if (!APP.char) return;
     toast("Making your character sheet...");
     try { await downloadSheetPdf(APP, APP.char); toast("Character sheet saved as a PDF"); }
-    catch (e) { console.error(e); toast("Could not make the PDF. Try again, or check your connection once so it can load."); }
+    catch (e) { console.error(e); toast("PDF failed. Check your connection"); }
   },
   exportOne() { exportChars([APP.char.id], APP.char.name); APP.prefs.lastBackup = Date.now(); savePrefs(); },
   toggleSaveProf(el) {
@@ -1682,7 +1682,7 @@ const ACTIONS = {
   loadoutSave() {
     const c = APP.char, f = document.getElementById("f-ldname");
     const list = loadoutsOf(c);
-    if (list.length >= 12) { toast("You can keep up to 12 loadouts. Delete one first."); return; }
+    if (list.length >= 12) { toast("12 loadouts max"); return; }
     const name = ((f && f.value) || "").trim().slice(0, 24) || "Loadout " + (list.length + 1);
     c.loadouts = [...list, { id: "ld" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, eq: { ...c.equipment } }];
     closeModal(); saveAndRender(); toast(`Saved "${name}"`);
@@ -1745,7 +1745,7 @@ const ACTIONS = {
   ctxAttune(el) {
     const c = APP.char, it = itemById(c, el.dataset.id);
     if (!it) return;
-    if (!it.attuned && attunedCount(c) >= 3) { toast("You can attune to 3 items at most — end one first"); return; }
+    if (!it.attuned && attunedCount(c) >= 3) { toast("3 attunements max"); return; }
     it.attuned = !it.attuned; closeModal(); saveAndRender();
   },
   // hotbar
@@ -1808,14 +1808,14 @@ const ACTIONS = {
   qtyStep(el) {
     const it = itemById(APP.char, el.dataset.id);
     it.qty = Math.max(0, (it.qty || 0) + +el.dataset.n);
-    if (it.qty === 0) toast(`Out of ${it.name} — tap its name to remove it`);
+    if (it.qty === 0) toast(`Out of ${it.name}`);
     saveAndRender();
   },
   ammoStep(el) { const w = itemById(APP.char, el.dataset.id).weapon; w.ammo.cur = Math.max(0, w.ammo.cur + +el.dataset.n); saveAndRender(); },
   toggleAttuneReq(el) { const it = itemById(APP.char, APP.modal.id); it.attune = el.checked; if (!el.checked) it.attuned = false; saveAndRender(); },
   toggleAttuned(el) {
     const c = APP.char, it = itemById(c, APP.modal.id);
-    if (el.checked && attunedCount(c) >= 3) { el.checked = false; toast("You can be attuned to 3 items at most — end one first"); return; }
+    if (el.checked && attunedCount(c) >= 3) { el.checked = false; toast("3 attunements max"); return; }
     it.attuned = el.checked; saveAndRender();
   },
   makeWeapon() { const it = itemById(APP.char, APP.modal.id); it.weapon = { dice: "1d6", dtype: "", kind: "Melee", props: "", ability: null, magic: 0 }; delete it.slot; saveAndRender(); },
@@ -1910,16 +1910,16 @@ function equip(id, slot, from) {
   let added = false;
   if (from && eq[from] === id) delete eq[from];
   else if (used.length && spare) added = true;
-  else if (used.length > 1) { toast(`All ${used.length} ${it.name} are already in use. Take one off first.`); return; }
+  else if (used.length > 1) { toast(`All ${used.length} ${it.name} in use`); return; }
   else used.forEach(k => delete eq[k]);
   const bumped = eq[slot] && eq[slot] !== id ? itemById(c, eq[slot]) : null;
   eq[slot] = id;
   if (added) toast(`Using another ${it.name} (${used.length + 1} of ${it.qty || 1})`);
-  if (slot === "main" && /two-handed/i.test(it.weapon?.props || "") && eq.off) { toast("Off hand emptied — that weapon needs both hands"); delete eq.off; }
+  if (slot === "main" && /two-handed/i.test(it.weapon?.props || "") && eq.off) { toast("Off hand emptied: two-handed"); delete eq.off; }
   if (wearKind(it) === "shield") c.ac.shield = false;
   APP.selItem = null;
   save(); render();
-  if (it.attune && !it.attuned) toast(`${it.name} needs attunement to work — tap it to attune`);
+  if (it.attune && !it.attuned) toast(`${it.name} needs attunement`);
   else if (bumped) toast(`Swapped out ${bumped.name}`);
   flashSlot(slot);
 }
@@ -1947,7 +1947,7 @@ async function tryUnlock(pw) {
   try {
     await unlockWithPassword(APP.lockErr, pw);
     APP.unlocking = false; APP.lockErr = null;
-    if (APP.needsNewPassword) { APP.needsNewPassword = false; APP.screen = APP.char ? "sheet" : "roster"; await init(); toast("Unlocked — you have the latest rules"); return; }
+    if (APP.needsNewPassword) { APP.needsNewPassword = false; APP.screen = APP.char ? "sheet" : "roster"; await init(); toast("Unlocked"); return; }
     await init();
   } catch (e) {
     APP.unlocking = false; APP.unlockError = "That password didn't work. Check capital letters and try again."; render();

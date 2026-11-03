@@ -283,7 +283,7 @@ function abilitiesBody(app, d) {
       <button class="btn sm${d.pointBuy ? " pri" : ""}" data-a="cxPointBuy">Point buy</button>
       <button class="btn sm" data-a="rollStats">Roll 4d6 for each</button>
     </div>
-    ${d.pointBuy ? `<p class="cx-budget"><b class="num" id="cx-pbleft">${PB_BUDGET - pbSpent(d)}</b> of ${PB_BUDGET} points left. Scores run 8 to 15 before the background bonus.</p>` : ""}
+    ${d.pointBuy ? `<p class="cx-budget"><b class="num" id="cx-pbleft">${PB_BUDGET - pbSpent(d)}</b> of ${PB_BUDGET} points left</p>` : ""}
     ${d.rolls ? `<p class="sub2" style="margin-top:6px">Rolled: ${ABILITIES.map(a => d.rolls[a]).join(", ")}. Saved.</p>` : ""}
     <div class="grid3 ${app._cxPop ? "cx-pop" : ""}" style="margin-top:12px">
       ${ABILITIES.map((a, i) => `<div class="abil ${cls && String(cls.primary || "").includes(ABILITY_LABEL[a]) ? "cx-prime" : ""}" style="--i:${i}"><label><span class="an">${ABILITY_LABEL[a]}${cls && String(cls.primary || "").includes(ABILITY_LABEL[a]) ? ' <i title="Primary ability for ' + esc(cls.name) + '">&#9733;</i>' : ""}</span>
@@ -308,7 +308,6 @@ function expertisePanel(app, d) {
 function shopPanel(app, d) {
   const start = startCp(app, d), left = walletLeftCp(app, d), rows = cartRows(app, d);
   return `<div class="choice"><div class="choice-head"><h3>Shop</h3><span class="sub2">${esc(fmtPrice(left / 100) || "0 gp")} left of ${esc(fmtPrice(start / 100) || "0 gp")}</span></div>
-    <p class="small">Spend your gold on gear you are trained to use. Choosing gold instead of items gives you more to spend.</p>
     ${rows.length ? `<div class="optlist">${rows.map(x => `<div class="optcard locked"><span class="grow"><b>${esc(x.name)}${x.qty > 1 ? " x" + x.qty : ""}</b><span>${esc(fmtPrice(priceCp(app, d, x.row) * x.qty / 100))}</span></span><button class="btn sm" data-a="cxUnbuy" data-name="${esc(x.name)}" aria-label="Remove one ${esc(x.name)}">Remove</button></div>`).join("")}</div>` : ""}
     <button class="btn pri block" data-a="cxOpenShop" style="margin-top:8px">Open shop</button></div>`;
 }
@@ -329,7 +328,7 @@ function skillsGearBody(app, d) {
     ${expertisePanel(app, d)}
     ${renderEquipGroup(app, d, "class")}${renderEquipGroup(app, d, "bg")}
     ${shopPanel(app, d)}
-    <p class="sub2">Equipment goes in your inventory, equipped. Spend gold later in the Gear tab.</p></div>`;
+    </div>`;
 }
 
 function choiceLines(app, d) {

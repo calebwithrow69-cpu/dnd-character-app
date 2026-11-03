@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.38";
+export const VERSION = "0.1.39";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.39",
+    date: "2026-11-03",
+    stage: "Pre-build",
+    blurb: "Shorter interface text everywhere.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Removed how-to sentences, reassurance and chatty wording from the sheet, level-up, creation, rest, backup, settings, ruleset and DM editor screens. Labels and messages are now short (Export character, Restore backup, Breakdown, Cancel, 3 attunements max).",
+          "Screen reader labels now name the value only (Hit points 12 of 20), not the gesture."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.38",
     date: "2026-11-03",

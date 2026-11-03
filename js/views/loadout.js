@@ -90,7 +90,7 @@ export function renderLoadoutBody(app, c, m) {
     <div class="quick" style="grid-template-columns:repeat(2,1fr);margin:0 0 6px"><div><b>${p.acNow}</b><span>AC now</span></div><div><b>${p.acNew}${dlt ? ` <small style="color:var(--${dlt > 0 ? "green" : "red"})">${dlt > 0 ? "+" : ""}${dlt}</small>` : ""}</b><span>AC after</span></div></div>
     ${p.changes.length ? kGroup("What changes", p.changes.length, { tone: "amber" }) + `<div class="k-list">${rows}</div>` : `<p class="muted small" style="padding:10px 0">Nothing would change.</p>`}
     ${warn.length ? `<div class="tilewhy" role="note" style="margin-top:12px">${warn.map(w => `<span>${esc(w)}</span>`).join("")}</div>` : ""}
-    <div class="ld-edit"><button class="linkbtn" data-a="loadoutUpdate" data-id="${esc(l.id)}">Replace with what I am wearing now</button>
+    <div class="ld-edit"><button class="linkbtn" data-a="loadoutUpdate" data-id="${esc(l.id)}">Update from worn</button>
       ${m.confirmDelete ? `<button class="btn danger sm" data-a="loadoutDelete" data-id="${esc(l.id)}">Yes, delete it</button>` : `<button class="linkbtn" data-a="loadoutAskDelete">Delete loadout</button>`}</div>`;
   return { title: l.name, body, foot: `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="loadoutApply" data-id="${esc(l.id)}" ${p.changes.length ? "" : "disabled"}>Equip loadout</button>` };
 }

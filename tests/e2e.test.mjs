@@ -512,7 +512,7 @@ await check("Death: instant death pops the animated screen, the sheet is locked 
 await check("Death save: one die, and the pips do not change until it has landed (laptop)", async () => {
   const p = await open(1280, 800, {}); await openSample(p); await goAdvanced(p);
   await p.waitForTimeout(1500);
-  const hp = await p.evaluate(() => document.querySelector('[data-a="openHp"]').getAttribute("aria-label").match(/Hit points (\d+)[^.]*?(?:, (\d+) temporary)?\./).slice(1).reduce((t, x) => t + Number(x || 0), 0));
+  const hp = await p.evaluate(() => document.querySelector('[data-a="openHp"]').getAttribute("aria-label").match(/Hit points (\d+) of \d+(?:, (\d+) temporary)?/).slice(1).reduce((t, x) => t + Number(x || 0), 0));
   await clickA(p, "openHp"); await p.locator("#hp-amt").fill(String(hp)); await p.locator('[data-a="hpApply"][data-mode="damage"]').click(); await p.waitForTimeout(1800);
   if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT });
   const filled = () => p.locator('[data-a="deathSave"]:not(.used)').count();
@@ -566,7 +566,7 @@ await check("level 20: dialog says max level, no 'Level up to 21'", async () => 
   await p.goto(URL_); await p.waitForSelector("#home-book"); await clickA(p, "goRoster"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openHp"]');
   await clickA(p, "openLevelMenu");
   assert(await p.locator('[data-a="startLevelUp"]').count() === 0, "still offers a level up at 20");
-  assert((await p.locator("#modal-root").innerText()).includes("highest level"), "no max-level message");
+  assert((await p.locator("#modal-root").innerText()).includes("level 20"), "no max-level message");
   noErrs(p); await p.context().close();
 });
 
@@ -674,7 +674,7 @@ await check("rulesets: anyone can open the DM editor, build a ruleset, use it, s
   await clickA(p, "dmOpen"); await p.waitForTimeout(200);
   assert(await p.evaluate(() => APP.screen === "dm"), "DM editor needs no PIN now");
   await clickA(p, "dmExit"); await clickA(p, "rsOpen"); await p.waitForTimeout(200);
-  assert(/Rulesets/i.test(await p.locator("main").innerText()) && await p.locator('[data-a="rsNew"]').count() === 1, "rulesets screen missing");
+  assert(/Rulesets/i.test(await p.locator("header").first().innerText()) && await p.locator('[data-a="rsNew"]').count() === 1, "rulesets screen missing");
   await clickA(p, "rsNew"); await p.waitForTimeout(200);
   await p.locator('[data-a="rsAllBooks"][data-v="0"]').click(); await p.waitForTimeout(150);
   assert(/no class/i.test(await p.locator("main").innerText()), "an empty ruleset should warn");
@@ -717,9 +717,9 @@ await check("editor: blocks, pick-or-type book, closed blocks keep their data, b
   await p.locator('select[data-a="dmKind"]').selectOption("subclasses"); await p.waitForTimeout(200);
   const before = await p.evaluate(() => APP.library.subclasses[0].features.length);
   await p.locator('[data-a="dmEdit"]').first().click(); await p.waitForTimeout(250);
-  assert(/Levels this class expects|Features/.test(await p.locator("main").innerText()), "subclass blocks missing");
+  assert(/Expected levels|Features/.test(await p.locator("main").innerText()), "subclass blocks missing");
   await p.locator('[data-a="dmBlock"][data-b="Features"]').click(); await p.waitForTimeout(150);
-  assert(/Levels this class expects/.test(await p.locator("main").innerText()), "subclass tools missing");
+  assert(/Expected levels/.test(await p.locator("main").innerText()), "subclass tools missing");
   await p.locator('[data-a="dmBlock"][data-b="Features"]').click(); await p.waitForTimeout(150); // close it again
   await clickA(p, "dmSave"); await p.waitForTimeout(300);
   assert(await p.evaluate(() => APP.library.subclasses.find(s => s.features.length > 0).features.length) >= 1 && (await p.evaluate(() => APP.library.subclasses[0].features.length)) === before, "a closed Features block lost data");

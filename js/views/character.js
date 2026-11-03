@@ -32,7 +32,7 @@ const switchRow = (k, label, hint, on) => `<div class="setrow"><div class="setin
 // ---------------- Rolls ----------------
 function rollsTab(app, c, d) {
   return `
-    <div class="panel"><div class="panel-head"><h2>Abilities</h2><span class="sub2">Tap to roll a check</span></div><div class="panel-body">
+    <div class="panel"><div class="panel-head"><h2>Abilities</h2></div><div class="panel-body">
       <div class="grid3 grid6">
         ${ABILITIES.map(a => `<button class="abil" data-a="rollAbility" data-ab="${a}">
           <span class="an">${ABILITY_SHORT[a]}</span><span class="am" style="display:block">${c.abilities[a]}</span><span class="as">${fmtMod(d.mods[a])}</span></button>`).join("")}
@@ -63,7 +63,7 @@ function featuresTab(app, c, d) {
     !c.subclass && c.level >= 3 && subclassesFor(app.library, c.class).length ? `<div class="rowline"><span class="nm" style="color:var(--amber)">No subclass chosen yet</span><button class="btn sm" data-a="openEdit">Choose</button></div>` : "",
     needsFirstChoices(app, c) ? `<div class="rowline"><span class="nm" style="color:var(--amber)">Level 1 choices not made yet</span><button class="btn sm pri" data-a="startFirstChoices">Choose</button></div>` : "",
     (c.masteries || []).length ? `<div class="rowline"><span class="nm">Weapon mastery</span><span class="sub2" style="text-align:right">${esc(c.masteries.join(", "))}</span></div>` : "",
-    c.level >= 11 && !(cls?.features || []).some(x => x.lv > 10) ? `<p class="sub2" style="padding:8px 0">Your rules data stops at level 10, so level ${c.level} features aren't listed.</p>` : ""
+    c.level >= 11 && !(cls?.features || []).some(x => x.lv > 10) ? `<p class="sub2" style="padding:8px 0">Rules data ends at level 10.</p>` : ""
   ].join("");
   return `
     <div class="panel"><div class="panel-head"><h2>Level ${c.level} ${esc(c.class)}</h2>
@@ -94,7 +94,7 @@ function toolsTab(app, c, d) {
     </div></div>
     ${trackersPanel(c)}
     <div class="panel"><div class="panel-head"><h2>Conditions</h2><button class="btn sm" data-a="openConditions">Change</button></div>
-      <div class="panel-body">${c.conditions.length || c.exhaustion || (c.active || []).length ? `<div class="chips" style="margin:0">${activeChips(c, true)}${c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button></span>`).join("")}${c.exhaustion ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion}</button></span>` : ""}</div><p class="sub2" style="margin-top:8px">Tap a condition to see what it does.</p>` : `<span class="muted small">None</span>`}</div></div>
+      <div class="panel-body">${c.conditions.length || c.exhaustion || (c.active || []).length ? `<div class="chips" style="margin:0">${activeChips(c, true)}${c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button></span>`).join("")}${c.exhaustion ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion}</button></span>` : ""}</div><p class="sub2" style="margin-top:8px"></p>` : `<span class="muted small">None</span>`}</div></div>
     <h2 class="toolh">Dice tray</h2>
     ${diceTab(app)}`;
 }

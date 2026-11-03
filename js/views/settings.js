@@ -71,8 +71,8 @@ export function renderSettingsModal(app) {
   const data =
     `<div class="setrow col" data-s="backup export save characters restore import">
       <div class="setinfo"><div class="setlabel">Backups</div><div class="sethint">Characters live only on this device. Last backup: ${esc(daysAgo(p.lastBackup))}.</div></div>
-      <button class="btn block" data-a="exportAll">Save a backup of all characters</button>
-      <button class="btn block" data-a="importPrompt">Restore from a backup file</button>
+      <button class="btn block" data-a="exportAll">Export all</button>
+      <button class="btn block" data-a="importPrompt">Restore backup</button>
       <div class="sethint">${app.persisted ? "This browser has agreed to keep your data." : "Tip: installing the app to your home screen keeps your data safest."}</div>
     </div>` +
     `<div class="setrow col" data-s="update rules data refresh check">
@@ -90,8 +90,8 @@ export function renderSettingsModal(app) {
       <button class="btn block danger" data-a="resetPrefs">Reset settings to defaults</button>
     </div>` +
     `<div class="setrow col" data-s="clear cache offline fix troubleshoot reload">
-      <div class="setinfo"><div class="setlabel">Fix a broken install</div><div class="sethint">Clears the offline copy of the app and reloads. Characters stay, but you will enter the group password again.</div></div>
-      <button class="btn block danger" data-a="clearOffline">Clear offline copy and reload</button>
+      <div class="setinfo"><div class="setlabel">Fix a broken install</div><div class="sethint">Characters stay. Password again.</div></div>
+      <button class="btn block danger" data-a="clearOffline">Clear cache and reload</button>
     </div>`;
 
   const about =
