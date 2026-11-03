@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.39";
+export const VERSION = "0.1.40";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.40",
+    date: "2026-11-03",
+    stage: "Pre-build",
+    blurb: "New name and icon.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "The app is now called Sheet. New icon: a gold d20 over a character sheet with a wax seal, on a deep red sunburst. If you installed the old one, remove it and install again to get the new name and icon on your home screen."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.39",
     date: "2026-11-03",

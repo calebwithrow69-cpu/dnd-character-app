@@ -43,7 +43,7 @@ function coverSvg() {
 export function renderHome(app) {
   const last = lastCharacter(app), n = listCharacters().length;
   return `<main class="home" aria-label="Home">
-    <h1 class="sr">Character Runner</h1>
+    <h1 class="sr">Sheet</h1>
     <div class="home-slot"><button class="home-book" id="home-book" data-a="homeContinue" aria-label="${last ? "Open " + esc(last.name) : "Make a character"}">${coverSvg()}</button></div>
     <div class="home-bottom">
       ${app.needsNewPassword ? `<button class="hbtn warn" data-a="enterNewPassword">New rules are waiting. Tap to enter the new password.</button>` : ""}

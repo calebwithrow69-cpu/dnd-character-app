@@ -37,7 +37,7 @@ export function renderUnlock(app) {
   return `<main class="wrap page" style="max-width:460px">
     <div style="text-align:center;margin:56px 0 18px">
       <img src="icons/icon-192.png" alt="" width="72" height="72" style="border-radius:16px">
-      <h1 style="font-size:1.4rem;margin-top:14px">Character Runner</h1>
+      <h1 style="font-size:1.4rem;margin-top:14px">Sheet</h1>
       <p class="muted" style="margin-top:6px">Group password</p>
     </div>
     <form class="panel" data-form="unlock"><div class="panel-body stack">

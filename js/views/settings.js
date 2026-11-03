@@ -96,7 +96,7 @@ export function renderSettingsModal(app) {
 
   const about =
     `<div class="setrow col" data-s="version changelog whats new about testers">
-      <div class="setinfo"><div class="setlabel">Character Runner ${esc(VERSION)} <span class="tag amber">${esc(STAGE)}</span></div><div class="sethint">Tester build: ${esc(TESTERS)}.</div></div>
+      <div class="setinfo"><div class="setlabel">Sheet ${esc(VERSION)} <span class="tag amber">${esc(STAGE)}</span></div><div class="sethint">Tester build: ${esc(TESTERS)}.</div></div>
       <button class="btn block" data-a="openChangelog">What's new (changelog)</button>
     </div>` +
     (L && L.credits ? `<div class="setrow col" data-s="credits license srd">${L.credits.map(t => `<div class="sethint">${esc(t)}</div>`).join("")}</div>` : "");

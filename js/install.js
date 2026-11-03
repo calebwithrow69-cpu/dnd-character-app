@@ -49,10 +49,10 @@ export function downloadShortcut() {
   const { mac } = installInfo();
   let name, body, type;
   if (mac) {
-    name = "Character Runner.webloc"; type = "application/x-apple-plist";
+    name = "Sheet.webloc"; type = "application/x-apple-plist";
     body = `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>URL</key><string>${url}</string></dict></plist>\n`;
   } else {
-    name = "Character Runner.url"; type = "application/octet-stream";
+    name = "Sheet.url"; type = "application/octet-stream";
     body = `[InternetShortcut]\r\nURL=${url}\r\n`;
   }
   const a = document.createElement("a");
@@ -75,20 +75,20 @@ export function installCard(app, { inSettings = false } = {}) {
       <ol><li>Tap the <b>⋯</b> or <b>share</b> menu in this screen.</li>
       <li>Choose <b>Open in ${i.ios ? "Safari" : "Chrome"}</b>, then come back to this box.</li></ol>`;
   } else if (i.canPrompt) {
-    body = `<p>Add Character Runner to your ${i.desktop ? "desktop and Start menu" : "home screen"} like a normal app.</p>
-      <div class="btnrow"><button class="btn pri" data-a="installApp">Install Character Runner</button></div>`;
+    body = `<p>Add Sheet to your ${i.desktop ? "desktop and Start menu" : "home screen"} like a normal app.</p>
+      <div class="btnrow"><button class="btn pri" data-a="installApp">Install Sheet</button></div>`;
   } else if (i.ios) {
     body = `<p>iPhones only allow this by hand — it takes 10 seconds:</p>
       <ol><li>Tap the <b>Share</b> button (square with an arrow${/CriOS/.test(navigator.userAgent) ? ", top right" : ", bottom of Safari"}).</li>
       <li>Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
-      <li>Open Character Runner from the new icon from now on.</li></ol>`;
+      <li>Open Sheet from the new icon from now on.</li></ol>`;
   } else if (i.android) {
     body = `<ol><li>Tap the <b>⋮</b> menu at the top right of ${esc(i.browser)}.</li>
       <li>Tap <b>Install app</b> or <b>Add to Home screen</b>.</li></ol>`;
   } else {
     const why = i.browser === "Opera" || i.browser === "Firefox" ? `${i.browser} can't install web apps, so here's the next best thing.`
       : i.browser === "Safari" ? "Or in Safari use File → Add to Dock." : "If your browser shows an install icon in the address bar, that works too.";
-    body = `<p>Get a desktop icon that opens Character Runner with a double-click. ${esc(why)}</p>
+    body = `<p>Get a desktop icon that opens Sheet with a double-click. ${esc(why)}</p>
       <div class="btnrow"><button class="btn pri" data-a="downloadShortcut">Download desktop shortcut</button></div>
       <p class="small muted" style="margin-top:6px">Move the downloaded file to your Desktop. It opens in your normal browser.</p>`;
   }

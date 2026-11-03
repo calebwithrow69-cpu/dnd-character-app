@@ -134,5 +134,5 @@ export function parseImport(text) {
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.characters)) return data.characters;
   if (data && data.name && data.abilities) return [data];
-  throw new Error("That file isn't a Character Runner backup.");
+  throw new Error("Not a Sheet backup.");
 }
