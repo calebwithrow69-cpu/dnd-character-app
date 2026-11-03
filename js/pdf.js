@@ -28,7 +28,7 @@ export async function buildSheetPdf(PDFLib, char, library, campaign) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
   const doc = await PDFDocument.create();
   doc.setTitle(`${clean(char.name)} - character sheet`);
-  doc.setCreator("Sheet");
+  doc.setCreator("The Sheet");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const form = doc.getForm();
@@ -220,7 +220,7 @@ export async function buildTemplateSheetPdf(PDFLib, char, library) {
   const { PDFDocument, StandardFonts, rgb, TextAlignment } = PDFLib;
   const tpl = library.sheetTemplate;
   const doc = await PDFDocument.create();
-  doc.setTitle(`${clean(char.name)} - character sheet`); doc.setCreator("Sheet");
+  doc.setTitle(`${clean(char.name)} - character sheet`); doc.setCreator("The Sheet");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const ink = rgb(0.1, 0.08, 0.06);
   const d = deriveCharacter(char);

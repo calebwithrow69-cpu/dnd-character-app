@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Sheet</title>
+<title>The Sheet</title>
 <meta name="description" content="Offline D&D 2024 character sheets for the group.">
 <meta name="theme-color" content="#211915">
 <meta name="robots" content="noindex, nofollow">
@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Sheet">
+<meta name="apple-mobile-web-app-title" content="The Sheet">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
 <body>
 <div id="app"><div class="loader" id="loader" role="status" aria-live="polite">
   <svg class="ld-d20" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M12 7l5 8H7z"/><path d="M12 2v5M21 7l-4 8M3 7l4 8M12 22v-7M7 15l-4 2M17 15l4 2"/></svg>
-  <h1 class="ld-title">Sheet</h1>
+  <h1 class="ld-title">The Sheet</h1>
   <div class="ld-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5" id="ld-bar"><i id="ld-fill"></i></div>
   <p class="ld-step" id="ld-step">Starting up&hellip;</p>
   <div class="ld-help" id="ld-help" hidden>
@@ -46,7 +46,7 @@
     document.getElementById("app").innerHTML = '<div class="empty"><h3>' + title + '</h3><p>' + body + '</p></div>';
   };
   if (location.protocol === "file:") {
-    box("Open the web link instead", "This app can't run from a downloaded file — browsers block it. Open your group's Sheet link (it ends in github.io) and install it from there.");
+    box("Open the web link instead", "This app can't run from a downloaded file — browsers block it. Open your group's link (it ends in github.io) and install it from there.");
     return;
   }
   // Loading progress: the app reports each stage here. If nothing moves for a while, say so and offer a way out.
@@ -83,7 +83,7 @@
   };
 })();
 </script>
-<noscript><div class="empty"><h3>Turn on JavaScript</h3><p>Sheet needs JavaScript.</p></div></noscript>
+<noscript><div class="empty"><h3>Turn on JavaScript</h3><p>The Sheet needs JavaScript.</p></div></noscript>
 <div id="update-bar" hidden role="status"><span>An update is ready.</span><button class="btn sm pri" type="button" id="update-go">Update now</button></div>
 <script>
 // Install button: browsers fire this once, possibly before the app code loads.

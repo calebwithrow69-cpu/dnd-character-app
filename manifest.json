@@ -1,6 +1,6 @@
 {
-  "name": "Sheet",
-  "short_name": "Sheet",
+  "name": "The Sheet",
+  "short_name": "The Sheet",
   "description": "Offline D&D 2024 character sheets",
   "start_url": "./index.html",
   "scope": "./",
