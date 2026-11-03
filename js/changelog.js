@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.42";
+export const VERSION = "0.1.43";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.43",
+    date: "2026-11-03",
+    stage: "Pre-build",
+    blurb: "New character button moved.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "New character is on the Characters screen.",
+          "Back from New character returns to where it started."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.42",
     date: "2026-11-03",

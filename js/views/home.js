@@ -42,10 +42,10 @@ export function renderHome(app) {
       <span class="hstats"><div><b>${esc(g.hp)}</b><small>HP</small></div><div><b>${esc(g.ac)}</b><small>AC</small></div><div><b>${esc(g.speed)}</b><small>SPEED</small></div><div><b>+${g.prof}</b><small>PROF</small></div></span>
       <span class="hgo">OPEN SHEET ${ARROW}</span></button>`;
   } else {
-    hero = `<button class="hero press" id="home-book" data-a="newChar"><span class="k">START</span><h2>Make your first character</h2><span class="hgo">NEW CHARACTER ${ARROW}</span></button>`;
+    hero = `<button class="hero press" id="home-book" data-a="newCharHome"><span class="k">START</span><h2>Make your first character</h2><span class="hgo">NEW CHARACTER ${ARROW}</span></button>`;
   }
   return `<main class="home" aria-label="Home">
-    <header class="hh">${LOGO}<h1 class="hh-t">THE SHEET</h1><button class="ibtn2" data-a="newChar" aria-label="New character">${PLUS}</button></header>
+    <header class="hh">${LOGO}<h1 class="hh-t">THE SHEET</h1></header>
     <div class="hh-mid">
       ${app.needsNewPassword ? `<button class="hwarn" data-a="enterNewPassword">New rules are waiting. Enter the new password.</button>` : ""}
       ${hero}

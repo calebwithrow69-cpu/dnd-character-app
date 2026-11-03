@@ -21,7 +21,7 @@ export function renderRoster(app) {
   }).join("");
   const add = `<button class="ccard new press" data-a="newChar">${PLUS}NEW CHARACTER</button>`;
   return `<main class="rs" aria-label="Characters">
-    <header class="hh"><button class="ibtn2" data-a="goHome" aria-label="Back">${BACK}</button><h1 class="hh-t">CHARACTERS</h1></header>
+    <header class="hh"><button class="ibtn2" data-a="goHome" aria-label="Back">${BACK}</button><h1 class="hh-t">CHARACTERS</h1><button class="ibtn2" data-a="newChar" aria-label="New character">${PLUS}</button></header>
     ${app.needsNewPassword ? `<div class="rs-note"><button class="hwarn" data-a="enterNewPassword">New rules are waiting. Enter the new password.</button></div>` : ""}
     <div class="deck">${cards}${add}</div>
     <div class="rs-foot">

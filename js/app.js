@@ -897,8 +897,9 @@ document.addEventListener("focusout", () => setTimeout(flushRender, 0));
 // ---------------- actions ----------------
 const ACTIONS = {
   // roster
+  newCharHome() { APP.startFrom = "home"; ACTIONS.newChar(); },
   newChar() { APP.screen = "start"; render(); window.scrollTo(0, 0); },
-  startBack() { APP.screen = "roster"; render(); window.scrollTo(0, 0); },
+  startBack() { APP.screen = APP.startFrom === "home" ? "home" : "roster"; APP.startFrom = null; render(); window.scrollTo(0, 0); },
   startMenu() { APP.screen = "start"; APP.load = null; render(); window.scrollTo(0, 0); },
   startManual() { clearDraft(); APP.createDraft = blankDraft(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.screen = "create"; try { history.pushState({ cx: 1 }, ""); } catch (e) { } render(); window.scrollTo(0, 0); },
   startRandom() { clearDraft(); APP.createDraft = blankDraft(); APP.rnd = rndDefault(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); rndRun(); APP.screen = "random"; render(); window.scrollTo(0, 0); },
@@ -938,10 +939,10 @@ const ACTIONS = {
     toast("Added Gandork"); render();
   },
   goHome() { APP.screen = "home"; APP.char = null; render(); window.scrollTo(0, 0); },
-  goRoster() { APP.screen = "roster"; render(); window.scrollTo(0, 0); },
+  goRoster() { APP.startFrom = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
   goRules() { APP.screen = "rules"; render(); window.scrollTo(0, 0); },
   homeContinue() {
-    const last = lastCharacter(APP); if (!last) { ACTIONS.newChar(); return; }
+    const last = lastCharacter(APP); if (!last) { ACTIONS.newCharHome(); return; }
     ACTIONS.openChar({ dataset: { id: last.id } });
   },
   openChar(el) {
