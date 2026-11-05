@@ -984,7 +984,7 @@ button.cval{cursor:pointer}
 .shieldsvg.tier-mithral{animation:shieldGlow 3.4s ease-in-out infinite;--glow:#8FD0FF}
 .shieldsvg.tier-radiant{animation:shieldGlow 2.6s ease-in-out infinite;--glow:#FFD25E}
 @keyframes shieldGlow{50%{filter:drop-shadow(0 0 9px var(--glow)) drop-shadow(0 3px 4px rgba(0,0,0,.3))}}
-.status .quick{gap:1px;border:0;margin-top:14px;background:var(--line);border-radius:var(--card-ri);overflow:hidden}
+.status .quick{gap:1px;border:0;margin-top:14px;background:linear-gradient(160deg,var(--card-hi),var(--card-lo));border-radius:var(--card-ri);overflow:hidden}
 .status .quick>*{border:0;background:var(--card-inset);border-radius:0;position:relative;padding:10px 4px;color:var(--card-ink)}
 .status .quick>*+*::before{display:none}
 .status .quick b{color:var(--card-ink)}
