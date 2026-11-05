@@ -2,11 +2,29 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.44";
+export const VERSION = "0.1.45";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.45",
+    date: "2026-11-05",
+    stage: "Pre-build",
+    blurb: "Roster, character cards and modals restyled.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Character cards: oxblood stat chips, parchment open button.",
+          "New-character card: oxblood dashed border.",
+          "Modals: oxblood gradient header, card radii, tinted borders.",
+          "Roll cards: matching radii and border tint.",
+          "Consistent card radii across home, roster and modals."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.44",
     date: "2026-11-04",
