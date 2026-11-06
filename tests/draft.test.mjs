@@ -65,6 +65,8 @@ test("background increases cannot push a score past 20", () => {
 });
 test("point buy, roll, standard array and suggested array all mark scores as set", () => {
   const d = C.blankDraft(); C.startPointBuy(d); assert(d.scoresSet); d.scoresSet = false; C.pointBuyStep(d, "str", 1); assert(d.scoresSet);
-  const e = C.blankDraft(); C.rollAndLock(e); assert(e.scoresSet);
+  const e = C.blankDraft(); C.startRolling(e); assert(!e.scoresSet);
+  for (const a of ["str","dex","con","int","wis","cha"]) C.rollOne(e, a);
+  assert(e.scoresSet);
 });
 console.log(`\n${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);

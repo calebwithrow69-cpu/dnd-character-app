@@ -17,7 +17,7 @@ import { emblem, emblemFor, emblemIcon } from "../emblems.js";
 import { cxSync } from "../cxfx.js";
 import {
   CHAPTERS, ALIGNMENTS, validateChapter, validateAll, unresolvedDecisions, choicePlan, bgAbilities, takenSkills, classSkillOptions,
-  finalAbilities, suggestedArray, equipOptions, gearChoices, buildCharacter, PB_BUDGET, pbSpent,
+  finalAbilities, equipOptions, gearChoices, buildCharacter, PB_BUDGET, pbSpent, rolledCount,
   startCp, walletLeftCp, cartRows, priceCp
 } from "../creation.js";
 
@@ -211,13 +211,14 @@ function cfgFor(app, d, kind) {
     synergyFor: d.class || "character",
     synergy: b => {
       const cls = findByName(L.classes, d.class); if (!cls) return "";
-      const out = [], ids = bgAbilityIds(b), pri = ids.filter(a => String(cls.primary || "").includes(ABILITY_LABEL[a]));
-      if (pri.length) out.push(`Raises ${pri.map(a => ABILITY_LABEL[a]).join(" and ")}, which ${cls.name}s rely on most.`);
-      else if (ids.length) out.push(`None of its increases are ${cls.primary || "your main ability"}, so your best score stays where you put it.`);
-      const list = parseList(cls.skillFrom), own = parseList(b.skills), on = own.filter(x => list.includes(x));
-      if (on.length) out.push(`${on.join(" and ")} ${on.length > 1 ? "are" : "is"} on the ${cls.name} skill list, so your class picks go further.`);
-      else if (own.length) out.push(`${own.join(" and ")} ${own.length > 1 ? "are" : "is"} not on the ${cls.name} list: you gain them without using a class pick.`);
-      return out.join(" ");
+      const ids = bgAbilityIds(b), pri = ids.filter(a => String(cls.primary || "").includes(ABILITY_LABEL[a]));
+      if (pri.length) return { good: true, text: `Boosts ${pri.map(a => ABILITY_LABEL[a]).join("/")}` };
+      return { good: false, text: `No score increase for ${cls.name}` };
+    },
+    synergyScore: b => {
+      const cls = findByName(L.classes, d.class); if (!cls) return 0;
+      const ids = bgAbilityIds(b), pri = ids.filter(a => String(cls.primary || "").includes(ABILITY_LABEL[a]));
+      return pri.length;
     },
     lore: b => b.desc || "",
     traits: b => backgroundFeatNames(b).map(n => {
@@ -275,21 +276,30 @@ function progressSheet(app, d) {
 // ---- chapter bodies
 function abilitiesBody(app, d) {
   const fin = finalAbilities(app, d), cls = findByName(app.library.classes, d.class);
-  const sug = suggestedArray(app, d.class);
+  const rolling = d.rolls && !d.pointBuy && !d.scoresSet;
+  const rc = rolledCount(d);
   return `<p class="small muted">${cls ? `${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>. ` : ""}Set base scores here. Background bonus is below.</p>
     <div class="btnrow" style="margin-top:10px">
-      ${sug ? `<button class="btn sm pri" data-a="suggestedArray">Suggested for ${esc(d.class)}</button>` : ""}
       <button class="btn sm" data-a="standardArray">Standard array</button>
       <button class="btn sm${d.pointBuy ? " pri" : ""}" data-a="cxPointBuy">Point buy</button>
-      <button class="btn sm" data-a="rollStats">Roll 4d6 for each</button>
+      <button class="btn sm${rolling ? " pri" : ""}" data-a="rollStats">Roll 4d6</button>
     </div>
     ${d.pointBuy ? `<p class="cx-budget"><b class="num" id="cx-pbleft">${PB_BUDGET - pbSpent(d)}</b> of ${PB_BUDGET} points left</p>` : ""}
-    ${d.rolls ? `<p class="sub2" style="margin-top:6px">Rolled: ${ABILITIES.map(a => d.rolls[a]).join(", ")}. Saved.</p>` : ""}
+    ${rolling ? `<p class="sub2" style="margin-top:6px">${rc}/6 rolled. Tap a score to roll it. Swap any two after.</p>` : ""}
+    ${d.scoresSet && d.rolls ? `<p class="sub2" style="margin-top:6px">All rolled. Swap any two scores to rearrange.</p>` : ""}
     <div class="grid3 ${app._cxPop ? "cx-pop" : ""}" style="margin-top:12px">
-      ${ABILITIES.map((a, i) => `<div class="abil ${cls && String(cls.primary || "").includes(ABILITY_LABEL[a]) ? "cx-prime" : ""}" style="--i:${i}"><label><span class="an">${ABILITY_LABEL[a]}${cls && String(cls.primary || "").includes(ABILITY_LABEL[a]) ? ' <i title="Primary ability for ' + esc(cls.name) + '">&#9733;</i>' : ""}</span>
-        <input type="number" inputmode="numeric" min="3" max="20" data-draft-ability="${a}" value="${d.base[a]}" aria-label="${ABILITY_LABEL[a]} base score">
+      ${ABILITIES.map((a, i) => {
+        const isPrime = cls && String(cls.primary || "").includes(ABILITY_LABEL[a]);
+        const unrolled = rolling && (!d.rolls || d.rolls[a] == null);
+        const swapping = app._cxSwap;
+        const swapSel = swapping === a;
+        return `<div class="abil ${isPrime ? "cx-prime" : ""} ${swapSel ? "picked" : ""} ${unrolled ? "cx-unrolled" : ""}" style="--i:${i}">
+        ${unrolled ? `<button class="abil-roll" data-a="rollOne" data-ab="${a}" aria-label="Roll ${ABILITY_LABEL[a]}"><span class="an">${ABILITY_LABEL[a]}</span><span class="roll-cue">\ud83c\udfb2</span><span class="as">—</span></button>`
+        : `<label><span class="an">${ABILITY_LABEL[a]}${isPrime ? ' <i title="Primary ability for ' + esc(cls.name) + '">&#9733;</i>' : ""}</span>
+        ${d.rolls && d.rolls[a] != null ? `<span class="am">${d.base[a]}</span>` : `<input type="number" inputmode="numeric" min="3" max="20" data-draft-ability="${a}" value="${d.base[a]}" aria-label="${ABILITY_LABEL[a]} base score">`}
         <span class="as" data-final="${a}">${fin[a] !== d.base[a] ? "\u2192 " + fin[a] + " " : ""}(${fmtMod(abilityMod(fin[a]))})</span></label>
-        ${d.pointBuy ? `<div class="cx-pb"><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="-1" aria-label="Lower ${ABILITY_LABEL[a]}" ${d.base[a] <= 8 ? "disabled" : ""}>-</button><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="1" aria-label="Raise ${ABILITY_LABEL[a]}" ${d.base[a] >= 15 ? "disabled" : ""}>+</button></div>` : ""}</div>`).join("")}
+        ${d.rolls && d.rolls[a] != null ? `<button class="btn sm cx-swap" data-a="cxSwapSel" data-ab="${a}" aria-pressed="${swapSel}">Swap</button>` : ""}`}
+        ${d.pointBuy ? `<div class="cx-pb"><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="-1" aria-label="Lower ${ABILITY_LABEL[a]}" ${d.base[a] <= 8 ? "disabled" : ""}>-</button><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="1" aria-label="Raise ${ABILITY_LABEL[a]}" ${d.base[a] >= 15 ? "disabled" : ""}>+</button></div>` : ""}</div>`; }).join("")}
     </div>
     <p class="sub2" style="margin-top:8px">Under each score: final score (modifier).</p>
     ${renderBonus(app, d) || `<p class="muted small" style="margin-top:12px">Choose a background to see its increases.</p>`}`;
@@ -499,10 +509,9 @@ export function renderCreate(app) {
   let tools = "", content = "";
   if (LIST_KINDS.includes(id)) {
     const cfg = cfgFor(app, d, id);
-    tools = `<button class="btn sm" data-a="randomPick">Randomize</button>`;
-    if (id !== "class" && d[id] && draftChoices(app, d, id === "species" ? "species" : "bg").length) tools += ` <button class="btn sm" data-a="randomChoices">Randomize choices</button>`;
-    if (id === "class") tools += ` <button class="btn sm" data-a="randomAll">Randomize everything</button>`;
-    if (id === "background") tools += ` <button class="btn sm" data-a="openCustomBg">Custom background</button>`;
+    cfg.randomBtn = `<button class="btn sm" data-a="randomPick">Randomize</button>`;
+    if (id === "class") tools = `<button class="btn sm" data-a="randomAll">Randomize everything</button>`;
+    if (id === "background") tools = `<button class="btn sm" data-a="openCustomBg">Custom background</button>`;
     content = `${renderControls(app, cfg)}${searchBox("wizard", d.query, `Search ${cfg.items.length} ${cfg.noun}`)}
       <div class="sp-list" id="wizard-results">${renderWizardResults(app)}</div>`;
   } else if (id === "abilities") content = abilitiesBody(app, d);

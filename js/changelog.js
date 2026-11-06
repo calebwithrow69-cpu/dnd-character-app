@@ -2,11 +2,32 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.45";
+export const VERSION = "0.1.46";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.46",
+    date: "2026-11-06",
+    stage: "Pre-build",
+    blurb: "Creation flow: roll one stat at a time, terse background synergy.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Ability scores: roll 4d6 one stat at a time, swap after.",
+          "Removed suggested-for-class array option.",
+          "Background synergy: green/red boost indicator, not sentences.",
+          "Background list: sort by Recommended option.",
+          "Randomize: one button beside Sort, fills choices too.",
+          "Trait rows preview their text before opening.",
+          "Creation accent stays fixed; emblem haze removed.",
+          "Light theme: sheet header buttons readable."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.45",
     date: "2026-11-05",

@@ -25,8 +25,8 @@ import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
 import { emblemFor } from "./emblems.js";
 import {
   CHAPTERS, ALIGNMENTS, blankDraft, saveDraft, loadDraft, clearDraft, pruneDraftToLibrary, cleanName, cartAdd, cartRemove, pruneCart, validateChapter, validateAll, buildCharacter,
-  bgAbilities, classSkillOptions, takenSkills, suggestedArray, gearChoices, finalAbilities,
-  choicePlan, rollAndLock, applySuggestedArray, applyStandardArray, generateRandom, randomizeStep, startPointBuy, pointBuyStep, PB_BUDGET, pbSpent,
+  bgAbilities, classSkillOptions, takenSkills, gearChoices, finalAbilities,
+  choicePlan, startRolling, rollOne, swapRolled, applyStandardArray, generateRandom, randomizeStep, startPointBuy, pointBuyStep, PB_BUDGET, pbSpent,
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
 } from "./creation.js";
 import { rollMods } from "./effects.js";
@@ -1250,8 +1250,15 @@ const ACTIONS = {
     render();
   },
   bonusMode(el) { APP.createDraft.bonusMode = el.dataset.mode; render(); },
-  standardArray() { applyStandardArray(APP.createDraft, APP); render(); toast("Standard array placed. Swap numbers if you like"); },
-  rollStats() { rollAndLock(APP.createDraft); APP._cxPop = true; render(); toast("Rolled 4d6, dropping the lowest die, for each score"); },
+  standardArray() { applyStandardArray(APP.createDraft, APP); APP._cxSwap = null; render(); toast("Standard array placed. Swap numbers if you like"); },
+  rollStats() { startRolling(APP.createDraft); APP._cxSwap = null; render(); toast("Tap each score to roll it"); },
+  rollOne(el) { const v = rollOne(APP.createDraft, el.dataset.ab); if (v != null) { APP._cxPop = true; render(); } },
+  cxSwapSel(el) {
+    const a = el.dataset.ab, d = APP.createDraft;
+    if (!APP._cxSwap) { APP._cxSwap = a; render(); return; }
+    if (APP._cxSwap === a) { APP._cxSwap = null; render(); return; }
+    swapRolled(d, APP._cxSwap, a); APP._cxSwap = null; render(); toast("Swapped");
+  },
   cxPointBuy() { startPointBuy(APP.createDraft); render(); toast("Point buy: 27 points, scores 8 to 15"); },
   cxPb(el) { if (pointBuyStep(APP.createDraft, el.dataset.ab, +el.dataset.dir)) render(); else toast(+el.dataset.dir > 0 ? "Not enough points left for that" : "Scores start at 8"); },
   pickEquip(el) { const d = APP.createDraft; d[el.dataset.which] = el.dataset.k; const n = pruneCart(APP, d); render(); if (n) toast("Your shop list was trimmed to fit your gold"); },
@@ -1269,6 +1276,10 @@ const ACTIONS = {
     const it = items[Math.floor(Math.random() * items.length)];
     APP.spUi.k[kind].open = it.name;
     ACTIONS.cxChoose({ dataset: { kind, name: it.name } });
+    if (kind !== "class" && draftChoices(APP, d, kind === "background" ? "bg" : "species").length) {
+      for (let i = 0; i < 4; i++) randomize(draftChoices(APP, d, kind === "background" ? "bg" : "species"), APP, d);
+      d.classSkills = d.classSkills.filter(sk => !takenSkills(APP, d).includes(sk)); render();
+    }
     requestAnimationFrame(() => { const r = mount.querySelector(".sp-row.open") || mount.querySelector(".sp-row.sel"); if (r) r.scrollIntoView({ block: "start", behavior: "smooth" }); });
   },
   randomChoices() {
@@ -1285,10 +1296,6 @@ const ACTIONS = {
     const { from, n } = classSkillOptions(APP, d);
     const pool = from.filter(id => !taken.includes(id)).sort(() => Math.random() - 0.5);
     d.classSkills = pool.slice(0, n); render();
-  },
-  suggestedArray() {
-    const d = APP.createDraft;
-    if (applySuggestedArray(d, APP)) { render(); toast(`Suggested ${d.class} scores placed`); }
   },
   randomAll() {
     randomFill(APP.createDraft, generateRandom);

@@ -536,24 +536,24 @@ export function pointBuyStep(d, a, dir) {
   if (dir > 0 && pbSpent(d) - PB_COST[v] + PB_COST[n] > PB_BUDGET) return false;
   d.base[a] = n; d.scoresSet = true; return true;
 }
-export function rollAndLock(d) {
-  const rolls = {};
-  for (const a of ABILITIES) rolls[a] = roll4d6DropLowest();
-  d.rolls = rolls;
-  d.pointBuy = false; d.scoresSet = true;
-  d.base = { ...rolls };
-  return rolls;
+export function startRolling(d) {
+  d.rolls = {}; d.pointBuy = false; d.scoresSet = false;
+  d.base = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
 }
-
-export function applySuggestedArray(d, app) {
-  const sug = suggestedArray(app, d.class);
-  if (sug) {
-    d.base = { ...sug }; d.scoresSet = true;
-    d.rolls = null; // suggested array replaces any roll
-    d.pointBuy = false;
-  }
-  return sug;
+export function rollOne(d, a) {
+  if (!d.rolls || d.rolls[a] != null) return null;
+  const v = roll4d6DropLowest();
+  d.rolls[a] = v; d.base[a] = v;
+  if (ABILITIES.every(ab => d.rolls[ab] != null)) d.scoresSet = true;
+  return v;
 }
+export function swapRolled(d, a, b) {
+  if (!d.rolls || d.rolls[a] == null || d.rolls[b] == null) return false;
+  [d.rolls[a], d.rolls[b]] = [d.rolls[b], d.rolls[a]];
+  [d.base[a], d.base[b]] = [d.base[b], d.base[a]];
+  return true;
+}
+export function rolledCount(d) { return d.rolls ? ABILITIES.filter(a => d.rolls[a] != null).length : 0; }
 
 export function applyStandardArray(d, app) {
   const cls = findByName(app.library.classes, d.class);

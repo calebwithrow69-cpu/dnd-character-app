@@ -28,12 +28,13 @@ function thumb(name, cls, kind) {
 
 export function renderControls(app, cfg) {
   const u = app.spUi.k[cfg.kind];
-  return `<div class="sp-controls">
+  return `<div class="sp-controls">${cfg.randomBtn || ""}
     <label class="sp-sel"><span>Sort by</span>
       <select class="f" data-a="cxSort" data-kind="${cfg.kind}" aria-label="Sort ${cfg.noun}">
         <option value="az" ${u.sort === "az" ? "selected" : ""}>A to Z</option>
         ${cfg.sources ? `<option value="source" ${u.sort === "source" ? "selected" : ""}>Source</option>` : ""}
         <option value="fav" ${u.sort === "fav" ? "selected" : ""}>Favorites first</option>
+        ${cfg.synergyScore ? `<option value="rec" ${u.sort === "rec" ? "selected" : ""}>Recommended</option>` : ""}
       </select></label>
     <label class="sp-sel"><span>${esc(cfg.filterLabel)}</span>
       <select class="f" data-a="cxFilter" data-kind="${cfg.kind}" aria-label="Filter ${cfg.noun}">
@@ -72,7 +73,7 @@ function traitRow(app, o, t, kind, bundle, defs, vhtml) {
   const tag = has ? (bundle.on ? (pending ? `<span class="flag need">Choose</span>` : `<span class="flag done">Chosen</span>`) : `<span class="flag need soft">Choice</span>`) : (vhtml ? `<span class="flag need soft">Choice</span>` : "");
   return `<div class="sp-trait ${open ? "open" : ""} ${t.level > 1 ? "later" : ""} ${t.variant ? "variant" : ""} ${pending ? "pending" : ""}">
     <button class="sp-tbtn" data-a="cxTrait" data-key="${esc(key)}" aria-expanded="${open}">
-      <span class="grow"><b>${esc(t.name)}</b><small>${esc(t.level > 1 ? "Level " + t.level + (act && t.usage !== "Always on" ? " · " + t.usage : "") : t.usage)}</small></span>
+      <span class="grow"><b>${esc(t.name)}</b><small>${esc(t.level > 1 ? "Level " + t.level + (act && t.usage !== "Always on" ? " · " + t.usage : "") : t.usage)}</small>${open ? "" : `<span class="sp-snip">${esc(String(t.body || "").replace(/[*_#|>]/g, "").replace(/\s+/g, " ").trim())}</span>`}</span>
       ${tag}<span class="flag ${act ? "act" : "pas"}">${act ? "Ability" : "Trait"}</span>
       <span class="chev">${I.chev}</span>
     </button>
@@ -102,7 +103,7 @@ function detail(app, cfg, o) {
   const vTrait = vr && all.find(t => t.name === vr.trait);
   const row = t => traitRow(app, o, t, cfg.kind, bundle, mt.by.get(t.name), vr && t.name === vr.trait ? variantPicker(app, o, vr, t.body) : "");
   return `<div class="sp-detail">
-    ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${cfg.synergy && cfg.synergy(o) ? `<p class="cx-syn"><b>For your ${esc(cfg.synergyFor || "character")}</b>${esc(cfg.synergy(o))}</p>` : ""}${upload}</div></div>`}
+    ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${cfg.synergy ? (() => { const s = cfg.synergy(o); return s ? `<p class="cx-syn ${s.good ? "cx-syn-good" : "cx-syn-bad"}"><b>${esc(cfg.synergyFor || "character")}</b>${esc(s.text)}${s.good ? "" : " · not recommended"}</p>` : ""; })() : ""}${upload}</div></div>`}
     ${desc ? `<div class="sp-desc ${dopen ? "open" : ""}">${formatText(desc)}</div>${String(desc).length > 420 ? `<button class="sp-more" data-a="cxTrait" data-key="${esc(dk)}" aria-expanded="${dopen}">${dopen ? "Show less" : "Read more"}</button>` : ""}` : ""}
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
     <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Select one to read it</span></div>
@@ -126,10 +127,11 @@ export function renderCodexList(app, cfg) {
   if (!items.length) return `<p class="muted small" style="padding:12px 0">No matches.</p>`;
   const src = s => s || "No source";
   const by = (a, b) => a.name.localeCompare(b.name);
-  const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : o.name[0].toUpperCase();
+  const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : u.sort === "rec" && cfg.synergyScore ? (cfg.synergyScore(o) > 0 ? "Recommended" : "Other") : o.name[0].toUpperCase();
   items = items.sort((a, b) => {
     if (u.sort === "source") return src(a.source).localeCompare(src(b.source)) || by(a, b);
     if (u.sort === "fav") return (fav.includes(b.name) - fav.includes(a.name)) || by(a, b);
+    if (u.sort === "rec" && cfg.synergyScore) return (cfg.synergyScore(b) - cfg.synergyScore(a)) || by(a, b);
     return by(a, b);
   });
   let last = null, html = `<p class="sub2 sp-count">${items.length} ${esc(cfg.noun)}</p>`;
