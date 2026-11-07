@@ -97,14 +97,14 @@ function detail(app, cfg, o) {
   const now = cfg.laterCollapsed ? all.filter(t => t.level <= 1) : all;
   const later = cfg.laterCollapsed ? all.filter(t => t.level > 1) : [];
   const lk = cfg.kind + ":" + o.name + ":~later", lopen = app.spUi.traits.has(lk);
-  const dk = cfg.kind + ":" + o.name + ":~desc", dopen = app.spUi.traits.has(dk);
+  // descriptions render in full: no tap needed
   const desc = [cfg.lore(o), cfg.intro(o)].filter(Boolean)[0] || "";
   const upload = `<label class="btn sm sp-up">${I.cam} ${has ? "Change image" : "Add image"}<input type="file" accept="image/*" data-sp-file="${esc(o.name)}" aria-label="Choose an image for ${esc(o.name)}"></label>${has ? `<button class="btn sm" data-a="cxPortraitClear" data-name="${esc(o.name)}">Remove</button>` : ""}`;
   const vTrait = vr && all.find(t => t.name === vr.trait);
   const row = t => traitRow(app, o, t, cfg.kind, bundle, mt.by.get(t.name), vr && t.name === vr.trait ? variantPicker(app, o, vr, t.body) : "");
   return `<div class="sp-detail">
     ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${cfg.synergy ? (() => { const s = cfg.synergy(o); return s ? `<p class="cx-syn ${s.good ? "cx-syn-good" : "cx-syn-bad"}"><b>${esc(cfg.synergyFor || "character")}</b>${esc(s.text)}${s.good ? "" : " · not recommended"}</p>` : ""; })() : ""}${upload}</div></div>`}
-    ${desc ? `<div class="sp-desc ${dopen ? "open" : ""}">${formatText(desc)}</div>${String(desc).length > 420 ? `<button class="sp-more" data-a="cxTrait" data-key="${esc(dk)}" aria-expanded="${dopen}">${dopen ? "Show less" : "Read more"}</button>` : ""}` : ""}
+    ${desc ? `<div class="sp-desc open">${formatText(desc)}</div>` : ""}
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
     <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Select one to read it</span></div>
     <div class="sp-traits">

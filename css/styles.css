@@ -1799,3 +1799,4 @@ html.dead{filter:grayscale(1);transition:filter 1.6s ease}
 .sp-trait.open .sp-snip{display:none}
 .sp-controls .btn{align-self:end}
 .optcard .grow .sp-snip,.k-nm .sp-snip{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.8rem;line-height:1.35;color:var(--muted);margin-top:2px}
+.sp-desc p{margin:0 0 .7em}.sp-desc p:last-child{margin-bottom:0}

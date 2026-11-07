@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.47";
+export const VERSION = "0.1.48";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.48",
+    date: "2026-11-07",
+    stage: "Pre-build",
+    blurb: "Warlock class list fixed, full descriptions.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Class list no longer shows every invocation or metamagic option as a feature.",
+          "Class, species and background descriptions show in full."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.47",
     date: "2026-11-06",

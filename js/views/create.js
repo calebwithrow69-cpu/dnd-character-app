@@ -193,7 +193,7 @@ function cfgFor(app, d, kind) {
         ["Armor training", c.armorProf || "None"], ["Weapon training", c.weaponProf], c.toolProf ? ["Tool training", c.toolProf] : null,
         ["Skills", `Choose ${c.skillN}: ${parseList(c.skillFrom).join(", ")}`]].filter(Boolean).filter(f => f[1]),
       lore: c => c.desc || "", laterCollapsed: true, choices: o => choiceBundle(app, d, "class", o),
-      traits: c => (c.features || []).filter(f => f.lv <= 10).map(f => ({ name: f.name, level: f.lv, body: f.text, ...classifyText(f.text) }))
+      traits: c => (c.features || []).filter(f => f.lv <= 10 && !f.opt).map(f => ({ name: f.name, level: f.lv, body: f.text, ...classifyText(f.text) }))
     };
   }
   const items = enabledBackgrounds(L, C);
