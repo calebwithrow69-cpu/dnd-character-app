@@ -121,13 +121,17 @@ export function conditionIcon(name) {
 
 // One row in a picker: the choose button plus an (i) that expands what it does.
 const PICK_ICON = [[/spell|cantrip/i, "bolt", "blue"], [/mastery|weapon/i, "sword", "amber"], [/feat|style/i, "book", "feat"], [/condition/i, "flag", "red"], [/option|pick/i, "star", "amber"]];
-export function infoRow({ key, action, data = {}, title, sub = "", pressed = false, disabled = false, open = false, detail = "", badge = "", lead = "" }) {
+// One short preview of rules text for a row; CSS clamps it to two lines. Display only, never reworded.
+export function snipOf(text) {
+  return String(text || "").replace(/[*_#|>]/g, "").replace(/\s+/g, " ").trim().slice(0, 260);
+}
+export function infoRow({ key, action, data = {}, title, sub = "", pressed = false, disabled = false, open = false, detail = "", badge = "", lead = "", snip = "" }) {
   if (!lead) { const m = PICK_ICON.find(x => x[0].test(action) || x[0].test(key || "")) || [0, "star", "faint"]; lead = `<span class="k-ic" style="--rc:var(--${m[2]})">${ICONS[m[1]] || ""}</span>`; }
   const attrs = Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(" ");
   return `<div class="inforow ${open ? "open" : ""}">
     <div class="inforow-top">
       <button class="optcard" data-a="${action}" ${attrs} aria-pressed="${pressed}" ${disabled ? "disabled" : ""}>
-        ${lead}<span class="grow"><b>${esc(title)}</b>${sub ? `<span>${sub}</span>` : ""}</span>${badge}
+        ${lead}<span class="grow"><b>${esc(title)}</b>${sub ? `<span>${sub}</span>` : ""}${snip && !open ? `<span class="sp-snip">${esc(snip)}</span>` : ""}</span>${badge}
       </button>
       <button class="infobtn" data-a="toggleInfo" data-key="${esc(key)}" aria-expanded="${open}" aria-label="What ${esc(title)} does">${open ? ICONS.close : ICONS.info}</button>
     </div>
@@ -140,9 +144,9 @@ export function infoRow({ key, action, data = {}, title, sub = "", pressed = fal
 export function kGroup(title, count = "", { tone = "faint", sticky = false } = {}) {
   return `<h3 class="k-gh ${sticky ? "stick" : ""}" style="--rc:var(--${tone})"><span>${esc(title)}</span>${count !== "" ? `<span class="ct">${esc(String(count))}</span>` : ""}</h3>`;
 }
-export function kRow({ icon = "", glyph = "", tone = "faint", title, titleHtml = "", cap = "", capHtml = "", sub = "", subHtml = "", status = "", mainAttrs = "", actions = "", extra = "", off = false, cls = "", why = "" }) {
+export function kRow({ icon = "", glyph = "", tone = "faint", title, titleHtml = "", cap = "", capHtml = "", sub = "", subHtml = "", status = "", mainAttrs = "", actions = "", extra = "", off = false, cls = "", why = "", snip = "" }) {
   const ic = icon || glyph ? `<span class="k-ic">${icon || esc(glyph)}</span>` : "";
-  const main = `<span class="k-nm"><h4>${titleHtml || esc(title)}</h4>${cap || capHtml ? `<span class="k-cap">${capHtml || esc(cap)}</span>` : ""}</span>`
+  const main = `<span class="k-nm"><h4>${titleHtml || esc(title)}</h4>${cap || capHtml ? `<span class="k-cap">${capHtml || esc(cap)}</span>` : ""}${snip ? `<span class="sp-snip">${esc(snip)}</span>` : ""}</span>`
     + `<span class="k-sm">${subHtml || esc(sub)}</span>${status ? `<span class="k-st">${status}</span>` : ""}`;
   return `<div class="k-row ${off ? "off" : ""} ${cls}" style="--rc:var(--${tone})">
     ${mainAttrs ? `<button class="k-main ${ic ? "" : "noic"}" ${mainAttrs}>${ic}${main}</button>` : `<div class="k-main ${ic ? "" : "noic"}">${ic}${main}</div>`}

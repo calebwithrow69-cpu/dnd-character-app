@@ -1,7 +1,7 @@
 // Full-screen level-up, one decision per step (Baldur's Gate style).
 import { subclassSpellGrants } from "../subclassspells.js";
 import { subRow } from "./subclass.js";
-import { esc, topbar, formatText, searchBox, infoRow, glossaryEntry, ICONS, kRow, kGroup } from "../ui.js";
+import { esc, topbar, formatText, searchBox, infoRow, glossaryEntry, ICONS, kRow, kGroup, snipOf } from "../ui.js";
 import { detailFor, spellSub } from "./sheet.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, abilityMod, fmtMod, hpAverageGain, slotRows } from "../rules.js";
 import { findByName, findFeat, enabledFeats, allWeapons, subclassesFor } from "../data.js";
@@ -57,7 +57,7 @@ function pickList(items, chosen, action, { max, render, disabled, detail, kind =
     const off = disabled ? disabled(it) : null;
     const full = !on && max != null && chosen.length >= max;
     const key = kind + ":" + it.name, open = !!APPREF?.info.has(key);
-    return infoRow({ key, action, data: { name: it.name }, title: it.name, sub: render ? render(it, off) : "", pressed: on,
+    return infoRow({ key, action, data: { name: it.name }, title: it.name, sub: render ? render(it, off) : "", snip: snipOf(it.text), pressed: on,
       disabled: !!(off || full), open, detail: open && detail ? detail(it) : "",
       badge: on ? `<span class="tag amber">Chosen</span>` : "" });
   }).join("");
@@ -161,7 +161,7 @@ export function levelBody(app) {
       <div class="quick" style="grid-template-columns:repeat(${facts.length},1fr);margin:12px 0 4px">${facts.map(([k, v]) => `<div><b style="font-size:${String(v).length > 12 ? ".95rem" : "1.15rem"}">${esc(v)}</b><span>${esc(k)}</span></div>`).join("")}</div>
       ${feats.length ? kGroup("New features", feats.length, { tone: "amber" }) + `<div class="k-list">${feats.map(f => {
         const open = d.gainOpen === f.name;
-        return kRow({ icon: ICONS.star, tone: "amber", title: f.name, cap: f.from === c.class ? "Class feature" : f.from, status: open ? "\u25b4" : "\u25be",
+        return kRow({ icon: ICONS.star, tone: "amber", title: f.name, cap: f.from === c.class ? "Class feature" : f.from, status: open ? "\u25b4" : "\u25be", snip: open ? "" : snipOf(f.text),
           mainAttrs: `data-a="lvlGainOpen" data-name="${esc(f.name)}" aria-expanded="${open}"`, extra: "" }) + (open ? `<div class="about" style="margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius-sm)">${formatText(f.text || "")}</div>` : "");
       }).join("")}</div>`
         : p.open ? `<p class="sub2">Rules data ends at level 10.</p>` : `<p class="sub2">No new class features.</p>`}`;
@@ -232,7 +232,7 @@ export function levelBody(app) {
         const missing = pre.needs.filter(n => !picked.has(n) && g.options.some(x => x.name === n));
         const off = lockedLevel ? `Needs level ${pre.level}` : missing.length ? `Needs ${missing.join(", ")}` : null;
         const on = d.options.includes(o.name), key = "option:" + o.name;
-        return infoRow({ key, action: "lvlOption", data: { name: o.name }, title: o.name, sub: esc(off || pre.text || "No prerequisite"),
+        return infoRow({ key, action: "lvlOption", data: { name: o.name }, title: o.name, sub: esc(off || pre.text || "No prerequisite"), snip: snipOf(o.text),
           pressed: on, disabled: !!(off || (!on && d.options.length >= step.n)), open: app.info.has(key) || on,
           detail: app.info.has(key) || on ? formatText(o.text) : "", badge: on ? `<span class="tag amber">Chosen</span>` : "" });
       }).join("")}</div>`;

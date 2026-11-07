@@ -1,5 +1,5 @@
 import { readinessStrip, loadoutCards, wornRows } from "./loadout.js";
-import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, activeChips, hotbarToggle, kRow, kGroup } from "../ui.js";
+import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, infoRow, activeChips, hotbarToggle, kRow, kGroup, snipOf } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
 } from "../rules.js";
@@ -211,7 +211,7 @@ export function spellsTab(app, c, d) {
         const unprep = lv > 0 && !s.always && !s.prepared;
         return kRow({
           glyph: (r?.school || s.name)[0], tone: lv === 0 ? "blue" : "amber", off: unprep,
-          title: s.name + (s.always ? " \u2726" : ""), cap: [r?.school, tag].filter(Boolean).join(" \u00b7 "), sub,
+          title: s.name + (s.always ? " \u2726" : ""), cap: [r?.school, tag].filter(Boolean).join(" \u00b7 "), sub, snip: snipOf(r?.text),
           mainAttrs: `data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"`,
           actions: `${lv > 0 && !s.always ? `<label class="prep" data-pop="prep:${esc(s.name)}" title="Prepared"><input type="checkbox" data-a="togglePrepared" data-name="${esc(s.name)}" ${s.prepared ? "checked" : ""} aria-label="Prepared: ${esc(s.name)}"><span>Prep</span></label>` : ""}
             ${info && (lv === 0 || s.prepared || s.always) ? `<button class="btn sm ${lv === 0 ? "" : "pri"}" data-a="${lv === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
@@ -234,7 +234,7 @@ export function renderSpellResults(app) {
   return `<div class="optlist" style="margin-top:4px">` + list.slice(0, 80).map(s => {
     const has = mine.includes(s.name), key = "spell:" + s.name;
     return infoRow({ key, action: has ? "askRemove" : "addSpell", data: has ? { name: s.name, do: "removeSpell", what: "spell" } : { name: s.name }, title: s.name,
-      sub: esc(spellSub(s)), pressed: has, open: app.info.has(key),
+      sub: esc(spellSub(s)), snip: snipOf(s.text), pressed: has, open: app.info.has(key),
       detail: app.info.has(key) ? detailFor(app, "spell", s.name).body : "",
       badge: `<span class="tag ${has ? "amber" : ""}">${has ? "Added ✓" : "+ Add"}</span>` });
   }).join("") + `</div>` + (list.length > 80 ? `<p class="muted small" style="padding:10px 0">Showing 80 of ${list.length}. Search to narrow it down.</p>` : "");
@@ -424,7 +424,7 @@ export function renderGearResults(app, kind) {
     ? `<div class="rowline"><span class="nm">Add "${esc(app.pickerQuery.trim())}" as your own</span><button class="btn sm pri" data-a="pickCustom" data-picker="${kind}">Add</button></div>` : "";
   return custom + (list.length ? `<div class="optlist" style="margin-top:4px">` + list.map(({ x, sub, detail }) => {
     const has = owned.includes(x.name), key = detail + ":" + x.name;
-    return infoRow({ key, action: "pickFrom", data: { picker: kind, name: x.name }, title: x.name, sub: esc(sub),
+    return infoRow({ key, action: "pickFrom", data: { picker: kind, name: x.name }, title: x.name, sub: esc(sub), snip: snipOf(x.text),
       pressed: has, disabled: has, open: app.info.has(key),
       detail: app.info.has(key) ? detailFor(app, detail, x.name).body : "",
       badge: `<span class="tag ${has ? "amber" : ""}">${has ? "Added ✓" : "+ Add"}</span>` });

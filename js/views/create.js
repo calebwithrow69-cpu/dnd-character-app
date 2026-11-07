@@ -2,7 +2,7 @@
 // portrait list; then ability scores (with the background bonus), skills and gear, and a
 // final page for the name and roleplay details. "View progress" opens a sheet of every chapter.
 // All data and validation live in ../creation.js. ASCII only in this file.
-import { esc, topbar, formatText, searchBox, infoRow } from "../ui.js";
+import { esc, topbar, formatText, searchBox, infoRow, snipOf } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize } from "../rules.js";
 import { variantDef, stripVariantText, draftChoices, optionsFor, isAnswered, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
@@ -59,7 +59,7 @@ export function renderChoice(app, d, def) {
   }
   return `<div class="choice">${head}<div class="optlist">${opts.map(o => {
     const on = cur.includes(o.v), key = `choice:${def.id}:${o.v}`, open = app.info.has(key);
-    return infoRow({ key, action: "pick", data: { id: def.id, v: o.v }, title: o.label || o.v, sub: esc(o.sub || ""),
+    return infoRow({ key, action: "pick", data: { id: def.id, v: o.v }, title: o.label || o.v, sub: esc(o.sub || ""), snip: o.detail ? snipOf(o.detail) : "",
       pressed: on, disabled: !on && full && def.n > 1, open, detail: open ? choiceDetail(app, o) : "", badge: on ? `<span class="tag amber">Chosen</span>` : "" });
   }).join("")}</div></div>`;
 }
