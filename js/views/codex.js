@@ -106,7 +106,7 @@ function detail(app, cfg, o) {
     ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${cfg.synergy ? (() => { const s = cfg.synergy(o); return s ? `<p class="cx-syn ${s.good ? "cx-syn-good" : "cx-syn-bad"}"><b>${esc(cfg.synergyFor || "character")}</b>${esc(s.text)}${s.good ? "" : " · not recommended"}</p>` : ""; })() : ""}${upload}</div></div>`}
     ${desc ? `<div class="sp-desc open">${formatText(desc)}</div>` : ""}
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
-    <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3><span class="sub2">Select one to read it</span></div>
+    <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3></div>
     <div class="sp-traits">
       ${now.map(row).join("")}
       ${later.length ? `<div class="sp-trait ${lopen ? "open" : ""}"><button class="sp-tbtn" data-a="cxTrait" data-key="${esc(lk)}" aria-expanded="${lopen}"><span class="grow"><b>Later levels</b><small>${later.length} more features, levels ${later[0].level} to ${later[later.length - 1].level}</small></span><span class="chev">${I.chev}</span></button>${lopen ? `<div class="sp-later">${later.map(row).join("")}</div>` : ""}</div>` : ""}

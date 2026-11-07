@@ -1800,3 +1800,41 @@ html.dead{filter:grayscale(1);transition:filter 1.6s ease}
 .sp-controls .btn{align-self:end}
 .optcard .grow .sp-snip,.k-nm .sp-snip{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.8rem;line-height:1.35;color:var(--muted);margin-top:2px}
 .sp-desc p{margin:0 0 .7em}.sp-desc p:last-child{margin-bottom:0}
+
+/* creation: card look. Card tokens only inside the oxblood preview card; page-level parts use theme variables. */
+.cx-sheet{position:relative;overflow:hidden;border:0;border-radius:var(--card-r);color:var(--card-ink);background:linear-gradient(160deg,var(--card-hi),var(--card-lo));box-shadow:0 10px 28px rgba(40,8,14,.28);
+  --ink:var(--card-ink);--muted:var(--card-sub);--faint:var(--card-label);--line:#ffffff2e;--line-soft:#ffffff1a;--frame:#ffffff3d;--bg:var(--card-inset);--panel:var(--card-inset);--panel2:var(--card-inset);--amber:var(--card-accent);--amber-ink:var(--card-accent-ink)}
+.cx-sheet::before{content:"";position:absolute;right:-70px;top:-70px;width:240px;height:240px;border-radius:50%;border:1px solid #ffffff18;box-shadow:0 0 0 26px #ffffff08,0 0 0 56px #ffffff04;pointer-events:none}
+.cx-sheet>*{position:relative}
+.cx-sheet .em{color:hsl(var(--eh,9) 60% 80%)}
+.cx-sheet .cx-trio .em{background:var(--card-inset)}
+.cx-h,.cx-six span{font-family:var(--display);letter-spacing:.2em}
+.cx-sheet .cx-six div{background:var(--card-inset);border-color:#ffffff14;border-radius:var(--card-ri)}
+.abil,.optcard,.chipbtn,.seg,.cx-emhero,.cx-scores span{border-radius:var(--card-ri)}
+.abil .an{font-family:var(--display);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase}
+.sp-facts{padding:12px 14px;background:var(--panel2);border:1px solid var(--line-soft);border-radius:var(--card-ri);gap:6px}
+.sp-facts dt{font-family:var(--display);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;padding-top:2px}
+.sp-facts dt::after{content:""}
+.cx-opt{border-radius:var(--card-r)}
+.stickybar{box-shadow:0 -8px 20px rgba(0,0,0,.12)}
+
+/* interactive: one affordance language. Tappable = accent edge + accent label. Static info = neutral hairline, never filled with the accent. */
+:root{--edge:color-mix(in srgb,var(--amber) 55%,var(--line))}
+.btn:not(.pri):not(.danger):not(.ghost),.iconbtn,.infobtn,.gloss-chip,.chipbtn,.optcard,.seg,.stepper button,.pip{border-color:var(--edge)}
+.btn:not(.pri):not(.danger):not(.ghost),.btn.ghost,.iconbtn,.infobtn,.linkbtn,.sp-more{color:var(--amber)}
+.btn.ghost{text-decoration:underline;text-decoration-color:var(--edge);text-underline-offset:3px}
+.sheetbar .iconbtn,.sheetbar .btn{color:var(--card-label);border-color:#ffffff33}
+.sheetbar .btn.ghost{text-decoration:none}
+input.f,select.f,textarea.f{border-color:var(--edge)}
+.chev,.sp-tbtn .chev{color:var(--amber)}
+.k-row:has(> button.k-main){border-left-color:color-mix(in srgb,var(--amber) 45%,transparent)}
+.k-row:has(> button.k-main):hover{border-left-color:var(--amber)}
+.k-row.on{border-left-color:var(--amber)}
+.optcard:hover:not(:disabled),.chipbtn:hover:not(:disabled),.gloss-chip:hover{border-color:var(--amber)}
+.seg button{color:var(--amber)}
+.seg button[aria-pressed="true"]{color:var(--amber-ink)}
+.flag.act{background:transparent;border-color:var(--line);color:var(--ink)}
+.flag.need{background:transparent;color:var(--amber);border-color:var(--edge)}
+.tag.amber{border-color:var(--line);color:var(--ink)}
+.btn.sm .cicon,.btn .cicon{color:inherit}
+.sp-fav{color:var(--amber)}

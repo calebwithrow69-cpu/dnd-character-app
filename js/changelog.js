@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.48";
+export const VERSION = "0.1.49";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.49",
+    date: "2026-11-07",
+    stage: "Pre-build",
+    blurb: "Creation card look, one style for tappable controls.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Creation: oxblood preview card, separate description, facts and traits.",
+          "Tappable controls share an accent edge and label.",
+          "Static labels are neutral, not filled."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.48",
     date: "2026-11-07",
