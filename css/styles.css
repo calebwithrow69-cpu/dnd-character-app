@@ -1838,3 +1838,6 @@ input.f,select.f,textarea.f{border-color:var(--edge)}
 .tag.amber{border-color:var(--line);color:var(--ink)}
 .btn.sm .cicon,.btn .cicon{color:inherit}
 .sp-fav{color:var(--amber)}
+.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.abil{min-width:0;padding-inline:2px}
+.abil .an{font-size:.58rem;letter-spacing:.05em;white-space:nowrap}
