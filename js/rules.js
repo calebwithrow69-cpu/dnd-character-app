@@ -63,6 +63,14 @@ export function primaryAbility(primaryText) {
   const m = /(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)/.exec(primaryText || "");
   return m ? ABILITY_BY_LABEL[m[1]] : null;
 }
+// All ability keys from a primary text. "Strength or Dexterity" -> ["str","dex"].
+export function primaryAbilities(primaryText) {
+  const all = [];
+  for (const [label, key] of Object.entries(ABILITY_BY_LABEL)) {
+    if ((primaryText || "").includes(label)) all.push(key);
+  }
+  return all;
+}
 
 // Species traits carry a line like "Speed: 30 feet".
 export function speciesSpeed(traits) {

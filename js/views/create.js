@@ -4,7 +4,7 @@
 // All data and validation live in ../creation.js. ASCII only in this file.
 import { esc, topbar, formatText, searchBox, infoRow, snipOf } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
-import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize } from "../rules.js";
+import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize, primaryAbilities } from "../rules.js";
 import { variantDef, stripVariantText, draftChoices, optionsFor, isAnswered, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
 import { fmtPrice } from "../equipment.js";
 import { parseSpecies, classifyText } from "../species.js";
@@ -86,16 +86,29 @@ export function renderTileChoice(app, d, def) {
 }
 
 
+// Subclasses that add spellcasting with an ability not in the base class primary.
+const SUBCLASS_ABILITY = { Fighter: "int", Rogue: "int" };
+
+function abilColor(abilKey, cls) {
+  if (!cls) return "";
+  const primes = primaryAbilities(cls.primary);
+  if (primes.includes(abilKey)) return "cx-bg-good";
+  if (abilKey === "con") return "cx-bg-ok";
+  if (SUBCLASS_ABILITY[cls.name] === abilKey) return "cx-bg-ok";
+  return "cx-bg-bad";
+}
+
 function renderBonus(app, d) {
   const opts = bgAbilities(app, d);
   if (!opts.length) return "";
   const cls = findByName(app.library.classes, d.class);
   const optSel = (key, exclude) => `<select class="f" data-draft="${key}">
       <option value="">Choose\u2026</option>
-      ${opts.filter(a => a !== exclude).map(a => `<option value="${a}" ${d[key] === a ? "selected" : ""}>${ABILITY_LABEL[a]}</option>`).join("")}
+      ${opts.filter(a => a !== exclude).map(a => `<option value="${a}" ${d[key] === a ? "selected" : ""} class="${cls ? abilColor(a, cls) : ""}">${ABILITY_LABEL[a]}</option>`).join("")}
     </select>`;
   return `<div class="choice"><div class="choice-head"><h3>Ability score increases</h3><span class="sub2">${esc(d.background)}</span></div>
-    <p class="small">Raise ${opts.map(a => ABILITY_LABEL[a]).join(", ")}.${cls ? ` ${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
+    <p class="small">Raise ${opts.map(a => `<span class="cx-ab ${cls ? abilColor(a, cls) : ""}">${ABILITY_LABEL[a]}</span>`).join(", ")}.${cls ? ` ${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
+    ${cls ? `<p class="cx-legend"><span class="cx-bg-good"></span> Primary <span class="cx-bg-ok"></span> Useful <span class="cx-bg-bad"></span> Low synergy</p>` : ""}
     <div class="seg" role="group" aria-label="Bonus type" style="margin-top:8px">
       <button data-a="bonusMode" data-mode="21" aria-pressed="${d.bonusMode === "21"}">+2 and +1</button>
       <button data-a="bonusMode" data-mode="111" aria-pressed="${d.bonusMode === "111"}">+1 to all three</button>
@@ -498,8 +511,28 @@ function cxAnimate() {
 }
 // Refresh only the sheet panel (used while typing a name or a score, when the page is not redrawn).
 export function cxRefreshSheet(app) {
-  const d = app.createDraft, el = document.querySelector(".cx-sheet"); if (!d || !el) return;
-  el.innerHTML = sheetInner(app, d, reachIndex(app, d)); cxAnimate();
+  const d = app.createDraft; if (!d) return;
+  const el = document.querySelector(".cx-sheet");
+  if (el) { el.innerHTML = sheetInner(app, d, reachIndex(app, d)); cxAnimate(); }
+  const mb = document.querySelector(".cx-mbar-stats");
+  if (mb) {
+    const c = previewChar(app, d), sp = findByName(app.library.species, d.species);
+    const hp = c ? c.hp.max : 0, ac = c ? computeAC(c).total : 10, speed = c ? c.speed : (sp ? speciesSpeed(sp.traits) : null);
+    mb.innerHTML = `<b>${hp}</b> HP <b>${ac}</b> AC${speed != null ? ` <b>${speed}</b> ft` : ""}`;
+  }
+  const ml = document.querySelector(".cx-mbar-label");
+  if (ml) { ml.textContent = [d.class, d.species].filter(Boolean).join(" · ") || "No class"; }
+}
+
+function mobileStatBar(app, d, c) {
+  const sp = findByName(app.library.species, d.species);
+  const hp = c ? c.hp.max : 0, ac = c ? computeAC(c).total : 10, speed = c ? c.speed : (sp ? speciesSpeed(sp.traits) : null);
+  const label = [d.class, d.species].filter(Boolean).join(" · ") || "No class";
+  return `<div class="cx-mbar" data-a="toggleMobileSheet" role="button" aria-label="Character stats" aria-expanded="${!!app.mobileSheetOpen}">
+    <span class="cx-mbar-label">${esc(label)}</span>
+    <span class="cx-mbar-stats"><b>${hp}</b> HP <b>${ac}</b> AC${speed != null ? ` <b>${speed}</b> ft` : ""}</span>
+    <span class="cx-mbar-arrow">${app.mobileSheetOpen ? "▼" : "▲"}</span></div>
+  ${app.mobileSheetOpen ? `<div class="cx-msheet-wrap"><div class="cx-msheet">${sheetInner(app, d, reachIndex(app, d))}</div></div>` : ""}`;
 }
 
 export function renderCreate(app) {
@@ -521,6 +554,7 @@ export function renderCreate(app) {
   } else if (id === "classChoices") content = classChoicesBody(app, d);
   else content = finishBody(app, d);
   const last = d.chapter === CHAPTERS.length - 1;
+  const c = previewChar(app, d);
   app._cxPop = false;
   return `<div class="cx-shell" style="--cx-h:${CX_HUE}">
     ${topbar(ch.title, `Step ${d.chapter + 1} of ${CHAPTERS.length}`, { back: d.chapter === 0 ? "cancelCreate" : "prevStep" })}
@@ -535,6 +569,7 @@ export function renderCreate(app) {
         <aside class="cx-sheet" aria-label="Your character so far">${sheetInner(app, d, reach)}</aside>
       </div>
     </main>
+    ${mobileStatBar(app, d, c)}
     <div class="stickybar"><div class="wrap">
       <p class="why" id="wizard-why">${v.valid ? "" : esc(v.reasons.join(" "))}</p>
       <div class="btnrow">

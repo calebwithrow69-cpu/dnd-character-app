@@ -593,7 +593,7 @@ function bindEvents() {
   document.addEventListener("submit", onSubmit);
   document.addEventListener("keydown", playKeys);
   document.addEventListener("scroll", e => { const t = e.target; if (t && t.classList && t.classList.contains("scscroll")) t.classList.toggle("past", t.scrollTop > 150); }, true);
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && APP.progressOpen) { APP.progressOpen = false; render(); } else if (e.key === "Escape" && APP.featUi && APP.featUi.open) { APP.featUi.open = null; render(); } else if (e.key === "Escape" && APP.modal) closeModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && APP.mobileSheetOpen) { APP.mobileSheetOpen = false; render(); } else if (e.key === "Escape" && APP.progressOpen) { APP.progressOpen = false; render(); } else if (e.key === "Escape" && APP.featUi && APP.featUi.open) { APP.featUi.open = null; render(); } else if (e.key === "Escape" && APP.modal) closeModal(); });
   window.addEventListener("popstate", () => {
     if (APP._ignorePop) { APP._ignorePop = false; return; }
     if (APP.modal) { APP.modal = null; render(); return; }
@@ -694,7 +694,7 @@ function rndRun(only) {
   d.mode = "generate";
 }
 function openBuilderWith(d, chapter) {
-  APP.createDraft = d; APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.screen = "create";
+  APP.createDraft = d; APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.mobileSheetOpen = false; APP.screen = "create";
   d.chapter = Math.max(0, Math.min(chapter, reachIndex(APP, d)));
   try { history.pushState({ cx: 1 }, ""); } catch (e) { }
   render(); window.scrollTo(0, 0);
@@ -901,7 +901,7 @@ const ACTIONS = {
   newChar() { APP.screen = "start"; render(); window.scrollTo(0, 0); },
   startBack() { APP.screen = APP.startFrom === "home" ? "home" : "roster"; APP.startFrom = null; render(); window.scrollTo(0, 0); },
   startMenu() { APP.screen = "start"; APP.load = null; render(); window.scrollTo(0, 0); },
-  startManual() { clearDraft(); APP.createDraft = blankDraft(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.screen = "create"; try { history.pushState({ cx: 1 }, ""); } catch (e) { } render(); window.scrollTo(0, 0); },
+  startManual() { clearDraft(); APP.createDraft = blankDraft(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); APP.progressOpen = false; APP.mobileSheetOpen = false; APP.screen = "create"; try { history.pushState({ cx: 1 }, ""); } catch (e) { } render(); window.scrollTo(0, 0); },
   startRandom() { clearDraft(); APP.createDraft = blankDraft(); APP.rnd = rndDefault(); APP.spUi = spUiDefault(); APP.featUi = featUiDefault(); rndRun(); APP.screen = "random"; render(); window.scrollTo(0, 0); },
   startLoad() { clearDraft(); APP.load = loadDefault(); APP.screen = "load"; render(); window.scrollTo(0, 0); },
   rndPick(el) { const d = APP.createDraft, k = el.dataset.k; if (!el.value) return; d[k] = el.value; APP.rnd.lock[k] = true; rndRun(); render(); },
@@ -1156,11 +1156,12 @@ const ACTIONS = {
     const i = el.dataset.id != null ? CHAPTERS.findIndex(c => c.id === el.dataset.id) : +el.dataset.i;
     if (i < 0 || i > reachIndex(APP, d)) return;
     if (i > d.chapter) { try { history.pushState({ cx: 1 }, ""); } catch (e) { } }
-    d.chapter = i; d.query = ""; APP.progressOpen = false; render(); window.scrollTo(0, 0);
+    d.chapter = i; d.query = ""; APP.progressOpen = false; APP.mobileSheetOpen = false; render(); window.scrollTo(0, 0);
   },
   openProgress() { APP.progressOpen = true; render(); },
   closeProgress() { APP.progressOpen = false; render(); },
   closeProgressBackdrop() { APP.progressOpen = false; render(); },
+  toggleMobileSheet() { APP.mobileSheetOpen = !APP.mobileSheetOpen; render(); },
   // codex lists (class, species, background)
   pickSpecies(el) { mPickSpecies(APP.createDraft, APP, el.dataset.name); render(); },
   pickClass(el) { mPickClass(APP.createDraft, APP, el.dataset.name); render(); },

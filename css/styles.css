@@ -1544,6 +1544,32 @@ body.cx-on #app{position:relative;z-index:1}
 @media (min-width:1100px) and (max-width:1299px){.cx-grid{grid-template-columns:180px minmax(0,1fr) 300px}.cx-shell .stickybar .wrap{padding-left:calc(196px + 16px);padding-right:calc(316px + 16px)}}
 @media (max-width:420px){.cx-emhero{flex-direction:column;align-items:flex-start}}
 
+/* ---- Mobile sticky stat bar (below 1100px) ---- */
+.cx-mbar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--panel);border-top:1px solid var(--line-soft);position:sticky;bottom:62px;z-index:18;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cx-mbar-label{font:600 .78rem var(--display);color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cx-mbar-stats{font:.72rem var(--mono);color:var(--faint);white-space:nowrap}
+.cx-mbar-stats b{color:var(--ink);font-size:.82rem}
+.cx-mbar-arrow{color:var(--faint);font-size:.7rem;flex:none}
+.cx-msheet-wrap{position:fixed;bottom:calc(62px + 38px);left:0;right:0;max-height:65vh;overflow:auto;z-index:17;background:var(--bg);border-top:1px solid var(--line-soft);box-shadow:0 -6px 20px rgba(0,0,0,.25);overscroll-behavior:contain;animation:cxMsheetIn .2s ease-out}
+.cx-msheet{padding:16px}
+@keyframes cxMsheetIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+@media (min-width:1100px){.cx-mbar,.cx-msheet-wrap{display:none}}
+@media (max-width:1099px){.cx-grid>.cx-sheet{display:none}}
+
+/* ---- Ability color-coding ---- */
+.cx-ab{font-weight:600;padding:1px 4px;border-radius:4px}
+.cx-bg-good{color:var(--green,#4ade80)}
+.cx-bg-ok{color:var(--amber,#fbbf24)}
+.cx-bg-bad{color:var(--red,#f87171)}
+select option.cx-bg-good{color:#166534;background:#dcfce7}
+select option.cx-bg-ok{color:#854d0e;background:#fef9c3}
+select option.cx-bg-bad{color:#991b1b;background:#fee2e2}
+.cx-legend{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:.72rem;color:var(--muted)}
+.cx-legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.cx-legend .cx-bg-good::before{background:var(--green,#4ade80)}
+.cx-legend .cx-bg-ok::before{background:var(--amber,#fbbf24)}
+.cx-legend .cx-bg-bad::before{background:var(--red,#f87171)}
+
 .randrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 
 /* ---- Shared list kit (js/ui.js kGroup / kRow): same look as Play Mode, used by attacks, spells, pickers ---- */
