@@ -15,10 +15,18 @@ const I = {
 
 export const favKey = kind => kind === "species" ? "favSpecies" : kind === "class" ? "favClass" : "favBackground";
 export const spUiDefault = () => ({
-  k: { species: { sort: "az", filter: "All", open: null }, class: { sort: "az", filter: "All", open: null }, background: { sort: "az", filter: "All", open: null } },
+  k: { species: { sort: "az", filter: "All", open: null }, class: { sort: "az", filter: "All", open: null }, background: { sort: "rec", filter: "All", open: null } },
   traits: new Set(), variant: {}
 });
 const favs = (app, kind) => app.prefs[favKey(kind)] || [];
+
+// Ability fit (green = primary, yellow = conditional, red = little use). Shape, not only color, so it reads without color vision.
+const FIT_MARK = { good: "\u2713", ok: "~", bad: "\u00d7" };
+const chipHtml = (cfg, c) => `<i class="cx-chip cx-bg-${c.tone}" aria-label="${esc(c.full)}: ${esc(cfg.fitWord[c.tone])}">${FIT_MARK[c.tone]} ${esc(c.label)}</i>`;
+const fitBlock = (cfg, o) => {
+  const rows = cfg.chips ? cfg.chips(o) : []; if (!rows.length) return "";
+  return `<div class="cx-fit"><b class="cx-fit-h">Score increases for ${esc(cfg.fitFor)}</b>${rows.map(c => `<p class="cx-fit-r cx-bg-${c.tone}"><span class="cx-fit-mark" aria-hidden="true">${FIT_MARK[c.tone]}</span><span><b>${esc(c.full)}</b><small>${esc(c.why)}</small></span></p>`).join("")}</div>`;
+};
 
 // A saved portrait wins; otherwise the choice's own emblem (class, species and background each have a drawing).
 function thumb(name, cls, kind) {
@@ -34,7 +42,7 @@ export function renderControls(app, cfg) {
         <option value="az" ${u.sort === "az" ? "selected" : ""}>A to Z</option>
         ${cfg.sources ? `<option value="source" ${u.sort === "source" ? "selected" : ""}>Source</option>` : ""}
         <option value="fav" ${u.sort === "fav" ? "selected" : ""}>Favorites first</option>
-        ${cfg.synergyScore ? `<option value="rec" ${u.sort === "rec" ? "selected" : ""}>Recommended</option>` : ""}
+        ${cfg.synergyScore ? `<option value="rec" ${u.sort === "rec" ? "selected" : ""}>Best fit</option>` : ""}
       </select></label>
     <label class="sp-sel"><span>${esc(cfg.filterLabel)}</span>
       <select class="f" data-a="cxFilter" data-kind="${cfg.kind}" aria-label="Filter ${cfg.noun}">
@@ -103,7 +111,8 @@ function detail(app, cfg, o) {
   const vTrait = vr && all.find(t => t.name === vr.trait);
   const row = t => traitRow(app, o, t, cfg.kind, bundle, mt.by.get(t.name), vr && t.name === vr.trait ? variantPicker(app, o, vr, t.body) : "");
   return `<div class="sp-detail">
-    ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${cfg.synergy ? (() => { const s = cfg.synergy(o); return s ? `<p class="cx-syn ${s.good ? "cx-syn-good" : "cx-syn-bad"}"><b>${esc(cfg.synergyFor || "character")}</b>${esc(s.text)}${s.good ? "" : " · not recommended"}</p>` : ""; })() : ""}${upload}</div></div>`}
+    ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${upload}</div></div>`}
+    ${fitBlock(cfg, o)}
     ${desc ? `<div class="sp-desc open">${formatText(desc)}</div>` : ""}
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
     <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3></div>
@@ -127,14 +136,14 @@ export function renderCodexList(app, cfg) {
   if (!items.length) return `<p class="muted small" style="padding:12px 0">No matches.</p>`;
   const src = s => s || "No source";
   const by = (a, b) => a.name.localeCompare(b.name);
-  const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : u.sort === "rec" && cfg.synergyScore ? (cfg.synergyScore(o) > 0 ? "Recommended" : "Other") : o.name[0].toUpperCase();
+  const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : u.sort === "rec" && cfg.synergyScore ? (cfg.synergyGood(o) ? "Best fit" : "Other") : o.name[0].toUpperCase();
   items = items.sort((a, b) => {
     if (u.sort === "source") return src(a.source).localeCompare(src(b.source)) || by(a, b);
     if (u.sort === "fav") return (fav.includes(b.name) - fav.includes(a.name)) || by(a, b);
     if (u.sort === "rec" && cfg.synergyScore) return (cfg.synergyScore(b) - cfg.synergyScore(a)) || by(a, b);
     return by(a, b);
   });
-  let last = null, html = `<p class="sub2 sp-count">${items.length} ${esc(cfg.noun)}</p>`;
+  let last = null, html = `<p class="sub2 sp-count">${items.length} ${esc(cfg.noun)}</p>${cfg.chips && cfg.fitFor ? `<p class="cx-key sub2">Score increases for ${esc(cfg.fitFor)}: <span class="cx-bg-good">${FIT_MARK.good} primary</span> <span class="cx-bg-ok">${FIT_MARK.ok} useful</span> <span class="cx-bg-bad">${FIT_MARK.bad} low value</span></p>` : ""}`;
   for (const o of items) {
     const g = group(o);
     if (g !== last) { html += `<div class="sp-group">${esc(g)}</div>`; last = g; }
@@ -143,7 +152,7 @@ export function renderCodexList(app, cfg) {
       <div class="sp-top">
         <button class="sp-main" data-a="cxOpen" data-kind="${cfg.kind}" data-name="${esc(o.name)}" aria-expanded="${open}">
           ${thumb(o.name, "sp-thumb", cfg.kind)}
-          <span class="grow"><b>${esc(o.name)}</b><small>${esc(cfg.sub(o))}</small></span>
+          <span class="grow"><b>${esc(o.name)}</b>${cfg.chips ? `<span class="cx-chips">${cfg.chips(o).map(c => chipHtml(cfg, c)).join("")}</span>` : ""}<small>${esc(cfg.sub(o))}</small></span>
           ${on ? `<span class="tag amber">Chosen</span>` : ""}
           <span class="chev">${I.chev}</span>
         </button>

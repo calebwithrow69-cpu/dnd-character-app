@@ -281,6 +281,13 @@ export function randomClassChoices(d, app) {
 
 const choicesDone = (app, d, scope) =>
   draftChoices(app, d, scope).every(def => def.kind === "text" || isAnswered(def, d.picks));
+// "Pick Size." / "Pick Size, Skill and 2 more." Names what is missing so the message says where to look.
+function missingPicks(app, d, scope) {
+  const miss = draftChoices(app, d, scope).filter(def => def.kind !== "text" && !isAnswered(def, d.picks)).map(def => String(def.label || "choice").replace(/\s+/g, " ").trim());
+  if (!miss.length) return "";
+  const shown = miss.slice(0, 2).join(", "), more = miss.length - 2;
+  return `Pick ${shown}${more > 0 ? ` and ${more} more` : ""}.`;
+}
 
 export function validateChapter(chapterId, d, app) {
   const reasons = [];
@@ -319,13 +326,13 @@ export function validateChapter(chapterId, d, app) {
 
   if (chapterId === "species") {
     if (!d.species) reasons.push("Choose a species.");
-    if (d.species && !choicesDone(app, d, "species")) reasons.push("Finish the picks under your species.");
+    if (d.species && !choicesDone(app, d, "species")) reasons.push(missingPicks(app, d, "species") || "Finish your species picks.");
   }
 
   if (chapterId === "background") {
     if (!d.background) reasons.push("Choose a background.");
     if (d.background) {
-      if (!choicesDone(app, d, "bg")) reasons.push("Finish the picks under your background.");
+      if (!choicesDone(app, d, "bg")) reasons.push(missingPicks(app, d, "bg") || "Finish your background picks.");
     }
   }
 
@@ -548,6 +555,7 @@ export function rollOne(d, a) {
   return v;
 }
 export function swapRolled(d, a, b) {
+  if (!d.rolls && d.scoresSet && !d.pointBuy) { [d.base[a], d.base[b]] = [d.base[b], d.base[a]]; return true; }
   if (!d.rolls || d.rolls[a] == null || d.rolls[b] == null) return false;
   [d.rolls[a], d.rolls[b]] = [d.rolls[b], d.rolls[a]];
   [d.base[a], d.base[b]] = [d.base[b], d.base[a]];

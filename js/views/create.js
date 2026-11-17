@@ -4,7 +4,7 @@
 // All data and validation live in ../creation.js. ASCII only in this file.
 import { esc, topbar, formatText, searchBox, infoRow, snipOf } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
-import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize, primaryAbilities } from "../rules.js";
+import { ABILITIES, ABILITY_LABEL, ABILITY_BY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize, primaryAbilities } from "../rules.js";
 import { variantDef, stripVariantText, draftChoices, optionsFor, isAnswered, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
 import { fmtPrice } from "../equipment.js";
 import { parseSpecies, classifyText } from "../species.js";
@@ -86,17 +86,23 @@ export function renderTileChoice(app, d, def) {
 }
 
 
-// Subclasses that add spellcasting with an ability not in the base class primary.
-const SUBCLASS_ABILITY = { Fighter: "int", Rogue: "int" };
-
-function abilColor(abilKey, cls) {
-  if (!cls) return "";
-  const primes = primaryAbilities(cls.primary);
-  if (primes.includes(abilKey)) return "cx-bg-good";
-  if (abilKey === "con") return "cx-bg-ok";
-  if (SUBCLASS_ABILITY[cls.name] === abilKey) return "cx-bg-ok";
-  return "cx-bg-bad";
+// How well one ability score suits a class: green (primary), yellow (conditional), red (little use).
+// Conditional = hit points (Con), AC and initiative (Dex, unless heavy armor), or a subclass that adds spellcasting.
+const FIT_WORD = { good: "Primary", ok: "Useful", bad: "Low value" };
+const FIT_MARK = { good: "\u2713", ok: "~", bad: "\u00d7" };
+export function abilFit(L, cls, key) {
+  if (!cls) return null;
+  if (primaryAbilities(cls.primary).includes(key)) return { tone: "good", why: "Primary ability" };
+  const sub = (L.subclasses || []).find(s => s.cls === cls.name && (s.features || []).some(f => {
+    if (!/spellcasting|pact magic/i.test(f.name)) return false;
+    const m = /(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)/.exec(f.text || ""); return m && ABILITY_BY_LABEL[m[1]] === key;
+  }));
+  if (sub) return { tone: "ok", why: sub.name + " spellcasting" };
+  if (key === "con") return { tone: "ok", why: "Hit points and saves" };
+  if (key === "dex" && !/heavy/i.test(cls.armorProf || "")) return { tone: "ok", why: "AC and initiative" };
+  return { tone: "bad", why: "No class use" };
 }
+const abilColor = (L, cls, key) => { const f = abilFit(L, cls, key); return f ? "cx-bg-" + f.tone : ""; };
 
 function renderBonus(app, d) {
   const opts = bgAbilities(app, d);
@@ -104,11 +110,10 @@ function renderBonus(app, d) {
   const cls = findByName(app.library.classes, d.class);
   const optSel = (key, exclude) => `<select class="f" data-draft="${key}">
       <option value="">Choose\u2026</option>
-      ${opts.filter(a => a !== exclude).map(a => `<option value="${a}" ${d[key] === a ? "selected" : ""} class="${cls ? abilColor(a, cls) : ""}">${ABILITY_LABEL[a]}</option>`).join("")}
+      ${opts.filter(a => a !== exclude).map(a => { const f = abilFit(app.library, cls, a); return `<option value="${a}" ${d[key] === a ? "selected" : ""} class="${f ? "cx-bg-" + f.tone : ""}">${f ? FIT_MARK[f.tone] + " " : ""}${ABILITY_LABEL[a]}</option>`; }).join("")}
     </select>`;
   return `<div class="choice"><div class="choice-head"><h3>Ability score increases</h3><span class="sub2">${esc(d.background)}</span></div>
-    <p class="small">Raise ${opts.map(a => `<span class="cx-ab ${cls ? abilColor(a, cls) : ""}">${ABILITY_LABEL[a]}</span>`).join(", ")}.${cls ? ` ${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
-    ${cls ? `<p class="cx-legend"><span class="cx-bg-good"></span> Primary <span class="cx-bg-ok"></span> Useful <span class="cx-bg-bad"></span> Low synergy</p>` : ""}
+    <p class="small">Raise ${opts.map(a => `<span class="cx-ab ${cls ? abilColor(app.library, cls, a) : ""}">${ABILITY_LABEL[a]}</span>`).join(", ")}.${cls ? ` ${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
     <div class="seg" role="group" aria-label="Bonus type" style="margin-top:8px">
       <button data-a="bonusMode" data-mode="21" aria-pressed="${d.bonusMode === "21"}">+2 and +1</button>
       <button data-a="bonusMode" data-mode="111" aria-pressed="${d.bonusMode === "111"}">+1 to all three</button>
@@ -215,24 +220,20 @@ function cfgFor(app, d, kind) {
   return {
     ...base, items, selected: d.background, noun: "backgrounds", sources: false, filterLabel: "Feat", filterOptions: ["All", ...feats],
     test: (b, f) => backgroundFeatNames(b).some(n => featBase(n) === f),
-    sub: b => [bgAbilityIds(b).map(a => ABILITY_LABEL[a].slice(0, 3)).join("/"), parseList(b.skills).join(", "), backgroundFeatNames(b).join(" or ")].filter(Boolean).join(" \u00b7 "),
+    sub: b => [d.class ? "" : bgAbilityIds(b).map(a => ABILITY_LABEL[a].slice(0, 3)).join("/"), parseList(b.skills).join(", "), backgroundFeatNames(b).join(" or ")].filter(Boolean).join(" \u00b7 "),
+    chips: b => { const cls = findByName(L.classes, d.class); return cls ? bgAbilityIds(b).map(a => ({ label: ABILITY_LABEL[a].slice(0, 3), full: ABILITY_LABEL[a], ...abilFit(L, cls, a) })) : []; },
+    fitWord: FIT_WORD,
     facts: b => {
       const tool = backgroundToolChoice(b), eq = (/Equipment:\s*([^\n]+)/.exec(b.effect || "") || [])[1];
       return [["Ability scores", bgAbilityIds(b).map(a => ABILITY_LABEL[a]).join(", ")], ["Skills", parseList(b.skills).join(", ")], ["Tool", tool ? (tool.fixed || "Your choice of one") : ""],
         ["Feat", backgroundFeatNames(b).join(" or ")], ["Equipment", eq || ""]].filter(f => f[1]);
     },
-    synergyFor: d.class || "character",
-    synergy: b => {
-      const cls = findByName(L.classes, d.class); if (!cls) return "";
-      const ids = bgAbilityIds(b), pri = ids.filter(a => String(cls.primary || "").includes(ABILITY_LABEL[a]));
-      if (pri.length) return { good: true, text: `Boosts ${pri.map(a => ABILITY_LABEL[a]).join("/")}` };
-      return { good: false, text: `No score increase for ${cls.name}` };
-    },
+    fitFor: d.class || "",
     synergyScore: b => {
       const cls = findByName(L.classes, d.class); if (!cls) return 0;
-      const ids = bgAbilityIds(b), pri = ids.filter(a => String(cls.primary || "").includes(ABILITY_LABEL[a]));
-      return pri.length;
+      return bgAbilityIds(b).reduce((n, a) => { const f = abilFit(L, cls, a); return n + (f.tone === "good" ? 10 : f.tone === "ok" ? 1 : 0); }, 0);
     },
+    synergyGood: b => { const cls = findByName(L.classes, d.class); return !!cls && bgAbilityIds(b).some(a => abilFit(L, cls, a).tone === "good"); },
     lore: b => b.desc || "",
     traits: b => backgroundFeatNames(b).map(n => {
       const f = [...L.feats, ...(C.homebrew?.feats || [])].find(x => x.name === featBase(n));
@@ -291,7 +292,7 @@ function abilitiesBody(app, d) {
   const fin = finalAbilities(app, d), cls = findByName(app.library.classes, d.class);
   const rolling = d.rolls && !d.pointBuy && !d.scoresSet;
   const rc = rolledCount(d);
-  return `<p class="small muted">${cls ? `${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>. ` : ""}Set base scores here. Background bonus is below.</p>
+  return `<p class="small muted">${cls ? `${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
     <div class="btnrow" style="margin-top:10px">
       <button class="btn sm" data-a="standardArray">Standard array</button>
       <button class="btn sm${d.pointBuy ? " pri" : ""}" data-a="cxPointBuy">Point buy</button>
@@ -311,10 +312,9 @@ function abilitiesBody(app, d) {
         : `<label><span class="an">${ABILITY_LABEL[a]}${isPrime ? ' <i title="Primary ability for ' + esc(cls.name) + '">&#9733;</i>' : ""}</span>
         ${d.rolls && d.rolls[a] != null ? `<span class="am">${d.base[a]}</span>` : `<input type="number" inputmode="numeric" min="3" max="20" data-draft-ability="${a}" value="${d.base[a]}" aria-label="${ABILITY_LABEL[a]} base score">`}
         <span class="as" data-final="${a}">${fin[a] !== d.base[a] ? "\u2192 " + fin[a] + " " : ""}(${fmtMod(abilityMod(fin[a]))})</span></label>
-        ${d.rolls && d.rolls[a] != null ? `<button class="btn sm cx-swap" data-a="cxSwapSel" data-ab="${a}" aria-pressed="${swapSel}">Swap</button>` : ""}`}
+        ${(d.rolls ? d.rolls[a] != null : d.scoresSet && !d.pointBuy) ? `<button class="btn sm cx-swap" data-a="cxSwapSel" data-ab="${a}" aria-pressed="${swapSel}">Swap</button>` : ""}`}
         ${d.pointBuy ? `<div class="cx-pb"><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="-1" aria-label="Lower ${ABILITY_LABEL[a]}" ${d.base[a] <= 8 ? "disabled" : ""}>-</button><button class="btn sm" data-a="cxPb" data-ab="${a}" data-dir="1" aria-label="Raise ${ABILITY_LABEL[a]}" ${d.base[a] >= 15 ? "disabled" : ""}>+</button></div>` : ""}</div>`; }).join("")}
     </div>
-    <p class="sub2" style="margin-top:8px">Under each score: final score (modifier).</p>
     ${renderBonus(app, d) || `<p class="muted small" style="margin-top:12px">Choose a background to see its increases.</p>`}`;
 }
 
@@ -514,24 +514,24 @@ export function cxRefreshSheet(app) {
   const d = app.createDraft; if (!d) return;
   const el = document.querySelector(".cx-sheet");
   if (el) { el.innerHTML = sheetInner(app, d, reachIndex(app, d)); cxAnimate(); }
-  const mb = document.querySelector(".cx-mbar-stats");
-  if (mb) {
-    const c = previewChar(app, d), sp = findByName(app.library.species, d.species);
-    const hp = c ? c.hp.max : 0, ac = c ? computeAC(c).total : 10, speed = c ? c.speed : (sp ? speciesSpeed(sp.traits) : null);
-    mb.innerHTML = `<b>${hp}</b> HP <b>${ac}</b> AC${speed != null ? ` <b>${speed}</b> ft` : ""}`;
-  }
-  const ml = document.querySelector(".cx-mbar-label");
-  if (ml) { ml.textContent = [d.class, d.species].filter(Boolean).join(" · ") || "No class"; }
+  const mb = document.querySelector(".cx-mbar-stats"); if (mb) mb.innerHTML = mbarStats(app, d);
+  const ml = document.querySelector(".cx-mbar-label"); if (ml) ml.textContent = mbarLabel(d);
 }
 
-function mobileStatBar(app, d, c) {
+// HP and AC are real only once scores are set; speed once a species is chosen. Dashes until then.
+function mbarStats(app, d) {
+  const c = previewChar(app, d), abIdx = CHAPTERS.findIndex(x => x.id === "abilities");
+  const scored = !!c && (d.chapter >= abIdx || reachIndex(app, d) > abIdx);
   const sp = findByName(app.library.species, d.species);
-  const hp = c ? c.hp.max : 0, ac = c ? computeAC(c).total : 10, speed = c ? c.speed : (sp ? speciesSpeed(sp.traits) : null);
-  const label = [d.class, d.species].filter(Boolean).join(" · ") || "No class";
+  const hp = scored ? c.hp.max : "--", ac = scored ? computeAC(c).total : "--", speed = c && sp ? c.speed : "--";
+  return `<b>${hp}</b> HP <b>${ac}</b> AC <b>${speed}</b> ft`;
+}
+const mbarLabel = d => [d.class, d.species].filter(Boolean).join(" \u00b7 ") || "No class";
+function mobileStatBar(app, d) {
   return `<div class="cx-mbar" data-a="toggleMobileSheet" role="button" aria-label="Character stats" aria-expanded="${!!app.mobileSheetOpen}">
-    <span class="cx-mbar-label">${esc(label)}</span>
-    <span class="cx-mbar-stats"><b>${hp}</b> HP <b>${ac}</b> AC${speed != null ? ` <b>${speed}</b> ft` : ""}</span>
-    <span class="cx-mbar-arrow">${app.mobileSheetOpen ? "▼" : "▲"}</span></div>
+    <span class="cx-mbar-label">${esc(mbarLabel(d))}</span>
+    <span class="cx-mbar-stats">${mbarStats(app, d)}</span>
+    <span class="cx-mbar-arrow">${app.mobileSheetOpen ? "\u25BC" : "\u25B2"}</span></div>
   ${app.mobileSheetOpen ? `<div class="cx-msheet-wrap"><div class="cx-msheet">${sheetInner(app, d, reachIndex(app, d))}</div></div>` : ""}`;
 }
 
@@ -554,7 +554,6 @@ export function renderCreate(app) {
   } else if (id === "classChoices") content = classChoicesBody(app, d);
   else content = finishBody(app, d);
   const last = d.chapter === CHAPTERS.length - 1;
-  const c = previewChar(app, d);
   app._cxPop = false;
   return `<div class="cx-shell" style="--cx-h:${CX_HUE}">
     ${topbar(ch.title, `Step ${d.chapter + 1} of ${CHAPTERS.length}`, { back: d.chapter === 0 ? "cancelCreate" : "prevStep" })}
@@ -569,8 +568,7 @@ export function renderCreate(app) {
         <aside class="cx-sheet" aria-label="Your character so far">${sheetInner(app, d, reach)}</aside>
       </div>
     </main>
-    ${mobileStatBar(app, d, c)}
-    <div class="stickybar"><div class="wrap">
+    <div class="stickybar">${mobileStatBar(app, d)}<div class="wrap">
       <p class="why" id="wizard-why">${v.valid ? "" : esc(v.reasons.join(" "))}</p>
       <div class="btnrow">
         <button class="btn" data-a="openProgress">View progress</button>

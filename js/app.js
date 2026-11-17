@@ -1251,7 +1251,7 @@ const ACTIONS = {
     render();
   },
   bonusMode(el) { APP.createDraft.bonusMode = el.dataset.mode; render(); },
-  standardArray() { applyStandardArray(APP.createDraft, APP); APP._cxSwap = null; render(); toast("Standard array placed. Swap numbers if you like"); },
+  standardArray() { applyStandardArray(APP.createDraft, APP); APP._cxSwap = null; render(); toast("Standard array placed"); },
   rollStats() { startRolling(APP.createDraft); APP._cxSwap = null; render(); toast("Tap each score to roll it"); },
   rollOne(el) { const v = rollOne(APP.createDraft, el.dataset.ab); if (v != null) { APP._cxPop = true; render(); } },
   cxSwapSel(el) {
