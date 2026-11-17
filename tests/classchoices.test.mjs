@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Level 1 class choices: what each class asks for at creation, and that the Class Choices chapter comes right after Class.
+// Level 1 class choices: what each class asks for at creation, and that the Class Choices chapter comes after Class, Species, Background and Ability Scores.
 // Needs the unlocked rules: CR_PASSWORD=<pw> node tools/crypt.mjs unlock, run this, then delete data/library.json.
 import { readFileSync } from "node:fs";
 const mem = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
@@ -25,8 +25,8 @@ const EXPECT = {
 for (const [cls, want] of Object.entries(EXPECT)) test(cls + " asks for: " + (want.join(", ") || "nothing"), () => {
   const got = labels(cls); assert(JSON.stringify(got) === JSON.stringify(want), "got " + JSON.stringify(got));
 });
-test("Class Choices is the second chapter and needs only a class", () => {
-  assert(C.CHAPTERS[0].id === "class" && C.CHAPTERS[1].id === "classChoices" && C.CHAPTERS.length === 7, C.CHAPTERS.map(c => c.id).join(","));
+test("Class Choices comes after Ability Scores and needs only a class", () => {
+  assert(C.CHAPTERS.map(c => c.id).join(",") === "class,species,background,abilities,classChoices,classOpts,finish", C.CHAPTERS.map(c => c.id).join(","));
   const d = draftFor("Druid"); assert(C.choicePlan(d, app) && !C.validateChapter("classChoices", d, app).valid, "Primal Order not required");
   assert(C.choicePlan(C.blankDraft(), app) === null);
 });

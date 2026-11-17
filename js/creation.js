@@ -23,10 +23,10 @@ import { ARMOR, makeItem, fitsOk, wearKind } from "./gear.js";
 // related decisions and knows how to validate itself.
 export const CHAPTERS = [
   { id: "class",      title: "Class",           short: "Class", help: "Sets your hit point die, proficiencies and level 1 features." },
-  { id: "classChoices", title: "Class Choices", short: "Class choices", help: "Choose your level 1 class options." },
   { id: "species",    title: "Species",         short: "Species", help: "Sets your size, speed and species traits." },
   { id: "background", title: "Background",      short: "Background", help: "Grants two skills, a tool proficiency, a feat and your ability score increases." },
   { id: "abilities",  title: "Ability Scores",  short: "Abilities", help: "Set your six ability scores, then apply your background increases. A star marks your class\u2019s primary ability." },
+  { id: "classChoices", title: "Class Choices", short: "Class choices", help: "Choose your level 1 class options." },
   { id: "classOpts",  title: "Skills and Gear", short: "Skills & gear", help: "Choose your class skills and starting equipment." },
   { id: "finish",     title: "Name and Finish", short: "Finish", help: "Enter a name and review your character." },
 ];

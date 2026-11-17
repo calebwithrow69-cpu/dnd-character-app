@@ -381,8 +381,8 @@ function classChoicesBody(app, d) {
     const before = cp.steps.slice(0, i).every(x => stepValidFor(cp.tmp, l, x));
     return `<li><button data-a="lvlGoto" data-i="${i}" class="${i === l.step ? "now" : stepValidFor(cp.tmp, l, st) && i < l.step ? "done" : ""}" ${before ? "" : "disabled"}><span>${i + 1}</span>${esc(st.label)}</button></li>`;
   }).join("");
-  return `<ol class="lvl-steps" aria-label="Class choices">${pills}</ol>
-    <div class="choice"><div class="choice-head"><h3>${esc(step.label)}</h3><span class="sub2">${l.step + 1} of ${cp.steps.length}</span></div>${body}</div>`;
+  return `${cp.steps.length > 1 ? `<ol class="lvl-steps" aria-label="Class choices">${pills}</ol>` : ""}
+    <div class="choice"><div class="choice-head"><h3>${esc(step.label)}</h3></div>${body}</div>`;
 }
 
 // What the bottom button needs: inside Class Choices it follows the current sub-step
@@ -542,8 +542,8 @@ export function renderCreate(app) {
   let tools = "", content = "";
   if (LIST_KINDS.includes(id)) {
     const cfg = cfgFor(app, d, id);
-    cfg.randomBtn = `<button class="btn sm" data-a="randomPick">Randomize</button>`;
-    if (id === "class") tools = `<button class="btn sm" data-a="randomAll">Randomize everything</button>`;
+    cfg.randomBtn = `<button class="btn sm" data-a="randomPick">Random ${cfg.kind}</button>`;
+    if (id === "class") tools = `<button class="btn sm" data-a="randomAll">Random character</button>`;
     if (id === "background") tools = `<button class="btn sm" data-a="openCustomBg">Custom background</button>`;
     content = `${renderControls(app, cfg)}${searchBox("wizard", d.query, `Search ${cfg.items.length} ${cfg.noun}`)}
       <div class="sp-list" id="wizard-results">${renderWizardResults(app)}</div>`;

@@ -205,7 +205,7 @@ export function levelBody(app) {
 
   else if (step.id === "expertise") {
     const opts = expertiseChoices(c);
-    body = `<p class="small muted">${d.expertise.length}/${Math.min(step.n, opts.length)}</p>
+    body = `<p class="small muted">Choose ${Math.min(step.n, opts.length)} \u00b7 ${d.expertise.length}/${Math.min(step.n, opts.length)}</p>
       <div class="optlist">${opts.map(s => {
         const on = d.expertise.includes(s.id);
         return `<button class="optcard" data-a="lvlExpertise" data-id="${s.id}" aria-pressed="${on}" ${!on && d.expertise.length >= step.n ? "disabled" : ""}>
@@ -216,7 +216,7 @@ export function levelBody(app) {
   else if (step.id === "mastery") {
     const have = c.masteries || [];
     const ws = allWeapons(L, app.campaign).filter(w => w.mastery && !have.includes(w.name)).sort((a, b) => a.name.localeCompare(b.name));
-    body = `<p class="small muted">${d.mastery.length}/${step.n}</p>
+    body = `<p class="small muted">Choose ${step.n} \u00b7 ${d.mastery.length}/${step.n}</p>
       <div class="optlist">${pickList(ws, d.mastery, "lvlMastery", { kind: "mastery", max: step.n, detail: masteryDetail, render: w => `${esc(w.mastery)} · ${esc(w.cat || "")} ${esc(w.kind || "")}` })}</div>`;
   }
 
@@ -225,7 +225,7 @@ export function levelBody(app) {
     const have = c.choices[g.key] || [];
     const picked = new Set([...have, ...d.options]);
     const opts = g.options.filter(o => !have.includes(o.name));
-    body = `<p class="small muted">${d.options.length}/${step.n}</p>
+    body = `<p class="small muted">Choose ${step.n} \u00b7 ${d.options.length}/${step.n}</p>
       <div class="optlist">${opts.map(o => {
         const pre = optionPrereq(o);
         const lockedLevel = pre.level > d.next;

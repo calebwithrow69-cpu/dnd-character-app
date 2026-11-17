@@ -202,7 +202,7 @@ await check("new character: creation flow loads class list, picks a class, advan
 
 await check("species variants: inside their ability, A to Z, first preselected, tapping swaps the details, Choose keeps the pick (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "goRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(400);
-  await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 2; });
+  await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 1; });
   await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Goliath"]').click(); await p.waitForTimeout(400);
   assert(await p.locator(".sp-variants").count() === 0, "there should be no separate Variants section");
@@ -225,7 +225,7 @@ await check("species variants: inside their ability, A to Z, first preselected, 
 
 await check("detail pane order: image, description, facts, variants, abilities, then Choose; choices sit under their ability", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "goRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(400);
-  await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 2; });
+  await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 1; });
   await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Elf"]').click(); await p.waitForTimeout(400);
   const order = await p.evaluate(() => { const d = document.querySelector(".sp-detail"); const y = sel => { const e = d.querySelector(sel); return e ? e.getBoundingClientRect().top : null; }; return { img: y(".sp-addimg, .sp-hero"), desc: y(".sp-desc"), facts: y(".sp-facts"), traits: y(".sp-traits"), choose: y(".chooserow") }; });
@@ -239,14 +239,17 @@ await check("detail pane order: image, description, facts, variants, abilities, 
   noErrs(p); await p.context().close();
 });
 
-await check("class choices come right after Class: Druid is asked for Primal Order, then cantrips and spells", async () => {
+await check("class choices come after Ability Scores: Druid is asked for Primal Order, then cantrips and spells", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "goRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(400);
-  await p.locator('[data-a="cxOpen"][data-name="Druid"]').click(); await p.waitForTimeout(300);
-  await p.locator('[data-a="cxChoose"][data-name="Druid"]').click(); await p.waitForTimeout(400);
-  await clickA(p, "nextStep"); await p.waitForTimeout(500);
-  assert((await p.locator(".topbar h1").innerText()).trim() === "Class Choices", "next chapter after Class is not Class Choices");
+  await p.evaluate(() => { APP.createDraft.class = "Druid"; APP.createDraft.chapter = 0; });
+  await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(300);
+  assert((await p.locator(".topbar h1").innerText()).trim() === "Class", "did not start on Class");
+  await p.evaluate(() => { APP.createDraft.chapter = 4; });
+  await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
+  assert((await p.locator(".topbar h1").innerText()).trim() === "Class Choices", "step 5 is not Class Choices");
   assert(/Primal Order/.test(await p.locator(".cx-stage").innerText()), "Primal Order was not asked");
   assert(/Magician/.test(await p.locator(".cx-stage").innerText()) && /Warden/.test(await p.locator(".cx-stage").innerText()), "options missing");
+  assert(!/\b1 of 1\b/.test(await p.locator(".cx-stage").innerText()), "single-step counter is back");
   noErrs(p); await p.context().close();
 });
 
