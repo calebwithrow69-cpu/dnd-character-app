@@ -200,34 +200,36 @@ await check("new character: creation flow loads class list, picks a class, advan
   noErrs(p); await p.context().close();
 });
 
-await check("species variants: inside their ability, A to Z, first preselected, tapping swaps the details, Choose keeps the pick (phone)", async () => {
+await check("species variants: picked first, nothing preselected, rest hidden, tapping swaps the details, Choose keeps the pick (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "goRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(400);
   await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 1; });
   await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Goliath"]').click(); await p.waitForTimeout(400);
-  assert(await p.locator(".sp-variants").count() === 0, "there should be no separate Variants section");
-  assert(await p.locator(".sp-trait .flag.need.soft").count() >= 1, "the variant ability should be marked as a choice");
-  await p.locator('.sp-tbtn', { hasText: "Giant Ancestry" }).first().click(); await p.waitForTimeout(300);
-  const tiles = p.locator('.sp-inline .tile[data-a="cxVariant"]'), names = await tiles.locator("b").allInnerTexts();
+  assert(await p.locator(".vpick.need").count() === 1, "the variant box should be flagged as needing a pick");
+  const tiles = p.locator('.vpick .tile[data-a="cxVariant"]'), names = await tiles.locator("b").allInnerTexts();
   assert(names.length === 7, "Goliath should list 7 variants, got " + names.length);
   assert(JSON.stringify(names) === JSON.stringify([...names].sort((a, b) => a.localeCompare(b))), "variants are not A to Z: " + names.join(","));
-  assert(await tiles.first().getAttribute("aria-pressed") === "true", "the first variant should be preselected");
-  assert(await p.locator(".sp-inline .tile-about").count() === 1, "the selected variant's details should show under the tiles");
+  assert(await p.locator('.vpick .tile[aria-pressed="true"]').count() === 0, "no variant should be preselected");
+  assert(await p.locator(".sp-traits").count() === 0, "abilities should stay hidden until a variant is picked");
+  await p.locator('[data-a="cxChoose"][data-name="Goliath"]').click({ force: true }); await p.waitForTimeout(300);
+  assert(await p.evaluate(() => APP.createDraft.species !== "Goliath"), "Choose must not work before a variant is picked");
   await tiles.filter({ hasText: "Fire" }).click(); await p.waitForTimeout(300);
-  assert(/Fire/.test(await p.locator(".sp-inline .tile-about").innerText()), "the Fire details did not appear");
+  assert(await p.locator(".sp-traits").count() === 1, "abilities should show after a pick");
+  assert(/Fire/.test(await p.locator(".vpick .tile-about").innerText()), "the Fire details did not appear");
   await tiles.filter({ hasText: "Frost" }).click(); await p.waitForTimeout(300);
-  assert(/Frost/.test(await p.locator(".sp-inline .tile-about").innerText()), "switching variants should swap the details");
+  assert(/Frost/.test(await p.locator(".vpick .tile-about").innerText()), "switching variants should swap the details");
   await p.locator('[data-a="cxChoose"][data-name="Goliath"]').click(); await p.waitForTimeout(600);
   assert(await p.evaluate(() => Object.values(APP.createDraft.picks).includes("Frost's Chill")), "the previewed variant was not kept when choosing the species");
-  assert(await p.locator('.sp-inline .tile[aria-pressed="true"]').first().innerText().then(t => /Frost/.test(t)), "chosen variant not highlighted");
+  assert(await p.locator('.vpick .tile[aria-pressed="true"]').first().innerText().then(t => /Frost/.test(t)), "chosen variant not highlighted");
   noErrs(p); await p.context().close();
 });
 
-await check("detail pane order: image, description, facts, variants, abilities, then Choose; choices sit under their ability", async () => {
+await check("detail pane order: image, description, facts, abilities, then Choose; choices sit under their ability", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "goRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await p.waitForTimeout(400);
   await p.evaluate(() => { APP.createDraft.class = "Fighter"; APP.createDraft.chapter = 1; });
   await clickA(p, "openProgress"); await clickA(p, "closeProgress"); await p.waitForTimeout(400);
   await p.locator('[data-a="cxOpen"][data-name="Elf"]').click(); await p.waitForTimeout(400);
+  await p.locator('.vpick .tile[data-a="cxVariant"]').first().click(); await p.waitForTimeout(300);
   const order = await p.evaluate(() => { const d = document.querySelector(".sp-detail"); const y = sel => { const e = d.querySelector(sel); return e ? e.getBoundingClientRect().top : null; }; return { img: y(".sp-addimg, .sp-hero"), desc: y(".sp-desc"), facts: y(".sp-facts"), traits: y(".sp-traits"), choose: y(".chooserow") }; });
   const seq = ["img", "desc", "facts", "traits", "choose"].filter(k => order[k] != null);
   assert(seq.length >= 4 && seq.every((k, i) => !i || order[k] >= order[seq[i - 1]]), "wrong order: " + JSON.stringify(order));
