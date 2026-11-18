@@ -30,7 +30,8 @@ export const CHANGELOG = [
           "Gear: None option.",
           "New character: Paper or Digital choice, then Classic or Advanced with details.",
           "Rules links: damage types, Expertise, Sorcery Points.",
-          "Classic sheet: tappable rows use the accent edge, wider item names, Gear tab label."
+          "Classic sheet: tappable rows use the accent edge, wider item names, Gear tab label.",
+          "Level-up: numbered step markers that fit the screen, new features always open."
         ]
       },
       {

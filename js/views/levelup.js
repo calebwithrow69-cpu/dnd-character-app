@@ -158,12 +158,8 @@ export function levelBody(app) {
     if (ns && os !== ns) facts.push(["Spell slots", `${os || "none"} \u2192 ${ns}`]);
     facts.push(["Hit die gained", `+1d${c.hitDice.die || 8}`]);
     body = `
-      <div class="quick" style="grid-template-columns:repeat(${facts.length},1fr);margin:12px 0 4px">${facts.map(([k, v]) => `<div><b style="font-size:${String(v).length > 12 ? ".95rem" : "1.15rem"}">${esc(v)}</b><span>${esc(k)}</span></div>`).join("")}</div>
-      ${feats.length ? kGroup("New features", feats.length, { tone: "amber" }) + `<div class="k-list">${feats.map(f => {
-        const open = d.gainOpen === f.name;
-        return kRow({ icon: ICONS.star, tone: "amber", title: f.name, cap: f.from === c.class ? "Class feature" : f.from, status: open ? "\u25b4" : "\u25be", snip: open ? "" : snipOf(f.text),
-          mainAttrs: `data-a="lvlGainOpen" data-name="${esc(f.name)}" aria-expanded="${open}"`, extra: "" }) + (open ? `<div class="about" style="margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius-sm)">${formatText(f.text || "")}</div>` : "");
-      }).join("")}</div>`
+      <div class="quick" style="grid-template-columns:repeat(${facts.length},1fr);margin:0 0 8px">${facts.map(([k, v]) => `<div><b style="font-size:${String(v).length > 12 ? ".95rem" : "1.15rem"}">${esc(v)}</b><span>${esc(k)}</span></div>`).join("")}</div>
+      ${feats.length ? kGroup("New features", feats.length, { tone: "amber" }) + `<div class="sp-traits">${feats.map(f => `<div class="sp-trait open"><div class="sp-tbtn static"><span class="grow"><b>${esc(f.name)}</b><small>${esc(f.from === c.class ? "Class feature" : f.from)}</small></span></div><div class="about">${formatText(f.text || "")}</div></div>`).join("")}</div>`
         : p.open ? `<p class="sub2">Rules data ends at level 10.</p>` : `<p class="sub2">No new class features.</p>`}`;
   }
 
@@ -297,8 +293,7 @@ export function renderLevelUp(app) {
   return `
     ${topbar(title, `${c.name} · ${c.class}${d.subclass || c.subclass ? " · " + (d.subclass || c.subclass) : ""}`, { back: "lvlCancel" })}
     <main class="wrap page has-stickybar">
-      <ol class="lvl-steps" aria-label="Steps">${p.steps.map((s, i) => `<li><button data-a="lvlGoto" data-i="${i}" class="${i === d.step ? "now" : i < d.step ? "done" : ""}" ${i > d.step && !p.steps.slice(0, i).every(x => stepValid(app, x)) ? "disabled" : ""}>
-        <span>${i + 1}</span>${esc(s.label)}</button></li>`).join("")}</ol>
+      <ol class="lvl-steps" aria-label="Steps">${p.steps.map((s, i) => `<li><button data-a="lvlGoto" data-i="${i}" aria-label="${esc(s.label)}" ${i === d.step ? 'aria-current="step"' : ""} class="${i === d.step ? "now" : i < d.step ? "done" : ""}" ${i > d.step && !p.steps.slice(0, i).every(x => stepValid(app, x)) ? "disabled" : ""}>${i < d.step ? "\u2713" : i + 1}</button></li>`).join("")}</ol>
       <div class="panel"><div class="panel-head"><h2>${esc(step.label)}</h2><span class="sub2">Step ${d.step + 1} of ${p.steps.length}</span></div>
         <div class="panel-body">${body}</div></div>
     </main>
