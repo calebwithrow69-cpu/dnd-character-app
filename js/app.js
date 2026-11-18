@@ -19,7 +19,7 @@ import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
 import { renderHome, renderRulesPage, lastCharacter } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
-import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits } from "./views/create.js";
+import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits, cxFlagNeed } from "./views/create.js";
 import { cxStop, cxSeal } from "./cxfx.js";
 import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
 import { emblemFor } from "./emblems.js";
@@ -103,6 +103,9 @@ function applyPrefs() {
   syncWake();
   const t = APP.prefs.theme;
   if (t === "light" || t === "dark") root.setAttribute("data-theme", t); else root.removeAttribute("data-theme");
+  { const mq = matchMedia("(prefers-color-scheme: light)"), mode = () => root.getAttribute("data-theme") || (mq.matches ? "light" : "dark");
+    root.setAttribute("data-mode", mode());
+    if (!APP._mq) { APP._mq = mq; mq.addEventListener && mq.addEventListener("change", () => root.setAttribute("data-mode", mode())); } }
   if (APP.prefs.size && APP.prefs.size !== "normal") root.setAttribute("data-size", APP.prefs.size); else root.removeAttribute("data-size");
   setSfxEnabled(APP.prefs.sfx !== "off");
   const meta = document.querySelector('meta[name="theme-color"]');
@@ -322,6 +325,12 @@ function save() {
 }
 function saveAndRender() { save(); render(); }
 
+// Anything that replaces an existing class asks first. A first pick (no class yet) does not.
+function classGuard(info, run) {
+  const d = APP.createDraft;
+  if (APP._clsOk || !d || !d.class) { run(); return; }
+  APP._cls = { from: d.class, ...info, run }; openModal({ type: "confirmClass" });
+}
 function openModal(m) {
   const wasOpen = !!APP.modal;
   APP.modal = m;
@@ -1141,11 +1150,11 @@ const ACTIONS = {
     if (chapterId(d) === "classChoices") {
       const cp = choicePlan(d, APP);
       if (cp && cp.lvl.step < cp.steps.length - 1) {
-        if (!stepValidFor(cp.tmp, cp.lvl, cp.steps[cp.lvl.step])) return;
+        if (!stepValidFor(cp.tmp, cp.lvl, cp.steps[cp.lvl.step])) { cxFlagNeed(APP); return; }
         cp.lvl.step += 1; cp.lvl.query = ""; try { history.pushState({ cx: 1 }, ""); } catch (e) { } render(); window.scrollTo(0, 0); return;
       }
     }
-    if (!validateChapter(chapterId(d), d, APP).valid) return;
+    if (!validateChapter(chapterId(d), d, APP).valid) { cxFlagNeed(APP); return; }
     d.chapter = Math.min(CHAPTERS.length - 1, d.chapter + 1); d.query = "";
     { const cp = chapterId(d) === "classChoices" ? choicePlan(d, APP) : null; if (cp && !cp.steps.length) d.chapter = Math.min(CHAPTERS.length - 1, d.chapter + 1); } // nothing to choose: skip the screen
     try { history.pushState({ cx: 1 }, ""); } catch (e) { }
@@ -1194,6 +1203,7 @@ const ACTIONS = {
   },
   cxChoose(el) {
     const kind = el.dataset.kind, name = el.dataset.name, d0 = APP.createDraft;
+    if (kind === "class" && d0.class && d0.class !== name && !APP._clsOk) { classGuard({ to: name, how: "pick" }, () => ACTIONS.cxChoose(el)); return; }
     const field = { species: "species", class: "class", background: "background" }[kind];
     const keys = Object.keys(d0.picks), changed = d0[field] && d0[field] !== name;
     const lost = changed && (kind === "class" ? d0.classSkills.length > 0 || d0.equipClass !== "A" || keys.some(k => /^(cls:|gear:class)/.test(k))
@@ -1272,6 +1282,7 @@ const ACTIONS = {
   randomPick() {
     const d = APP.createDraft, kind = chapterId(d);
     if (!["class", "species", "background"].includes(kind)) return;
+    if (kind === "class" && d.class && !APP._clsOk) { classGuard({ how: "random" }, () => ACTIONS.randomPick()); return; }
     const items = listItems(APP, d, kind);
     if (!items.length) return;
     const it = items[Math.floor(Math.random() * items.length)];
@@ -1299,6 +1310,7 @@ const ACTIONS = {
     d.classSkills = pool.slice(0, n); render();
   },
   randomAll() {
+    if (APP.createDraft.class && !APP._clsOk) { classGuard({ how: "all" }, () => ACTIONS.randomAll()); return; }
     randomFill(APP.createDraft, generateRandom);
     APP.createDraft.chapter = CHAPTERS.length - 1;
     render(); window.scrollTo(0, 0); toast("Random character ready");
@@ -1310,7 +1322,12 @@ const ACTIONS = {
   },
   finishCreate() {
     const d = APP.createDraft;
-    if (!d || !validateAll(d, APP).valid) { toast("Finish every step before creating the character"); return; } // also stops a second tap while the sheet opens
+    if (!d) return;
+    if (!validateAll(d, APP).valid) { // an earlier step is unfinished: go there and flag it; otherwise the name
+      const i = CHAPTERS.findIndex(c => c.id !== "finish" && !validateChapter(c.id, d, APP).valid);
+      if (i >= 0) { d.chapter = i; d.query = ""; render(); requestAnimationFrame(() => cxFlagNeed(APP)); } else cxFlagNeed(APP);
+      return;
+    } // also stops a second tap while the sheet opens
     const cp = choicePlan(d, APP);
     const char = store.normalize(buildCharacter(d, APP), APP.library);
     const sealHue = (d.species ? emblemFor("species", d.species) : emblemFor("class", d.class)).hue;
@@ -1668,6 +1685,8 @@ const ACTIONS = {
   pickFrom(el) { addPicked(el.dataset.picker, el.dataset.name, false); },
   pickCustom(el) { addPicked(el.dataset.picker, APP.pickerQuery.trim(), true); },
   askRemove(el) { APP._rm = { act: el.dataset.do, data: { ...el.dataset }, what: el.dataset.what, name: el.dataset.name }; APP._rmUnder = APP.modal || null; openModal({ type: "confirmRemove" }); },
+  confirmClass() { const c = APP._cls; APP._cls = null; closeModal(); if (!c) return; APP._clsOk = true; try { c.run(); } finally { APP._clsOk = false; } },
+  cancelClass() { APP._cls = null; closeModal(); },
   cancelRemove() { APP._rm = null; if (APP._rmUnder) { APP.modal = APP._rmUnder; APP._rmUnder = null; render(); } else closeModal(); },
   confirmRemove() { const r = APP._rm, under = APP._rmUnder; APP._rm = null; APP._rmUnder = null; if (under) APP.modal = under; else closeModal(); if (r && ACTIONS[r.act]) ACTIONS[r.act]({ dataset: r.data }); },
   removeFeat(el) { APP.char.feats.splice(+el.dataset.i, 1); closeModal(); saveAndRender(); },

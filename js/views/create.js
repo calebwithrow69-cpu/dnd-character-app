@@ -41,7 +41,7 @@ function choiceDetail(app, o) {
 export function renderChoice(app, d, def) {
   const opts = optionsFor(def, app, d);
   const cur = [].concat(d.picks[def.id] || []);
-  const full = cur.length >= def.n;
+  const full = cur.length >= def.n, need = def.kind !== "text" && !full ? " need" : "";
   const head = `<div class="choice-head"><h3>${esc(def.label)}</h3>
       <span class="sub2">${esc(def.trait && def.trait !== def.label ? def.trait + " \u00b7 " : "")}${esc(def.from)}${def.n > 1 ? ` \u00b7 choose ${def.n} (${cur.length}/${def.n})` : ""}</span></div>
       ${def.hint ? `<p class="small muted">${esc(def.hint)}</p>` : ""}`;
@@ -52,12 +52,12 @@ export function renderChoice(app, d, def) {
   if (!opts.length) return `<div class="choice">${head}<p class="small muted">${def.kind === "spell" ? "Choose the spell list first." : "No options available."}</p></div>`;
   const rich = opts.some(o => o.detail || o.term);
   if (!rich) {
-    return `<div class="choice">${head}<div class="chips">${opts.map(o => {
+    return `<div class="choice${need}">${head}<div class="chips">${opts.map(o => {
       const on = cur.includes(o.v);
       return `<button class="chipbtn" data-a="pick" data-id="${esc(def.id)}" data-v="${esc(o.v)}" aria-pressed="${on}" ${!on && full && def.n > 1 ? "disabled" : ""}>${esc(o.label || o.v)}${o.sub ? `<span>${esc(o.sub)}</span>` : ""}</button>`;
     }).join("")}</div></div>`;
   }
-  return `<div class="choice">${head}<div class="optlist">${opts.map(o => {
+  return `<div class="choice${need}">${head}<div class="optlist">${opts.map(o => {
     const on = cur.includes(o.v), key = `choice:${def.id}:${o.v}`, open = app.info.has(key);
     return infoRow({ key, action: "pick", data: { id: def.id, v: o.v }, title: o.label || o.v, sub: esc(o.sub || ""), snip: o.detail ? snipOf(o.detail) : "",
       pressed: on, disabled: !on && full && def.n > 1, open, detail: open ? choiceDetail(app, o) : "", badge: on ? `<span class="tag amber">Chosen</span>` : "" });
@@ -70,14 +70,14 @@ const firstLine = firstLineOf;
 export function renderTileChoice(app, d, def) {
   const opts = optionsFor(def, app, d);
   const cur = [].concat(d.picks[def.id] || []);
-  const full = cur.length >= def.n;
+  const full = cur.length >= def.n, need = def.kind !== "text" && !full ? " need" : "";
   const head = `<div class="choice-head"><h3>${esc(def.label)}</h3>
       <span class="sub2">${esc(def.trait && def.trait !== def.label ? def.trait + " \u00b7 " : "")}${def.n > 1 ? `choose ${def.n} (${cur.length}/${def.n})` : "choose one"}</span></div>
       ${def.hint && def.kind !== "text" ? `<p class="small muted">${esc(def.hint)}</p>` : ""}`;
   if (def.kind === "text") return renderChoice(app, d, def);
   if (!opts.length) return renderChoice(app, d, def);
   const picked = opts.filter(o => cur.includes(o.v));
-  return `<div class="choice tiles">${head}<div class="tilegrid">${opts.map(o => {
+  return `<div class="choice tiles${need}">${head}<div class="tilegrid">${opts.map(o => {
     const on = cur.includes(o.v), sub = o.sub || "";
     return `<button class="tile" data-a="pick" data-id="${esc(def.id)}" data-v="${esc(o.v)}" aria-pressed="${on}" ${!on && full && def.n > 1 ? "disabled" : ""}>
       <span class="grow"><b>${esc(o.label || o.v)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span>${on ? `<span class="tick" aria-hidden="true">&#10003;</span>` : ""}</button>`;
@@ -85,6 +85,25 @@ export function renderTileChoice(app, d, def) {
     ${picked.map(o => { const det = choiceDetail(app, o); return det ? `<div class="about tile-about"><p class="sub2"><b>${esc(o.label || o.v)}</b></p>${det}</div>` : ""; }).join("")}</div>`;
 }
 
+
+
+// A hit die drawn as its own shape with the number inside (d6 square, d8 diamond, d10 kite, d12 pentagon).
+const DIE_SHAPE = {
+  6: '<rect x="3" y="3" width="18" height="18" rx="3.5"/>',
+  8: '<path d="M12 1.6 22.4 12 12 22.4 1.6 12z"/><path class="f" d="M1.6 12h20.8M12 1.6v20.8"/>',
+  10: '<path d="M12 1.5l9.6 7.6L12 22.5 2.4 9.1z"/><path class="f" d="M2.4 9.1h19.2"/>',
+  12: '<path d="M12 1.6l10 7.4-3.8 12H5.8L2 9z"/><path class="f" d="M12 1.6v5.2M2 9l5.6 1.8M22 9l-5.6 1.8M5.8 21l3.6-6.6M18.2 21l-3.6-6.6"/>'
+};
+export function dieIcon(n) {
+  const num = String(n), sh = DIE_SHAPE[n] || DIE_SHAPE[6];
+  return `<svg class="die" viewBox="0 0 24 24" aria-hidden="true">${sh}<text x="12" y="${n === 10 ? 14.6 : 15.2}" text-anchor="middle">${num}</text></svg>`;
+}
+const AB_SHORT = { str: "STR", dex: "DEX", con: "CON", int: "INT", wis: "WIS", cha: "CHA" };
+export const abChip = k => `<i class="ab ab-${k}" aria-label="${esc(ABILITY_LABEL[k])}">${AB_SHORT[k]}</i>`;
+const classBadges = c => {
+  const keys = primaryAbilities(c.primary), caster = (c.features || []).some(f => /^(Spellcasting|Pact Magic)$/i.test(f.name));
+  return `<span class="cx-badges"><span class="cx-die" aria-label="d${c.hd} hit die">${dieIcon(c.hd)}</span>${keys.map(abChip).join("")}${caster ? `<span class="cx-tagc">Caster</span>` : ""}</span>`;
+};
 
 // How well one ability score suits a class: green (primary), yellow (conditional), red (little use).
 // Conditional = hit points (Con), AC and initiative (Dex, unless heavy armor), or a subclass that adds spellcasting.
@@ -112,7 +131,8 @@ function renderBonus(app, d) {
       <option value="">Choose\u2026</option>
       ${opts.filter(a => a !== exclude).map(a => { const f = abilFit(app.library, cls, a); return `<option value="${a}" ${d[key] === a ? "selected" : ""} class="${f ? "cx-bg-" + f.tone : ""}">${f ? FIT_MARK[f.tone] + " " : ""}${ABILITY_LABEL[a]}</option>`; }).join("")}
     </select>`;
-  return `<div class="choice"><div class="choice-head"><h3>Ability score increases</h3><span class="sub2">${esc(d.background)}</span></div>
+  const bonusDone = d.bonusMode === "111" || (!!d.plus2 && !!d.plus1 && d.plus1 !== d.plus2);
+  return `<div class="choice${bonusDone ? "" : " need"}"><div class="choice-head"><h3>Ability score increases</h3><span class="sub2">${esc(d.background)}</span></div>
     <p class="small">Raise ${opts.map(a => `<span class="cx-ab ${cls ? abilColor(app.library, cls, a) : ""}">${ABILITY_LABEL[a]}</span>`).join(", ")}.${cls ? ` ${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
     <div class="seg" role="group" aria-label="Bonus type" style="margin-top:8px">
       <button data-a="bonusMode" data-mode="21" aria-pressed="${d.bonusMode === "21"}">+2 and +1</button>
@@ -138,7 +158,7 @@ function renderEquipGroup(app, d, which) {
       return `<button class="optcard" data-a="pickEquip" data-which="${key}" data-k="${o.key}" aria-pressed="${on}">
         <span class="grow"><b>${o.items.length ? `Option ${o.key}: gear + ${fmtPrice(o.gp)}` : `Option ${o.key}: ${fmtPrice(o.gp)} to spend`}</b>
         <span>${esc(list || "No gear. Spend the gold in the shop below.")}</span></span>${on ? `<span class="tag amber">Chosen</span>` : ""}</button>
-        ${on ? gearChoices(app, d).filter(g => g.which === which && !g.fixed).map(g => `<div class="field gearpick"><label>Choose: ${esc(g.label)}</label>
+        ${on ? gearChoices(app, d).filter(g => g.which === which && !g.fixed).map(g => `<div class="field gearpick${d.picks[g.id] ? "" : " need"}"><label>Choose: ${esc(g.label)}</label>
           <select class="f" data-gear-pick="${esc(g.id)}"><option value="">Choose\u2026</option>
           ${g.options.map(o => `<option value="${esc(o)}" ${d.picks[g.id] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`).join("") : ""}`;
     }).join("")}</div></div>`;
@@ -206,8 +226,9 @@ function cfgFor(app, d, kind) {
     return {
       ...base, items, selected: d.class, noun: "classes", sources: new Set(items.map(c => c.source)).size > 1, filterLabel: "Show",
       filterOptions: ["All", "Spellcasters", "Non-spellcasters"], test: (c, f) => f === "Spellcasters" ? caster(c) : !caster(c),
-      sub: c => `Primary: ${c.primary || "?"} \u00b7 d${c.hd} hit die${caster(c) ? " \u00b7 Spellcaster" : ""}`,
-      facts: c => [["Hit Point Die", "d" + c.hd], ["Primary ability", c.primary], ["Saving throws", parseList(c.saves).join(", ")],
+      sub: () => "",
+      badges: classBadges, accent: c => primaryAbilities(c.primary),
+      facts: c => [["Hit Point Die", "d" + c.hd, `<span class="cx-die">${dieIcon(c.hd)}d${c.hd}</span>`], ["Primary ability", c.primary, primaryAbilities(c.primary).map(abChip).join(" ") + " " + esc(c.primary)], ["Saving throws", parseList(c.saves).join(", ")],
         ["Armor training", c.armorProf || "None"], ["Weapon training", c.weaponProf], c.toolProf ? ["Tool training", c.toolProf] : null,
         ["Skills", `Choose ${c.skillN}: ${parseList(c.skillFrom).join(", ")}`]].filter(Boolean).filter(f => f[1]),
       lore: c => c.desc || "", laterCollapsed: true, choices: o => choiceBundle(app, d, "class", o),
@@ -293,7 +314,7 @@ function abilitiesBody(app, d) {
   const rolling = d.rolls && !d.pointBuy && !d.scoresSet;
   const rc = rolledCount(d);
   return `<p class="small muted">${cls ? `${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
-    <div class="btnrow" style="margin-top:10px">
+    <div class="btnrow cx-methods${d.scoresSet ? "" : " need"}" style="margin-top:10px">
       <button class="btn sm" data-a="standardArray">Standard array</button>
       <button class="btn sm${d.pointBuy ? " pri" : ""}" data-a="cxPointBuy">Point buy</button>
       <button class="btn sm${rolling ? " pri" : ""}" data-a="rollStats">Roll 4d6</button>
@@ -323,7 +344,7 @@ function expertisePanel(app, d) {
   const cp = choicePlan(d, app); if (!cp || !cp.expertise) return "";
   const st = cp.expertise, opts = expertiseOptions(cp.tmp), have = cp.lvl.expertise, full = have.length >= Math.min(st.n, opts.length);
   const { n } = classSkillOptions(app, d);
-  return `<div class="choice"><div class="choice-head"><h3>Expertise</h3><span class="sub2">Choose ${st.n} \u00b7 ${have.length}/${Math.min(st.n, opts.length) || st.n}</span></div>
+  return `<div class="choice${have.length < Math.min(st.n, opts.length) ? " need" : ""}"><div class="choice-head"><h3>Expertise</h3><span class="sub2">Choose ${st.n} \u00b7 ${have.length}/${Math.min(st.n, opts.length) || st.n}</span></div>
     ${d.classSkills.length < Math.min(n, classSkillOptions(app, d).from.length) ? `<p class="small muted">Choose your class skills first. Expertise doubles your proficiency bonus for skills you are proficient in.</p>` : `<p class="small muted">Your proficiency bonus is doubled for ${st.n} skills you are proficient in.</p>`}
     <div class="chips">${opts.map(o => `<button class="chipbtn" data-a="lvlExpertise" data-id="${o.id}" aria-pressed="${have.includes(o.id)}" ${full && !have.includes(o.id) ? "disabled" : ""}>${esc(o.label)}</button>`).join("")}</div></div>`;
 }
@@ -342,7 +363,7 @@ function skillsGearBody(app, d) {
   const subs = subclassesFor(app.library, d.class), lvl = app.campaign.startingLevel || 1;
   return `<div class="stack">
     ${toolDefs.map(def => renderChoice(app, d, def)).join("")}
-    <div class="choice"><div class="choice-head"><h3>Class skills</h3><span class="sub2">Choose ${need} \u00b7 ${d.classSkills.length}/${need}</span></div>
+    <div class="choice${d.classSkills.length < need ? " need" : ""}"><div class="choice-head"><h3>Class skills</h3><span class="sub2">Choose ${need} \u00b7 ${d.classSkills.length}/${need}</span></div>
       <div class="optlist">
         ${taken.map(id => `<div class="optcard locked" aria-pressed="true"><input type="checkbox" checked disabled><span class="grow"><b>${esc(SKILLS.find(s => s.id === id).label)}</b><span>You have this</span></span></div>`).join("")}
         ${choices.map(id => { const on = d.classSkills.includes(id), s = SKILLS.find(x => x.id === id);
@@ -572,8 +593,24 @@ export function renderCreate(app) {
       <p class="why" id="wizard-why">${v.valid ? "" : esc(v.reasons.join(" "))}</p>
       <div class="btnrow">
         <button class="btn" data-a="openProgress">View progress</button>
-        <button class="btn pri" data-a="${last ? "finishCreate" : "nextStep"}" ${v.valid ? "" : "disabled"}>${last ? "Create character" : "Continue"}</button>
+        <button class="btn pri${v.valid ? "" : " incomplete"}" data-a="${last ? "finishCreate" : "nextStep"}" ${v.valid ? "" : 'aria-disabled="true"'}>${last ? "Create character" : "Continue"}</button>
       </div>
     </div></div>
     ${app.progressOpen ? progressSheet(app, d) : ""}</div>`;
+}
+
+// Continue on an unfinished step: move to the first thing still missing and flag it.
+export function cxFlagNeed(app) {
+  const d = app.createDraft, id = chapterId(d), stage = document.querySelector(".cx-stage"); if (!d || !stage) return false;
+  let el = null;
+  if (id === "finish") el = document.getElementById("f-name");
+  else if (LIST_KINDS.includes(id) && !d[id]) el = stage.querySelector("#wizard-results");
+  else el = stage.querySelector(".need, .sp-trait.pending") || stage.querySelector(".optlist, .panel");
+  if (!el) return false;
+  el.scrollIntoView({ block: el.getBoundingClientRect().height > innerHeight * 0.6 ? "start" : "center", behavior: "smooth" });
+  el.classList.remove("flag-need"); void el.offsetWidth; el.classList.add("flag-need");
+  if (el.focus && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) el.focus({ preventScroll: true });
+  setTimeout(() => el.classList.remove("flag-need"), 2600);
+  const why = document.getElementById("wizard-why"); if (why) { why.classList.remove("flag-why"); void why.offsetWidth; why.classList.add("flag-why"); }
+  return true;
 }

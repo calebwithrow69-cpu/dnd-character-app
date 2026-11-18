@@ -186,6 +186,111 @@
     {
       "name": "Passive Perception",
       "text": "10 + your Wisdom (Perception) bonus. The DM compares it against hidden things, like a lurking creature or a trap, to see whether you notice them without rolling."
+    },
+    {
+      "name": "Spell Slot",
+      "text": "Fuel for casting a spell of level 1 or higher. Casting spends one slot of the spell's level or higher; slots come back on a Long Rest.",
+      "aliases": [
+        "Spell Slots"
+      ]
+    },
+    {
+      "name": "Magic Action",
+      "text": "The action you spend to cast most spells or use a magic item. A turn gives you one action.",
+      "aliases": [
+        "Magic action"
+      ]
+    },
+    {
+      "name": "Attack Action",
+      "text": "The action that lets you make an attack with a weapon or an Unarmed Strike. Extra Attack adds more attacks to it.",
+      "aliases": [
+        "Attack action"
+      ]
+    },
+    {
+      "name": "Utilize Action",
+      "text": "The action for using an object, such as a lever, a door or a tool.",
+      "aliases": [
+        "Utilize action"
+      ]
+    },
+    {
+      "name": "Unarmed Strike",
+      "text": "A punch, kick or head-butt. Hits for 1 + Strength modifier Bludgeoning damage, and you are proficient with it.",
+      "aliases": [
+        "Unarmed Strikes"
+      ]
+    },
+    {
+      "name": "Weapon Mastery",
+      "text": "A weapon property you unlock for weapons your class lets you master, such as Push, Topple or Vex. Only the weapons you picked count.",
+      "aliases": [
+        "Mastery property"
+      ]
+    },
+    {
+      "name": "Spellcasting Ability",
+      "text": "The ability score that powers your spells. It sets your Spell Save DC and Spell Attack bonus."
+    },
+    {
+      "name": "Damage Roll",
+      "text": "The dice you roll after a hit to deal damage, plus the modifiers that apply.",
+      "aliases": [
+        "Damage Rolls"
+      ]
+    },
+    {
+      "name": "Creature Type",
+      "text": "The broad group a creature belongs to, such as Humanoid, Undead or Fey. Some effects only work on certain types.",
+      "aliases": [
+        "Creature Types"
+      ]
+    },
+    {
+      "name": "Difficulty Class",
+      "text": "The number a d20 Test must meet or beat to succeed. Written DC.",
+      "aliases": [
+        "DC"
+      ]
+    },
+    {
+      "name": "Weapon Proficiency",
+      "text": "Training in a weapon group. You add your Proficiency Bonus to attack rolls with weapons you are proficient with."
+    },
+    {
+      "name": "Concentration",
+      "text": "Keeps some spells going. Taking damage forces a Constitution save, and casting another Concentration spell ends the first."
+    },
+    {
+      "name": "Spellcasting Focus",
+      "text": "An item that stands in for a spell's material components, such as an arcane focus or a holy symbol.",
+      "aliases": [
+        "arcane focus",
+        "holy symbol",
+        "druidic focus"
+      ]
+    },
+    {
+      "name": "Prepared Spell",
+      "text": "A spell from your list that you have readied. Only prepared spells can be cast.",
+      "aliases": [
+        "Prepared Spells"
+      ]
+    },
+    {
+      "name": "Ranged Attack",
+      "text": "An attack made from a distance with a bow, a thrown weapon or a spell.",
+      "aliases": [
+        "Ranged Attacks"
+      ]
+    },
+    {
+      "name": "Melee Attack",
+      "text": "An attack made up close with a weapon or an Unarmed Strike.",
+      "aliases": [
+        "Melee Attacks"
+      ]
     }
   ]
 }

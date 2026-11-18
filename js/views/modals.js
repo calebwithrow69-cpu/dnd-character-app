@@ -98,6 +98,13 @@ export function renderModal(app) {
       return modalShell(`Switch to the ${to} sheet?`, `<p>Characters are not changed.</p>`,
         `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmStyle">Switch</button>`);
     }
+    case "confirmClass": {
+      const c = app._cls || {};
+      const title = c.how === "all" ? "Random character?" : "Change class?";
+      const body = c.how === "all" ? `<p>This replaces every choice you made.</p>`
+        : `<p><b>${esc(c.from || "")}</b> becomes ${c.how === "random" ? "a random class" : `<b>${esc(c.to || "")}</b>`}.</p><p class="sub2">Class skills, gear and choices reset.</p>`;
+      return modalShell(title, body, `<button class="btn" data-a="cancelClass">Keep ${c.how === "all" ? "mine" : esc(c.from || "it")}</button><button class="btn pri" data-a="confirmClass">${c.how === "all" ? "Replace" : "Change class"}</button>`);
+    }
     case "confirmRemove": {
       const r = app._rm || {};
       const note = r.what === "spell" ? "It leaves your spell list. You can add it back any time from Add spells."

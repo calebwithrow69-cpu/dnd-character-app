@@ -10,39 +10,62 @@ export function esc(s) {
 // Filled by the app from the book glossary + data/terms.json.
 let GLOSSARY = new Map();      // lowercased name -> {name, text}
 let TERM_RE = null;
-const SKIP_TERMS = new Set(["adventure", "campaign", "ally", "attitude", "alignment", "action", "magic", "help", "ready", "speed", "hit points", "save", "push", "slow", "vex", "nick", "sap", "graze", "cleave", "topple", "dash", "hide", "dodge", "darkness"]);
+// Words too common to link on their own. "action" and friends still link inside defined phrases (Magic action, Hit Points).
+const SKIP_TERMS = new Set(["adventure", "campaign", "ally", "attitude", "alignment", "action", "magic", "help", "ready", "speed", "save", "push", "slow", "vex", "nick", "sap", "graze", "cleave", "topple", "dash", "hide", "dodge", "darkness"]);
+// Plain-word terms that are only linked when written capitalized ("Speed", "Hit Points"), as the 2024 rules do.
+const CAP_ONLY = new Set(["speed", "hit points"]);
+let TERM_RE_I = null, TERM_RE_C = null, SPELL_RE = null;
+const reEsc = n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function setGlossary(entries) {
   GLOSSARY = new Map();
   for (const e of entries) {
     if (!e || !e.name || !e.text) continue;
     for (const n of [e.name, ...(e.aliases || [])]) if (!GLOSSARY.has(n.toLowerCase())) GLOSSARY.set(n.toLowerCase(), { name: e.name, text: e.text });
   }
-  // Only capitalized, whole-word matches (2024 rules capitalize defined terms), longest first.
-  const names = [...GLOSSARY.keys()].filter(k => !SKIP_TERMS.has(k)).sort((a, b) => b.length - a.length);
-  const pat = names.map(k => [...GLOSSARY.values()].find(v => v.name.toLowerCase() === k)?.name || k)
-    .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const aliasPat = [...GLOSSARY.entries()].filter(([k, v]) => k !== v.name.toLowerCase() && !SKIP_TERMS.has(k)).map(([k]) => k.replace(/\b\w/g, c => c.toUpperCase()).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-  const all = [...new Set([...pat, ...aliasPat])].sort((a, b) => b.length - a.length);
-  TERM_RE = all.length ? new RegExp(`\\b(${all.join("|")})(s|es)?\\b`, "g") : null;
+  const keys = [...GLOSSARY.keys()].sort((a, b) => b.length - a.length);
+  const loose = keys.filter(k => SKIP_TERMS.has(k) === false && (k.length >= 5 || k.includes(" "))).map(reEsc);
+  const strict = keys.filter(k => CAP_ONLY.has(k) || (SKIP_TERMS.has(k) === false && k.length < 5 && k.includes(" ") === false))
+    .map(k => reEsc(k.replace(/\b\w/g, c => c.toUpperCase())));
+  TERM_RE_I = loose.length ? new RegExp(`\\b(${loose.join("|")})(s|es)?\\b`, "gi") : null;
+  TERM_RE_C = strict.length ? new RegExp(`\\b(${strict.join("|")})(s|es)?\\b`, "g") : null;
+  TERM_RE = TERM_RE_I;
 }
 export function glossaryEntry(name) { return GLOSSARY.get(String(name || "").toLowerCase()) || null; }
 
+// Run `fn` over the text between tags/buttons only, so links never nest or land inside markup.
+const outside = (html, fn) => html.split(/(<button[\s\S]*?<\/button>|<[^>]+>)/).map((seg, i) => i % 2 ? seg : fn(seg)).join("");
 function linkTerms(escaped, seen) {
-  if (!TERM_RE) return escaped;
-  return escaped.replace(TERM_RE, (m, base) => {
+  if (!TERM_RE_I && !TERM_RE_C && !SPELL_RE) return escaped;
+  const term = (m, base) => {
     const e = GLOSSARY.get(base.toLowerCase());
     if (!e || seen.has(e.name)) return m;
     seen.add(e.name);
     return `<button type="button" class="term" data-term="${esc(e.name)}">${m}</button>`;
-  });
+  };
+  let out = escaped;
+  if (TERM_RE_I) out = outside(out, t => t.replace(TERM_RE_I, term));
+  if (TERM_RE_C) out = outside(out, t => t.replace(TERM_RE_C, term));
+  if (SPELL_RE) out = outside(out, t => t.replace(SPELL_RE, m => {
+    const n = SPELLS.get(m.toLowerCase().replace(/&#39;|&#x27;/g, "'")); if (!n || seen.has("spell:" + n)) return m;
+    seen.add("spell:" + n);
+    return `<button type="button" class="spelllink" data-a="showDetail" data-kind="spell" data-name="${esc(n)}">${m}</button>`;
+  }));
+  return out;
+}
+
+// Spell names the rules text can link to (set by the app once the rules open).
+let SPELLS = new Map();
+const SPELL_AMBIGUOUS = new Set(["light", "shield", "command", "message", "sleep", "fear", "haste", "slow", "resistance", "blur", "guidance", "bane", "bless", "heroism", "reach"]);
+export function setSpellNames(names) {
+  SPELLS = new Map((names || []).map(n => [String(n).toLowerCase(), n]));
+  // Spells are Title Case in the rules; match that case exactly, and leave one-word names that are also plain words.
+  const pats = [...SPELLS.values()].filter(n => n.length > 3 && !(SPELL_AMBIGUOUS.has(n.toLowerCase()) && !n.includes(" "))).sort((a, b) => b.length - a.length).map(n => reEsc(esc(n)));
+  SPELL_RE = pats.length ? new RegExp(`\\b(?:${pats.join("|")})\\b`, "g") : null;
 }
 
 // Rules text: paragraphs on blank lines, bold lead-ins ("Darkvision. You…"
 // or "Speed: 30 feet"), and the first mention of each glossary term turned
 // into a tap/hover definition.
-// Spell names the rules text can link to (set by the app once the rules open).
-let SPELLS = new Map();
-export function setSpellNames(names) { SPELLS = new Map((names || []).map(n => [String(n).toLowerCase(), n])); }
 
 const CELL = /\t+| {2,}/, isRow = l => CELL.test(l.trim());
 // A "table" in the book text is a title line, then rows whose cells are split

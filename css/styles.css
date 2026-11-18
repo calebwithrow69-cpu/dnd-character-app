@@ -100,6 +100,7 @@ svg .fill{fill:currentColor;stroke:none}
 .btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
 .btn.sm{min-height:36px;padding:5px 11px;font-size:.88rem}
 .btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.incomplete{opacity:.55}
 .btn:active:not(:disabled){transform:translateY(1px)}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap}
 .btnrow > .btn{flex:1}
@@ -1549,9 +1550,16 @@ body.cx-on #app{position:relative;z-index:1}
 .cx-msheet-wrap{position:absolute;left:0;right:0;bottom:100%;max-height:60vh;overflow:auto;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(0,0,0,.25);overscroll-behavior:contain;animation:cxMsheetIn .2s ease-out}
 .cx-msheet{padding:16px}
 @keyframes cxMsheetIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
-@media (min-width:1100px){.cx-mbar,.cx-msheet-wrap{display:none}}
-@media (max-width:1099px){main.page.has-stickybar.cx-main{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}}
-@media (max-width:1099px){.cx-grid>.cx-sheet{display:none}}
+@media (min-width:760px){.cx-mbar,.cx-msheet-wrap{display:none}}
+@media (max-width:759px){main.page.has-stickybar.cx-main{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}}
+@media (max-width:759px){.cx-grid>.cx-sheet{display:none}}
+/* tablet: stage + the character panel locked beside it (the chapter rail joins at 1100px) */
+@media (min-width:760px) and (max-width:1099px){
+  .cx-main.wrap{max-width:1100px}
+  .cx-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+  .cx-sheet{margin-top:12px;position:sticky;top:76px;max-height:calc(100vh - 160px);overflow:auto;scrollbar-width:thin}
+  .cx-shell .stickybar .wrap{max-width:1100px;padding-right:calc(316px + 16px)}
+}
 
 /* ability fit on the background picker */
 .cx-chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 2px}
@@ -1831,7 +1839,7 @@ html.dead{filter:grayscale(1);transition:filter 1.6s ease}
 .sp-desc p{margin:0 0 .7em}.sp-desc p:last-child{margin-bottom:0}
 
 /* creation: card look. Card tokens only inside the oxblood preview card; page-level parts use theme variables. */
-.cx-sheet{position:relative;overflow:hidden;border:0;border-radius:var(--card-r);color:var(--card-ink);background:linear-gradient(160deg,var(--card-hi),var(--card-lo));box-shadow:0 10px 28px rgba(40,8,14,.28);
+.cx-sheet{position:sticky;top:76px;overflow-x:hidden;overflow-y:auto;border:0;border-radius:var(--card-r);color:var(--card-ink);background:linear-gradient(160deg,var(--card-hi),var(--card-lo));box-shadow:0 10px 28px rgba(40,8,14,.28);
   --ink:var(--card-ink);--muted:var(--card-sub);--faint:var(--card-label);--line:#ffffff2e;--line-soft:#ffffff1a;--frame:#ffffff3d;--bg:var(--card-inset);--panel:var(--card-inset);--panel2:var(--card-inset);--amber:var(--card-accent);--amber-ink:var(--card-accent-ink)}
 .cx-sheet::before{content:"";position:absolute;right:-70px;top:-70px;width:240px;height:240px;border-radius:50%;border:1px solid #ffffff18;box-shadow:0 0 0 26px #ffffff08,0 0 0 56px #ffffff04;pointer-events:none}
 .cx-sheet>*{position:relative}
@@ -1870,3 +1878,78 @@ input.f,select.f,textarea.f{border-color:var(--edge)}
 .grid3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .abil{min-width:0;padding-inline:2px}
 .abil .an{font-size:.58rem;letter-spacing:.05em;white-space:nowrap}
+
+/* Continue on an unfinished step: the missing choice is flagged where it sits */
+.flag-need{animation:flagNeed 2.6s ease-out;scroll-margin:110px 0 220px}
+@keyframes flagNeed{0%,100%{box-shadow:0 0 0 0 transparent}8%,40%,72%{box-shadow:0 0 0 4px var(--gold),0 0 22px 2px color-mix(in srgb,var(--gold) 55%,transparent)}22%,56%{box-shadow:0 0 0 2px var(--gold)}}
+.choice.need,.cx-methods.need{outline:2px dashed color-mix(in srgb,var(--gold) 70%,transparent);outline-offset:4px;border-radius:var(--radius-sm)}
+.flag-why{animation:flagWhy .7s ease-out}
+@keyframes flagWhy{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.flag-need,.flag-why{animation:none}.flag-need{box-shadow:0 0 0 4px var(--gold)}}
+
+/* entries that are always open */
+.sp-tbtn.static{cursor:default;display:flex;align-items:center;gap:10px;width:100%;text-align:left}
+.sp-trait.open>.about{display:block}
+
+/* ===== Creation polish: ability colors, hit dice, light theme, tappable signal ===== */
+:root{--ab-str:#D2603A;--ab-dex:#35AE98;--ab-con:#C99A33;--ab-int:#5E8FD6;--ab-wis:#9A74D6;--ab-cha:#D65C98}
+html[data-mode="light"]{--ab-str:#B8431F;--ab-dex:#1F8573;--ab-con:#946D10;--ab-int:#2A5CA8;--ab-wis:#6A3FB0;--ab-cha:#B02A72}
+.ab{--abc:var(--ab-str);display:inline-block;font:700 .72rem/1 var(--mono);font-style:normal;letter-spacing:.04em;padding:4px 7px;border-radius:5px;color:var(--ink);background:color-mix(in srgb,var(--abc) 24%,transparent);border:1.5px solid var(--abc);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--abc) 45%,transparent)}
+.ab-str{--abc:var(--ab-str)}.ab-dex{--abc:var(--ab-dex)}.ab-con{--abc:var(--ab-con)}.ab-int{--abc:var(--ab-int)}.ab-wis{--abc:var(--ab-wis)}.ab-cha{--abc:var(--ab-cha)}
+.cx-badges{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:5px 0 2px}
+.cx-tagc{font:600 .68rem/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 0 4px 4px}
+.cx-die{display:inline-flex;align-items:center;gap:4px;font:700 .8rem var(--mono);color:var(--ink)}
+.die{width:30px;height:30px;flex:none;fill:color-mix(in srgb,var(--amber) 14%,transparent);stroke:var(--amber);stroke-width:1.6;stroke-linejoin:round}
+.die .f{fill:none;stroke-opacity:.4;stroke-width:1}
+.die text{fill:var(--ink);stroke:none;font:700 8.5px var(--mono)}
+.sp-row.has-ab .sp-top{position:relative}
+.sp-row.has-ab .sp-top::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(var(--abc1),var(--abc2));pointer-events:none;z-index:1}
+body.cx-on .sp-row.has-ab .sp-main{padding-left:14px}
+.sp-facts dd .ab{margin-right:2px}
+
+/* Light theme: tan page, cream panels, near-black ink, ink-weight headings instead of thin red */
+html[data-mode="light"]{
+  --bg:#D9CAA6;--panel:#FFFAEC;--panel2:#F3E8CB;--raised:#E8D9B3;--glow:#E4D6B3;
+  --line:#6F5B38;--line-soft:#B3A077;--frame:#5E4C2C;
+  --ink:#150E07;--muted:#392A18;--faint:#523F27;
+  --amber:#8B1D12;--amber-ink:#FFF7E4;--amber-dim:#EBCFC1;
+  --green:#2F5E2B;--red:#9A241B;--blue:#234F7E;--gold:#7A5400;--edge:#6F5B38}
+html[data-mode="dark"]{--edge:#080504}
+html[data-mode="light"] body{font-weight:500}
+html[data-mode="light"] :is(small,.sub2,.small,.muted,.lab){font-weight:500}
+html[data-mode="light"] :is(.sp-group,.sp-sechead h3,.cx-fit-h,.cx-h,.k-gh,.cx-help b){color:var(--ink);font-weight:700}
+html[data-mode="light"] .sp-group{border-bottom:2px solid var(--amber)}
+html[data-mode="light"] .sp-sechead h3{border-bottom:2px solid var(--amber);padding-bottom:3px}
+html[data-mode="light"] .cx-help{border-left-width:5px;color:var(--ink);font-weight:500}
+html[data-mode="light"] :is(.cx-chip,.cx-bg-good,.cx-bg-ok,.cx-bg-bad,.cx-fit-r b){font-weight:700}
+html[data-mode="light"] .panel,html[data-mode="light"] .modal{border:2px solid var(--frame)}
+
+/* One signal for "you can tap this" during creation: a raised key with a hard bottom edge that presses down.
+   Anything flat (text, pills, chips, panels) is information. */
+body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.seg button,.iconbtn,.sp-fav,.prow,.cx-chap,.sp-tbtn:not(.static),.k-row .k-main,.term,.spelllink,.cx-mbar,select.f){
+  cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .08s,box-shadow .08s,background-color .12s}
+body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.seg button,.iconbtn,.sp-fav,.prow,.cx-chap,.cx-mbar,select.f){
+  border:2px solid var(--frame);border-radius:7px;box-shadow:0 3px 0 var(--edge)}
+body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.seg button,.iconbtn,.sp-fav,.prow,.cx-chap,.cx-mbar):not(:disabled):not([aria-disabled="true"]):hover{background-color:var(--raised)}
+body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.seg button,.iconbtn,.sp-fav,.prow,.cx-chap,.cx-mbar):not(:disabled):active{transform:translateY(3px);box-shadow:0 0 0 var(--edge)}
+body.cx-on .btn.pri:not(:disabled){background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+body.cx-on :is(.tile,.optcard,.chipbtn,.seg button)[aria-pressed="true"]{background:var(--amber-dim);border-color:var(--amber);box-shadow:0 3px 0 var(--amber),inset 0 0 0 1px var(--amber)}
+body.cx-on .sp-top{border:2px solid var(--frame);border-radius:9px;box-shadow:0 3px 0 var(--edge);background:var(--panel);margin:8px 0 10px;overflow:hidden}
+body.cx-on .sp-top:active{transform:translateY(2px);box-shadow:0 1px 0 var(--edge)}
+body.cx-on .sp-row.open>.sp-top{background:var(--panel2)}
+body.cx-on .sp-row.on>.sp-top{border-color:var(--amber)}
+body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.sp-main,.sp-fav,.prow,.cx-chap,.term,.spelllink,select.f,input.f,textarea.f):focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+body.cx-on :is(input.f,textarea.f){border:2px solid var(--frame);border-radius:6px;box-shadow:inset 0 2px 3px color-mix(in srgb,var(--edge) 35%,transparent)}
+body.cx-on .btn:disabled,body.cx-on .btn.incomplete{box-shadow:0 2px 0 var(--edge)}
+body.cx-on .btn.incomplete{opacity:.6}
+body.cx-on :is(.cx-chip,.cx-pill,.ab,.cx-tagc,.tag,.flag){box-shadow:none;transform:none}
+@media (prefers-reduced-motion:reduce){body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.sp-top){transition:none}}
+/* inside a list row the row is the key; the star is a divided cell, not a second key */
+body.cx-on .sp-top .sp-fav{border:0;border-left:2px solid var(--line-soft);border-radius:0;box-shadow:none;background:transparent;align-self:stretch}
+body.cx-on .sp-top .sp-fav:active{transform:none}
+body.cx-on .sp-row{border-bottom:0}
+.die{width:36px;height:36px}
+/* Rules-text links: terms get a tinted chip-underline, spells a blue one; both visible in either theme */
+.term{background:color-mix(in srgb,var(--gold) 16%,transparent);text-decoration:underline solid var(--gold);text-decoration-thickness:2px;border-radius:3px;padding:0 2px;cursor:pointer;font-weight:600}
+.term:hover,.term:focus-visible{background:color-mix(in srgb,var(--gold) 32%,transparent);color:var(--ink)}
+.spelllink{color:var(--blue,#5E8FD6);background:color-mix(in srgb,var(--blue,#5E8FD6) 14%,transparent);text-decoration:underline solid var(--blue,#5E8FD6);text-decoration-thickness:2px;border-radius:3px;padding:0 2px;font-weight:600}

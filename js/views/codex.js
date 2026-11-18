@@ -74,18 +74,17 @@ export function matchChoices(defs, traits, anchor) {
   return { by, rest };
 }
 
+// Entries are always open: the text is what the player came to read, so it never hides behind a tap.
 function traitRow(app, o, t, kind, bundle, defs, vhtml) {
-  const key = kind + ":" + o.name + ":" + t.name, open = app.spUi.traits.has(key);
   const act = t.kind === "active", has = defs && defs.length;
   const pending = has && bundle.on && defs.some(d => !bundle.done(d));
   const tag = has ? (bundle.on ? (pending ? `<span class="flag need">Choose</span>` : `<span class="flag done">Chosen</span>`) : `<span class="flag need soft">Choice</span>`) : (vhtml ? `<span class="flag need soft">Choice</span>` : "");
-  return `<div class="sp-trait ${open ? "open" : ""} ${t.level > 1 ? "later" : ""} ${t.variant ? "variant" : ""} ${pending ? "pending" : ""}">
-    <button class="sp-tbtn" data-a="cxTrait" data-key="${esc(key)}" aria-expanded="${open}">
-      <span class="grow"><b>${esc(t.name)}</b><small>${esc(t.level > 1 ? "Level " + t.level + (act && t.usage !== "Always on" ? " · " + t.usage : "") : t.usage)}</small>${open ? "" : `<span class="sp-snip">${esc(String(t.body || "").replace(/[*_#|>]/g, "").replace(/\s+/g, " ").trim())}</span>`}</span>
+  return `<div class="sp-trait open ${t.level > 1 ? "later" : ""} ${t.variant ? "variant" : ""} ${pending ? "pending" : ""}">
+    <div class="sp-tbtn static">
+      <span class="grow"><b>${esc(t.name)}</b><small>${esc(t.level > 1 ? "Level " + t.level + (act && t.usage !== "Always on" ? " \u00b7 " + t.usage : "") : t.usage)}</small></span>
       ${tag}<span class="flag ${act ? "act" : "pas"}">${act ? "Ability" : "Trait"}</span>
-      <span class="chev">${I.chev}</span>
-    </button>
-    ${open ? `<div class="about">${formatText(t.body)}</div>${vhtml ? `<div class="sp-inline">${vhtml}</div>` : ""}${has ? `<div class="sp-inline">${bundle.on ? defs.map(d => bundle.render(d)).join("") : `<p class="sub2">You make this choice here after you choose ${esc(o.name)} below.</p>`}</div>` : ""}` : ""}
+    </div>
+    <div class="about">${formatText(t.body)}</div>${vhtml ? `<div class="sp-inline">${vhtml}</div>` : ""}${has ? `<div class="sp-inline">${bundle.on ? defs.map(d => bundle.render(d)).join("") : `<p class="sub2">You make this choice here after you choose ${esc(o.name)} below.</p>`}</div>` : ""}
   </div>`;
 }
 function plainRow(app, o, kind, key, title, text) {
@@ -114,7 +113,7 @@ function detail(app, cfg, o) {
     ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${upload}</div></div>`}
     ${fitBlock(cfg, o)}
     ${desc ? `<div class="sp-desc open">${formatText(desc)}</div>` : ""}
-    ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
+    ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${f[2] || esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
     <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3></div>
     <div class="sp-traits">
       ${now.map(row).join("")}
@@ -148,11 +147,12 @@ export function renderCodexList(app, cfg) {
     const g = group(o);
     if (g !== last) { html += `<div class="sp-group">${esc(g)}</div>`; last = g; }
     const on = cfg.selected === o.name, open = u.open === o.name, isFav = fav.includes(o.name);
-    html += `<div class="sp-row ${open ? "open" : ""} ${on ? "on" : ""}">
+    const acc = cfg.accent ? cfg.accent(o) : [];
+    html += `<div class="sp-row ${open ? "open" : ""} ${on ? "on" : ""} ${acc.length ? "has-ab" : ""}" ${acc.length ? `style="--abc1:var(--ab-${acc[0]});--abc2:var(--ab-${acc[acc.length - 1]})"` : ""}>
       <div class="sp-top">
         <button class="sp-main" data-a="cxOpen" data-kind="${cfg.kind}" data-name="${esc(o.name)}" aria-expanded="${open}">
           ${thumb(o.name, "sp-thumb", cfg.kind)}
-          <span class="grow"><b>${esc(o.name)}</b>${cfg.chips ? `<span class="cx-chips">${cfg.chips(o).map(c => chipHtml(cfg, c)).join("")}</span>` : ""}<small>${esc(cfg.sub(o))}</small></span>
+          <span class="grow"><b>${esc(o.name)}</b>${cfg.badges ? cfg.badges(o) : ""}${cfg.chips ? `<span class="cx-chips">${cfg.chips(o).map(c => chipHtml(cfg, c)).join("")}</span>` : ""}<small>${esc(cfg.sub(o))}</small></span>
           ${on ? `<span class="tag amber">Chosen</span>` : ""}
           <span class="chev">${I.chev}</span>
         </button>

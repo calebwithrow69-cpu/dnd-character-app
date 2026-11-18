@@ -120,13 +120,12 @@ export function renderFeatSheet(app, items, selected, pick) {
   if (!it) return "";
   const { f, ok, why } = it, p = parseFeat(f), on = selected === f.name;
   const benefits = p.benefits.map(b => {
-    const key = f.name + ":" + b.name, open = u.tOpen.has(key), act = b.kind === "active";
-    return `<div class="sp-trait ${open ? "open" : ""}">
-      <button class="sp-tbtn" data-a="featBenefit" data-key="${esc(key)}" aria-expanded="${open}">
+    const act = b.kind === "active";
+    return `<div class="sp-trait open">
+      <div class="sp-tbtn static">
         <span class="grow"><b>${esc(b.name)}</b></span>
-        <span class="flag ${act ? "act" : "pas"}">${act ? "Ability" : "Trait"}</span>
-        <span class="chev">${chev}</span></button>
-      ${open ? `<div class="about">${formatText(b.body)}</div>` : ""}</div>`;
+        <span class="flag ${act ? "act" : "pas"}">${act ? "Ability" : "Trait"}</span></div>
+      <div class="about">${formatText(b.body)}</div></div>`;
   }).join("");
   return `<div class="modal-back" data-a="featCloseBackdrop"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(f.name)}">
     <div class="modal-head fhead">
