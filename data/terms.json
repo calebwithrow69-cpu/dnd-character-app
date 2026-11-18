@@ -291,6 +291,32 @@
       "aliases": [
         "Melee Attacks"
       ]
+    },
+    {
+      "name": "Damage Types",
+      "text": "The kind of harm an effect does: Acid, Bludgeoning, Cold, Fire, Force, Lightning, Necrotic, Piercing, Poison, Psychic, Radiant, Slashing or Thunder. Resistance, Immunity and Vulnerability apply to one type at a time.",
+      "aliases": [
+        "Damage Type",
+        "bludgeoning",
+        "piercing",
+        "slashing",
+        "necrotic",
+        "radiant",
+        "psychic",
+        "thunder",
+        "lightning"
+      ]
+    },
+    {
+      "name": "Expertise",
+      "text": "Doubles your Proficiency Bonus on checks with a skill or tool you are already proficient in."
+    },
+    {
+      "name": "Sorcery Points",
+      "text": "A Sorcerer's pool of points. Spend them on Metamagic and trade them for spell slots; they come back on a Long Rest.",
+      "aliases": [
+        "Sorcery Point"
+      ]
     }
   ]
 }

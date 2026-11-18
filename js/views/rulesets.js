@@ -17,7 +17,7 @@ export function renderRulesets(app) {
     const active = (sets.active || GROUP_ID) === rs.id || (!sets.sets.some(x => x.id === sets.active) && rs.id === GROUP_ID);
     const bad = problems(rs, L);
     return `<div class="panel rs-card"><div class="panel-head"><h2>${esc(rs.name)}</h2>${active ? `<span class="chip">In use</span>` : ""}</div>
-      <div class="panel-body"><p class="sub2">${rs.builtin ? "Your group's rules (set by your DM, updates by itself). " : ""}${esc(summary(rs, L))}</p>
+      <div class="panel-body"><p class="sub2">${rs.builtin ? "Group rules, read-only. " : ""}${esc(summary(rs, L))}</p>
         ${bad.length ? `<p class="sub2 lrwarn">${esc(bad[0])}</p>` : ""}
         <div class="btnrow">
           ${active ? "" : `<button class="btn pri" data-a="rsUse" data-id="${esc(rs.id)}" ${bad.length ? "disabled" : ""}>Use</button>`}
@@ -29,7 +29,7 @@ export function renderRulesets(app) {
         ${ui.share === rs.id ? `<label class="field"><span class="lab">Send this code. Anyone can paste it into Import to get the same ruleset.</span><textarea class="f mono" rows="4" readonly data-rs-code onfocus="this.select()">${esc(encodeRuleset(rs))}</textarea></label><button class="btn sm" data-a="rsCopyCode" data-id="${esc(rs.id)}">Copy code</button>` : ""}
       </div></div>`;
   };
-  return `${topbar("Rulesets", "What players on this device can pick", { back: "rsExit" })}
+  return `${topbar("Rulesets", "This device", { back: "rsExit" })}
     <main class="wrap page">
       
       ${[group, ...sets.sets].map(card).join("")}

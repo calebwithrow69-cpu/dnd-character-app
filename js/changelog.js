@@ -28,7 +28,9 @@ export const CHANGELOG = [
           "Species: Best fit sort and tag for the chosen class.",
           "Name and Finish: Random buttons and Randomize all.",
           "Gear: None option.",
-          "New character: Paper or Digital choice, then Classic or Advanced with details."
+          "New character: Paper or Digital choice, then Classic or Advanced with details.",
+          "Rules links: damage types, Expertise, Sorcery Points.",
+          "Classic sheet: tappable rows use the accent edge, wider item names, Gear tab label."
         ]
       },
       {

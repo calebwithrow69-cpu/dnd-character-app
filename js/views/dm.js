@@ -151,7 +151,7 @@ export function renderDm(app) {
     return `${topbar((ui.edit.isNew ? "New " : "Edit ") + sc.one, sc.label, { back: "dmCancel" })}
       <main class="wrap page">${formHtml(app, ui.edit)}</main>`;
   }
-  return `${topbar("DM editor", n ? `${n} change${n === 1 ? "" : "s"} on this device` : "Anyone can use this. Changes stay on this device.", { back: "dmExit" })}
+  return `${topbar("DM editor", n ? `${n} change${n === 1 ? "" : "s"} on this device` : "No changes yet", { back: "dmExit" })}
     <main class="wrap page">
       <button class="btn block" data-a="rsOpen" style="margin-bottom:10px">Rulesets</button>
       <div class="dm-f"><select class="f" data-a="dmKind" aria-label="What to edit">${KIND_ORDER.map(k => `<option value="${k}" ${k === ui.kind ? "selected" : ""}>${esc(SCHEMA[k].label)} (${(app.library[k] || []).length})</option>`).join("")}</select></div>

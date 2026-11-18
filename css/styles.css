@@ -1943,3 +1943,16 @@ body.cx-on .btn.incomplete{opacity:.6}
 .sp-line{margin:0;color:var(--muted);font-size:.86rem}
 .sp-confirm-row{display:flex;gap:10px}
 .sp-confirm-row .block{flex:1}
+
+/* Classic sheet: tappable rows use the shared accent edge; item list gets room for names */
+.classic .rowline.rollable,.classic .cg-row{border-left:3px solid color-mix(in srgb,var(--amber) 45%,transparent)}
+.classic .rowline.rollable:hover,.classic .cg-row:hover,.classic .cg-row.selected{border-left-color:var(--amber)}
+.classic .rowline.rollable .nm{color:var(--ink)}
+.cg-rows .bl-head,.cg-row.bl-row{grid-template-columns:28px minmax(0,1fr) auto auto;gap:6px 10px}
+.cg-rows .bl-head{padding:4px 4px 4px 7px}
+.cg-row.bl-row{padding-left:7px}
+.cg-row .bl-nm{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
+.cg-row .w{min-width:3.2em}
+.cg-list .panel-head{flex-wrap:wrap;gap:8px}
+.cg-list .panel-head .btnrow{flex-wrap:wrap;gap:8px;margin-left:auto}
+.cg-list .sortsel{min-width:0;flex:1 1 140px}

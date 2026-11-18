@@ -71,7 +71,7 @@ export function classicBody(app, c, d) {
   const pips = (n, kind, cls2) => Array.from({ length: 3 }, (_, i) => `<button class="pip ${cls2} ${i < n ? "" : "used"}" data-a="deathSave" data-kind="${kind}" data-i="${i}" aria-label="${kind} ${i + 1}"><i></i></button>`).join("");
   const val = (label, v, attrs = "") => `<${attrs ? "button" : "div"} class="cval" ${attrs}><b>${v}</b><span>${label}</span></${attrs ? "button" : "div"}>`;
 
-  const subs = [["sheet", "Sheet"], ["features", "Features"], si ? ["spells", "Spells"] : null, ["gear", "Equipment"], ["notes", "Notes"]].filter(Boolean);
+  const subs = [["sheet", "Sheet"], ["features", "Features"], si ? ["spells", "Spells"] : null, ["gear", "Gear"], ["notes", "Notes"]].filter(Boolean);
   const sub = subs.some(x => x[0] === app.classicSub) ? app.classicSub : "sheet";
   const profsBox = `<div class="panel"><div class="panel-head"><h2>Equipment training and proficiencies</h2></div><div class="panel-body stack">
       ${profsChecks(c)}
