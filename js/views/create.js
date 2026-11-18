@@ -169,9 +169,10 @@ function renderEquipGroup(app, d, which) {
 // The variant shown for a species: the pick when it is the chosen species, else what was last previewed.
 export const sortedVariants = vd => [...vd.options].sort((a, b) => String(a.v).localeCompare(String(b.v)));
 function selectedVariant(app, d, s, vd) {
-  const first = sortedVariants(vd)[0];
-  if (d.species === s.name) return [].concat(d.picks[vd.id] || [])[0] || (first && first.v) || null;
-  return (app.spUi.variant && app.spUi.variant[s.name]) || (first && first.v) || null;
+  // No default: the player picks which one to read, and the rest stays hidden until then.
+  const ok = v => v && vd.options.some(o => o.v === v) ? v : null;
+  if (d.species === s.name) { const p = ok([].concat(d.picks[vd.id] || [])[0]); if (p) return p; }
+  return ok(app.spUi.variant && app.spUi.variant[s.name]);
 }
 // What a choice screen needs for the item being read: its choices, and how to draw and check each one.
 function choiceBundle(app, d, kind, o) {
@@ -600,6 +601,12 @@ export function renderCreate(app) {
 }
 
 // Continue on an unfinished step: move to the first thing still missing and flag it.
+export function flagEl(el) {
+  el.scrollIntoView({ block: el.getBoundingClientRect().height > innerHeight * 0.6 ? "start" : "center", behavior: "smooth" });
+  el.classList.remove("flag-need"); void el.offsetWidth; el.classList.add("flag-need");
+  if (el.focus && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) el.focus({ preventScroll: true });
+  setTimeout(() => el.classList.remove("flag-need"), 2600);
+}
 export function cxFlagNeed(app) {
   const d = app.createDraft, id = chapterId(d), stage = document.querySelector(".cx-stage"); if (!d || !stage) return false;
   let el = null;
@@ -607,10 +614,7 @@ export function cxFlagNeed(app) {
   else if (LIST_KINDS.includes(id) && !d[id]) el = stage.querySelector("#wizard-results");
   else el = stage.querySelector(".need, .sp-trait.pending") || stage.querySelector(".optlist, .panel");
   if (!el) return false;
-  el.scrollIntoView({ block: el.getBoundingClientRect().height > innerHeight * 0.6 ? "start" : "center", behavior: "smooth" });
-  el.classList.remove("flag-need"); void el.offsetWidth; el.classList.add("flag-need");
-  if (el.focus && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) el.focus({ preventScroll: true });
-  setTimeout(() => el.classList.remove("flag-need"), 2600);
+  flagEl(el);
   const why = document.getElementById("wizard-why"); if (why) { why.classList.remove("flag-why"); void why.offsetWidth; why.classList.add("flag-why"); }
   return true;
 }

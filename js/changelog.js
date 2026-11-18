@@ -20,7 +20,10 @@ export const CHANGELOG = [
           "Confirm before Random character and before changing the class.",
           "Hit die icon and ability chips on the class list.",
           "Light theme: stronger text and accent contrast.",
-          "Rules links: any case, spell names, 20 new terms."
+          "Rules links: any case, spell names, 20 new terms.",
+          "Variants (lineage, ancestry, legacy): pick first, nothing preselected, rest hidden until picked.",
+          "Unanswered choice boxes get a running red outline and a ! badge.",
+          "Home: development notice."
         ]
       },
       {
@@ -29,6 +32,12 @@ export const CHANGELOG = [
           "Feats, traits and abilities in creation are always open.",
           "Class Choices comes after Ability Scores.",
           "Side panel stays in view while scrolling."
+        ]
+      },
+      {
+        title: "Fixed",
+        items: [
+          "Burning Hands is the spell, not the Burning condition."
         ]
       }
     ]

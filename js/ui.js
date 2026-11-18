@@ -43,13 +43,14 @@ function linkTerms(escaped, seen) {
     return `<button type="button" class="term" data-term="${esc(e.name)}">${m}</button>`;
   };
   let out = escaped;
-  if (TERM_RE_I) out = outside(out, t => t.replace(TERM_RE_I, term));
-  if (TERM_RE_C) out = outside(out, t => t.replace(TERM_RE_C, term));
+  // Spell names first, so "Burning Hands" is the spell and not the Burning condition.
   if (SPELL_RE) out = outside(out, t => t.replace(SPELL_RE, m => {
     const n = SPELLS.get(m.toLowerCase().replace(/&#39;|&#x27;/g, "'")); if (!n || seen.has("spell:" + n)) return m;
     seen.add("spell:" + n);
     return `<button type="button" class="spelllink" data-a="showDetail" data-kind="spell" data-name="${esc(n)}">${m}</button>`;
   }));
+  if (TERM_RE_I) out = outside(out, t => t.replace(TERM_RE_I, term));
+  if (TERM_RE_C) out = outside(out, t => t.replace(TERM_RE_C, term));
   return out;
 }
 

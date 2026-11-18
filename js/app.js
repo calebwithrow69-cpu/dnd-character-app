@@ -19,7 +19,7 @@ import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
 import { renderHome, renderRulesPage, lastCharacter } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
-import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits, cxFlagNeed } from "./views/create.js";
+import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits, cxFlagNeed, flagEl } from "./views/create.js";
 import { cxStop, cxSeal } from "./cxfx.js";
 import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
 import { emblemFor } from "./emblems.js";
@@ -1197,12 +1197,16 @@ const ACTIONS = {
     const name = el.dataset.name, v = el.dataset.v, d = APP.createDraft;
     const vd = variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
     if (!vd) return;
-    if (d && d.species === name) { ACTIONS.pick({ dataset: { id: vd.id, v } }); return; }
+    if (d && d.species === name) { if ([].concat(d.picks[vd.id] || [])[0] !== v) ACTIONS.pick({ dataset: { id: vd.id, v } }); return; }
     APP.spUi.variant = APP.spUi.variant || {};
-    APP.spUi.variant[name] = APP.spUi.variant[name] === v ? null : v; spRefresh();
+    APP.spUi.variant[name] = v; spRefresh();
   },
   cxChoose(el) {
     const kind = el.dataset.kind, name = el.dataset.name, d0 = APP.createDraft;
+    if (kind === "species" && d0.species !== name) {
+      const sp = APP.library.species.find(x => x.name === name), vd0 = sp && variantDef(sp, APP.library, APP.campaign), pv0 = APP.spUi.variant && APP.spUi.variant[name];
+      if (vd0 && !vd0.options.some(o => o.v === pv0)) { const box = document.querySelector(".sp-row.open .vpick"); if (box) flagEl(box); toast("Pick " + vd0.label.toLowerCase()); return; }
+    }
     if (kind === "class" && d0.class && d0.class !== name && !APP._clsOk) { classGuard({ to: name, how: "pick" }, () => ACTIONS.cxChoose(el)); return; }
     const field = { species: "species", class: "class", background: "background" }[kind];
     const keys = Object.keys(d0.picks), changed = d0[field] && d0[field] !== name;
@@ -1218,8 +1222,8 @@ const ACTIONS = {
       const vd = variantDef(APP.library.species.find(s => s.name === name), APP.library, APP.campaign);
       if (vd && APP.createDraft.species === name) {
         const pv = APP.spUi.variant && APP.spUi.variant[name];
-        const pick = pv && vd.options.some(o => o.v === pv) ? pv : [...vd.options].sort((a, b) => String(a.v).localeCompare(String(b.v)))[0].v; // the variant shown is the one you get (first A to Z by default)
-        APP.createDraft.picks[vd.id] = pick; render();
+        const pick = pv && vd.options.some(o => o.v === pv) ? pv : null;
+        if (pick) APP.createDraft.picks[vd.id] = pick; render();
       }
     }
     openChoiceTraits(APP); render();

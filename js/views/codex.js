@@ -53,12 +53,11 @@ export function renderControls(app, cfg) {
 
 // The variant (lineage, ancestry, legacy, gem...) is a choice inside its own ability: the options are the book's table, shown as a list.
 const fmtVariant = t => String(t || "").replace(/\s+(?=Level \d+:)/g, "\n").trim();
-export function variantPicker(app, o, vr, bodyText) {
+export function variantPicker(app, o, vr) {
   const sel = vr.options.find(v => v.v === vr.cur);
-  const note = /\btable\b|\bbelow\b|following/i.test(bodyText || "") ? ` The book's table is this list.` : "";
-  return `<p class="small"><b>Choose your ${esc(vr.label.toLowerCase())}.</b>${note}${vr.on ? "" : ` Your pick is kept when you choose ${esc(o.name)}.`}</p>
+  return `<div class="choice vpick${sel ? "" : " need"}"><div class="choice-head"><h3>${esc(vr.label)}</h3><span class="sub2">${sel ? "Choose one" : "Choose one to read"}</span></div>
     <div class="tilegrid">${vr.options.map(v => `<button class="tile" data-a="cxVariant" data-name="${esc(o.name)}" data-v="${esc(v.v)}" aria-pressed="${vr.cur === v.v}"><span class="grow"><b>${esc(v.label)}</b></span>${vr.cur === v.v ? `<span class="tick" aria-hidden="true">&#10003;</span>` : ""}</button>`).join("")}</div>
-    ${sel && sel.detail ? `<div class="about tile-about"><p class="sub2"><b>${esc(sel.label)}</b></p>${formatText(fmtVariant(sel.detail))}</div>` : ""}`;
+    ${sel && sel.detail ? `<div class="about tile-about"><p class="sub2"><b>${esc(sel.label)}</b></p>${formatText(fmtVariant(sel.detail))}</div>` : ""}</div>`;
 }
 
 // A choice belongs under the ability it comes from. Match on the ability's name (or the feat it comes from); a spellcasting-ability
@@ -107,20 +106,19 @@ function detail(app, cfg, o) {
   // descriptions render in full: no tap needed
   const desc = [cfg.lore(o), cfg.intro(o)].filter(Boolean)[0] || "";
   const upload = `<label class="btn sm sp-up">${I.cam} ${has ? "Change image" : "Add image"}<input type="file" accept="image/*" data-sp-file="${esc(o.name)}" aria-label="Choose an image for ${esc(o.name)}"></label>${has ? `<button class="btn sm" data-a="cxPortraitClear" data-name="${esc(o.name)}">Remove</button>` : ""}`;
-  const vTrait = vr && all.find(t => t.name === vr.trait);
-  const row = t => traitRow(app, o, t, cfg.kind, bundle, mt.by.get(t.name), vr && t.name === vr.trait ? variantPicker(app, o, vr, t.body) : "");
+  const hidden = !!(vr && !vr.cur), row = t => traitRow(app, o, t, cfg.kind, bundle, mt.by.get(t.name), "");
   return `<div class="sp-detail">
     ${has ? `<div class="sp-hero"><img src="${portraitFor(o.name)}" alt="Portrait of ${esc(o.name)}"><div class="sp-hero-act">${upload}</div></div>` : `<div class="sp-addimg cx-emhero" style="--eh:${emblemFor(cfg.kind, o.name).hue}"><span class="cx-embig">${emblem(cfg.kind, o.name, { motion: true })}</span><div class="grow">${upload}</div></div>`}
+    ${vr ? variantPicker(app, o, vr) : ""}
     ${fitBlock(cfg, o)}
     ${desc ? `<div class="sp-desc open">${formatText(desc)}</div>` : ""}
     ${facts.length ? `<dl class="sp-facts">${facts.map(f => `<div><dt>${esc(f[0])}</dt><dd>${f[2] || esc(f[1])}</dd></div>`).join("")}</dl>` : ""}
-    <div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3></div>
+    ${hidden ? "" : `<div class="sp-sechead"><h3>${esc(cfg.traitsTitle)}</h3></div>
     <div class="sp-traits">
       ${now.map(row).join("")}
       ${later.length ? `<div class="sp-trait ${lopen ? "open" : ""}"><button class="sp-tbtn" data-a="cxTrait" data-key="${esc(lk)}" aria-expanded="${lopen}"><span class="grow"><b>Later levels</b><small>${later.length} more features, levels ${later[0].level} to ${later[later.length - 1].level}</small></span><span class="chev">${I.chev}</span></button>${lopen ? `<div class="sp-later">${later.map(row).join("")}</div>` : ""}</div>` : ""}
-    </div>
-    ${vr && !vTrait ? `<div class="sp-choices"><div class="sp-sechead"><h3>${esc(vr.label)}</h3></div><div class="sp-inline">${variantPicker(app, o, vr, "")}</div></div>` : ""}
-    ${mt.rest.length ? (on ? `<div class="sp-choices"><div class="sp-sechead"><h3>Other choices</h3></div>${mt.rest.map(d => bundle.render(d)).join("")}</div>` : `<p class="sub2 sp-note">After you choose ${esc(o.name)} you also pick: ${esc(mt.rest.map(d => d.label).join(", "))}.</p>`) : ""}
+    </div>`}
+    ${mt.rest.length && !hidden ? (on ? `<div class="sp-choices"><div class="sp-sechead"><h3>Other choices</h3></div>${mt.rest.map(d => bundle.render(d)).join("")}</div>` : `<p class="sub2 sp-note">After you choose ${esc(o.name)} you also pick: ${esc(mt.rest.map(d => d.label).join(", "))}.</p>`) : ""}
     ${cfg.note ? `<p class="sub2 sp-note">${cfg.note(o)}</p>` : ""}
     <div class="chooserow"><button class="btn pri block" data-a="cxChoose" data-kind="${cfg.kind}" data-name="${esc(o.name)}" ${on ? "disabled" : ""}>${on ? "Chosen" : "Choose " + esc(o.name)}</button></div>
   </div>`;

@@ -49,6 +49,7 @@ export function renderHome(app) {
     <div class="hh-mid">
       ${app.needsNewPassword ? `<button class="hwarn" data-a="enterNewPassword">New rules are waiting. Enter the new password.</button>` : ""}
       ${hero}
+      <p class="devnote" role="note">Under development. Expect issues.</p>
       <div class="float">
         <button class="fbtn press" data-a="goRoster">${ic("people")}CHARACTERS${n ? `<em>${n}</em>` : ""}</button>
         <button class="fbtn press" data-a="goRules">${ic("book")}RULES</button>

@@ -1882,7 +1882,15 @@ input.f,select.f,textarea.f{border-color:var(--edge)}
 /* Continue on an unfinished step: the missing choice is flagged where it sits */
 .flag-need{animation:flagNeed 2.6s ease-out;scroll-margin:110px 0 220px}
 @keyframes flagNeed{0%,100%{box-shadow:0 0 0 0 transparent}8%,40%,72%{box-shadow:0 0 0 4px var(--amber),0 0 22px 2px color-mix(in srgb,var(--amber) 45%,transparent)}22%,56%{box-shadow:0 0 0 2px var(--amber)}}
-.choice.need,.cx-methods.need{outline:2px dashed color-mix(in srgb,var(--amber) 70%,transparent);outline-offset:4px;border-radius:var(--radius-sm)}
+/* A box that still needs a pick: red arc running clockwise around it, plus a "!" badge */
+@property --ang{syntax:"<angle>";inherits:false;initial-value:0deg}
+.need:not(.flag){position:relative;border-radius:var(--radius-sm)}
+.need:not(.flag)::before{content:"";position:absolute;inset:-4px;border-radius:calc(var(--radius-sm) + 4px);padding:2px;pointer-events:none;
+  background:conic-gradient(from var(--ang),transparent 0 62%,var(--amber) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:needSpin 2.2s linear infinite}
+.need:not(.flag)::after{content:"!";position:absolute;top:-11px;right:10px;width:20px;height:20px;border-radius:50%;background:var(--amber);color:var(--amber-ink);font:700 .8rem/20px var(--mono);text-align:center;pointer-events:none}
+@keyframes needSpin{to{--ang:360deg}}
+@media (prefers-reduced-motion:reduce){.need:not(.flag)::before{animation:none;background:var(--amber)}}
 .flag-why{animation:flagWhy .7s ease-out}
 @keyframes flagWhy{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 @media (prefers-reduced-motion:reduce){.flag-need,.flag-why{animation:none}.flag-need{box-shadow:0 0 0 4px var(--amber)}}
@@ -1918,3 +1926,6 @@ body.cx-on :is(.btn,.chipbtn,.optcard,.tile,.cx-chap,.sp-main,.sp-fav,.term,.spe
 body.cx-on .btn.incomplete{opacity:.6}
 .term{text-decoration-style:solid;cursor:pointer}
 @media (prefers-reduced-motion:reduce){body.cx-on :is(.btn,.chipbtn,.optcard,.tile,.sp-main){transform:none}}
+
+/* Launch notice on Home */
+.devnote{margin:0 0 10px;padding:7px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);font:600 .68rem/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:center}
