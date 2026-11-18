@@ -98,6 +98,10 @@ export function renderModal(app) {
       return modalShell(`Switch to the ${to} sheet?`, `<p>Characters are not changed.</p>`,
         `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmStyle">Switch</button>`);
     }
+    case "confirmAsk": {
+      const a = app._ask || {};
+      return modalShell(a.title || "Confirm", `<p>${esc(a.body || "")}</p>`, `<button class="btn" data-a="askNo">${esc(a.no || "Cancel")}</button><button class="btn pri" data-a="askYes">${esc(a.yes || "OK")}</button>`);
+    }
     case "confirmClass": {
       const c = app._cls || {};
       const title = c.how === "all" ? "Random character?" : "Change class?";

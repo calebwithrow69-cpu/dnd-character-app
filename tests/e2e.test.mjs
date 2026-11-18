@@ -74,7 +74,7 @@ const openSample = async p => {
   if (await p.locator(".stylefull").count()) { await pickSheet(p, "classic"); await p.waitForTimeout(350); }
   await p.waitForSelector('[data-a="openHp"]', { timeout: 10000 });
 };
-const pickSheet = async (p, v) => { await p.locator(`[data-a="stylePick"][data-v="${v}"]`).click(); await p.waitForTimeout(150); await p.locator('[data-a="styleConfirm"]').click(); };
+const pickSheet = async (p, v) => { if (await p.locator('[data-a="styleRun"]').count()) { await p.locator('[data-a="styleRun"]').click(); await p.waitForTimeout(200); } await p.locator(`[data-a="stylePick"][data-v="${v}"]`).click(); await p.waitForTimeout(150); await p.locator('[data-a="styleConfirm"]').click(); };
 const goAdvanced = async p => { await clickA(p, "openEdit"); await p.locator('[data-a="setPrefV"][data-v="advanced"]').first().click(); await p.waitForTimeout(300); await clickA(p, "confirmStyle"); };
 const noErrs = p => assert(p.errs.length === 0, p.errs.join(" || "));
 
@@ -798,8 +798,10 @@ await check("style chooser: shows first, picking applies at once, switching late
   const p = await open(390, 844, { touch: true });
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]');
   await p.waitForSelector(".stylefull", { timeout: 10000 });
-  assert(await p.locator(".sp-card").count() === 2, "expected two cards");
+  assert(await p.locator(".sp-card").count() === 2 && await p.locator('[data-a="downloadPdf"]').count() === 1, "expected the Paper and Digital cards");
   assert(await p.locator('[data-a="sheetTab"]').count() === 0, "chooser should be full screen");
+  await p.locator('[data-a="styleRun"]').click(); await p.waitForTimeout(200);
+  assert(await p.locator(".sp-card").count() === 2 && await p.locator('[data-a="stylePick"]').count() === 2, "expected the Classic and Advanced cards");
   assert(await p.locator('[data-a="styleConfirm"]').isDisabled(), "confirm should wait for a choice");
   await p.locator('[data-a="stylePick"][data-v="classic"]').click(); await p.waitForTimeout(150);
   assert(await p.locator('.sp-card.sel').count() === 1 && /classic/i.test(await p.locator('[data-a="styleConfirm"]').innerText()) && !(await p.locator('[data-a="styleConfirm"]').isDisabled()), "picking a sheet should select it and name it on the confirm button");
@@ -906,7 +908,7 @@ await check("creation shop: buy trained gear with the gold, see it on the new ch
   await clickA(p, "openProgress"); await clickA(p, "gotoChapter", '[data-i="5"]'); await p.waitForTimeout(400);
   assert(await p.locator('[data-a="cxOpenShop"]:visible').count() >= 1, "no Shop button on Skills and Gear");
   // take the gold options so there is plenty to spend
-  for (const k of ["equipClass", "equipBg"]) { const opts = p.locator(`[data-a="pickEquip"][data-which="${k}"]:visible`); const n = await opts.count(); if (n) { await opts.nth(n - 1).click(); await p.waitForTimeout(250); } }
+  for (const k of ["equipClass", "equipBg"]) { const opts = p.locator(`[data-a="pickEquip"][data-which="${k}"]:not([data-k="none"]):visible`); const n = await opts.count(); if (n) { await opts.nth(n - 1).click(); await p.waitForTimeout(250); } }
   await clickA(p, "cxOpenShop"); await p.waitForSelector("#results-cxshop .shopitem", { timeout: 5000 });
   const before = await p.evaluate(() => ({ cls: APP.createDraft.class, rows: document.querySelectorAll("#results-cxshop .shopitem").length }));
   assert(before.rows > 3, "shop looks empty for " + before.cls);

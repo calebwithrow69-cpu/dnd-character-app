@@ -15,7 +15,7 @@ const I = {
 
 export const favKey = kind => kind === "species" ? "favSpecies" : kind === "class" ? "favClass" : "favBackground";
 export const spUiDefault = () => ({
-  k: { species: { sort: "az", filter: "All", open: null }, class: { sort: "az", filter: "All", open: null }, background: { sort: "rec", filter: "All", open: null } },
+  k: { species: { sort: "rec", filter: "All", open: null }, class: { sort: "az", filter: "All", open: null }, background: { sort: "rec", filter: "All", open: null } },
   traits: new Set(), variant: {}
 });
 const favs = (app, kind) => app.prefs[favKey(kind)] || [];
@@ -24,7 +24,7 @@ const favs = (app, kind) => app.prefs[favKey(kind)] || [];
 const FIT_MARK = { good: "\u2713", ok: "~", bad: "\u00d7" };
 const chipHtml = (cfg, c) => `<i class="cx-chip cx-bg-${c.tone}" aria-label="${esc(c.full)}: ${esc(cfg.fitWord[c.tone])}">${FIT_MARK[c.tone]} ${esc(c.label)}</i>`;
 const fitBlock = (cfg, o) => {
-  const rows = cfg.chips ? cfg.chips(o) : []; if (!rows.length) return "";
+  const rows = cfg.chips && !cfg.noFitBlock ? cfg.chips(o) : []; if (!rows.length) return "";
   return `<div class="cx-fit"><b class="cx-fit-h">Score increases for ${esc(cfg.fitFor)}</b>${rows.map(c => `<p class="cx-fit-r cx-bg-${c.tone}"><span class="cx-fit-mark" aria-hidden="true">${FIT_MARK[c.tone]}</span><span><b>${esc(c.full)}</b><small>${esc(c.why)}</small></span></p>`).join("")}</div>`;
 };
 

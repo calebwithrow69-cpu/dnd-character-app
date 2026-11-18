@@ -1929,3 +1929,17 @@ body.cx-on .btn.incomplete{opacity:.6}
 
 /* Launch notice on Home */
 .devnote{margin:0 0 10px;padding:7px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);font:600 .68rem/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:center}
+
+/* Creation: labelled class stats, Finish randomizers, sheet mode screen */
+.cx-badges{flex-direction:column;align-items:flex-start;gap:5px}
+.cx-brow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.cx-bl{font:600 .66rem/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.rlabel{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.rlabel label{margin:0}
+.stylefull .sp-cards.sp-modes{grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}
+.sp-modes .sp-card{padding:14px 10px 14px}
+.sp-modes .sp-mock{width:72px;height:auto}
+.sp-modes .btn{margin-top:auto}
+.sp-line{margin:0;color:var(--muted);font-size:.86rem}
+.sp-confirm-row{display:flex;gap:10px}
+.sp-confirm-row .block{flex:1}

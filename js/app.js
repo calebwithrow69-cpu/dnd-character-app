@@ -20,7 +20,7 @@ import { renderGraveyard } from "./views/graveyard.js";
 import { renderHome, renderRulesPage, lastCharacter } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
 import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits, cxFlagNeed, flagEl } from "./views/create.js";
-import { cxStop, cxSeal } from "./cxfx.js";
+import { cxStop } from "./cxfx.js";
 import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
 import { emblemFor } from "./emblems.js";
 import {
@@ -689,9 +689,9 @@ function randomFill(d, gen, constraints = {}, keep = {}) {
   const typed = { name: keep.name === false ? "" : cleanName(d.name), alignment: d.alignment, appearance: (d.appearance || "").trim(), backstory: (d.backstory || "").trim() };
   gen(d, APP, constraints);
   d.name = typed.name || randomName();
-  d.alignment = typed.alignment || any(ALIGNMENTS);
-  d.appearance = typed.appearance || `${any(["Tall and lean", "Short and sturdy", "Broad-shouldered", "Slight and quick", "Weathered and wiry"])}, with ${any(["close-cropped", "braided", "wild", "silver-streaked", "dark and tied-back"])} hair and ${any(["a scar across one brow", "ink-stained fingers", "a crooked grin", "calloused hands", "mismatched eyes"])}.`;
-  d.backstory = typed.backstory || `A ${d.background.toLowerCase()} turned adventurer, ${d.name.split(" ")[0]} left home ${any(["after a debt came due", "chasing a rumor", "to keep a promise", "when the harvest failed", "with nothing left to lose"])}. ${any(["Blunt and loyal", "Curious to a fault", "Wary of strangers but fiercely protective of friends", "Cheerful, even when it is unwise", "Quiet, watchful and slow to trust"])}.`;
+  d.alignment = typed.alignment || randomAlign();
+  d.appearance = typed.appearance || randomLook();
+  d.backstory = typed.backstory || randomStory(d);
   d.query = "";
 }
 // The random screen: roll everything not locked (or only one part), then apply the chosen way of setting scores.
@@ -715,6 +715,10 @@ function loadText(text) {
 }
 function templateFile(d) { const p = templatePayload(d, cleanName(d.name) || `${d.species || ""} ${d.class || "character"}`.trim()); const safe = p.name.replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "template"; return { p, safe }; }
 
+const anyOf = l => l[Math.floor(Math.random() * l.length)];
+const randomAlign = () => anyOf(ALIGNMENTS);
+const randomLook = () => `${anyOf(["Tall and lean", "Short and sturdy", "Broad-shouldered", "Slight and quick", "Weathered and wiry"])}, with ${anyOf(["close-cropped", "braided", "wild", "silver-streaked", "dark and tied-back"])} hair and ${anyOf(["a scar across one brow", "ink-stained fingers", "a crooked grin", "calloused hands", "mismatched eyes"])}.`;
+const randomStory = d => `A ${String(d.background || "wanderer").toLowerCase()} turned adventurer, ${(d.name || "they").split(" ")[0]} left home ${anyOf(["after a debt came due", "chasing a rumor", "to keep a promise", "when the harvest failed", "with nothing left to lose"])}. ${anyOf(["Blunt and loyal", "Curious to a fault", "Wary of strangers but fiercely protective of friends", "Cheerful, even when it is unwise", "Quiet, watchful and slow to trust"])}.`;
 function randomName() {
   const r = l => l[Math.floor(Math.random() * l.length)];
   return `${r(NAME_A)}${r(NAME_B)} ${r(NAME_C)}`.trim();
@@ -1107,9 +1111,11 @@ const ACTIONS = {
     if (el.dataset.k === "startTab") toast("Characters will open on " + el.textContent);
   },
   stylePick(el) { APP.stylePending = el.dataset.v; render(); },
+  styleRun() { APP.styleStep = "style"; render(); window.scrollTo(0, 0); },
+  styleBack() { APP.styleStep = "mode"; APP.stylePending = null; render(); window.scrollTo(0, 0); },
   styleConfirm() {
     const v = APP.stylePending; if (v !== "classic" && v !== "advanced") return;
-    APP.stylePending = null; APP.styleAsk = null; APP.prefs.sheetStyle = v; savePrefs(); applyPrefs();
+    APP.stylePending = null; APP.styleAsk = null; APP.styleStep = null; APP.prefs.sheetStyle = v; savePrefs(); applyPrefs();
     if (APP._shopLater) { APP._shopLater = false; APP.charSub = "gear"; APP.classicSub = "gear"; render(); openModal({ type: "shop" }); } else render();
     window.scrollTo(0, 0);
   },
@@ -1283,6 +1289,15 @@ const ACTIONS = {
   cxUnbuy(el) { cartRemove(APP.createDraft, el.dataset.name); render(); },
   randomGear() { randomGear(APP.createDraft); render(); },
   randomName() { APP.createDraft.name = randomName(); render(); },
+  randomAlign() { APP.createDraft.alignment = randomAlign(); render(); },
+  randomLook() { APP.createDraft.appearance = randomLook(); render(); },
+  randomStory() { APP.createDraft.backstory = randomStory(APP.createDraft); render(); },
+  randomDetails() {
+    const d = APP.createDraft, run = () => { d.name = randomName(); d.alignment = randomAlign(); d.appearance = randomLook(); d.backstory = randomStory(d); render(); };
+    if ((d.appearance || "").trim() || (d.backstory || "").trim()) { APP._ask = { title: "Randomize all?", body: "Name, alignment, appearance and backstory are replaced.", yes: "Replace", no: "Keep mine", run }; openModal({ type: "confirmAsk" }); } else run();
+  },
+  askYes() { const r = APP._ask && APP._ask.run; APP._ask = null; closeModal(); if (r) r(); },
+  askNo() { APP._ask = null; closeModal(); },
   randomPick() {
     const d = APP.createDraft, kind = chapterId(d);
     if (!["class", "species", "background"].includes(kind)) return;
@@ -1334,7 +1349,6 @@ const ACTIONS = {
     } // also stops a second tap while the sheet opens
     const cp = choicePlan(d, APP);
     const char = store.normalize(buildCharacter(d, APP), APP.library);
-    const sealHue = (d.species ? emblemFor("species", d.species) : emblemFor("class", d.class)).hue;
     const goldOnly = char.inventory.length === 0 && (char.coins.gp > 0);
     APP.char = char; APP.screen = "sheet"; save();
     store.setActiveId(char.id); APP.prefs.lastChar = char.id; savePrefs();
@@ -1346,8 +1360,7 @@ const ACTIONS = {
       if (goldOnly) { APP.shopAfterChoices = false; APP._shopLater = true; }
       render(); window.scrollTo(0, 0);
     }
-    toast(goldOnly ? "Spend your gold on starting gear" : `${APP.char.name} is ready`);
-    cxSeal(APP.char.name, sealHue);
+    if (goldOnly) toast("Spend your gold on starting gear");
   },
 
   // sheet nav

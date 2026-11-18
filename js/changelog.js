@@ -23,7 +23,12 @@ export const CHANGELOG = [
           "Rules links: any case, spell names, 20 new terms.",
           "Variants (lineage, ancestry, legacy): pick first, nothing preselected, rest hidden until picked.",
           "Unanswered choice boxes get a running red outline and a ! badge.",
-          "Home: development notice."
+          "Home: development notice.",
+          "Class list: Hit die and Primary stat labels.",
+          "Species: Best fit sort and tag for the chosen class.",
+          "Name and Finish: Random buttons and Randomize all.",
+          "Gear: None option.",
+          "New character: Paper or Digital choice, then Classic or Advanced with details."
         ]
       },
       {
@@ -31,7 +36,8 @@ export const CHANGELOG = [
         items: [
           "Feats, traits and abilities in creation are always open.",
           "Class Choices comes after Ability Scores.",
-          "Side panel stays in view while scrolling."
+          "Side panel stays in view while scrolling.",
+          "The name flash after Create character is gone."
         ]
       },
       {

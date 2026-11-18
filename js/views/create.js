@@ -5,6 +5,7 @@
 import { esc, topbar, formatText, searchBox, infoRow, snipOf } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
 import { ABILITIES, ABILITY_LABEL, ABILITY_BY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize, primaryAbilities } from "../rules.js";
+import { speciesFit } from "../speciesfit.js";
 import { variantDef, stripVariantText, draftChoices, optionsFor, isAnswered, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
 import { fmtPrice } from "../equipment.js";
 import { parseSpecies, classifyText } from "../species.js";
@@ -102,7 +103,8 @@ const AB_SHORT = { str: "STR", dex: "DEX", con: "CON", int: "INT", wis: "WIS", c
 export const abChip = k => `<i class="ab ab-${k}" aria-label="${esc(ABILITY_LABEL[k])}">${AB_SHORT[k]}</i>`;
 const classBadges = c => {
   const keys = primaryAbilities(c.primary), caster = (c.features || []).some(f => /^(Spellcasting|Pact Magic)$/i.test(f.name));
-  return `<span class="cx-badges"><span class="cx-die" aria-label="d${c.hd} hit die">${dieIcon(c.hd)}</span>${keys.map(abChip).join("")}${caster ? `<span class="cx-tagc">Caster</span>` : ""}</span>`;
+  return `<span class="cx-badges"><span class="cx-brow"><span class="cx-bl">Hit die:</span><span class="cx-die" aria-label="d${c.hd} hit die">${dieIcon(c.hd)}d${c.hd}</span></span>`
+    + `<span class="cx-brow"><span class="cx-bl">Primary stat${keys.length > 1 ? "s" : ""}:</span>${keys.map(abChip).join("")}${caster ? `<span class="cx-tagc">Caster</span>` : ""}</span></span>`;
 };
 
 // How well one ability score suits a class: green (primary), yellow (conditional), red (little use).
@@ -150,7 +152,7 @@ function renderEquipGroup(app, d, which) {
   const name = which === "class" ? d.class : d.background;
   if (!opts.length) return "";
   return `<div class="choice"><div class="choice-head"><h3>From your ${which === "class" ? "class" : "background"}</h3><span class="sub2">${esc(name)}</span></div>
-    <p class="small muted">Option ${esc(d[key])} is selected. Choose another to change it.</p>
+    <p class="small muted">${d[key] === "none" ? "None" : "Option " + esc(d[key])} selected</p>
     <div class="optlist">${opts.map(o => {
       const on = d[key] === o.key;
       const gc = on ? gearChoices(app, d).filter(g => g.which === which) : [];
@@ -161,10 +163,9 @@ function renderEquipGroup(app, d, which) {
         ${on ? gearChoices(app, d).filter(g => g.which === which && !g.fixed).map(g => `<div class="field gearpick${d.picks[g.id] ? "" : " need"}"><label>Choose: ${esc(g.label)}</label>
           <select class="f" data-gear-pick="${esc(g.id)}"><option value="">Choose\u2026</option>
           ${g.options.map(o => `<option value="${esc(o)}" ${d.picks[g.id] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></div>`).join("") : ""}`;
-    }).join("")}</div></div>`;
+    }).join("")}
+      <button class="optcard" data-a="pickEquip" data-which="${key}" data-k="none" aria-pressed="${d[key] === "none"}"><span class="grow"><b>None</b><span>No gear, no gold</span></span>${d[key] === "none" ? `<span class="tag amber">Chosen</span>` : ""}</button></div></div>`;
 }
-
-
 
 // The variant shown for a species: the pick when it is the chosen species, else what was last previewed.
 export const sortedVariants = vd => [...vd.options].sort((a, b) => String(a.v).localeCompare(String(b.v)));
@@ -218,6 +219,10 @@ function cfgFor(app, d, kind) {
         return { label: vd.label, trait: vd.trait, cur: selectedVariant(app, d, s, vd), options: sortedVariants(vd).map(o => ({ v: o.v, label: o.v, detail: o.detail || "" })), on: d.species === s.name };
       },
       traitsTitle: "Traits and abilities",
+      chips: o => d.class && speciesFit(d.class, o.name) ? [{ label: "Best fit", full: "Best fit for " + d.class, tone: "good" }] : [],
+      fitWord: { good: "Suggested", ok: "", bad: "" }, noFitBlock: true,
+      synergyScore: d.class ? o => (speciesFit(d.class, o.name) ? 1 : 0) : undefined,
+      synergyGood: o => speciesFit(d.class, o.name),
       choices: o => choiceBundle(app, d, "species", o)
     };
   }
@@ -431,15 +436,15 @@ function finishBody(app, d) {
   const skills = [...takenSkills(app, d), ...d.classSkills].map(id => SKILLS.find(s => s.id === id)?.label).filter(Boolean);
   const open = unresolvedDecisions(d, app).filter(x => x.chapter !== "finish");
   const picks = choiceLines(app, d);
-  return `<div class="field"><label for="f-name">Character name</label>
+  return `<div class="btnrow"><button class="btn pri" data-a="randomDetails">Randomize all</button></div>
+    <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-name">Character name</label><button class="btn sm" data-a="randomName" aria-label="Random name">Random</button></div>
       <input class="f" id="f-name" value="${esc(d.name)}" placeholder="e.g. Gandork the Green" maxlength="60" autocomplete="off" enterkeyhint="next"></div>
-    <div class="btnrow" style="margin-top:8px"><button class="btn sm" data-a="randomName">Random name</button></div>
     <div class="grid2" style="margin-top:12px">
-      <div class="field"><label for="f-align">Alignment (optional)</label><select class="f" id="f-align" data-draft="alignment"><option value="">Choose...</option>${ALIGNMENTS.map(a => `<option ${d.alignment === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
+      <div class="field"><div class="rlabel"><label for="f-align">Alignment (optional)</label><button class="btn sm" data-a="randomAlign" aria-label="Random alignment">Random</button></div><select class="f" id="f-align" data-draft="alignment"><option value="">Choose...</option>${ALIGNMENTS.map(a => `<option ${d.alignment === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
       <div class="field"><label>Languages</label><input class="f" value="${esc(["Common", ...[].concat(d.picks["bg:lang"] || [])].join(", "))}" disabled aria-label="Languages from your background"></div>
     </div>
-    <div class="field" style="margin-top:12px"><label for="f-look">Appearance (optional)</label><textarea class="f" id="f-look" rows="3" data-draft-text="appearance" placeholder="Height, build, hair, scars, clothing">${esc(d.appearance || "")}</textarea></div>
-    <div class="field" style="margin-top:12px"><label for="f-story">Backstory and personality (optional)</label><textarea class="f" id="f-story" rows="5" data-draft-text="backstory" placeholder="Where from, what they want, how they act">${esc(d.backstory || "")}</textarea></div>
+    <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-look">Appearance (optional)</label><button class="btn sm" data-a="randomLook" aria-label="Random appearance">Random</button></div><textarea class="f" id="f-look" rows="3" data-draft-text="appearance" placeholder="Height, build, hair, scars, clothing">${esc(d.appearance || "")}</textarea></div>
+    <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-story">Backstory and personality (optional)</label><button class="btn sm" data-a="randomStory" aria-label="Random backstory and personality">Random</button></div><textarea class="f" id="f-story" rows="5" data-draft-text="backstory" placeholder="Where from, what they want, how they act">${esc(d.backstory || "")}</textarea></div>
     <div class="choice"><div class="choice-head"><h3>Summary</h3></div><dl class="kv">
       <dt>Class</dt><dd>${esc(d.class)}, level ${lvl}</dd><dt>Species</dt><dd>${esc(d.species)}</dd><dt>Background</dt><dd>${esc(d.background)}</dd>
       <dt>Abilities</dt><dd class="num">${ABILITIES.map(a => `${a.toUpperCase()} ${fin[a]}`).join(" \u00b7 ")}</dd>

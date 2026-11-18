@@ -18,20 +18,38 @@ const MOCK_ADV = `<svg class="sp-mock" viewBox="0 0 120 150" aria-hidden="true" 
   <rect x="28" y="132" width="64" height="10" rx="5" class="bar"/></svg>`;
 
 const SHEETS = {
-  classic: { name: "Classic", short: "Classic", mock: MOCK_CLASSIC, icon: "book",
-    gets: ["One page", "Tap to roll", "Paper layout"] },
-  advanced: { name: "Advanced", short: "Advanced", mock: MOCK_ADV, icon: "bolt",
-    gets: ["Tabs", "Action tiles, turn tracker", "Loadouts, hotbar, shortcuts"] }
+  classic: { name: "Classic", short: "Classic", mock: MOCK_CLASSIC, icon: "book", line: "Works like the paper sheet",
+    gets: ["One page, paper layout", "Tap a number to roll", "Spells and gear on tabs"] },
+  advanced: { name: "Advanced", short: "Advanced", mock: MOCK_ADV, icon: "bolt", line: "Built for running turns",
+    gets: ["Action, bonus action, reaction tracker", "Hotbar for attacks and spells", "Loadouts for gear sets", "Counters, rests, death saves"] }
 };
+const MOCK_PAPER = `<svg class="sp-mock" viewBox="0 0 120 150" aria-hidden="true" focusable="false">
+  <rect x="14" y="6" width="92" height="138" rx="4" class="paper"/><rect x="24" y="16" width="72" height="10" rx="2" class="bar"/>
+  <g class="line">${[40, 52, 64, 76, 88, 100, 112].map(y => `<rect x="24" y="${y}" width="${y % 24 ? 72 : 52}" height="4" rx="2"/>`).join("")}</g></svg>`;
+
+// Step 1 after a character is made: print a PDF, or run the character in the app.
+function modePicker(app) {
+  return `<div class="sheetview stylefull">
+    ${topbar("Character sheet", app.char ? app.char.name : "", { back: "backToRoster" })}
+    <main class="wrap page">
+      <div class="sp-cards sp-modes">
+        <section class="sp-card" aria-label="Paper">${MOCK_PAPER}<b>Paper</b><p class="sp-line">Print it and play on paper</p>
+          <button class="btn block" data-a="downloadPdf">Download PDF</button></section>
+        <section class="sp-card" aria-label="Digital">${MOCK_ADV}<b>Digital</b><p class="sp-line">PDF download stays available</p>
+          <button class="btn pri block" data-a="styleRun">Run in app</button></section>
+      </div>
+    </main></div>`;
+}
 
 export function stylePicker(app) {
+  if (app.styleStep !== "style") return modePicker(app);
   const pend = app.stylePending, p = pend && SHEETS[pend];
   const card = k => {
     const s = SHEETS[k], on = pend === k;
     return `<button class="sp-card ${k}${on ? " sel" : ""}" data-a="stylePick" data-v="${k}" aria-pressed="${on}">
-      <span class="sp-check" aria-hidden="true">${on ? "✓" : ""}</span>
+      <span class="sp-check" aria-hidden="true">${on ? "\u2713" : ""}</span>
       ${s.mock}
-      <b>${s.name}</b>
+      <b>${s.name}</b><span class="sp-line">${s.line}</span>
       <ul class="sp-gets">${s.gets.map(g => `<li>${g}</li>`).join("")}</ul>
     </button>`;
   };
@@ -40,7 +58,8 @@ export function stylePicker(app) {
     <main class="wrap page">
       <div class="sp-cards">${card("classic")}${card("advanced")}</div>
     </main>
-    <div class="sp-confirm"><div class="wrap">
+    <div class="sp-confirm"><div class="wrap sp-confirm-row">
+      <button class="btn" data-a="styleBack">Back</button>
       <button class="btn pri block" data-a="styleConfirm" ${p ? "" : "disabled"}>${p ? `Use ${p.short}` : "Select a sheet"}</button>
     </div></div></div>`;
 }
