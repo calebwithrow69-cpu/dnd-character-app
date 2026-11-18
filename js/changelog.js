@@ -31,7 +31,9 @@ export const CHANGELOG = [
           "New character: Paper or Digital choice, then Classic or Advanced with details.",
           "Rules links: damage types, Expertise, Sorcery Points.",
           "Classic sheet: tappable rows use the accent edge, wider item names, Gear tab label.",
-          "Level-up: numbered step markers that fit the screen, new features always open."
+          "Level-up: numbered step markers that fit the screen, new features always open.",
+          "Classic sheet redesign: floating header and dock, card panels, underline tabs.",
+          "Sheet choice: Advanced is marked experimental."
         ]
       },
       {
@@ -40,7 +42,8 @@ export const CHANGELOG = [
           "Feats, traits and abilities in creation are always open.",
           "Class Choices comes after Ability Scores.",
           "Side panel stays in view while scrolling.",
-          "The name flash after Create character is gone."
+          "The name flash after Create character is gone.",
+          "Sheet header buttons are readable in the light theme."
         ]
       },
       {

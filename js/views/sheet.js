@@ -74,7 +74,7 @@ export function renderSheet(app) {
   else body = rulesTab(app);
   const wide = tab === "stats" && app.prefs.sheetStyle === "advanced" && app.charSub === "gear";
 
-  return `<div class="sheetview">
+  return `<div class="sheetview" data-sheet="${app.prefs.sheetStyle === "advanced" ? "advanced" : "classic"}">
     ${sheetBar(c, d, meta)}
     <main class="wrap page ${wide ? "wide" : ""}">
       ${c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}

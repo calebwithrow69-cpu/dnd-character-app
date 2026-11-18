@@ -1964,3 +1964,56 @@ body.cx-on .btn.incomplete{opacity:.6}
 .lvl-steps button.now{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
 .lvl-steps button.done{color:var(--ink);background:var(--panel2)}
 .lvl-steps button:disabled{opacity:.45;color:var(--muted);border-color:var(--line)}
+
+/* Sheet header buttons stay legible in both themes (the accent label colour was winning over the card label colour) */
+.sheetbar .iconbtn,.sheetbar .btn,.sheetbar .btn:not(.pri):not(.danger):not(.ghost){color:var(--card-ink);background:#ffffff18;border-color:#ffffff33}
+.sheetbar .iconbtn:hover,.sheetbar .btn:hover{background:#ffffff2a;border-color:#ffffff55}
+.sp-warn{display:flex;align-items:flex-start;gap:8px;align-self:stretch;text-align:left;margin-top:6px;padding:8px 10px;border:1px solid var(--edge);border-radius:var(--radius-sm);font-size:.82rem;color:var(--ink)}
+.sp-warn i{flex:none;width:18px;height:18px;border-radius:50%;background:var(--amber);color:var(--amber-ink);font:700 .75rem/18px var(--mono);font-style:normal;text-align:center}
+
+/* ===== Classic sheet v2: floating header and dock, card panels, underline tabs ===== */
+.sheetview[data-sheet="classic"] .topbar.sheetbar{margin:10px 12px 0;top:10px;border-radius:18px;box-shadow:0 10px 28px rgba(30,8,12,.3)}
+.sheetview[data-sheet="classic"] .status{background:var(--panel);border:1px solid var(--line);border-radius:var(--card-r);padding:18px 14px 14px;margin-top:14px;box-shadow:0 8px 22px rgba(30,8,12,.1)}
+.sheetview[data-sheet="classic"] .status .xpline{margin:10px 0 0;color:var(--muted)}
+.sheetview[data-sheet="classic"] .status .quick{margin-top:12px;border-radius:12px}
+.sheetview[data-sheet="classic"] nav.tabs{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border-radius:20px;box-shadow:0 10px 28px rgba(30,8,12,.35)}
+.sheetview[data-sheet="classic"] nav.tabs button{border-radius:16px}
+
+.sheetview[data-sheet="classic"] .subtabs.seg{display:flex;gap:0;margin:2px 0 14px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;box-shadow:none;overflow-x:auto;scrollbar-width:none}
+.sheetview[data-sheet="classic"] .subtabs.seg::-webkit-scrollbar{display:none}
+.sheetview[data-sheet="classic"] .subtabs.seg button{flex:1 0 auto;min-width:64px;min-height:46px;padding:0 12px;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;border-radius:0;background:none;box-shadow:none;font:600 .72rem var(--display);letter-spacing:.12em;color:var(--muted);overflow:visible;text-overflow:clip}
+.sheetview[data-sheet="classic"] .subtabs.seg button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--amber);background:none}
+.sheetview[data-sheet="classic"] .subtabs.seg button:hover{color:var(--ink)}
+.sheetview[data-sheet="classic"] .classic .search{margin:0 0 12px}
+
+.sheetview[data-sheet="classic"] .classic .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(30,8,12,.07)}
+.sheetview[data-sheet="classic"] .classic .panel-head{padding:11px 14px;background:color-mix(in srgb,var(--ink) 4%,transparent);border-bottom:1px solid var(--line-soft)}
+.sheetview[data-sheet="classic"] .classic .panel-head h2{font-size:.82rem;letter-spacing:.18em;color:var(--ink)}
+.sheetview[data-sheet="classic"] .classic .panel-body{padding:4px 14px 12px}
+.sheetview[data-sheet="classic"] .classic .panel-body.flush{padding:0}
+.sheetview[data-sheet="classic"] .classic .abblk{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 12px 8px;box-shadow:0 4px 14px rgba(30,8,12,.07)}
+.sheetview[data-sheet="classic"] .classic .abmod{box-shadow:0 0 0 4px var(--panel),0 0 0 5px var(--edge)}
+.sheetview[data-sheet="classic"] .classic .abrow .term{background:none;padding:0;text-decoration:none;font-weight:500;color:var(--ink);cursor:pointer}
+.sheetview[data-sheet="classic"] .classic .abrow .term:hover{text-decoration:underline dotted var(--amber);text-underline-offset:3px;background:none}
+.sheetview[data-sheet="classic"] .classic .rowline{padding-inline:2px}
+@media (min-width:1100px){
+  .sheetview[data-sheet="classic"]{padding-left:120px}
+  .sheetview[data-sheet="classic"] .topbar.sheetbar{margin:12px 28px 0 20px}
+  .sheetview[data-sheet="classic"] nav.tabs{left:16px;right:auto;top:104px;bottom:auto;width:88px;padding:8px;border:1px solid #ffffff1f;border-radius:22px;background:linear-gradient(180deg,var(--card-hi),var(--card-lo))}
+  .sheetview[data-sheet="classic"] nav.tabs .in{gap:6px}
+  .sheetview[data-sheet="classic"] nav.tabs button{min-height:72px;border-radius:16px}
+  .sheetview[data-sheet="classic"] .classic{background:none;border:0;box-shadow:none;padding:0;border-radius:0}
+  .sheetview[data-sheet="classic"] .classic::before{display:none}
+  .sheetview[data-sheet="classic"] .cl-top{gap:20px}
+  .sheetview[data-sheet="classic"] .cl-cols,.sheetview[data-sheet="classic"] .cl-cols3{gap:20px}
+}
+.sheetview[data-sheet="classic"] .classic .search{margin:0}
+.sheetview[data-sheet="classic"] .classic .abrow .linkbtn{text-decoration:none;color:var(--ink);font-weight:500}
+.sheetview[data-sheet="classic"] .classic .abrow .linkbtn:hover{text-decoration:underline dotted var(--amber);text-underline-offset:3px}
+.sheetview[data-sheet="classic"] .classic .abrow .v,.sheetview[data-sheet="classic"] .classic .abrow b{color:var(--amber)}
+.sheetview[data-sheet="classic"] .hptext{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px}
+.sheetview[data-sheet="classic"] .hptext .muted{white-space:nowrap;font-size:.85rem}
+.sheetview[data-sheet="classic"] .hptext .hpedit{flex-basis:100%}
+.sheetview[data-sheet="classic"] .subtabs.seg button{flex:1 1 0;min-width:0;padding:0 4px;letter-spacing:.06em;font-size:.66rem}
+.sheetview[data-sheet="classic"] nav.tabs button{font-size:.6rem;letter-spacing:.08em}
+@media (min-width:1100px){.sheetview[data-sheet="classic"] .subtabs.seg button{font-size:.72rem;letter-spacing:.14em}}

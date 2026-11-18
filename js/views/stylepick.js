@@ -21,7 +21,8 @@ const SHEETS = {
   classic: { name: "Classic", short: "Classic", mock: MOCK_CLASSIC, icon: "book", line: "Works like the paper sheet",
     gets: ["One page, paper layout", "Tap a number to roll", "Spells and gear on tabs"] },
   advanced: { name: "Advanced", short: "Advanced", mock: MOCK_ADV, icon: "bolt", line: "Built for running turns",
-    gets: ["Action, bonus action, reaction tracker", "Hotbar for attacks and spells", "Loadouts for gear sets", "Counters, rests, death saves"] }
+    gets: ["Action, bonus action, reaction tracker", "Hotbar for attacks and spells", "Loadouts for gear sets", "Counters, rests, death saves"],
+    warn: "Experimental. No healing yet. Some abilities are not read." }
 };
 const MOCK_PAPER = `<svg class="sp-mock" viewBox="0 0 120 150" aria-hidden="true" focusable="false">
   <rect x="14" y="6" width="92" height="138" rx="4" class="paper"/><rect x="24" y="16" width="72" height="10" rx="2" class="bar"/>
@@ -51,6 +52,7 @@ export function stylePicker(app) {
       ${s.mock}
       <b>${s.name}</b><span class="sp-line">${s.line}</span>
       <ul class="sp-gets">${s.gets.map(g => `<li>${g}</li>`).join("")}</ul>
+      ${s.warn ? `<span class="sp-warn" role="note"><i aria-hidden="true">!</i>${s.warn}</span>` : ""}
     </button>`;
   };
   return `<div class="sheetview stylefull">
