@@ -2,11 +2,37 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.50";
+export const VERSION = "0.1.51";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.51",
+    date: "2026-11-18",
+    stage: "Pre-build",
+    blurb: "Creation: guidance, locked side panel, class list, rules links.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "Continue scrolls to the missing choice and flags it.",
+          "Confirm before Random character and before changing the class.",
+          "Hit die icon and ability chips on the class list.",
+          "Light theme: stronger text and accent contrast.",
+          "Rules links: any case, spell names, 20 new terms."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Feats, traits and abilities in creation are always open.",
+          "Class Choices comes after Ability Scores.",
+          "Side panel stays in view while scrolling."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.50",
     date: "2026-11-08",

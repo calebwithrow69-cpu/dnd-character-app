@@ -147,8 +147,7 @@ export function renderCodexList(app, cfg) {
     const g = group(o);
     if (g !== last) { html += `<div class="sp-group">${esc(g)}</div>`; last = g; }
     const on = cfg.selected === o.name, open = u.open === o.name, isFav = fav.includes(o.name);
-    const acc = cfg.accent ? cfg.accent(o) : [];
-    html += `<div class="sp-row ${open ? "open" : ""} ${on ? "on" : ""} ${acc.length ? "has-ab" : ""}" ${acc.length ? `style="--abc1:var(--ab-${acc[0]});--abc2:var(--ab-${acc[acc.length - 1]})"` : ""}>
+    html += `<div class="sp-row ${open ? "open" : ""} ${on ? "on" : ""}">
       <div class="sp-top">
         <button class="sp-main" data-a="cxOpen" data-kind="${cfg.kind}" data-name="${esc(o.name)}" aria-expanded="${open}">
           ${thumb(o.name, "sp-thumb", cfg.kind)}

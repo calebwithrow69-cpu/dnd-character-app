@@ -1881,75 +1881,40 @@ input.f,select.f,textarea.f{border-color:var(--edge)}
 
 /* Continue on an unfinished step: the missing choice is flagged where it sits */
 .flag-need{animation:flagNeed 2.6s ease-out;scroll-margin:110px 0 220px}
-@keyframes flagNeed{0%,100%{box-shadow:0 0 0 0 transparent}8%,40%,72%{box-shadow:0 0 0 4px var(--gold),0 0 22px 2px color-mix(in srgb,var(--gold) 55%,transparent)}22%,56%{box-shadow:0 0 0 2px var(--gold)}}
-.choice.need,.cx-methods.need{outline:2px dashed color-mix(in srgb,var(--gold) 70%,transparent);outline-offset:4px;border-radius:var(--radius-sm)}
+@keyframes flagNeed{0%,100%{box-shadow:0 0 0 0 transparent}8%,40%,72%{box-shadow:0 0 0 4px var(--amber),0 0 22px 2px color-mix(in srgb,var(--amber) 45%,transparent)}22%,56%{box-shadow:0 0 0 2px var(--amber)}}
+.choice.need,.cx-methods.need{outline:2px dashed color-mix(in srgb,var(--amber) 70%,transparent);outline-offset:4px;border-radius:var(--radius-sm)}
 .flag-why{animation:flagWhy .7s ease-out}
 @keyframes flagWhy{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
-@media (prefers-reduced-motion:reduce){.flag-need,.flag-why{animation:none}.flag-need{box-shadow:0 0 0 4px var(--gold)}}
+@media (prefers-reduced-motion:reduce){.flag-need,.flag-why{animation:none}.flag-need{box-shadow:0 0 0 4px var(--amber)}}
 
 /* entries that are always open */
 .sp-tbtn.static{cursor:default;display:flex;align-items:center;gap:10px;width:100%;text-align:left}
 .sp-trait.open>.about{display:block}
 
-/* ===== Creation polish: ability colors, hit dice, light theme, tappable signal ===== */
+/* ===== Creation polish (inside the 0.1.49 system: one accent, hairlines, flat panels) ===== */
+/* Ability identity is a 3px underline on a neutral chip: the only place the six hues appear. */
 :root{--ab-str:#D2603A;--ab-dex:#35AE98;--ab-con:#C99A33;--ab-int:#5E8FD6;--ab-wis:#9A74D6;--ab-cha:#D65C98}
 html[data-mode="light"]{--ab-str:#B8431F;--ab-dex:#1F8573;--ab-con:#946D10;--ab-int:#2A5CA8;--ab-wis:#6A3FB0;--ab-cha:#B02A72}
-.ab{--abc:var(--ab-str);display:inline-block;font:700 .72rem/1 var(--mono);font-style:normal;letter-spacing:.04em;padding:4px 7px;border-radius:5px;color:var(--ink);background:color-mix(in srgb,var(--abc) 24%,transparent);border:1.5px solid var(--abc);box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--abc) 45%,transparent)}
+.ab{--abc:var(--ab-str);display:inline-block;font:600 .7rem/1 var(--mono);font-style:normal;letter-spacing:.08em;padding:4px 7px 3px;border-radius:var(--radius-sm);color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-bottom:3px solid var(--abc)}
 .ab-str{--abc:var(--ab-str)}.ab-dex{--abc:var(--ab-dex)}.ab-con{--abc:var(--ab-con)}.ab-int{--abc:var(--ab-int)}.ab-wis{--abc:var(--ab-wis)}.ab-cha{--abc:var(--ab-cha)}
-.cx-badges{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:5px 0 2px}
-.cx-tagc{font:600 .68rem/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 0 4px 4px}
-.cx-die{display:inline-flex;align-items:center;gap:4px;font:700 .8rem var(--mono);color:var(--ink)}
-.die{width:30px;height:30px;flex:none;fill:color-mix(in srgb,var(--amber) 14%,transparent);stroke:var(--amber);stroke-width:1.6;stroke-linejoin:round}
-.die .f{fill:none;stroke-opacity:.4;stroke-width:1}
+.cx-badges{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:5px 0 2px}
+.cx-tagc{font:600 .66rem/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-left:2px}
+.cx-die{display:inline-flex;align-items:center;gap:5px;font:600 .8rem var(--mono);color:var(--ink)}
+.die{width:34px;height:34px;flex:none;fill:none;stroke:var(--amber);stroke-width:1.5;stroke-linejoin:round}
+.die .f{stroke-opacity:.4;stroke-width:1}
 .die text{fill:var(--ink);stroke:none;font:700 8.5px var(--mono)}
-.sp-row.has-ab .sp-top{position:relative}
-.sp-row.has-ab .sp-top::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(var(--abc1),var(--abc2));pointer-events:none;z-index:1}
-body.cx-on .sp-row.has-ab .sp-main{padding-left:14px}
 .sp-facts dd .ab{margin-right:2px}
 
-/* Light theme: tan page, cream panels, near-black ink, ink-weight headings instead of thin red */
-html[data-mode="light"]{
-  --bg:#D9CAA6;--panel:#FFFAEC;--panel2:#F3E8CB;--raised:#E8D9B3;--glow:#E4D6B3;
-  --line:#6F5B38;--line-soft:#B3A077;--frame:#5E4C2C;
-  --ink:#150E07;--muted:#392A18;--faint:#523F27;
-  --amber:#8B1D12;--amber-ink:#FFF7E4;--amber-dim:#EBCFC1;
-  --green:#2F5E2B;--red:#9A241B;--blue:#234F7E;--gold:#7A5400;--edge:#6F5B38}
-html[data-mode="dark"]{--edge:#080504}
-html[data-mode="light"] body{font-weight:500}
-html[data-mode="light"] :is(small,.sub2,.small,.muted,.lab){font-weight:500}
-html[data-mode="light"] :is(.sp-group,.sp-sechead h3,.cx-fit-h,.cx-h,.k-gh,.cx-help b){color:var(--ink);font-weight:700}
-html[data-mode="light"] .sp-group{border-bottom:2px solid var(--amber)}
-html[data-mode="light"] .sp-sechead h3{border-bottom:2px solid var(--amber);padding-bottom:3px}
-html[data-mode="light"] .cx-help{border-left-width:5px;color:var(--ink);font-weight:500}
-html[data-mode="light"] :is(.cx-chip,.cx-bg-good,.cx-bg-ok,.cx-bg-bad,.cx-fit-r b){font-weight:700}
-html[data-mode="light"] .panel,html[data-mode="light"] .modal{border:2px solid var(--frame)}
+/* Light theme: stronger ink and a deeper accent for contrast. Hairlines, radii and the card tokens are unchanged. */
+html[data-mode="light"]{--bg:#DCCFAE;--panel:#FFFAEC;--panel2:#F4EAD0;--ink:#1A120A;--muted:#40301D;--faint:#5A4529;--amber:#8B1D12;--amber-ink:#FFF7E4}
+html[data-mode="light"] :is(.sp-group,.sp-sechead h3,.cx-fit-h,.cx-h){color:var(--ink)}
 
-/* One signal for "you can tap this" during creation: a raised key with a hard bottom edge that presses down.
-   Anything flat (text, pills, chips, panels) is information. */
-body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.seg button,.iconbtn,.sp-fav,.prow,.cx-chap,.sp-tbtn:not(.static),.k-row .k-main,.term,.spelllink,.cx-mbar,select.f){
-  cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .08s,box-shadow .08s,background-color .12s}
-body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.seg button,.iconbtn,.sp-fav,.prow,.cx-chap,.cx-mbar,select.f){
-  border:2px solid var(--frame);border-radius:7px;box-shadow:0 3px 0 var(--edge)}
-body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.seg button,.iconbtn,.sp-fav,.prow,.cx-chap,.cx-mbar):not(:disabled):not([aria-disabled="true"]):hover{background-color:var(--raised)}
-body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.seg button,.iconbtn,.sp-fav,.prow,.cx-chap,.cx-mbar):not(:disabled):active{transform:translateY(3px);box-shadow:0 0 0 var(--edge)}
-body.cx-on .btn.pri:not(:disabled){background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
-body.cx-on :is(.tile,.optcard,.chipbtn,.seg button)[aria-pressed="true"]{background:var(--amber-dim);border-color:var(--amber);box-shadow:0 3px 0 var(--amber),inset 0 0 0 1px var(--amber)}
-body.cx-on .sp-top{border:2px solid var(--frame);border-radius:9px;box-shadow:0 3px 0 var(--edge);background:var(--panel);margin:8px 0 10px;overflow:hidden}
-body.cx-on .sp-top:active{transform:translateY(2px);box-shadow:0 1px 0 var(--edge)}
-body.cx-on .sp-row.open>.sp-top{background:var(--panel2)}
-body.cx-on .sp-row.on>.sp-top{border-color:var(--amber)}
-body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.sp-main,.sp-fav,.prow,.cx-chap,.term,.spelllink,select.f,input.f,textarea.f):focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-body.cx-on :is(input.f,textarea.f){border:2px solid var(--frame);border-radius:6px;box-shadow:inset 0 2px 3px color-mix(in srgb,var(--edge) 35%,transparent)}
-body.cx-on .btn:disabled,body.cx-on .btn.incomplete{box-shadow:0 2px 0 var(--edge)}
+/* Tappable rows and rail items follow the same language as k-rows: accent edge, accent label, press state only. */
+.sp-row .sp-top{border-left:2px solid color-mix(in srgb,var(--amber) 45%,transparent)}
+.sp-row .sp-top:hover,.sp-row.open .sp-top,.sp-row.on .sp-top{border-left-color:var(--amber)}
+body.cx-on :is(.cx-chap,.cx-mbar,.prow,.tile){border:1px solid var(--edge);border-radius:var(--radius-sm);cursor:pointer}
+body.cx-on :is(.btn,.chipbtn,.optcard,.tile,.cx-chap,.cx-mbar,.sp-main,.iconbtn):not(:disabled):active{transform:scale(.985)}
+body.cx-on :is(.btn,.chipbtn,.optcard,.tile,.cx-chap,.sp-main,.sp-fav,.term,.spelllink,select.f,input.f,textarea.f):focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 body.cx-on .btn.incomplete{opacity:.6}
-body.cx-on :is(.cx-chip,.cx-pill,.ab,.cx-tagc,.tag,.flag){box-shadow:none;transform:none}
-@media (prefers-reduced-motion:reduce){body.cx-on :is(.btn,.chipbtn,.tile,.optcard,.sp-top){transition:none}}
-/* inside a list row the row is the key; the star is a divided cell, not a second key */
-body.cx-on .sp-top .sp-fav{border:0;border-left:2px solid var(--line-soft);border-radius:0;box-shadow:none;background:transparent;align-self:stretch}
-body.cx-on .sp-top .sp-fav:active{transform:none}
-body.cx-on .sp-row{border-bottom:0}
-.die{width:36px;height:36px}
-/* Rules-text links: terms get a tinted chip-underline, spells a blue one; both visible in either theme */
-.term{background:color-mix(in srgb,var(--gold) 16%,transparent);text-decoration:underline solid var(--gold);text-decoration-thickness:2px;border-radius:3px;padding:0 2px;cursor:pointer;font-weight:600}
-.term:hover,.term:focus-visible{background:color-mix(in srgb,var(--gold) 32%,transparent);color:var(--ink)}
-.spelllink{color:var(--blue,#5E8FD6);background:color-mix(in srgb,var(--blue,#5E8FD6) 14%,transparent);text-decoration:underline solid var(--blue,#5E8FD6);text-decoration-thickness:2px;border-radius:3px;padding:0 2px;font-weight:600}
+.term{text-decoration-style:solid;cursor:pointer}
+@media (prefers-reduced-motion:reduce){body.cx-on :is(.btn,.chipbtn,.optcard,.tile,.sp-main){transform:none}}

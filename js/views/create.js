@@ -227,7 +227,7 @@ function cfgFor(app, d, kind) {
       ...base, items, selected: d.class, noun: "classes", sources: new Set(items.map(c => c.source)).size > 1, filterLabel: "Show",
       filterOptions: ["All", "Spellcasters", "Non-spellcasters"], test: (c, f) => f === "Spellcasters" ? caster(c) : !caster(c),
       sub: () => "",
-      badges: classBadges, accent: c => primaryAbilities(c.primary),
+      badges: classBadges,
       facts: c => [["Hit Point Die", "d" + c.hd, `<span class="cx-die">${dieIcon(c.hd)}d${c.hd}</span>`], ["Primary ability", c.primary, primaryAbilities(c.primary).map(abChip).join(" ") + " " + esc(c.primary)], ["Saving throws", parseList(c.saves).join(", ")],
         ["Armor training", c.armorProf || "None"], ["Weapon training", c.weaponProf], c.toolProf ? ["Tool training", c.toolProf] : null,
         ["Skills", `Choose ${c.skillN}: ${parseList(c.skillFrom).join(", ")}`]].filter(Boolean).filter(f => f[1]),
