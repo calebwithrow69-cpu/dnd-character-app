@@ -1,5 +1,5 @@
 // DM editor screen + its actions. ASCII-only.
-import { esc, topbar, searchBox } from "../ui.js";
+import { esc, topbar, searchBox, dateStamp } from "../ui.js";
 import { SCHEMA, KIND_ORDER, BLOCKS, PICK_FIELDS, extraKeys, template, keyOf, labelOf, validate, loadPatch, savePatch, patchCount } from "../dm.js";
 import { listBooks, bookName } from "../rulesets.js";
 import { subclassSpellTables } from "../subclassspells.js";
@@ -295,7 +295,7 @@ export function dmActions(APP, h) {
     dmReset() { if (window.confirm("Clear every DM change on this device? Anything you have not exported is lost.")) { commit({}); h.toast("Cleared"); } },
     dmExport() {
       const blob = new Blob([JSON.stringify(patch(), null, 1)], { type: "application/json" }), a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = "character-runner-dm-changes.json"; document.body.appendChild(a); a.click(); a.remove();
+      a.href = URL.createObjectURL(blob); a.download = `character-runner-dm-changes-${dateStamp()}.json`; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000); h.toast("Changes file saved");
     },
     async dmImportFile(file) {

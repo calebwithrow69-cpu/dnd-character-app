@@ -22,6 +22,7 @@ import { COST_LABEL, isSustained } from "../combat.js";
 import { wieldedId } from "../play.js";
 import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
+import { renderContentUpdate } from "./contentupdate.js";
 import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
 import { trainingFromChar, trainingSummary, isTrained } from "../creation.js";
@@ -429,6 +430,9 @@ export function renderModal(app) {
 
     case "changelog":
       return renderChangelogModal(app);
+
+    case "contentUpdate":
+      return renderContentUpdate(app);
 
     case "hp": {
       const hp = c.hp;

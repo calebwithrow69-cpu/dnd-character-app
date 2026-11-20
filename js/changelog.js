@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.52";
+export const VERSION = "0.1.53";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.53",
+    date: "2026-11-20",
+    stage: "Pre-build",
+    blurb: "Content update popup and dated export names.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Content update popup: New, Changed and Removed with counts, each change with Before and After.",
+          "Buff and nerf tags on changed spells, feats and classes.",
+          "Settings > About reopens the last content update.",
+          "Export file names carry the date."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.52",
     date: "2026-11-20",

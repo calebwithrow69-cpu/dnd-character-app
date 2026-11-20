@@ -14,7 +14,7 @@ import { spUiDefault, favKey } from "./views/codex.js";
 import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
 import { renderRulesets, rsActions, rsUiDefault } from "./views/rulesets.js";
 import { applyPatch, loadPatch } from "./dm.js";
-import { toast, platform, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
+import { toast, platform, dateStamp, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
 import { renderHome, renderRulesPage, lastCharacter } from "./views/home.js";
@@ -40,6 +40,8 @@ import { renderSheetSearch } from "./views/classic.js";
 import { renderSheet, renderSpellResults, renderGearResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat } from "./views/glossary.js";
 import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
+import { cuState } from "./views/contentupdate.js";
+import { hasUpdate, shouldShow, seenId, markSeen } from "./contentupdate.js";
 import { flourish, toneFor } from "./subtone.js";
 import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
@@ -160,11 +162,12 @@ async function init() {
   APP._lvlChecked = true;
   if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindContext(); APP._eventsBound = true; }
   render();
+  maybeShowUpdate();
 
   const recheck = (manual) => checkForUpdates({ library: APP.rawLibrary, campaign: APP.rawCampaign }, (fresh) => {
     APP.rawLibrary = fresh.library; APP.rawCampaign = fresh.campaign; setRules(); rebuildGlossary();
     toast(fresh.changed.includes("campaign") ? "Your DM updated the campaign rules" : "Rules data updated");
-    render();
+    render(); maybeShowUpdate();
   }, (err) => { APP.lockErr = err; APP.needsNewPassword = true; render(); }).then(() => { if (manual === true) toast(navigator.onLine ? "Checked — you're up to date" : "You're offline right now"); });
   APP.recheck = recheck;
   if (!APP._listening) {
@@ -237,6 +240,15 @@ function restoreLevelUp() {
     if (c.level !== d.level || !Number.isFinite(d.lvl.next) || d.lvl.next !== (d.lvl.fromCreation ? c.level : c.level + 1)) { localStorage.removeItem(LS_LVL); return false; }
     APP.char = c; APP.lvl = d.lvl; APP.screen = "levelup"; return true;
   } catch (e) { try { localStorage.removeItem(LS_LVL); } catch (e2) { } return false; }
+}
+
+// The content update opens once per device. A device with no characters starts at the current update.
+function maybeShowUpdate() {
+  const u = APP.library && APP.library.update;
+  if (!hasUpdate(u) || APP.modal || APP.screen === "create" || APP.screen === "locked") return;
+  const seen = seenId(), automated = !!navigator.webdriver, hasCharacters = store.listCharacters().length > 0;
+  if (!automated && !seen && !hasCharacters) { markSeen(u.id); return; }
+  if (shouldShow(u, { seen, hasCharacters, automated })) { APP.cu = null; openModal({ type: "contentUpdate" }); }
 }
 
 // The Rules screen updates in pieces so the list keeps its scroll and the search box its focus.
@@ -354,6 +366,7 @@ function openModal(m) {
 }
 function closeModal() {
   if (!APP.modal) return;
+  if (APP.modal.type === "contentUpdate" && APP.library?.update) markSeen(APP.library.update.id);
   if (APP._under) {
     APP.modal = APP._under; APP._under = null; render();
     const b = modalRoot.querySelector(".modal-body"); if (b) b.scrollTop = APP._underScroll || 0;
@@ -556,7 +569,7 @@ async function shareOrDownload(filename, text) {
   toast("Backup saved to your downloads");
 }
 function exportChars(ids, label) {
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = dateStamp();
   const safe = (label || "characters").replace(/[^\w-]+/g, "-").slice(0, 40);
   shareOrDownload(`character-runner-${safe}-${stamp}.json`, JSON.stringify(store.backupPayload(ids), null, 1));
 }
@@ -942,7 +955,7 @@ const ACTIONS = {
   rndBuilder() { openBuilderWith(APP.createDraft, CHAPTERS.length - 1); },
   async tplSave() {
     const d = APP.createDraft; if (!d) return;
-    const { p, safe } = templateFile(d); await shareOrDownload(`template-${safe}.json`, JSON.stringify(p, null, 1)); toast("Template saved");
+    const { p, safe } = templateFile(d); await shareOrDownload(`template-${safe}-${dateStamp()}.json`, JSON.stringify(p, null, 1)); toast("Template saved");
   },
   async tplCopy() {
     const d = APP.createDraft; if (!d) return;
@@ -1096,6 +1109,10 @@ const ACTIONS = {
     updateHpPreview();
   },
   openChangelog() { openModal({ type: "changelog" }); },
+  openUpdate() { APP.cu = null; openModal({ type: "contentUpdate" }); },
+  cuOpen(el) { const st = cuState(APP); st.open = st.open === el.dataset.k ? "" : el.dataset.k; render(); },
+  cuItem(el) { const st = cuState(APP), k = el.dataset.key; if (st.items.has(k)) st.items.delete(k); else st.items.add(k); render(); },
+  cuDone() { closeModal(); },
   togglePref(el) {
     const t = PREF_TOGGLES[el.dataset.k];
     if (!t) return;

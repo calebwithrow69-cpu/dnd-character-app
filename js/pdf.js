@@ -5,6 +5,7 @@
 import { profsString, deriveCharacter, weaponNumbers, SKILLS, ABILITIES, ABILITY_LABEL, fmtMod, slotRows, CASTER_TYPE } from "./rules.js";
 import { parseSpecies } from "./species.js";
 import { optionGroup, optionNames } from "./progression.js";
+import { dateStamp } from "./ui.js";
 
 const PAGE_W = 612, PAGE_H = 792, M = 28;
 
@@ -386,7 +387,7 @@ export async function downloadSheetPdf(app, char) {
   const blob = new Blob([bytes], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = (char.name || "character").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") + "-sheet.pdf";
+  a.href = url; a.download = (char.name || "character").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-") + "-sheet-" + dateStamp() + ".pdf";
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }

@@ -231,6 +231,49 @@ await check("Rules glossary: the sheet's Rules tab shares the same list", async 
   assert(await p.locator('.gl-open:has-text("Prone")').count() >= 1, "Prone not found"); noErrs(p); await p.context().close();
 });
 
+await check("Content update: opened from Settings, three counts, before and after, buff/nerf tags (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "openSettings"); await p.waitForTimeout(400);
+  await p.locator('details[data-sec="about"] summary').click(); await p.waitForTimeout(150);
+  await p.locator('[data-a="openUpdate"]').click(); await p.waitForTimeout(350);
+  assert(/Content update/i.test(await p.locator(".modal-head h2").innerText()), "header");
+  const counts = await p.locator(".cu-card b").allInnerTexts(); assert(counts.join() === "2,2,0", "counts " + counts.join());
+  assert(await p.locator(".cu-card.removed").isDisabled(), "empty Removed should not open");
+  await p.locator(".cu-card.changed").click(); await p.waitForTimeout(200);
+  assert(await p.locator(".cu-item").count() === 2 && await p.locator(".cu-eff.nerf").count() >= 2, "changed list with Nerf tags");
+  await p.locator(".cu-ih").nth(0).click(); await p.waitForTimeout(150); await p.locator(".cu-ih").nth(1).click(); await p.waitForTimeout(200);
+  assert(await p.locator(".cu-ba .cu-lab", { hasText: "Before" }).count() >= 1 && await p.locator(".cu-ba .cu-lab", { hasText: "After" }).count() >= 1, "before and after");
+  assert(await p.locator(".cu-ba del").count() >= 1 && await p.locator(".cu-ba ins").count() >= 1, "changed words marked");
+  await p.locator(".cu-card.new").click(); await p.waitForTimeout(200);
+  assert(await p.locator(".cu-item").count() === 2 && await p.locator(".cu-eff").count() === 0, "new list has no buff/nerf tags");
+  await p.locator('[data-a="cuDone"]').click(); await p.waitForTimeout(250);
+  assert(await p.locator(".modal").count() === 0, "Done should close it");
+  assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+});
+
+await check("Content update: opens once for a player with characters, never for a new device", async () => {
+  const mk = async () => { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block" });
+    await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); }); const page = await ctx.newPage(); page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
+    await page.goto(URL_); await page.waitForSelector("#home-book"); return page; };
+  const p = await mk(); await p.waitForTimeout(500);
+  assert(await p.locator(".modal").count() === 0, "a new device should not get the popup");
+  await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => localStorage.removeItem("dnd-update-seen"));
+  await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
+  assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "an existing player should get the popup");
+  await p.keyboard.press("Escape"); await p.waitForTimeout(250);
+  await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
+  assert(await p.locator(".modal").count() === 0, "closing it should mark it seen"); noErrs(p); await p.context().close();
+});
+
+await check("Export file names carry the date", async () => {
+  const p = await open(1100, 800); await openSample(p);
+  const today = await p.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
+  await clickA(p, "openSettings"); await p.waitForTimeout(300);
+  await p.locator('details[data-sec="data"] summary').click(); await p.waitForTimeout(150);
+  const [dl] = await Promise.all([p.waitForEvent("download"), p.locator('[data-a="exportAll"]').first().click()]);
+  assert(dl.suggestedFilename() === `character-runner-backup-${today}.json`, dl.suggestedFilename());
+  noErrs(p); await p.context().close();
+});
+
 await check("Settings opens (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "openSettings"); await p.waitForTimeout(500);
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();

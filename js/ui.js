@@ -246,6 +246,9 @@ export function modalShell(title, body, footer = "") {
     </div></div>`;
 }
 
+// Today's date on this device, YYYY-MM-DD, for file names.
+export function dateStamp(d = new Date()) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+
 export function searchBox(query, value, placeholder) {
   return `<div class="search">${ICONS.search}<input class="f" type="search" data-query="${query}" value="${esc(value || "")}" placeholder="${esc(placeholder)}" autocomplete="off"></div>`;
 }
