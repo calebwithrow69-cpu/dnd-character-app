@@ -42,7 +42,8 @@ test("character and word counts count what was typed, emoji as one", () => {
 test("milestones climb in order and report the next one", () => {
   const ns = N.MILESTONES.map(m => m.n); assert(ns.every((v, i) => !i || v > ns[i - 1]), "ascending");
   assert(N.milestoneText(0).head === "Under a tweet", "zero");
-  const m = N.milestoneText(3000); assert(/Gettysburg/.test(m.head) && /Declaration/.test(m.sub), JSON.stringify(m));
+  const m = N.milestoneText(2000); assert(/Gettysburg/.test(m.head) && /single-spaced page/.test(m.sub), JSON.stringify(m));
+  assert(/single-spaced page/.test(N.milestoneText(3000).head), "3000 chars is a page");
   const big = N.milestoneText(4e6); assert(/War and Peace/.test(big.head) && big.pct === 100, JSON.stringify(big));
   assert(/Hobbit/.test(N.milestoneText(N.MILESTONES.find(x => /Hobbit/.test(x.name)).n).head), "exact hit");
 });
@@ -86,5 +87,24 @@ test("toolbar formatting wraps, prefixes and unwraps", () => {
   const e = applyFormat("abc", 3, 3, "italic"); assert(e.text === "abc*italic*" && e.start === 4 && e.end === 10, JSON.stringify(e));
   assert(applyFormat("a\nb", 0, 3, "ul").text === "- a\n- b" && applyFormat("- a\n- b", 0, 7, "ul").text === "a\nb", "list on and off");
   assert(applyFormat("x", 0, 1, "check").text === "- [ ] x" && applyFormat("x", 0, 1, "nope").text === "x", "check and unknown");
+});
+test("every badge has a unique id, an explanation and several facts", () => {
+  assert(N.BADGES.length >= 20, "a lot of badges");
+  assert(new Set(N.BADGES.map(b => b.id)).size === N.BADGES.length, "unique ids");
+  for (const b of N.BADGES) assert(b.name && b.short && b.about && b.facts.length >= 2 && b.facts.every(f => f.length > 15) && Number.isInteger(b.n) && b.n > 0, b.id);
+  assert(N.BADGES.every((b, i, a) => !i || b.n > a[i - 1].n), "ascending");
+});
+test("badges are earned once and kept after notes are deleted", () => {
+  const d = N.load(mem()); assert(N.awardBadges(d, 100, 1).length === 1 && d.badges.sms1 === 1, "first badge");
+  assert(N.awardBadges(d, 100, 2).length === 0 && d.badges.sms1 === 1, "not twice");
+  assert(N.awardBadges(d, 300, 3).map(b => b.id).join() === "sms160,tweet", "two more");
+  assert(N.awardBadges(d, 0, 4).length === 0 && N.badgeCount(d) === 3, "deleting text keeps badges");
+});
+test("badges survive save and load, junk ids are dropped, backups merge the earliest date", () => {
+  const st = mem(), d = N.load(st); N.awardBadges(d, 300, 5); N.save(d, st);
+  assert(!("hadBadges" in JSON.parse(st.getItem(N.KEY))), "no helper flag in storage");
+  const r = N.load(st); assert(N.badgeCount(r) === 3 && r.hadBadges === true && !N.load(mem()).hadBadges, "reload");
+  assert(Object.keys(N.clean({ badges: { nope: 5, tweet: 7, sms1: "x" } }).badges).join() === "tweet", "junk dropped");
+  const b = N.load(mem()); b.badges.tweet = 9; N.mergeImport(b, N.exportData(d)); assert(b.badges.tweet === 5 && N.badgeCount(b) === 3, "earliest wins");
 });
 console.log(`\n${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);

@@ -293,6 +293,29 @@ await check("Notes ledger: create, count, categorize, search, preview checklist,
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
 });
 
+await check("Notes badges: earned by length, facts unlock, kept after delete (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "goNotes"); await p.waitForTimeout(250);
+  const total = n => p.evaluate(k => Object.keys(JSON.parse(localStorage.getItem("dnd-notes-v1")).badges).length, 0);
+  await clickA(p, "nbNew"); await p.fill('[data-nb="title"]', "A"); await p.fill('[data-nb="body"]', "x".repeat(40)); await p.waitForTimeout(150);
+  assert(await total() === 1, "15 characters earns the first badge");
+  await clickA(p, "nbBack"); await p.waitForTimeout(150);
+  await p.locator('[data-a="nbBadges"]').click(); await p.waitForTimeout(250);
+  assert(/1\/22/.test(await p.locator(".bd-sum").innerText()) && await p.locator(".bd-item").count() === 22, "1 of 22 earned");
+  await p.locator(".bd-item.earned .bd-h").click(); await p.waitForTimeout(150);
+  assert(await p.locator(".bd-facts li").count() >= 2 && /Merry Christmas/.test(await p.locator(".bd-body").innerText()), "earned badge shows facts");
+  await p.locator(".bd-item.next .bd-h").click(); await p.waitForTimeout(150);
+  assert(await p.locator(".bd-facts").count() === 0 && /to go/.test(await p.locator(".bd-left").innerText()), "locked badge hides facts and shows the gap");
+  await p.locator('[data-a="closeModal"]').first().click(); await p.waitForTimeout(200);
+  await p.locator(".nb-open").click(); await p.fill('[data-nb="body"]', "y".repeat(300)); await p.waitForTimeout(200);
+  assert(await total() === 3, "300 characters earns the text and tweet badges");
+  assert(/Badge/.test(await p.locator("#toast").innerText().catch(() => "")), "toast names the badge");
+  await p.locator('[data-a="askRemove"]').click(); await p.waitForTimeout(150); await p.locator('[data-a="confirmRemove"]').click(); await p.waitForTimeout(200);
+  assert(await total() === 3, "deleting the note keeps the badges");
+  await p.reload(); await p.waitForSelector("#home-book"); await clickA(p, "goNotes"); await p.waitForTimeout(200);
+  assert(/3\/22/.test(await p.locator('[data-a="nbBadges"]').innerText()), "badges survive reload");
+  assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+});
+
 await check("Notes ledger: sheet button opens it and returns; old sheet notes move over; full backup carries notes", async () => {
   const p = await open(1100, 800); await openSample(p);
   const stored = await p.evaluate(() => APP.char.notes); assert(stored && stored.trim(), "sample character needs sheet notes");

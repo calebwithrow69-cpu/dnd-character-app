@@ -559,6 +559,11 @@ function applyHp(mode) {
 // ---------------- notes ledger ----------------
 const nbCurrent = () => { const s = APP.nb; return s && s.data ? s.data.notes.find(n => n.id === s.sel) || null : null; };
 function nbSave() { if (APP.nb && APP.nb.data && !notes.save(APP.nb.data, localStorage)) toast("Storage full"); }
+function nbAward(silent) {
+  const s = APP.nb; if (!s || !s.data) return;
+  const won = notes.awardBadges(s.data, notes.stats(s.data.notes).chars);
+  if (won.length) { nbSave(); if (!silent) toast("Badge: " + won[won.length - 1].short); }
+}
 function nbPrune() { const s = APP.nb, n = nbCurrent(); if (s && n && !n.title.trim() && !n.body.trim()) { notes.removeNote(s.data, n.id); s.sel = null; nbSave(); } }
 function nbRefresh(parts) {
   const s = APP.nb; if (!s || !s.data || APP.screen !== "notes") return;
@@ -867,7 +872,7 @@ function onInput(e) {
   if (ds.query === "notes") { nbState(APP).q = el.value; nbRefresh({ list: 1 }); return; }
   if ((ds.nb === "title" || ds.nb === "body") && APP.screen === "notes") {
     const n = nbCurrent(); if (!n) return;
-    notes.edit(n, { [ds.nb]: el.value }); nbSave(); nbRefresh({ list: 1, stats: 1, foot: 1 }); return;
+    notes.edit(n, { [ds.nb]: el.value }); nbSave(); nbAward(); nbRefresh({ list: 1, stats: 1, foot: 1 }); return;
   }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
   if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
@@ -1016,9 +1021,12 @@ const ACTIONS = {
     const before = s.data.migrated.length;
     notes.migrateSheetNotes(s.data, store.listCharacters());
     if (s.data.migrated.length !== before) nbSave();
+    if (!s.data.hadBadges) { s.data.hadBadges = true; notes.awardBadges(s.data, notes.stats(s.data.notes).chars); nbSave(); }
     APP.notesFrom = APP.screen === "sheet" && APP.char ? "sheet" : "home";
     s.sel = null; s.adding = false; APP.screen = "notes"; render(); window.scrollTo(0, 0);
   },
+  nbBadges() { nbState(APP).bopen = ""; openModal({ type: "badges" }); },
+  nbBadge(el) { const s = nbState(APP); s.bopen = s.bopen === el.dataset.id ? "" : el.dataset.id; render(); },
   nbExit() { nbPrune(); if (APP.notesFrom === "sheet" && APP.char) { APP.screen = "sheet"; render(); window.scrollTo(0, 0); } else ACTIONS.goHome(); },
   nbCat(el) { const s = nbState(APP); s.cat = el.dataset.cat; s.adding = false; nbRefresh({ cats: 1, list: 1 }); },
   nbCatForm() { nbState(APP).adding = true; nbRefresh({ cats: 1 }); const i = document.querySelector('[data-nb="newcat"]'); if (i) i.focus(); },
@@ -1046,7 +1054,7 @@ const ACTIONS = {
     const ta = document.getElementById("nb-body"), n = nbCurrent(); if (!ta || !n) return;
     const r = applyFormat(ta.value, ta.selectionStart, ta.selectionEnd, el.dataset.f);
     ta.value = r.text; ta.focus(); ta.setSelectionRange(r.start, r.end);
-    notes.edit(n, { body: r.text }); nbSave(); nbRefresh({ list: 1, stats: 1, foot: 1 });
+    notes.edit(n, { body: r.text }); nbSave(); nbAward(); nbRefresh({ list: 1, stats: 1, foot: 1 });
   },
   nbCheck(el) {
     const n = nbCurrent(); if (!n) return;

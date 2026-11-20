@@ -2217,3 +2217,27 @@ textarea.nb-body{display:block;box-sizing:border-box;width:calc(100% - 32px);mar
   .nb-edit{min-height:60vh}
 }
 .nb-box{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel);overflow:hidden}
+
+/* ---- Notes badges ---- */
+.bd-sum{margin:0 0 10px;color:var(--muted);font-family:var(--mono);font-size:.8rem}
+.bd-sum b{color:var(--amber)}
+.bd-list{display:grid;gap:8px}
+.bd-item{border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel2);overflow:hidden;box-shadow:inset 2px 0 0 color-mix(in srgb,var(--amber) 30%,transparent)}
+.bd-item.earned{box-shadow:inset 3px 0 0 var(--amber)}
+.bd-item.locked .bd-seal,.bd-item.next .bd-seal{opacity:.55}
+.bd-h{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px;border:0;background:none;color:var(--ink);font:inherit;text-align:left}
+.bd-seal{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;border:2px solid var(--amber);background:var(--amber-dim);color:var(--amber);font-family:var(--mono);font-size:.8rem;font-weight:700}
+.bd-item.locked .bd-seal{border-color:var(--edge);background:transparent;color:var(--muted);border-style:dashed}
+.bd-seal.t2{box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 18%,transparent)}
+.bd-seal.t3{box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 28%,transparent),0 0 0 6px color-mix(in srgb,var(--amber) 12%,transparent)}
+.bd-seal.t4{background:var(--amber);color:var(--bg,#1a1210);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 35%,transparent),0 0 0 6px color-mix(in srgb,var(--amber) 15%,transparent)}
+.bd-n{flex:1;min-width:0;display:grid;gap:2px}
+.bd-n b{font-weight:600}
+.bd-n small{color:var(--muted);font-family:var(--mono);font-size:.72rem}
+.bd-st{flex:none;font-family:var(--display);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.bd-item.earned .bd-st,.bd-item.next .bd-st{color:var(--amber)}
+.bd-body{padding:2px 14px 14px 62px}
+.bd-body p{margin:0 0 6px;line-height:1.5}
+.bd-len,.bd-left{color:var(--muted);font-family:var(--mono);font-size:.74rem}
+.bd-facts{margin:8px 0 0;padding-left:1.1em}
+.bd-facts li{margin:0 0 6px;line-height:1.5}

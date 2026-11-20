@@ -1,5 +1,7 @@
 // Notes ledger: one list of notes per device (not per character), with categories, sorting, counters and
 // length milestones. Pure data layer; storage is injectable so node tests can run it. ASCII only.
+import { BADGES } from "./milestones.js";
+export { BADGES };
 export const KEY = "dnd-notes-v1";
 export const GENERAL = "General";
 export const DEFAULT_CATS = [GENERAL, "Session", "NPC", "Quest", "Place", "Loot", "Character", "Rules", "Ideas"];
@@ -9,7 +11,7 @@ export const QUOTA_CHARS = 5000000; // typical localStorage budget; the browser 
 const newId = () => "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const len = s => [...String(s || "")].length;
 export const noteLen = n => len(n.title) + len(n.body);
-const blank = () => ({ v: 1, notes: [], cats: DEFAULT_CATS.slice(), migrated: [] });
+const blank = () => ({ v: 1, notes: [], cats: DEFAULT_CATS.slice(), migrated: [], badges: {} });
 
 export function clean(raw) {
   const d = blank();
@@ -25,10 +27,13 @@ export function clean(raw) {
       created: +n.created || Date.now(), updated: +n.updated || +n.created || Date.now() });
   }
   d.migrated = Array.isArray(raw.migrated) ? raw.migrated.map(String) : [];
+  d.badges = {};
+  if (raw.badges && typeof raw.badges === "object") for (const b of BADGES) if (+raw.badges[b.id]) d.badges[b.id] = +raw.badges[b.id];
+  d.hadBadges = !!(raw.badges && typeof raw.badges === "object");
   return d;
 }
 export function load(st) { try { return clean(JSON.parse(st.getItem(KEY))); } catch (e) { return blank(); } }
-export function save(data, st) { try { st.setItem(KEY, JSON.stringify(data)); return true; } catch (e) { return false; } }
+export function save(data, st) { try { const { hadBadges, ...rest } = data; st.setItem(KEY, JSON.stringify(rest)); return true; } catch (e) { return false; } }
 
 export function addNote(data, cat, now = Date.now()) {
   const n = { id: newId(), title: "", body: "", cat: data.cats.includes(cat) ? cat : GENERAL, pin: false, charId: "", created: now, updated: now };
@@ -82,21 +87,8 @@ export function storageUse(st) {
 }
 export function fmtBytes(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
 
-// Length milestones. Word counts are the commonly cited approximate figures; characters = words x 5.7
-// (English average with spaces). The view says "about", so these are comparisons, not measurements.
-const cw = w => Math.round(w * 5.7 / 10) * 10;
-export const MILESTONES = [
-  { n: 280, name: "a tweet" },
-  { n: cw(272), name: "the Gettysburg Address" },
-  { n: cw(1320), name: "the Declaration of Independence" },
-  { n: cw(28000), name: "A Christmas Carol" },
-  { n: cw(47000), name: "The Great Gatsby" },
-  { n: cw(77000), name: "Harry Potter and the Philosopher's Stone" },
-  { n: cw(95000), name: "The Hobbit" },
-  { n: cw(210000), name: "Moby-Dick" },
-  { n: cw(480000), name: "The Lord of the Rings" },
-  { n: cw(590000), name: "War and Peace" }
-];
+// Length milestones come from milestones.js (each is also a badge with facts).
+export const MILESTONES = BADGES;
 export function milestone(chars) {
   let at = null, next = null;
   for (const m of MILESTONES) { if (chars >= m.n) at = m; else { next = m; break; } }
@@ -129,10 +121,11 @@ export function migrateSheetNotes(data, chars) {
 }
 
 // Backups: the ledger rides along in a full backup. Importing merges by id, newest edit wins.
-export function exportData(data) { return { v: 1, cats: data.cats, notes: data.notes }; }
+export function exportData(data) { return { v: 1, cats: data.cats, notes: data.notes, badges: data.badges }; }
 export function mergeImport(data, raw) {
   const inc = clean(raw); let added = 0, updated = 0;
   inc.cats.forEach(c => { if (!data.cats.includes(c)) data.cats.push(c); });
+  for (const [id, ts] of Object.entries(inc.badges)) if (!data.badges[id] || ts < data.badges[id]) data.badges[id] = ts;
   for (const n of inc.notes) {
     const mine = data.notes.find(x => x.id === n.id);
     if (!mine) { data.notes.push(n); added++; } else if (n.updated > mine.updated) { Object.assign(mine, n); updated++; }
@@ -143,3 +136,11 @@ export function toMarkdownFile(data, now = new Date()) {
   const body = sortNotes(data.notes, "cat", false).map(n => `# ${titleOf(n)}\n\n_${n.cat}_\n\n${n.body}`).join("\n\n---\n\n");
   return body || "";
 }
+
+// Badges: earned once, kept even if notes are deleted later. Returns the badges earned by this call.
+export function awardBadges(data, chars, now = Date.now()) {
+  const won = [];
+  for (const b of BADGES) if (chars >= b.n && !data.badges[b.id]) { data.badges[b.id] = now; won.push(b); }
+  return won;
+}
+export function badgeCount(data) { return BADGES.filter(b => data.badges[b.id]).length; }

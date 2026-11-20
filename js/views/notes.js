@@ -1,6 +1,6 @@
 // Notes ledger screen: left sidebar (new, search, categories, sort, counters), note list, markdown editor.
 // Phone: sidebar and list stack; an open note is its own page with Back. ASCII only.
-import { esc, topbar, searchBox, ICONS } from "../ui.js";
+import { esc, topbar, searchBox, modalShell, ICONS } from "../ui.js";
 import { renderMd } from "../markdown.js";
 import * as N from "../notes.js";
 
@@ -45,7 +45,8 @@ export function nbStats(app) {
       <div class="nb-grid"><div><b>${num(st.notes)}</b><small>Notes</small></div><div><b>${num(st.chars)}</b><small>Characters</small></div><div><b>${num(st.words)}</b><small>Words</small></div></div></div>
     <div class="nb-card"><span class="nb-k">Length</span><b class="nb-ms">${esc(ms.head)}</b>
       <div class="nb-bar" role="progressbar" aria-valuenow="${Math.round(ms.pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress to next milestone"><i style="width:${ms.pct.toFixed(1)}%"></i></div>
-      <small>Next: ${esc(ms.sub)}</small></div>
+      <small>Next: ${esc(ms.sub)}</small>
+      <button class="btn sm block" data-a="nbBadges">Badges <b>${N.badgeCount(s.data)}/${N.BADGES.length}</b></button></div>
     <div class="nb-card"><span class="nb-k">Storage</span><b class="nb-ms">${N.fmtBytes(st.bytes)} notes</b>
       <div class="nb-bar" role="progressbar" aria-valuenow="${Math.round(use.pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Device storage used"><i style="width:${Math.max(1, use.pct).toFixed(1)}%"></i></div>
       <small>${N.fmtBytes(use.used)} of about ${N.fmtBytes(use.quota)} on this device</small></div>`;
@@ -91,4 +92,21 @@ export function renderNotes(app) {
       <section class="nb-list nb-box" id="nb-list" aria-label="Notes">${nbList(app)}</section>
       <section class="nb-edit nb-box" id="nb-edit" aria-label="Editor">${nbEdit(app)}</section>
     </div></main>`;
+}
+
+export function renderBadges(app) {
+  const s = nbState(app), got = N.badgeCount(s.data), next = N.BADGES.find(b => !s.data.badges[b.id]);
+  const chars = N.stats(s.data.notes).chars;
+  const rows = N.BADGES.map((b, i) => {
+    const ts = s.data.badges[b.id], open = s.bopen === b.id, words = b.words || Math.round(b.n / 5.7);
+    const state = ts ? "Earned" : next && next.id === b.id ? "Next" : "Locked";
+    const body = open ? `<div class="bd-body"><p>${esc(b.about)}</p>
+        <p class="bd-len">${num(b.n)} characters${b.n >= 1000 ? " \u00b7 about " + num(words) + " words" : ""}</p>
+        ${ts ? `<ul class="bd-facts">${b.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : `<p class="bd-left">${num(Math.max(0, b.n - chars))} to go</p>`}</div>` : "";
+    return `<div class="bd-item ${state.toLowerCase()}${open ? " open" : ""}"><button class="bd-h" data-a="nbBadge" data-id="${esc(b.id)}" aria-expanded="${open}">
+      <span class="bd-seal t${b.tier}">${i + 1}</span>
+      <span class="bd-n"><b>${esc(b.short)}</b><small>${ts ? "Earned " + new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : num(b.n) + " characters"}</small></span>
+      <span class="bd-st">${state}</span></button>${body}</div>`;
+  }).join("");
+  return modalShell("Badges", `<p class="bd-sum"><b>${got}/${N.BADGES.length}</b> earned \u00b7 ${num(chars)} characters written</p><div class="bd-list">${rows}</div>`, `<button class="btn pri" data-a="closeModal">Done</button>`);
 }
