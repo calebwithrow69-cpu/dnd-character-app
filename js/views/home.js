@@ -2,7 +2,7 @@
 import { esc, topbar } from "../ui.js";
 import { deriveCharacter } from "../rules.js";
 import { listCharacters, getCharacter, normalize } from "../store.js";
-import { rulesTab } from "./sheet.js";
+import { rulesTab } from "./glossary.js";
 
 const ICON = {
   people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6M16 5a3.5 3.5 0 010 6.5M18 14c2 .6 3.3 2.4 3.6 6"/>',
@@ -61,5 +61,5 @@ export function renderHome(app) {
 
 export function renderRulesPage(app) {
   return `${topbar("Rules glossary", app.campaign?.name || "", { back: "goHome" })}
-    <main class="wrap page">${rulesTab(app)}</main>`;
+    <main class="wrap page wide">${rulesTab(app)}</main>`;
 }

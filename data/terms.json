@@ -3,38 +3,46 @@
   "terms": [
     {
       "name": "Reaction",
-      "text": "An instant response to a trigger, like an Opportunity Attack or the Shield spell. You get one Reaction per round, and it comes back at the start of your turn."
+      "text": "An instant response to a trigger, like an Opportunity Attack or the Shield spell. You get one Reaction per round, and it comes back at the start of your turn.",
+      "cat": "Rule"
     },
     {
       "name": "Disadvantage",
-      "text": "Roll two d20s and use the lower one. If something gives you Advantage and something else gives Disadvantage on the same roll, they cancel out and you roll one d20."
+      "text": "Roll two d20s and use the lower one. If something gives you Advantage and something else gives Disadvantage on the same roll, they cancel out and you roll one d20.",
+      "cat": "Rule"
     },
     {
       "name": "Saving Throw",
       "aliases": [
         "Save"
       ],
-      "text": "A d20 roll to resist or avoid an effect: d20 + the ability modifier the effect names, plus your Proficiency Bonus if you're proficient in that save. Meet or beat the DC to succeed."
+      "text": "A d20 roll to resist or avoid an effect: d20 + the ability modifier the effect names, plus your Proficiency Bonus if you're proficient in that save. Meet or beat the DC to succeed.",
+      "cat": "Rule"
     },
     {
       "name": "Temporary Hit Points",
-      "text": "A buffer that soaks up damage before your real Hit Points. They don't stack: if you gain more, keep whichever amount is higher. They can't be healed, and they go away when you finish a Long Rest."
+      "text": "A buffer that soaks up damage before your real Hit Points. They don't stack: if you gain more, keep whichever amount is higher. They can't be healed, and they go away when you finish a Long Rest.",
+      "cat": "Rule"
     },
     {
       "name": "Long Rest",
-      "text": "At least 8 hours of downtime, mostly sleeping. You regain all Hit Points and all spent Hit Point Dice, get your spell slots and most features back, and lower Exhaustion by 1. One Long Rest per 24 hours."
+      "text": "At least 8 hours of downtime, mostly sleeping. You regain all Hit Points and all spent Hit Point Dice, get your spell slots and most features back, and lower Exhaustion by 1. One Long Rest per 24 hours.",
+      "cat": "Rule"
     },
     {
       "name": "Short Rest",
-      "text": "At least 1 hour of downtime. You can spend Hit Point Dice to heal: roll each one, add your Constitution modifier, and regain that many Hit Points. Some features recharge on a Short Rest."
+      "text": "At least 1 hour of downtime. You can spend Hit Point Dice to heal: roll each one, add your Constitution modifier, and regain that many Hit Points. Some features recharge on a Short Rest.",
+      "cat": "Rule"
     },
     {
       "name": "Difficult Terrain",
-      "text": "Every foot you move costs 1 extra foot. Rubble, thick brush, deep snow and other creatures' spaces are common examples."
+      "text": "Every foot you move costs 1 extra foot. Rubble, thick brush, deep snow and other creatures' spaces are common examples.",
+      "cat": "Rule"
     },
     {
       "name": "Proficiency Bonus",
-      "text": "A bonus that grows with your level, from +2 at level 1 to +6 at level 17. You add it to attacks, checks and saves you're proficient in, and to your spell save DC."
+      "text": "A bonus that grows with your level, from +2 at level 1 to +6 at level 17. You add it to attacks, checks and saves you're proficient in, and to your spell save DC.",
+      "cat": "Rule"
     },
     {
       "name": "Hit Point Dice",
@@ -42,225 +50,273 @@
         "Hit Dice",
         "Hit Die"
       ],
-      "text": "You have one per level; the die size depends on your class. Spend them during a Short Rest to heal. A Long Rest gives all spent ones back."
+      "text": "You have one per level; the die size depends on your class. Spend them during a Short Rest to heal. A Long Rest gives all spent ones back.",
+      "cat": "Rule"
     },
     {
       "name": "Heroic Inspiration",
-      "text": "A reward you can spend to reroll any one die you just rolled; you must use the new roll. You can hold only one at a time."
+      "text": "A reward you can spend to reroll any one die you just rolled; you must use the new roll. You can hold only one at a time.",
+      "cat": "Rule"
     },
     {
       "name": "Opportunity Attack",
-      "text": "When a creature you can see leaves your reach, you can use your Reaction to make one melee attack against it. Taking the Disengage action avoids provoking one."
+      "text": "When a creature you can see leaves your reach, you can use your Reaction to make one melee attack against it. Taking the Disengage action avoids provoking one.",
+      "cat": "Rule"
     },
     {
       "name": "Resistance",
-      "text": "You take half damage (rounded down) from that damage type."
+      "text": "You take half damage (rounded down) from that damage type.",
+      "cat": "Rule"
     },
     {
       "name": "Vulnerability",
-      "text": "You take double damage from that damage type."
+      "text": "You take double damage from that damage type.",
+      "cat": "Rule"
     },
     {
       "name": "Immunity",
-      "text": "You take no damage from that damage type, or the named condition can't affect you."
+      "text": "You take no damage from that damage type, or the named condition can't affect you.",
+      "cat": "Rule"
     },
     {
       "name": "Critical Hit",
-      "text": "A natural 20 on an attack roll always hits, and you roll the attack's damage dice twice. Modifiers are added only once."
+      "text": "A natural 20 on an attack roll always hits, and you roll the attack's damage dice twice. Modifiers are added only once.",
+      "cat": "Rule"
     },
     {
       "name": "Initiative",
-      "text": "At the start of combat everyone rolls a Dexterity check (d20 + Dexterity modifier + any bonuses). Turns go from highest to lowest."
+      "text": "At the start of combat everyone rolls a Dexterity check (d20 + Dexterity modifier + any bonuses). Turns go from highest to lowest.",
+      "cat": "Rule"
     },
     {
       "name": "Spell Save DC",
-      "text": "8 + your spellcasting ability modifier + your Proficiency Bonus. Creatures targeted by your spells roll their saves against this number."
+      "text": "8 + your spellcasting ability modifier + your Proficiency Bonus. Creatures targeted by your spells roll their saves against this number.",
+      "cat": "Rule"
     },
     {
       "name": "Spell Attack",
-      "text": "d20 + your spellcasting ability modifier + your Proficiency Bonus, compared against the target's Armor Class."
+      "text": "d20 + your spellcasting ability modifier + your Proficiency Bonus, compared against the target's Armor Class.",
+      "cat": "Rule"
     },
     {
       "name": "Ritual",
-      "text": "A spell with the Ritual tag can be cast without spending a spell slot if you take 10 extra minutes to cast it. You need it prepared."
+      "text": "A spell with the Ritual tag can be cast without spending a spell slot if you take 10 extra minutes to cast it. You need it prepared.",
+      "cat": "Rule"
     },
     {
       "name": "Darkvision",
-      "text": "Within range, you see in Dim Light as if it were Bright Light, and in Darkness as if it were Dim Light. In darkness you see only shades of gray."
+      "text": "Within range, you see in Dim Light as if it were Bright Light, and in Darkness as if it were Dim Light. In darkness you see only shades of gray.",
+      "cat": "Rule"
     },
     {
       "name": "Dim Light",
-      "text": "Lightly obscured: you have Disadvantage on Wisdom (Perception) checks that rely on sight."
+      "text": "Lightly obscured: you have Disadvantage on Wisdom (Perception) checks that rely on sight.",
+      "cat": "Rule"
     },
     {
       "name": "Darkness",
-      "text": "Heavily obscured: you're effectively Blinded when trying to see something there."
+      "text": "Heavily obscured: you're effectively Blinded when trying to see something there.",
+      "cat": "Rule"
     },
     {
       "name": "Half Cover",
-      "text": "+2 to AC and Dexterity saving throws, from an obstacle blocking at least half of you."
+      "text": "+2 to AC and Dexterity saving throws, from an obstacle blocking at least half of you.",
+      "cat": "Rule"
     },
     {
       "name": "Three-Quarters Cover",
-      "text": "+5 to AC and Dexterity saving throws, from an obstacle blocking about three-quarters of you."
+      "text": "+5 to AC and Dexterity saving throws, from an obstacle blocking about three-quarters of you.",
+      "cat": "Rule"
     },
     {
       "name": "Total Cover",
-      "text": "You can't be targeted directly by attacks or spells."
+      "text": "You can't be targeted directly by attacks or spells.",
+      "cat": "Rule"
     },
     {
       "name": "Speed",
-      "text": "How far you can move on your turn, in feet. You can split movement before and after your action."
+      "text": "How far you can move on your turn, in feet. You can split movement before and after your action.",
+      "cat": "Rule"
     },
     {
       "name": "Hit Points",
-      "text": "How much damage you can take. At 0 Hit Points you fall Unconscious and start making death saving throws."
+      "text": "How much damage you can take. At 0 Hit Points you fall Unconscious and start making death saving throws.",
+      "cat": "Rule"
     },
     {
       "name": "Death Saving Throw",
       "aliases": [
         "Death Save"
       ],
-      "text": "At 0 Hit Points, roll a d20 at the start of each turn: 10 or higher is a success, 9 or lower a failure. Three successes and you're stable; three failures and you die. A 1 counts as two failures; a 20 brings you back with 1 Hit Point."
+      "text": "At 0 Hit Points, roll a d20 at the start of each turn: 10 or higher is a success, 9 or lower a failure. Three successes and you're stable; three failures and you die. A 1 counts as two failures; a 20 brings you back with 1 Hit Point.",
+      "cat": "Rule"
     },
     {
       "name": "Dash",
-      "text": "Action: gain extra movement equal to your Speed this turn."
+      "text": "Action: gain extra movement equal to your Speed this turn.",
+      "cat": "Action"
     },
     {
       "name": "Disengage",
-      "text": "Action: your movement doesn't provoke Opportunity Attacks for the rest of the turn."
+      "text": "Action: your movement doesn't provoke Opportunity Attacks for the rest of the turn.",
+      "cat": "Action"
     },
     {
       "name": "Dodge",
-      "text": "Action: until your next turn, attacks against you have Disadvantage and you have Advantage on Dexterity saves, unless you're Incapacitated or your Speed is 0."
+      "text": "Action: until your next turn, attacks against you have Disadvantage and you have Advantage on Dexterity saves, unless you're Incapacitated or your Speed is 0.",
+      "cat": "Action"
     },
     {
       "name": "Help",
-      "text": "Action: give an ally Advantage on their next check, or on their next attack against a creature next to you."
+      "text": "Action: give an ally Advantage on their next check, or on their next attack against a creature next to you.",
+      "cat": "Action"
     },
     {
       "name": "Hide",
-      "text": "Action: while heavily obscured or behind cover, make a DC 15 Dexterity (Stealth) check. On a success you have the Invisible condition until you're found or give yourself away."
+      "text": "Action: while heavily obscured or behind cover, make a DC 15 Dexterity (Stealth) check. On a success you have the Invisible condition until you're found or give yourself away.",
+      "cat": "Action"
     },
     {
       "name": "Ready",
-      "text": "Action: pick a trigger and an action; when the trigger happens before your next turn, you can use your Reaction to do it."
+      "text": "Action: pick a trigger and an action; when the trigger happens before your next turn, you can use your Reaction to do it.",
+      "cat": "Action"
     },
     {
       "name": "Magic",
-      "text": "Action: cast a spell or use a magic item or feature that takes a Magic action."
+      "text": "Action: cast a spell or use a magic item or feature that takes a Magic action.",
+      "cat": "Rule"
     },
     {
       "name": "Cleave",
-      "text": "Weapon mastery. When you hit a creature with a melee attack, you can attack a second creature within 5 feet of it that's also in your reach. Don't add your ability modifier to that second hit's damage unless it's negative. Once per turn."
+      "text": "Weapon mastery. When you hit a creature with a melee attack, you can attack a second creature within 5 feet of it that's also in your reach. Don't add your ability modifier to that second hit's damage unless it's negative. Once per turn.",
+      "cat": "Weapon Mastery"
     },
     {
       "name": "Graze",
-      "text": "Weapon mastery. If your attack misses, the target still takes damage equal to the ability modifier you used for the attack."
+      "text": "Weapon mastery. If your attack misses, the target still takes damage equal to the ability modifier you used for the attack.",
+      "cat": "Weapon Mastery"
     },
     {
       "name": "Nick",
-      "text": "Weapon mastery. The extra attack from the Light property can be made as part of the Attack action instead of using a Bonus Action. Once per turn."
+      "text": "Weapon mastery. The extra attack from the Light property can be made as part of the Attack action instead of using a Bonus Action. Once per turn.",
+      "cat": "Weapon Mastery"
     },
     {
       "name": "Push",
-      "text": "Weapon mastery. On a hit, you can push a Large or smaller target up to 10 feet straight away from you."
+      "text": "Weapon mastery. On a hit, you can push a Large or smaller target up to 10 feet straight away from you.",
+      "cat": "Weapon Mastery"
     },
     {
       "name": "Sap",
-      "text": "Weapon mastery. On a hit, the target has Disadvantage on its next attack roll before the start of your next turn."
+      "text": "Weapon mastery. On a hit, the target has Disadvantage on its next attack roll before the start of your next turn.",
+      "cat": "Weapon Mastery"
     },
     {
       "name": "Slow",
-      "text": "Weapon mastery. On a hit that deals damage, the target's Speed drops by 10 feet until the start of your next turn. Doesn't stack."
+      "text": "Weapon mastery. On a hit that deals damage, the target's Speed drops by 10 feet until the start of your next turn. Doesn't stack.",
+      "cat": "Weapon Mastery"
     },
     {
       "name": "Topple",
-      "text": "Weapon mastery. On a hit, the target makes a Constitution save (DC 8 + the attack's ability modifier + your Proficiency Bonus) or falls Prone."
+      "text": "Weapon mastery. On a hit, the target makes a Constitution save (DC 8 + the attack's ability modifier + your Proficiency Bonus) or falls Prone.",
+      "cat": "Weapon Mastery"
     },
     {
       "name": "Vex",
-      "text": "Weapon mastery. On a hit that deals damage, you have Advantage on your next attack roll against that creature before the end of your next turn."
+      "text": "Weapon mastery. On a hit that deals damage, you have Advantage on your next attack roll against that creature before the end of your next turn.",
+      "cat": "Weapon Mastery"
     },
     {
       "name": "Passive Perception",
-      "text": "10 + your Wisdom (Perception) bonus. The DM compares it against hidden things, like a lurking creature or a trap, to see whether you notice them without rolling."
+      "text": "10 + your Wisdom (Perception) bonus. The DM compares it against hidden things, like a lurking creature or a trap, to see whether you notice them without rolling.",
+      "cat": "Rule"
     },
     {
       "name": "Spell Slot",
       "text": "Fuel for casting a spell of level 1 or higher. Casting spends one slot of the spell's level or higher; slots come back on a Long Rest.",
       "aliases": [
         "Spell Slots"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Magic Action",
       "text": "The action you spend to cast most spells or use a magic item. A turn gives you one action.",
       "aliases": [
         "Magic action"
-      ]
+      ],
+      "cat": "Action"
     },
     {
       "name": "Attack Action",
       "text": "The action that lets you make an attack with a weapon or an Unarmed Strike. Extra Attack adds more attacks to it.",
       "aliases": [
         "Attack action"
-      ]
+      ],
+      "cat": "Action"
     },
     {
       "name": "Utilize Action",
       "text": "The action for using an object, such as a lever, a door or a tool.",
       "aliases": [
         "Utilize action"
-      ]
+      ],
+      "cat": "Action"
     },
     {
       "name": "Unarmed Strike",
       "text": "A punch, kick or head-butt. Hits for 1 + Strength modifier Bludgeoning damage, and you are proficient with it.",
       "aliases": [
         "Unarmed Strikes"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Weapon Mastery",
       "text": "A weapon property you unlock for weapons your class lets you master, such as Push, Topple or Vex. Only the weapons you picked count.",
       "aliases": [
         "Mastery property"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Spellcasting Ability",
-      "text": "The ability score that powers your spells. It sets your Spell Save DC and Spell Attack bonus."
+      "text": "The ability score that powers your spells. It sets your Spell Save DC and Spell Attack bonus.",
+      "cat": "Rule"
     },
     {
       "name": "Damage Roll",
       "text": "The dice you roll after a hit to deal damage, plus the modifiers that apply.",
       "aliases": [
         "Damage Rolls"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Creature Type",
       "text": "The broad group a creature belongs to, such as Humanoid, Undead or Fey. Some effects only work on certain types.",
       "aliases": [
         "Creature Types"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Difficulty Class",
       "text": "The number a d20 Test must meet or beat to succeed. Written DC.",
       "aliases": [
         "DC"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Weapon Proficiency",
-      "text": "Training in a weapon group. You add your Proficiency Bonus to attack rolls with weapons you are proficient with."
+      "text": "Training in a weapon group. You add your Proficiency Bonus to attack rolls with weapons you are proficient with.",
+      "cat": "Rule"
     },
     {
       "name": "Concentration",
-      "text": "Keeps some spells going. Taking damage forces a Constitution save, and casting another Concentration spell ends the first."
+      "text": "Keeps some spells going. Taking damage forces a Constitution save, and casting another Concentration spell ends the first.",
+      "cat": "Rule"
     },
     {
       "name": "Spellcasting Focus",
@@ -269,28 +325,32 @@
         "arcane focus",
         "holy symbol",
         "druidic focus"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Prepared Spell",
       "text": "A spell from your list that you have readied. Only prepared spells can be cast.",
       "aliases": [
         "Prepared Spells"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Ranged Attack",
       "text": "An attack made from a distance with a bow, a thrown weapon or a spell.",
       "aliases": [
         "Ranged Attacks"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Melee Attack",
       "text": "An attack made up close with a weapon or an Unarmed Strike.",
       "aliases": [
         "Melee Attacks"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Damage Types",
@@ -305,18 +365,21 @@
         "psychic",
         "thunder",
         "lightning"
-      ]
+      ],
+      "cat": "Rule"
     },
     {
       "name": "Expertise",
-      "text": "Doubles your Proficiency Bonus on checks with a skill or tool you are already proficient in."
+      "text": "Doubles your Proficiency Bonus on checks with a skill or tool you are already proficient in.",
+      "cat": "Rule"
     },
     {
       "name": "Sorcery Points",
       "text": "A Sorcerer's pool of points. Spend them on Metamagic and trade them for spell slots; they come back on a Long Rest.",
       "aliases": [
         "Sorcery Point"
-      ]
+      ],
+      "cat": "Rule"
     }
   ]
 }

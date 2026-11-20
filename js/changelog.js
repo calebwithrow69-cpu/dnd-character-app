@@ -2,11 +2,36 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.51";
+export const VERSION = "0.1.52";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.52",
+    date: "2026-11-20",
+    stage: "Pre-build",
+    blurb: "Rules glossary: searchable list, entry pages, saved entries.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "Rules: category tabs with counts, filters and sortable columns.",
+          "Star an entry to save it; the Saved tab keeps them on this device.",
+          "Laptop: list and entry side by side.",
+          "SRD 5.2 glossary: skills, damage types, languages, hazards, senses and 90 more rules.",
+          "Terms such as Saving Throw and Long Rest are listed, not only linked."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Class and subclass pages show every feature in full.",
+          "Search covers every category and reads rule text."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.51",
     date: "2026-11-18",

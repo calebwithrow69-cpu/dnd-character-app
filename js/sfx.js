@@ -136,8 +136,8 @@ function kindFor(el) {
   if (el.matches("nav.tabs button") || a === "sheetTab") return "tab";
   if (el.matches(".diebtn")) return "dice";
   if (el.matches(".pip")) return "pip";
-  if (el.matches(".gloss-chip, .seg button, .chip")) return "tick";
-  if (/^(closeModal|glossaryBack|back|cancel)/i.test(a)) return "back";
+  if (el.matches(".gloss-chip, .gl-tab, .seg button, .chip")) return "tick";
+  if (/^(closeModal|glBack|back|cancel)/i.test(a)) return "back";
   return "tap";
 }
 

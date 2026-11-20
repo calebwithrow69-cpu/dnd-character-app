@@ -37,7 +37,9 @@ import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
 import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { renderSheetSearch } from "./views/classic.js";
-import { renderSheet, renderSpellResults, renderGearResults, renderRulesResults, needsFirstChoices, detailFor } from "./views/sheet.js";
+import { renderSheet, renderSpellResults, renderGearResults, needsFirstChoices, detailFor } from "./views/sheet.js";
+import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat } from "./views/glossary.js";
+import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
 import { flourish, toneFor } from "./subtone.js";
 import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
@@ -69,7 +71,7 @@ const APP = {
   turn: { on: false, round: 0, spent: {}, once: {} }, gwm: false, concPrompt: null, createDraft: null, seedGandork: null,
   roll: null, history: [], diceFormula: "",
   modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "", sheetQuery: "",
-  glossaryCat: "", glossaryClass: "", glossarySubclass: "",
+  gl: null, marks: null,
   setOpen: new Set(["appearance", "feel"]),
   prefs: readPrefs(), installDismissed: readFlag(LS_INSTALL), persisted: false
 };
@@ -235,6 +237,16 @@ function restoreLevelUp() {
     if (c.level !== d.level || !Number.isFinite(d.lvl.next) || d.lvl.next !== (d.lvl.fromCreation ? c.level : c.level + 1)) { localStorage.removeItem(LS_LVL); return false; }
     APP.char = c; APP.lvl = d.lvl; APP.screen = "levelup"; return true;
   } catch (e) { try { localStorage.removeItem(LS_LVL); } catch (e2) { } return false; }
+}
+
+// The Rules screen updates in pieces so the list keeps its scroll and the search box its focus.
+function glRefresh(o) {
+  const set = (id, html) => { const n = document.getElementById(id); if (n) n.innerHTML = html; };
+  if (o.tabs) set("gl-tabs", glTabs(APP));
+  if (o.filters) set("gl-filters", glFilters(APP));
+  if (o.list) set("results-rules", renderRulesResults(APP));
+  if (o.pane) set("gl-pane", glPane(APP));
+  const root = document.getElementById("gl"); if (root) root.dataset.sel = APP.gl && APP.gl.sel ? "1" : "0";
 }
 
 function render() {
@@ -813,7 +825,7 @@ function onInput(e) {
   if (ds.query === "shop") { APP.shopQuery = el.value; const r = document.getElementById("results-shop"); if (r) r.innerHTML = renderShopResults(APP); return; }
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
   if (ds.query === "sheet") { APP.sheetQuery = el.value; const r = document.getElementById("results-sheet"); if (r) r.innerHTML = renderSheetSearch(APP); return; }
-  if (ds.query === "rules") { APP.rulesQuery = el.value; if (el.value.trim()) { APP.glossaryClass = ""; APP.glossarySubclass = ""; } const r = document.getElementById("results-rules"); if (r) r.innerHTML = renderRulesResults(APP); return; }
+  if (ds.query === "rules") { APP.rulesQuery = el.value; glState(APP).limit = 150; glRefresh({ tabs: 1, filters: 1, list: 1 }); return; }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
   if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
   if (ds.itemNotes != null && APP.char) { const it = APP.char.inventory[+ds.itemNotes]; if (it) { it.notes = el.value; save(); } return; }
@@ -1123,7 +1135,7 @@ const ACTIONS = {
     APP.prefs.sheetStyle = APP._style; APP._style = null; savePrefs(); closeModal(); render(); window.scrollTo(0, 0);
     toast("Switched to the " + APP.prefs.sheetStyle + " sheet");
   },
-  searchRules() { APP.rulesQuery = APP.sheetQuery; APP.glossaryClass = ""; APP.glossarySubclass = ""; APP.sheetTab = "rules"; render(); window.scrollTo(0, 0); },
+  searchRules() { APP.rulesQuery = APP.sheetQuery; Object.assign(glState(APP), { cat: "all", picked: true, sel: null, f: {}, sort: "", desc: false, limit: 150 }); APP.sheetTab = "rules"; render(); window.scrollTo(0, 0); },
   testSound() { sfx("confirm"); sfx("dice"); },
   resetPrefs() {
     if (!window.confirm("Put every setting back to its default? Your characters are not touched.")) return;
@@ -1365,18 +1377,20 @@ const ACTIONS = {
 
   // sheet nav
   backToRoster() { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
-  sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; if (el.dataset.tab !== "rules") { APP.glossaryCat = ""; APP.glossaryClass = ""; APP.glossarySubclass = ""; } render(); window.scrollTo(0, 0); },
-  glossaryCat(el) {
-    const cat = el.dataset.cat;
-    APP.glossaryCat = APP.glossaryCat === cat ? "" : cat;
-    APP.glossaryClass = ""; APP.glossarySubclass = ""; APP.rulesQuery = "";
-    APP._rulesIndex = null;
-    render();
+  sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; render(); window.scrollTo(0, 0); },
+  glCat(el) { const g = glState(APP); Object.assign(g, { cat: el.dataset.cat, picked: true, sel: null, f: {}, sort: "", desc: false, limit: 150 }); glRefresh({ tabs: 1, filters: 1, list: 1, pane: 1 }); },
+  glFilter(el) { const g = glState(APP); g.f[el.dataset.id] = el.value; g.limit = 150; glRefresh({ filters: 1, list: 1 }); },
+  glClear() { glState(APP).f = {}; glState(APP).limit = 150; glRefresh({ filters: 1, list: 1 }); },
+  glSort(el) { const g = glState(APP), k = el.dataset.k; if (g.sort === k) { if (g.desc) { g.sort = ""; g.desc = false; } else g.desc = true; } else { g.sort = k; g.desc = false; } glRefresh({ list: 1 }); },
+  glMore() { glState(APP).limit += 150; glRefresh({ list: 1 }); },
+  glOpen(el) { const g = glState(APP); APP._glY = window.scrollY; g.sel = el.dataset.id; glRefresh({ list: 0, pane: 1 }); document.querySelectorAll("#results-rules .gl-row").forEach(r => r.classList.toggle("sel", r.querySelector(".gl-open")?.dataset.id === g.sel)); if (!window.matchMedia("(min-width: 900px)").matches) window.scrollTo(0, 0); else { const p = document.getElementById("gl-pane"); if (p) p.scrollTop = 0; } },
+  glBack() { glState(APP).sel = null; glRefresh({ pane: 1 }); document.querySelectorAll("#results-rules .gl-row.sel").forEach(r => r.classList.remove("sel")); const y = APP._glY || 0; requestAnimationFrame(() => window.scrollTo(0, y)); },
+  glMark(el) {
+    APP.marks = toggleMark(marksOf(APP), el.dataset.id); saveMarks(APP.marks);
+    const on = APP.marks.includes(el.dataset.id);
+    document.querySelectorAll(`.gl-star[data-id="${CSS.escape(el.dataset.id)}"]`).forEach(b => { b.setAttribute("aria-pressed", String(on)); b.classList.remove("pop"); void b.offsetWidth; if (on) b.classList.add("pop"); });
+    glRefresh({ tabs: 1, list: effCat(APP) === "marks" && !on ? 1 : 0 });
   },
-  glossaryClassView(el) { APP.glossaryClass = el.dataset.class || el.dataset.name; APP.glossarySubclass = ""; render(); window.scrollTo(0, 0); },
-  glossarySubclass(el) { APP.glossarySubclass = el.dataset.name; render(); window.scrollTo(0, 0); },
-  glossaryBack() { APP.glossaryClass = ""; APP.glossarySubclass = ""; render(); },
-  glossaryBackToClass(el) { APP.glossarySubclass = ""; render(); },
   openEdit() { openModal({ type: "edit" }); },
   askDelete() { openModal({ type: "confirmDelete" }); },
   goGraveyard() { APP.screen = "graveyard"; render(); window.scrollTo(0, 0); },
@@ -2004,7 +2018,7 @@ async function rebuildGlossary() {
     try { const r = await fetch("data/terms.json"); APP.terms = r.ok ? (await r.json()).terms : []; } catch (e) { APP.terms = []; }
   }
   setSpellNames((APP.library?.spells || []).map(x => x.name));
-  setGlossary([...(APP.library?.rules || []), ...(APP.campaign?.homebrew?.rules || []), ...APP.terms]);
+  setGlossary([...(APP.library?.rules || []), ...(APP.campaign?.homebrew?.rules || []), ...(APP.library?.glossary || []).filter(e => e.link), ...APP.terms]);
 }
 const pop = () => document.getElementById("term-pop");
 function termContent(key) {

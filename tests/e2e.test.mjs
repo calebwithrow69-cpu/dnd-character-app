@@ -188,6 +188,49 @@ await check("Rules screen opens with no sideways scroll, laptop 1100", async () 
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
 });
 
+await check("Rules glossary: search, open, save, Saved tab, back (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "goRules"); await p.waitForTimeout(500);
+  const tabs = await p.locator(".gl-tab").allInnerTexts(); assert(tabs.length >= 12 && /Saved/i.test(tabs.join()), "tabs: " + tabs.join("|"));
+  await p.fill('input[data-query="rules"]', "fireball"); await p.waitForTimeout(400);
+  assert(await p.locator(".gl-tab[aria-selected=true]").innerText().then(t => /^All/i.test(t)), "search should widen to All");
+  await p.locator('.gl-open:has-text("Fireball")').first().click(); await p.waitForTimeout(300);
+  assert(await p.locator(".gl-head h2").innerText() === "Fireball" && await p.locator(".gl-list:visible").count() === 0, "phone should show the entry page");
+  await p.locator(".gl-head .gl-star").click(); await p.waitForTimeout(200);
+  assert(await p.locator(".gl-head .gl-star").getAttribute("aria-pressed") === "true", "not saved");
+  await p.locator(".gl-back").click(); await p.waitForTimeout(300);
+  assert(await p.locator(".gl-list:visible").count() === 1, "list did not return");
+  await p.fill('input[data-query="rules"]', ""); await p.locator('.gl-tab[data-cat="marks"]').click(); await p.waitForTimeout(250);
+  assert(await p.locator('.gl-open:has-text("Fireball")').count() === 1, "Saved tab missing Fireball");
+  await p.reload(); await p.waitForSelector("#home-book"); await clickA(p, "goRules"); await p.locator('.gl-tab[data-cat="marks"]').click(); await p.waitForTimeout(250);
+  assert(await p.locator('.gl-open:has-text("Fireball")').count() === 1, "saved entry lost after reload");
+  assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+});
+
+await check("Rules glossary: laptop shows list and entry together; filters and sort work", async () => {
+  const p = await open(1280, 800); await clickA(p, "goRules"); await p.waitForTimeout(500);
+  await p.locator('.gl-tab[data-cat="spell"]').click(); await p.waitForTimeout(250);
+  await p.selectOption('select[data-id="lv"]', "3"); await p.waitForTimeout(250);
+  const n = await p.locator(".gl-row").count(); assert(n > 10 && n < 80, "level filter gave " + n);
+  await p.locator('.gl-open:has-text("Fireball")').first().click(); await p.waitForTimeout(250);
+  assert(await p.locator(".gl-list:visible").count() === 1 && await p.locator(".gl-pane:visible .gl-head h2").innerText() === "Fireball", "list and entry should both show");
+  await p.locator('.gl-cols .c1').click(); await p.waitForTimeout(200);
+  const first = await p.locator(".gl-row .gl-name").first().innerText(); assert(first < "Daylight" || first === "Animate Dead" || first.localeCompare("Daylight") < 0, "name sort: " + first);
+  await p.locator('.gl-tab[data-cat="class"]').click(); await p.waitForTimeout(250);
+  await p.locator('.gl-open:has-text("Druid")').first().click(); await p.waitForTimeout(300);
+  assert(await p.locator(".gl-pane .gl-feat").count() > 10 && await p.locator(".gl-pane .gl-links .gl-link").count() > 3, "class page needs features and subclasses");
+  await p.locator(".gl-pane .gl-links .gl-link").first().click(); await p.waitForTimeout(300);
+  assert(/Subclass/i.test(await p.locator(".gl-pane .gl-kind").innerText()), "subclass link did not open");
+  assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+});
+
+await check("Rules glossary: the sheet's Rules tab shares the same list", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p);
+  await p.locator('[data-a="sheetTab"][data-tab="rules"]').first().click(); await p.waitForTimeout(500);
+  assert(await p.locator(".gl-tab").count() >= 12, "glossary missing on the sheet");
+  await p.fill('input[data-query="rules"]', "prone"); await p.waitForTimeout(300);
+  assert(await p.locator('.gl-open:has-text("Prone")').count() >= 1, "Prone not found"); noErrs(p); await p.context().close();
+});
+
 await check("Settings opens (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "openSettings"); await p.waitForTimeout(500);
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
