@@ -42,6 +42,9 @@ import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat
 import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
 import { cuState } from "./views/contentupdate.js";
 import { hasUpdate, shouldShow, seenId, markSeen } from "./contentupdate.js";
+import * as notes from "./notes.js";
+import { applyFormat, toggleTask, renderMd } from "./markdown.js";
+import { renderNotes, nbState, nbCats, nbList, nbStats, nbFoot, nbEdit } from "./views/notes.js";
 import { flourish, toneFor } from "./subtone.js";
 import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
@@ -184,7 +187,7 @@ async function init() {
 }
 
 // ---------------- render ----------------
-const FOCUS_KEYS = ["itemField", "weaponField", "edit", "editAbility", "ac", "coin", "field", "itemNotes", "modal", "query", "draft", "draftAbility"];
+const FOCUS_KEYS = ["itemField", "weaponField", "edit", "editAbility", "ac", "coin", "field", "itemNotes", "nb", "modal", "query", "draft", "draftAbility"];
 function focusSelector(el) {
   if (!isTextish(el) && el?.tagName !== "SELECT") return null;
   if (el.id) return "#" + CSS.escape(el.id);
@@ -280,7 +283,7 @@ function killCharacter(c, cause = "") {
 function lockDead() {
   mount.querySelectorAll(".sheetview main.page > :not(.deadbar), .sheetview [data-a=openEdit], .sheetview nav").forEach(el => el.setAttribute("inert", ""));
 }
-const DEAD_OK = new Set(["reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause"]);
+const DEAD_OK = new Set(["reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause", "goNotes"]);
 function renderNow() {
   if (window.__boot) window.__boot(100);
   const mb = modalRoot.querySelector(".modal-body"), rs = document.querySelector(".results");
@@ -293,6 +296,7 @@ function renderNow() {
   else if (APP.screen === "graveyard") mount.innerHTML = renderGraveyard(APP);
   else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
   else if (APP.screen === "rulesets" && APP.rs) mount.innerHTML = renderRulesets(APP);
+  else if (APP.screen === "notes" && APP.nb && APP.nb.data) mount.innerHTML = renderNotes(APP);
   else if (APP.screen === "start") mount.innerHTML = startMenu(APP);
   else if (APP.screen === "random" && APP.createDraft && APP.rnd) mount.innerHTML = randomScreen(APP);
   else if (APP.screen === "load" && APP.load) mount.innerHTML = loadScreen(APP);
@@ -552,13 +556,30 @@ function applyHp(mode) {
   if (APP.modal && APP.modal.type === "hp") { save(); closeModal(); } else saveAndRender();
 }
 
+// ---------------- notes ledger ----------------
+const nbCurrent = () => { const s = APP.nb; return s && s.data ? s.data.notes.find(n => n.id === s.sel) || null : null; };
+function nbSave() { if (APP.nb && APP.nb.data && !notes.save(APP.nb.data, localStorage)) toast("Storage full"); }
+function nbPrune() { const s = APP.nb, n = nbCurrent(); if (s && n && !n.title.trim() && !n.body.trim()) { notes.removeNote(s.data, n.id); s.sel = null; nbSave(); } }
+function nbRefresh(parts) {
+  const s = APP.nb; if (!s || !s.data || APP.screen !== "notes") return;
+  const put = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  const n = nbCurrent();
+  if (parts.cats) put("nb-cats", nbCats(APP));
+  if (parts.list) put("nb-list", nbList(APP));
+  if (parts.stats) put("nb-stats", nbStats(APP));
+  if (parts.edit) put("nb-edit", nbEdit(APP));
+  if (parts.foot && n) put("nb-foot", nbFoot(n));
+  const root = document.getElementById("nb"); if (root) root.dataset.sel = n ? "1" : "0";
+}
+
 // ---------------- backups ----------------
 async function shareOrDownload(filename, text) {
-  const blob = new Blob([text], { type: "application/json" });
+  const mime = /\.md$/.test(filename) ? "text/markdown" : "application/json";
+  const blob = new Blob([text], { type: mime });
   const p = platform();
   if ((p.ios || p.android) && navigator.canShare) {
     try {
-      const file = new File([blob], filename, { type: "application/json" });
+      const file = new File([blob], filename, { type: mime });
       if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: filename }); return; }
     } catch (e) { if (e && e.name === "AbortError") return; }
   }
@@ -571,7 +592,9 @@ async function shareOrDownload(filename, text) {
 function exportChars(ids, label) {
   const stamp = dateStamp();
   const safe = (label || "characters").replace(/[^\w-]+/g, "-").slice(0, 40);
-  shareOrDownload(`character-runner-${safe}-${stamp}.json`, JSON.stringify(store.backupPayload(ids), null, 1));
+  const payload = store.backupPayload(ids);
+  if (!ids) { const d = notes.load(localStorage); if (d.notes.length) payload.notes = notes.exportData(d); }
+  shareOrDownload(`character-runner-${safe}-${stamp}.json`, JSON.stringify(payload, null, 1));
 }
 function importPrompt() {
   const input = Object.assign(document.createElement("input"), { type: "file", accept: ".json,application/json,text/plain" });
@@ -580,8 +603,10 @@ function importPrompt() {
     if (!f) return;
     try {
       const text = await f.text();
-      const chars = store.parseImport(text);
+      let chars = [];
+      try { chars = store.parseImport(text); } catch (err) { if (!/"notes"/.test(text)) throw err; }
       chars.forEach(c => store.saveCharacter(store.normalize(c, APP.library)));
+      try { const j = JSON.parse(text); if (j && j.notes) { const d = notes.load(localStorage); notes.mergeImport(d, j.notes); notes.save(d, localStorage); APP.nb = null; } } catch (err) { /* notes are optional */ }
       const pics = await importPortraits(store.parsePortraits(text));
       toast(`Restored ${chars.length} character${chars.length === 1 ? "" : "s"}${pics ? ` and ${pics} portrait${pics === 1 ? "" : "s"}` : ""}`);
       APP.modal = null; APP.screen = "roster"; APP.char = null; store.setActiveId(null);
@@ -839,6 +864,11 @@ function onInput(e) {
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
   if (ds.query === "sheet") { APP.sheetQuery = el.value; const r = document.getElementById("results-sheet"); if (r) r.innerHTML = renderSheetSearch(APP); return; }
   if (ds.query === "rules") { APP.rulesQuery = el.value; glState(APP).limit = 150; glRefresh({ tabs: 1, filters: 1, list: 1 }); return; }
+  if (ds.query === "notes") { nbState(APP).q = el.value; nbRefresh({ list: 1 }); return; }
+  if ((ds.nb === "title" || ds.nb === "body") && APP.screen === "notes") {
+    const n = nbCurrent(); if (!n) return;
+    notes.edit(n, { [ds.nb]: el.value }); nbSave(); nbRefresh({ list: 1, stats: 1, foot: 1 }); return;
+  }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
   if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
   if (ds.itemNotes != null && APP.char) { const it = APP.char.inventory[+ds.itemNotes]; if (it) { it.notes = el.value; save(); } return; }
@@ -847,6 +877,8 @@ function onInput(e) {
 
 function onChange(e) {
   const el = e.target, ds = el.dataset, c = APP.char;
+  if (ds.nb === "cat" && APP.screen === "notes") { const n = nbCurrent(); if (n) { notes.edit(n, { cat: el.value }); nbSave(); nbRefresh({ cats: 1, list: 1 }); } return; }
+  if (ds.nb === "sort" && APP.screen === "notes") { nbState(APP).sort = el.value; nbRefresh({ list: 1 }); return; }
   if (ds.spFile != null && el.files && el.files[0]) {
     const f = el.files[0], name = ds.spFile;
     savePortrait(name, f).then(saved => { spRefresh(); toast(saved ? `Image saved for ${name}` : `Showing for now, but this browser would not save it`); },
@@ -978,6 +1010,51 @@ const ACTIONS = {
   },
   goHome() { APP.screen = "home"; APP.char = null; render(); window.scrollTo(0, 0); },
   goRoster() { APP.startFrom = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
+  goNotes() {
+    const s = nbState(APP);
+    if (!s.data) s.data = notes.load(localStorage);
+    const before = s.data.migrated.length;
+    notes.migrateSheetNotes(s.data, store.listCharacters());
+    if (s.data.migrated.length !== before) nbSave();
+    APP.notesFrom = APP.screen === "sheet" && APP.char ? "sheet" : "home";
+    s.sel = null; s.adding = false; APP.screen = "notes"; render(); window.scrollTo(0, 0);
+  },
+  nbExit() { nbPrune(); if (APP.notesFrom === "sheet" && APP.char) { APP.screen = "sheet"; render(); window.scrollTo(0, 0); } else ACTIONS.goHome(); },
+  nbCat(el) { const s = nbState(APP); s.cat = el.dataset.cat; s.adding = false; nbRefresh({ cats: 1, list: 1 }); },
+  nbCatForm() { nbState(APP).adding = true; nbRefresh({ cats: 1 }); const i = document.querySelector('[data-nb="newcat"]'); if (i) i.focus(); },
+  nbAddCat() {
+    const s = nbState(APP), i = document.querySelector('[data-nb="newcat"]'), c = notes.addCat(s.data, i ? i.value : "");
+    s.adding = false; if (c) { s.cat = c; nbSave(); }
+    nbRefresh({ cats: 1, list: 1, edit: 1 });
+  },
+  nbDelCat() { const s = nbState(APP); if (notes.removeCat(s.data, s.cat)) { s.cat = "all"; nbSave(); nbRefresh({ cats: 1, list: 1, edit: 1 }); } },
+  nbNew() {
+    const s = nbState(APP); nbPrune();
+    const n = notes.addNote(s.data, s.cat === "all" ? notes.GENERAL : s.cat);
+    s.sel = n.id; s.mode = "write"; nbSave(); render(); window.scrollTo(0, 0);
+    const t = document.querySelector('[data-nb="title"]'); if (t) t.focus();
+  },
+  nbOpen(el) { const s = nbState(APP); nbPrune(); s.sel = el.dataset.id; nbRefresh({ list: 1, edit: 1 }); window.scrollTo(0, 0); },
+  nbBack() { const s = nbState(APP); nbPrune(); s.sel = null; nbRefresh({ list: 1, edit: 1, cats: 1, stats: 1 }); },
+  nbPin(el) {
+    const s = nbState(APP), n = s.data.notes.find(x => x.id === el.dataset.id); if (!n) return;
+    n.pin = !n.pin; nbSave(); nbRefresh({ list: 1, edit: n.id === s.sel ? 1 : 0 });
+  },
+  nbMode(el) { nbState(APP).mode = el.dataset.mode; nbRefresh({ edit: 1 }); },
+  nbDir() { const s = nbState(APP); s.desc = !s.desc; render(); },
+  nbFmt(el) {
+    const ta = document.getElementById("nb-body"), n = nbCurrent(); if (!ta || !n) return;
+    const r = applyFormat(ta.value, ta.selectionStart, ta.selectionEnd, el.dataset.f);
+    ta.value = r.text; ta.focus(); ta.setSelectionRange(r.start, r.end);
+    notes.edit(n, { body: r.text }); nbSave(); nbRefresh({ list: 1, stats: 1, foot: 1 });
+  },
+  nbCheck(el) {
+    const n = nbCurrent(); if (!n) return;
+    notes.edit(n, { body: toggleTask(n.body, +el.dataset.line) }); nbSave();
+    const md = document.getElementById("nb-md"); if (md) md.innerHTML = renderMd(n.body);
+  },
+  nbDelete(el) { const s = nbState(APP); notes.removeNote(s.data, el.dataset.id); s.sel = null; nbSave(); render(); },
+  nbExport() { const d = nbState(APP).data; if (!d.notes.length) { toast("No notes"); return; } shareOrDownload(`notes-${dateStamp()}.md`, notes.toMarkdownFile(d)); },
   goRules() { APP.screen = "rules"; render(); window.scrollTo(0, 0); },
   homeContinue() {
     const last = lastCharacter(APP); if (!last) { ACTIONS.newCharHome(); return; }

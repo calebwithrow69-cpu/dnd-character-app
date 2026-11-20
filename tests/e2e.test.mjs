@@ -264,6 +264,53 @@ await check("Content update: opens once for a player with characters, never for 
   assert(await p.locator(".modal").count() === 0, "closing it should mark it seen"); noErrs(p); await p.context().close();
 });
 
+await check("Notes ledger: create, count, categorize, search, preview checklist, delete, keep after reload (phone)", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "goNotes"); await p.waitForTimeout(250);
+  assert(await p.locator(".nb-cat").count() >= 10 && /No notes/.test(await p.locator("#nb-list").innerText()), "empty ledger with default categories");
+  await clickA(p, "nbNew"); await p.fill('[data-nb="title"]', "Session 1"); await p.fill('[data-nb="body"]', "# Recap\n- [ ] find the key\nWe met **Orin**.");
+  await p.selectOption('[data-nb="cat"]', "Session"); await p.waitForTimeout(100);
+  const foot = await p.locator("#nb-foot").innerText(); assert(/^\d+ characters/.test(foot) && /(\d+) characters/.exec(foot)[1] === String("Session 1".length + "# Recap\n- [ ] find the key\nWe met **Orin**.".length), "live counter: " + foot);
+  await p.locator('[data-a="nbMode"][data-mode="preview"]').click(); await p.waitForTimeout(150);
+  assert(await p.locator("#nb-md h3").count() === 1 && await p.locator("#nb-md strong").innerText() === "Orin", "markdown preview");
+  await p.locator('#nb-md input[type="checkbox"]').click(); await p.waitForTimeout(120);
+  assert(await p.locator("#nb-md .md-task.done").count() === 1, "checklist toggles in preview");
+  assert((await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-notes-v1")).notes[0].body)).includes("- [x] find the key"), "toggle saved to the note");
+  await clickA(p, "nbBack"); await p.waitForTimeout(150);
+  assert(await p.locator(".nb-row").count() === 1 && /Session 1/.test(await p.locator(".nb-row").innerText()), "note listed");
+  assert(/^1$/.test((await p.locator("#nb-stats .nb-grid b").first().innerText()).trim()), "ledger count");
+  assert(/ledger/i.test(await p.locator("#nb-stats").innerText()) && await p.locator("#nb-stats .nb-bar").count() === 2, "length and storage meters");
+  await p.locator('[data-a="nbCat"][data-cat="NPC"]').click(); await p.waitForTimeout(120);
+  assert(await p.locator(".nb-row").count() === 0, "category filter hides it");
+  await p.locator('[data-a="nbCat"][data-cat="all"]').click(); await p.fill('[data-query="notes"]', "orin"); await p.waitForTimeout(120);
+  assert(await p.locator(".nb-row").count() === 1, "search finds body text");
+  await p.fill('[data-query="notes"]', "zzz"); await p.waitForTimeout(120); assert(await p.locator(".nb-row").count() === 0, "search misses");
+  await p.fill('[data-query="notes"]', ""); await p.waitForTimeout(100);
+  await p.reload(); await p.waitForSelector("#home-book"); await clickA(p, "goNotes"); await p.waitForTimeout(200);
+  assert(await p.locator(".nb-row").count() === 1, "note survives reload");
+  await p.locator(".nb-open").click(); await p.waitForTimeout(150);
+  await p.locator('[data-a="askRemove"]').click(); await p.waitForTimeout(150); await p.locator('[data-a="confirmRemove"]').click(); await p.waitForTimeout(200);
+  assert(await p.locator(".nb-row").count() === 0, "deleted");
+  assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+});
+
+await check("Notes ledger: sheet button opens it and returns; old sheet notes move over; full backup carries notes", async () => {
+  const p = await open(1100, 800); await openSample(p);
+  const stored = await p.evaluate(() => APP.char.notes); assert(stored && stored.trim(), "sample character needs sheet notes");
+  await p.locator('[data-a="goNotes"]:visible').first().click(); await p.waitForTimeout(300);
+  assert(await p.locator(".nb-row").count() === 1 && /notes/i.test(await p.locator(".nb-row").innerText()), "sheet notes migrated into the ledger");
+  await p.locator(".nb-open").click(); await p.waitForTimeout(150);
+  assert((await p.locator("#nb-body").inputValue()) === stored, "migrated text intact");
+  await p.locator('[data-a="nbPin"]').first().click(); await p.waitForTimeout(100);
+  assert(await p.locator('.nb-row .nb-pin[aria-pressed="true"]').count() === 1, "pin");
+  await p.locator('.topbar [data-a="nbExit"]').click(); await p.waitForTimeout(300);
+  assert(await p.locator(".sheetview").count() === 1, "Back should return to the sheet");
+  await clickA(p, "openSettings"); await p.waitForTimeout(250); await p.locator('details[data-sec="data"] summary').click(); await p.waitForTimeout(120);
+  const [dl] = await Promise.all([p.waitForEvent("download"), p.locator('[data-a="exportAll"]').first().click()]);
+  const j = JSON.parse(await (await import("node:fs")).promises.readFile(await dl.path(), "utf8"));
+  assert(j.notes && j.notes.notes.length === 1 && j.notes.notes[0].pin === true, "backup notes");
+  noErrs(p); await p.context().close();
+});
+
 await check("Export file names carry the date", async () => {
   const p = await open(1100, 800); await openSample(p);
   const today = await p.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });

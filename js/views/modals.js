@@ -113,7 +113,7 @@ export function renderModal(app) {
     case "confirmRemove": {
       const r = app._rm || {};
       const note = r.what === "spell" ? "It leaves your spell list. You can add it back any time from Add spells."
-        : r.what === "feat" ? "It comes off your sheet. Bonuses it already gave, such as ability points or hit points, are not undone." : "";
+        : r.what === "note" ? "It is deleted from this device. A backup keeps older copies." : r.what === "feat" ? "It comes off your sheet. Bonuses it already gave, such as ability points or hit points, are not undone." : "";
       return modalShell(`Remove ${r.name || "this"}?`, `<p>Are you sure you want to remove <b>${esc(r.name || "this")}</b>?</p><p class="sub2">${esc(note)}</p>`,
         `<button class="btn" data-a="cancelRemove">Keep it</button><button class="btn danger" data-a="confirmRemove">Remove</button>`);
     }

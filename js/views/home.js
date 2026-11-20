@@ -6,6 +6,7 @@ import { rulesTab } from "./glossary.js";
 
 const ICON = {
   people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6M16 5a3.5 3.5 0 010 6.5M18 14c2 .6 3.3 2.4 3.6 6"/>',
+  notes: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
   book: '<path d="M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M8 4v13"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>',
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>'
@@ -53,6 +54,7 @@ export function renderHome(app) {
       <div class="float">
         <button class="fbtn press" data-a="goRoster">${ic("people")}CHARACTERS${n ? `<em>${n}</em>` : ""}</button>
         <button class="fbtn press" data-a="goRules">${ic("book")}RULES</button>
+        <button class="fbtn press" data-a="goNotes">${ic("notes")}NOTES</button>
         <button class="fbtn press" data-a="openSettings">${ic("gear")}SETTINGS</button>
       </div>
     </div>

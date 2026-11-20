@@ -2,11 +2,29 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.53";
+export const VERSION = "0.1.54";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.54",
+    date: "2026-11-20",
+    stage: "Pre-build",
+    blurb: "Notes ledger: one place for every note.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Notes screen from Home and from every sheet, not tied to one sheet style.",
+          "Categories, pins, search and sorting by edit date, created, title, length or category.",
+          "Markdown editor with toolbar, preview and checklists.",
+          "Counters for notes, characters, words and storage, with book-length milestones.",
+          "Old sheet notes move into the ledger. Full backups include notes. Export notes as Markdown."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.53",
     date: "2026-11-20",

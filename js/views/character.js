@@ -103,8 +103,8 @@ function toolsTab(app, c, d) {
 // ---------------- Notes ----------------
 function notesTab(app, c) {
   return `
-    <div class="panel"><div class="panel-head"><h2>Notes</h2><span class="sub2">Saves as you type</span></div><div class="panel-body">
-      <textarea class="f" data-field="notes" aria-label="Notes" style="min-height:170px">${esc(c.notes)}</textarea></div></div>
+    <div class="panel"><div class="panel-head"><h2>Notes</h2></div><div class="panel-body">
+      <button class="btn block" data-a="goNotes">${ICONS.notes}<span>Open notes</span></button></div></div>
     ${c.classFeatureNotes ? `<div class="panel"><div class="panel-head"><h2>Class notes</h2></div><div class="panel-body">
       <textarea class="f" data-field="classFeatureNotes" aria-label="Class notes">${esc(c.classFeatureNotes)}</textarea></div></div>` : ""}
     <div class="panel"><div class="panel-head"><h2>Proficiencies &amp; languages</h2></div><div class="panel-body stack">

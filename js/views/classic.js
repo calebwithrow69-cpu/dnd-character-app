@@ -129,7 +129,7 @@ export function classicBody(app, c, d) {
     notes: `<div class="cl-cols3 cl-two"><div>${profsBox}</div><div>
     <div class="panel"><div class="panel-body"><div class="btnrow">
       <button class="btn" data-a="downloadPdf">Download character sheet (PDF)</button></div>
-      <label class="field" style="margin-top:12px"><span class="lab">Notes</span><textarea class="f" data-field="notes" aria-label="Notes" style="min-height:120px">${esc(c.notes)}</textarea></label></div></div>
+      <button class="btn block" style="margin-top:12px" data-a="goNotes">${ICONS.notes}<span>Open notes</span></button></div></div>
       </div>
     </div></div>`
   };
