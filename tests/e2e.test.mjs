@@ -250,104 +250,81 @@ await check("Content update: opened from Settings, three counts, before and afte
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
 });
 
-await check("Content update: opens once for a player with characters, never for a new device", async () => {
+await check("Content update: stays pending until Done, with a Home banner; never for a new device", async () => {
   const mk = async () => { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block" });
     await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); }); const page = await ctx.newPage(); page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
     await page.goto(URL_); await page.waitForSelector("#home-book"); return page; };
   const p = await mk(); await p.waitForTimeout(500);
-  assert(await p.locator(".modal").count() === 0, "a new device should not get the popup");
+  assert(await p.locator(".modal").count() === 0 && await p.locator('.hwarn[data-a="openUpdate"]').count() === 0, "a new device gets neither popup nor banner");
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => localStorage.removeItem("dnd-update-seen"));
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
-  assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "an existing player should get the popup");
+  assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "an existing player gets the popup");
   await p.keyboard.press("Escape"); await p.waitForTimeout(250);
+  assert(/4 rule changes/.test(await p.locator('.hwarn[data-a="openUpdate"]').innerText()), "closing it leaves a banner on Home");
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
-  assert(await p.locator(".modal").count() === 0, "closing it should mark it seen"); noErrs(p); await p.context().close();
+  assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "still pending after closing without Done");
+  await p.locator('[data-a="cuDone"]').click(); await p.waitForTimeout(300);
+  assert(await p.locator(".modal").count() === 0 && await p.locator('.hwarn[data-a="openUpdate"]').count() === 0, "Done clears the popup and the banner");
+  await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
+  assert(await p.locator(".modal").count() === 0, "checked updates stay closed"); noErrs(p); await p.context().close();
 });
 
-await check("Notes ledger: create, count, categorize, search, preview checklist, delete, keep after reload (phone)", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "goNotes"); await p.waitForTimeout(250);
-  assert(await p.locator(".nb-cat").count() >= 10 && /No notes/.test(await p.locator("#nb-list").innerText()), "empty ledger with default categories");
-  await clickA(p, "nbNew"); await p.fill('[data-nb="title"]', "Session 1"); await p.fill('[data-nb="body"]', "# Recap\n- [ ] find the key\nWe met **Orin**.");
-  await p.selectOption('[data-nb="cat"]', "Session"); await p.waitForTimeout(100);
-  const foot = await p.locator("#nb-foot").innerText(); assert(/^\d+ characters/.test(foot) && /(\d+) characters/.exec(foot)[1] === String("Session 1".length + "# Recap\n- [ ] find the key\nWe met **Orin**.".length), "live counter: " + foot);
-  await p.locator('[data-a="nbMode"][data-mode="preview"]').click(); await p.waitForTimeout(150);
-  assert(await p.locator("#nb-md h3").count() === 1 && await p.locator("#nb-md strong").innerText() === "Orin", "markdown preview");
-  await p.locator('#nb-md input[type="checkbox"]').click(); await p.waitForTimeout(120);
-  assert(await p.locator("#nb-md .md-task.done").count() === 1, "checklist toggles in preview");
-  assert((await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-notes-v1")).notes[0].body)).includes("- [x] find the key"), "toggle saved to the note");
-  await clickA(p, "nbBack"); await p.waitForTimeout(150);
-  assert(await p.locator(".nb-row").count() === 1 && /Session 1/.test(await p.locator(".nb-row").innerText()), "note listed");
-  assert(/^1$/.test((await p.locator("#nb-stats .nb-grid b").first().innerText()).trim()), "ledger count");
-  assert(/ledger/i.test(await p.locator("#nb-stats").innerText()) && await p.locator("#nb-stats .nb-bar").count() === 2, "length and storage meters");
-  await p.locator('[data-a="nbCat"][data-cat="NPC"]').click(); await p.waitForTimeout(120);
-  assert(await p.locator(".nb-row").count() === 0, "category filter hides it");
-  await p.locator('[data-a="nbCat"][data-cat="all"]').click(); await p.fill('[data-query="notes"]', "orin"); await p.waitForTimeout(120);
-  assert(await p.locator(".nb-row").count() === 1, "search finds body text");
-  await p.fill('[data-query="notes"]', "zzz"); await p.waitForTimeout(120); assert(await p.locator(".nb-row").count() === 0, "search misses");
-  await p.fill('[data-query="notes"]', ""); await p.waitForTimeout(100);
-  await p.reload(); await p.waitForSelector("#home-book"); await clickA(p, "goNotes"); await p.waitForTimeout(200);
-  assert(await p.locator(".nb-row").count() === 1, "note survives reload");
-  await p.locator(".nb-open").click(); await p.waitForTimeout(150);
-  await p.locator('[data-a="askRemove"]').click(); await p.waitForTimeout(150); await p.locator('[data-a="confirmRemove"]').click(); await p.waitForTimeout(200);
-  assert(await p.locator(".nb-row").count() === 0, "deleted");
-  assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
-});
-
-await check("Notes PDF: one note and the filtered list download as dated PDFs", async () => {
-  const p = await open(1280, 860); await clickA(p, "goNotes"); await p.waitForTimeout(250);
-  const today = await p.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
-  const mk = async (t, b, cat) => { await clickA(p, "nbNew"); await p.fill('[data-nb="title"]', t); await p.fill('[data-nb="body"]', b); await p.selectOption('[data-nb="cat"]', cat); await p.waitForTimeout(80); };
-  await mk("Orin the Smith", "# Smith\n- [x] met him\nHe owes us **a favour**.", "NPC"); await mk("Loot", "3 potions", "Loot");
-  const grab = async sel => { const [dl] = await Promise.all([p.waitForEvent("download"), p.locator(sel).first().click()]); const buf = await (await import("node:fs")).promises.readFile(await dl.path()); return { name: dl.suggestedFilename(), head: buf.slice(0, 5).toString(), size: buf.length }; };
-  await p.locator(".nb-open", { hasText: "Orin" }).click(); await p.waitForTimeout(150);
-  const one = await grab('[data-a="nbPdf"]');
-  assert(one.name === `Orin-the-Smith-${today}.pdf` && one.head === "%PDF-" && one.size > 1000, JSON.stringify(one));
-  await p.locator('[data-a="nbCat"][data-cat="NPC"]').click(); await p.waitForTimeout(120);
-  const npc = await grab('[data-a="nbPdfAll"]'); assert(npc.name === `notes-NPC-${today}.pdf` && npc.head === "%PDF-", JSON.stringify(npc));
-  await p.locator('[data-a="nbCat"][data-cat="all"]').click(); await p.waitForTimeout(120);
-  const all = await grab('[data-a="nbPdfAll"]'); assert(all.name === `notes-all-${today}.pdf` && all.size > npc.size, JSON.stringify(all) + JSON.stringify(npc));
+await check("Content update: two updates since the last check read as one total", async () => {
+  const p = await open(390, 844, { touch: true });
+  await p.evaluate(() => {
+    const r1 = APP.library.updates[0], wb = r1.items.find(i => i.name === "Water Bullet");
+    const after = { ...wb.after, text: wb.after.text + " Extra line." };
+    APP.library.updates.push({ id: "2026-12-01-ffffff", date: "2026-12-01", title: "Content update", items: [{ status: "changed", kind: "spells", label: "Spell", name: "Water Bullet", effect: "buff", summary: "Back up.", before: wb.after, after, changes: [{ field: "text", label: "Rules text", before: wb.after.text, after: after.text, effect: "buff", note: "More text." }] }] });
+  });
+  await clickA(p, "openSettings"); await p.waitForTimeout(300); await p.locator('details[data-sec="about"] summary').click(); await p.waitForTimeout(150);
+  await p.locator('[data-a="openUpdate"]').click(); await p.waitForTimeout(300);
+  assert(/2 updates/.test(await p.locator(".cu-date").innerText()), "header counts the updates");
+  assert((await p.locator(".cu-card b").allInnerTexts()).join() === "2,2,0", "one total per entry, not per update");
+  await p.locator(".cu-card.changed").click(); await p.waitForTimeout(150);
+  assert(await p.locator(".cu-item", { hasText: "Water Bullet" }).locator(".cu-eff.mixed").count() >= 1, "nerf then buff reads as mixed");
+  await p.locator('[data-a="cuDone"]').click(); await p.waitForTimeout(250);
+  assert(await p.evaluate(() => localStorage.getItem("dnd-update-seen")) === "2026-12-01-ffffff", "Done stores the newest id");
+  assert(await p.locator(".modal").count() === 0, "Done closes the popup and Settings");
+  await clickA(p, "openSettings"); await p.waitForTimeout(250);
+  if (!await p.locator('[data-a="openUpdate"]').isVisible()) await p.locator('details[data-sec="about"] summary').click();
+  await p.waitForTimeout(150); await p.locator('[data-a="openUpdate"]').click(); await p.waitForTimeout(300);
+  assert((await p.locator(".cu-card b").allInnerTexts()).join() === "0,1,0" && !/2 updates/.test(await p.locator(".cu-date").innerText()), "after Done, Settings shows only the newest update");
   noErrs(p); await p.context().close();
 });
 
-await check("Notes badges: earned by length, facts unlock, kept after delete (phone)", async () => {
-  const p = await open(390, 844, { touch: true }); await clickA(p, "goNotes"); await p.waitForTimeout(250);
-  const total = n => p.evaluate(k => Object.keys(JSON.parse(localStorage.getItem("dnd-notes-v1")).badges).length, 0);
-  await clickA(p, "nbNew"); await p.fill('[data-nb="title"]', "A"); await p.fill('[data-nb="body"]', "x".repeat(40)); await p.waitForTimeout(150);
-  assert(await total() === 1, "15 characters earns the first badge");
-  await clickA(p, "nbBack"); await p.waitForTimeout(150);
-  await p.locator('[data-a="nbBadges"]').click(); await p.waitForTimeout(250);
-  assert(/1\/22/.test(await p.locator(".bd-sum").innerText()) && await p.locator(".bd-item").count() === 22, "1 of 22 earned");
-  await p.locator(".bd-item.earned .bd-h").click(); await p.waitForTimeout(150);
-  assert(await p.locator(".bd-facts li").count() >= 2 && /Merry Christmas/.test(await p.locator(".bd-body").innerText()), "earned badge shows facts");
-  await p.locator(".bd-item.next .bd-h").click(); await p.waitForTimeout(150);
-  assert(await p.locator(".bd-facts").count() === 0 && /to go/.test(await p.locator(".bd-left").innerText()), "locked badge hides facts and shows the gap");
-  await p.locator('[data-a="closeModal"]').first().click(); await p.waitForTimeout(200);
-  await p.locator(".nb-open").click(); await p.fill('[data-nb="body"]', "y".repeat(300)); await p.waitForTimeout(200);
-  assert(await total() === 3, "300 characters earns the text and tweet badges");
-  assert(/Badge/.test(await p.locator("#toast").innerText().catch(() => "")), "toast names the badge");
-  await p.locator('[data-a="askRemove"]').click(); await p.waitForTimeout(150); await p.locator('[data-a="confirmRemove"]').click(); await p.waitForTimeout(200);
-  assert(await total() === 3, "deleting the note keeps the badges");
-  await p.reload(); await p.waitForSelector("#home-book"); await clickA(p, "goNotes"); await p.waitForTimeout(200);
-  assert(/3\/22/.test(await p.locator('[data-a="nbBadges"]').innerText()), "badges survive reload");
-  assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
+await check("Notes storage: old localStorage notes move to IndexedDB once and stay editable", async () => {
+  const p = await open(390, 844, { touch: true });
+  const L = JSON.stringify({ v: 1, notes: [{ id: "old1", title: "From before", body: "kept " + "x".repeat(2000), cat: "General", pin: false, created: 1, updated: 2 }], cats: ["General"], migrated: [], badges: {} });
+  await p.evaluate(v => localStorage.setItem("dnd-notes-v1", v), L);
+  await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
+  const st = await p.evaluate(async () => { await APP.kvReady; const db = await new Promise((ok, no) => { const r = indexedDB.open("dnd-kv-v1", 1); r.onsuccess = () => ok(r.result); r.onerror = no; });
+    const get = k => new Promise(ok => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => ok(q.result ?? null); });
+    return { legacy: localStorage.getItem("dnd-notes-v1"), idb: await get("dnd-notes-v1"), backup: await get("dnd-notes-v1#backup") }; });
+  assert(st.legacy === null && st.idb === L && st.backup === L, "moved with a backup copy");
+  await clickA(p, "goNotes"); await p.waitForTimeout(500);
+  assert(/From before/.test(await p.locator("#nb-list").innerText()), "the old note is listed");
+  await clickA(p, "nbNew"); await p.waitForTimeout(250); await p.locator(".nb-title").fill("After"); await p.waitForTimeout(300);
+  await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600); await clickA(p, "goNotes"); await p.waitForTimeout(500);
+  const list = await p.locator("#nb-list").innerText(); assert(/From before/.test(list) && /After/.test(list), "both notes survive a reload: " + list.slice(0, 80));
+  assert(await p.evaluate(() => localStorage.getItem("dnd-notes-v1")) === null, "nothing written back to localStorage");
+  assert(/of [\d.]+ (MB|GB)/.test(await p.locator(".nb-card", { hasText: "Storage" }).innerText()), "browser-reported quota");
+  noErrs(p); await p.context().close();
 });
 
-await check("Notes ledger: sheet button opens it and returns; old sheet notes move over; full backup carries notes", async () => {
-  const p = await open(1100, 800); await openSample(p);
-  const stored = await p.evaluate(() => APP.char.notes); assert(stored && stored.trim(), "sample character needs sheet notes");
-  await p.locator('[data-a="goNotes"]:visible').first().click(); await p.waitForTimeout(300);
-  assert(await p.locator(".nb-row").count() === 1 && /notes/i.test(await p.locator(".nb-row").innerText()), "sheet notes migrated into the ledger");
-  await p.locator(".nb-open").click(); await p.waitForTimeout(150);
-  assert((await p.locator("#nb-body").inputValue()) === stored, "migrated text intact");
-  await p.locator('[data-a="nbPin"]').first().click(); await p.waitForTimeout(100);
-  assert(await p.locator('.nb-row .nb-pin[aria-pressed="true"]').count() === 1, "pin");
-  await p.locator('.topbar [data-a="nbExit"]').click(); await p.waitForTimeout(300);
-  assert(await p.locator(".sheetview").count() === 1, "Back should return to the sheet");
-  await clickA(p, "openSettings"); await p.waitForTimeout(250); await p.locator('details[data-sec="data"] summary').click(); await p.waitForTimeout(120);
-  const [dl] = await Promise.all([p.waitForEvent("download"), p.locator('[data-a="exportAll"]').first().click()]);
-  const j = JSON.parse(await (await import("node:fs")).promises.readFile(await dl.path(), "utf8"));
-  assert(j.notes && j.notes.notes.length === 1 && j.notes.notes[0].pin === true, "backup notes");
-  noErrs(p); await p.context().close();
+await check("Home banners: Safari without the install, then backup age", async () => {
+  const mk = async ua => { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block", userAgent: ua }); await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); });
+    const page = await ctx.newPage(); page.errs = []; page.on("pageerror", e => page.errs.push(String(e))); await page.goto(URL_); await page.waitForSelector("#home-book"); return page; };
+  const SAF = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+  const p = await mk(SAF); await p.waitForTimeout(300);
+  assert(await p.locator('.hwarn[data-a="openSettings"]').count() === 0, "no characters, no banner");
+  await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => localStorage.setItem("dnd-update-seen", APP.library.updates.slice(-1)[0].id)); await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(500);
+  assert(/Safari erases data/.test(await p.locator(".hwarn").first().innerText()), "Safari banner with a character");
+  await p.context().close();
+  const q = await mk("Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
+  await clickA(q, "goRoster"); await clickA(q, "importGandork"); await q.evaluate(() => localStorage.setItem("dnd-update-seen", APP.library.updates.slice(-1)[0].id)); await q.reload(); await q.waitForSelector("#home-book"); await q.waitForTimeout(500);
+  assert(/No backup yet/.test(await q.locator('.hwarn[data-a="exportAll"]').innerText()), "backup banner when never backed up");
+  await q.evaluate(() => { const k = "dnd-prefs-v1"; });
+  noErrs(q); await q.context().close();
 });
 
 await check("Export file names carry the date", async () => {

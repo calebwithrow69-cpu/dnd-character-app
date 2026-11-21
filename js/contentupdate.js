@@ -55,12 +55,62 @@ export function changeView(a, b) {
 export const isLong = v => typeof v === "string" && (v.length > 60 || v.includes("\n"));
 export const show = v => v == null || v === "" ? "None" : Array.isArray(v) ? (v.length ? v.join(", ") : "None") : typeof v === "boolean" ? (v ? "Yes" : "No") : String(v);
 
-// ---- seen (this device)
+// ---- history: library.updates is a list of records, oldest first (older app versions read library.update, the newest).
+export const updatesOf = lib => (lib && Array.isArray(lib.updates) ? lib.updates : lib && lib.update ? [lib.update] : []).filter(hasUpdate);
+
+// The records a device has not checked yet. Nothing seen yet, or a marker older than the history kept: everything kept.
+export function pending(updates, seen) {
+  const i = seen ? updates.findIndex(u => u.id === seen) : -1;
+  return { records: i < 0 ? updates.slice() : updates.slice(i + 1), older: !!seen && i < 0 };
+}
+
+const sameJson = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const uniq = list => [...new Set(list.filter(Boolean))];
+const effectOf = list => { const e = uniq(list.filter(x => x && x !== "neutral")); return e.length > 1 ? "mixed" : e[0] || (list.includes("neutral") ? "neutral" : ""); };
+
+// Several records read as one: per entry, the oldest Before against the newest After. Added then removed vanishes,
+// removed then added again reads as changed, and a change that was undone is dropped.
+export function squash(records, older = false) {
+  if (!records.length) return null;
+  const map = new Map();
+  for (const rec of records) for (const it of rec.items || []) { const k = it.kind + "|" + it.name; if (!map.has(k)) map.set(k, []); map.get(k).push(it); }
+  const items = [];
+  for (const parts of map.values()) {
+    const first = parts[0], last = parts[parts.length - 1];
+    const before = first.status === "new" ? null : first.before, after = last.status === "removed" ? null : last.after;
+    const base = { kind: last.kind, label: last.label, name: last.name };
+    if (before == null && after == null) continue;
+    if (before == null) { items.push({ ...base, status: "new", effect: "", summary: parts.length === 1 ? last.summary || "" : "", before: null, after, changes: [] }); continue; }
+    if (after == null) { items.push({ ...base, status: "removed", effect: "", summary: parts.length === 1 ? first.summary || "" : "", before, after: null, changes: [] }); continue; }
+    if (parts.length === 1) { items.push({ ...last, before, after }); continue; }
+    const seen = parts.flatMap(p => p.changes || []);
+    const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(f => f !== "bookLv" && !sameJson(before[f], after[f]));
+    const changes = fields.map(f => {
+      const mine = seen.filter(c => c.field === f);
+      return { field: f, label: (mine[0] && mine[0].label) || f, before: before[f] ?? null, after: after[f] ?? null, effect: effectOf(mine.map(c => c.effect)), note: uniq(mine.map(c => c.note)).join(" ") };
+    });
+    if (!changes.length) continue;
+    items.push({ ...base, status: "changed", effect: effectOf(changes.map(c => c.effect)), summary: uniq(parts.map(p => p.summary)).join(" "), before, after, changes });
+  }
+  const last = records[records.length - 1];
+  return { id: last.id, date: last.date, from: records[0].date, to: last.date, count: records.length, older, title: last.title, items };
+}
+
+// What the popup shows for a library and a device: everything unchecked, squashed; null when nothing is pending.
+export function pendingUpdate(lib, seen) {
+  const p = pending(updatesOf(lib), seen), u = squash(p.records, p.older);
+  return u && u.items.length ? u : null;
+}
+// Settings can reopen the newest update after it was checked.
+export const latestUpdate = lib => { const l = updatesOf(lib).slice(-1); return squash(l); };
+export const rangeText = u => (u.count > 1 ? `${u.count} updates \u00b7 ${u.from} to ${u.to}` : u.date || "");
+
+// ---- seen (this device): the id of the newest record the player has checked
 export const seenId = (store = globalThis.localStorage) => { try { return store.getItem(LS_SEEN) || ""; } catch (e) { return ""; } };
 export const markSeen = (id, store = globalThis.localStorage) => { try { store.setItem(LS_SEEN, id); } catch (e) { } };
-// Show on launch when there is an update this device has not seen. A device with no characters yet is new:
-// it starts at the current update instead of reading changes to rules it never used.
-export function shouldShow(u, { seen, hasCharacters, automated }) {
-  if (!hasUpdate(u) || seen === u.id || automated) return false;
+// Launch rule. A device with no characters and no marker is new: it starts at the current update instead of reading
+// changes to rules it never used. Everyone else sees what is pending until they press Done.
+export function shouldShow(pend, { seen, hasCharacters, automated }) {
+  if (!pend || automated) return false;
   return hasCharacters || !!seen;
 }

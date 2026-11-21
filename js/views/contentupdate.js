@@ -1,8 +1,11 @@
 // "Content update" popup: three cards (New, Changed, Removed) with counts; a card opens its list and each entry
 // opens to its before and after. Changed text is shown with the changed words marked.
 import { esc, modalShell, formatText } from "../ui.js";
-import { STATUS, EFFECT, groupItems, changeView, isLong, show } from "../contentupdate.js";
+import { STATUS, EFFECT, groupItems, changeView, isLong, show, pendingUpdate, latestUpdate, rangeText, seenId } from "../contentupdate.js";
 
+// What the popup shows: everything not yet checked on this device, or the newest update once it has been checked.
+export function cuRecord(app) { return pendingUpdate(app.library, seenId()) || latestUpdate(app.library); }
+export const cuPendingCount = app => { const u = pendingUpdate(app.library, seenId()); return u ? u.items.length : 0; };
 export const cuState = app => app.cu || (app.cu = { open: "", items: new Set() });
 
 const runs = rs => rs.map(r => (r.mark === "skip" ? `<span class="cu-skip">${esc(r.s)}</span>` : r.mark ? `<${r.mark}>${esc(r.s)}</${r.mark}>` : esc(r.s))).join("").replace(/\n/g, "<br>");
@@ -36,10 +39,10 @@ function itemHtml(it, open) {
 }
 
 export function renderContentUpdate(app) {
-  const u = app.library && app.library.update;
+  const u = cuRecord(app);
   if (!u) return modalShell("Content update", `<p class="muted">No update.</p>`, `<button class="btn" data-a="closeModal">Done</button>`);
   const st = cuState(app), g = groupItems(u);
   const cards = STATUS.map(([k, l]) => `<button class="cu-card ${k}" data-a="cuOpen" data-k="${k}" aria-expanded="${st.open === k}"${g[k].length ? "" : " disabled"}><span class="cu-cl">${l}</span><b>${g[k].length}</b></button>`).join("");
   const list = st.open && g[st.open] ? `<div class="cu-list">${g[st.open].map(it => itemHtml(it, st.items.has(it.key))).join("")}</div>` : "";
-  return modalShell("Content update", `<p class="cu-date">${esc(u.date || "")}</p><div class="cu-cards">${cards}</div>${list}`, `<button class="btn pri" data-a="cuDone">Done</button>`);
+  return modalShell("Content update", `<p class="cu-date">${esc(rangeText(u))}${u.older ? ` \u00b7 Earlier updates not listed` : ""}</p><div class="cu-cards">${cards}</div>${list}`, `<button class="btn pri" data-a="cuDone">Done</button>`);
 }

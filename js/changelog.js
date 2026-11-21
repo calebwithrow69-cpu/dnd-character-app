@@ -2,11 +2,29 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.54";
+export const VERSION = "0.1.55";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.55",
+    date: "2026-11-21",
+    stage: "Pre-build",
+    blurb: "Content updates stay until checked. Notes get more room.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Content update stays open on launch until Done is pressed. Closing it leaves a banner on Home.",
+          "Players who skipped several updates see one total: oldest Before against newest After for each entry.",
+          "Notes are stored in IndexedDB, which has far more room than the 5 MB shared by localStorage. Existing notes move over once, with a verified backup copy. Characters are not touched.",
+          "Storage meter shows what the browser reports for this site.",
+          "Home warns when Safari is not installed to the Home Screen (it erases site data after 7 days of no use) and when the last backup is older than 14 days."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.54",
     date: "2026-11-20",

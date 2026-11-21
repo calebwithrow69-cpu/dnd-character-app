@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// Content update: fold a DM-editor changes file into the rules AND write the record players see in the
-// "Content update" popup (library.update). The old record is replaced; its before/after snapshots are dropped.
+// Content update: fold a DM-editor changes file into the rules AND append a record to the history behind the
+// "Content update" popup (library.updates). Each device shows everything since the update it last checked,
+// squashed per entry (oldest Before, newest After), so records are only ever appended, never replaced.
+// The tool keeps the newest KEEP records and mirrors the newest into library.update for older app versions.
 //
 //   CR_PASSWORD=... node tools/crypt.mjs unlock
 //   node tools/content-update.mjs <changes.json> <notes.json> [--title "Content update"] [--date YYYY-MM-DD] [--dry]
@@ -68,18 +70,21 @@ for (const kind of KIND_ORDER) {
 if (!items.length) { console.error("No new, changed or removed entries in that file (already applied?)."); process.exit(1); }
 
 const id = `${date}-${createHash("sha1").update(JSON.stringify(items)).digest("hex").slice(0, 6)}`;
-const record = {
-  _note: "NOTE FOR FUTURE CLAUDE: this object is the one content update shown to players in the Content update popup (js/views/contentupdate.js, tools/content-update.mjs). It holds a single update. When the DM brings a new changes file, run tools/content-update.mjs: it builds the new record from the unlocked library, REPLACES this whole object (the old items and their before/after snapshots are dropped), then applies the changes. Lock the library afterwards. If there is no new update, leave this object exactly as it is. Write each changed item's summary in plain words and mark it buff, nerf, mixed or neutral in the notes file.",
-  id, date, title, items
-};
+export const UPDATES_NOTE = "NOTE FOR FUTURE CLAUDE: library.updates is the history behind the Content update popup (js/contentupdate.js, js/views/contentupdate.js, tools/content-update.mjs). Each rules roll-out APPENDS one record; never replace or hand-edit records. A device shows everything since the update its player last checked (they press Done), squashed per entry: the oldest Before against the newest After, so players who skipped several updates read one total. Run tools/content-update.mjs <changes.json> <notes.json> on the unlocked library for each roll-out: it builds the record, applies the changes, keeps the newest 12 records and mirrors the newest into library.update for older app versions. Write each changed item's summary in plain words and mark every change buff, nerf, mixed or neutral in the notes file. Lock the library afterwards. If there are no new changes, leave all of this untouched.";
+const record = { id, date, title, items };
 const count = s => items.filter(i => i.status === s).length;
 console.log(`${id}: ${count("new")} new, ${count("changed")} changed, ${count("removed")} removed`);
 for (const f of fixed) console.log("fixed class name:", f);
 for (const i of items) console.log(` ${i.status.padEnd(7)} ${i.kind}|${i.name}  ${i.effect || "-"}${i.summary ? "" : "  (no summary)"}${i.changes.map(c => `\n           ${c.field}: ${c.effect || "-"}${c.note ? "" : " (no note)"}`).join("")}`);
 if (dry) process.exit(0);
 
+const KEEP = 12;
+const history = (Array.isArray(lib.updates) ? lib.updates : lib.update ? [lib.update] : []).map(({ _note, ...rec }) => rec);
+if (history.some(h => h.id === id)) { console.error("This update is already in the history."); process.exit(1); }
 const r = applyPatch(lib, camp, patch);
+r.library.updates = [...history, record].slice(-KEEP);
 r.library.update = record;
+r.library.updatesNote = UPDATES_NOTE;
 writeFileSync("data/library.json", JSON.stringify(r.library, null, 0));
 writeFileSync("data/campaign.json", JSON.stringify(r.campaign, null, 2) + "\n");
 console.log("Applied. Now lock the library and commit. Then clear the changes on your device (DM editor > Clear).");

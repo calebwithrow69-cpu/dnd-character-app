@@ -33,6 +33,11 @@ export function clean(raw) {
   return d;
 }
 export function load(st) { try { return clean(JSON.parse(st.getItem(KEY))); } catch (e) { return blank(); } }
+// Two copies of the ledger that differ: keep the one edited most recently.
+export function newer(a, b) {
+  const t = raw => { try { const d = JSON.parse(raw); return Math.max(0, ...((d && d.notes) || []).map(n => n.updated || 0)); } catch (e) { return -1; } };
+  return t(a) >= t(b) ? a : b;
+}
 export function save(data, st) { try { const { hadBadges, ...rest } = data; st.setItem(KEY, JSON.stringify(rest)); return true; } catch (e) { return false; } }
 
 export function addNote(data, cat, now = Date.now()) {

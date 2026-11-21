@@ -40,7 +40,7 @@ export function nbList(app) {
 }
 
 export function nbStats(app) {
-  const s = nbState(app), st = N.stats(s.data.notes), ms = N.milestoneText(st.chars), use = N.storageUse(localStorage);
+  const s = nbState(app), st = N.stats(s.data.notes), ms = N.milestoneText(st.chars), use = app.est || N.storageUse(localStorage);
   return `<div class="nb-card"><span class="nb-k">Ledger</span>
       <div class="nb-grid"><div><b>${num(st.notes)}</b><small>Notes</small></div><div><b>${num(st.chars)}</b><small>Characters</small></div><div><b>${num(st.words)}</b><small>Words</small></div></div></div>
     <div class="nb-card"><span class="nb-k">Length</span><b class="nb-ms">${esc(ms.head)}</b>
@@ -49,7 +49,7 @@ export function nbStats(app) {
       <button class="btn sm block" data-a="nbBadges">Badges <b>${N.badgeCount(s.data)}/${N.BADGES.length}</b></button></div>
     <div class="nb-card"><span class="nb-k">Storage</span><b class="nb-ms">${N.fmtBytes(st.bytes)} notes</b>
       <div class="nb-bar" role="progressbar" aria-valuenow="${Math.round(use.pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Device storage used"><i style="width:${Math.max(1, use.pct).toFixed(1)}%"></i></div>
-      <small>${N.fmtBytes(use.used)} of about ${N.fmtBytes(use.quota)} on this device</small></div>`;
+      <small>${N.fmtBytes(use.used)} of ${use.est ? "" : "about "}${N.fmtBytes(use.quota)} on this device</small></div>`;
 }
 
 export function nbFoot(n) {

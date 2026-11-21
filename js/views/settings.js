@@ -1,6 +1,7 @@
 // Settings and changelog screens. Plain markup; actions live in app.js.
 // ASCII only in this file.
 import { esc, modalShell } from "../ui.js";
+import { updatesOf } from "../contentupdate.js";
 import { installCard } from "../install.js";
 import { VERSION, STAGE, TESTERS, CHANGELOG } from "../changelog.js";
 
@@ -98,7 +99,7 @@ export function renderSettingsModal(app) {
     `<div class="setrow col" data-s="version changelog whats new about testers">
       <div class="setinfo"><div class="setlabel">The Sheet ${esc(VERSION)} <span class="tag amber">${esc(STAGE)}</span></div><div class="sethint">Tester build: ${esc(TESTERS)}.</div></div>
       <button class="btn block" data-a="openChangelog">What's new (changelog)</button>
-      ${L && L.update && L.update.items && L.update.items.length ? `<button class="btn block" data-a="openUpdate">Content update <span class="muted">${esc(L.update.date || "")}</span></button>` : ""}
+      ${L && updatesOf(L).length ? `<button class="btn block" data-a="openUpdate">Content update <span class="muted">${esc(updatesOf(L).slice(-1)[0].date || "")}</span></button>` : ""}
     </div>` +
     (L && L.credits ? `<div class="setrow col" data-s="credits license srd">${L.credits.map(t => `<div class="sethint">${esc(t)}</div>`).join("")}</div>` : "");
 

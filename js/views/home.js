@@ -3,6 +3,8 @@ import { esc, topbar } from "../ui.js";
 import { deriveCharacter } from "../rules.js";
 import { listCharacters, getCharacter, normalize } from "../store.js";
 import { rulesTab } from "./glossary.js";
+import { cuPendingCount } from "./contentupdate.js";
+import { safariAtRisk } from "../kv.js";
 
 const ICON = {
   people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6M16 5a3.5 3.5 0 010 6.5M18 14c2 .6 3.3 2.4 3.6 6"/>',
@@ -48,6 +50,8 @@ export function renderHome(app) {
   return `<main class="home" aria-label="Home">
     <header class="hh">${LOGO}<h1 class="hh-t">THE SHEET</h1></header>
     <div class="hh-mid">
+      ${storageBanner(app)}
+      ${cuPendingCount(app) && !navigator.webdriver ? `<button class="hwarn" data-a="openUpdate">${cuPendingCount(app)} rule changes</button>` : ""}
       ${app.needsNewPassword ? `<button class="hwarn" data-a="enterNewPassword">New rules are waiting. Enter the new password.</button>` : ""}
       ${hero}
       <p class="devnote" role="note">Under development. Expect issues.</p>
@@ -64,4 +68,15 @@ export function renderHome(app) {
 export function renderRulesPage(app) {
   return `${topbar("Rules glossary", app.campaign?.name || "", { back: "goHome" })}
     <main class="wrap page wide">${rulesTab(app)}</main>`;
+}
+
+// Data-loss warnings for players who have characters: Safari without the install, and no recent backup.
+const BACKUP_DAYS = 14;
+export function storageBanner(app, { now = Date.now(), nav = navigator } = {}) {
+  if (nav.webdriver || !listCharacters().some(c => !c.dead)) return "";
+  const standalone = !!(nav.standalone || (typeof matchMedia === "function" && matchMedia("(display-mode: standalone)").matches));
+  if (safariAtRisk(nav, standalone)) return `<button class="hwarn" data-a="openSettings">Safari erases data. Install</button>`;
+  const last = app.prefs && app.prefs.lastBackup;
+  if (!last || now - last > BACKUP_DAYS * 864e5) return `<button class="hwarn" data-a="exportAll">${last ? `Last backup ${Math.floor((now - last) / 864e5)} days ago. Back up now.` : "No backup yet. Back up now."}</button>`;
+  return "";
 }

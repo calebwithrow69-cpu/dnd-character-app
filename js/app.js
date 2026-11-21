@@ -40,8 +40,9 @@ import { renderSheetSearch } from "./views/classic.js";
 import { renderSheet, renderSpellResults, renderGearResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat } from "./views/glossary.js";
 import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
-import { cuState } from "./views/contentupdate.js";
-import { hasUpdate, shouldShow, seenId, markSeen } from "./contentupdate.js";
+import { openKv, idbBackend, estimate } from "./kv.js";
+import { cuState, cuRecord } from "./views/contentupdate.js";
+import { pendingUpdate, shouldShow, seenId, markSeen } from "./contentupdate.js";
 import * as notes from "./notes.js";
 import { downloadNotesPdf } from "./notespdf.js";
 import { applyFormat, toggleTask, renderMd } from "./markdown.js";
@@ -183,6 +184,9 @@ async function init() {
     window.addEventListener("pagehide", save);
   }
   recheck();
+  APP.kvReady = openKv([notes.KEY], localStorage, idbBackend(), { pick: notes.newer, onError: () => toast("Notes not saved") }).then(kv => {
+    notesStore = kv; APP.kv = kv.status; if (APP.screen !== "notes") APP.nb = null;
+  }).catch(() => { });
   store.requestPersistence().then(p => { APP.persisted = !!p; }).catch(() => { });
   if (navigator.storage?.persisted) navigator.storage.persisted().then(p => { APP.persisted = p; }).catch(() => { });
 }
@@ -248,9 +252,9 @@ function restoreLevelUp() {
 
 // The content update opens once per device. A device with no characters starts at the current update.
 function maybeShowUpdate() {
-  const u = APP.library && APP.library.update;
-  if (!hasUpdate(u) || APP.modal || APP.screen === "create" || APP.screen === "locked") return;
-  const seen = seenId(), automated = !!navigator.webdriver, hasCharacters = store.listCharacters().length > 0;
+  if (!APP.library || APP.modal || APP.screen === "create" || APP.screen === "locked") return;
+  const seen = seenId(), u = pendingUpdate(APP.library, seen), automated = !!navigator.webdriver, hasCharacters = store.listCharacters().length > 0;
+  if (!u) return;
   if (!automated && !seen && !hasCharacters) { markSeen(u.id); return; }
   if (shouldShow(u, { seen, hasCharacters, automated })) { APP.cu = null; openModal({ type: "contentUpdate" }); }
 }
@@ -371,7 +375,6 @@ function openModal(m) {
 }
 function closeModal() {
   if (!APP.modal) return;
-  if (APP.modal.type === "contentUpdate" && APP.library?.update) markSeen(APP.library.update.id);
   if (APP._under) {
     APP.modal = APP._under; APP._under = null; render();
     const b = modalRoot.querySelector(".modal-body"); if (b) b.scrollTop = APP._underScroll || 0;
@@ -558,8 +561,9 @@ function applyHp(mode) {
 }
 
 // ---------------- notes ledger ----------------
+let notesStore = localStorage; // swapped for the IndexedDB cache once it has opened
 const nbCurrent = () => { const s = APP.nb; return s && s.data ? s.data.notes.find(n => n.id === s.sel) || null : null; };
-function nbSave() { if (APP.nb && APP.nb.data && !notes.save(APP.nb.data, localStorage)) toast("Storage full"); }
+function nbSave() { if (APP.nb && APP.nb.data && !notes.save(APP.nb.data, notesStore)) toast("Storage full"); }
 function nbAward(silent) {
   const s = APP.nb; if (!s || !s.data) return;
   const won = notes.awardBadges(s.data, notes.stats(s.data.notes).chars);
@@ -604,7 +608,7 @@ function exportChars(ids, label) {
   const stamp = dateStamp();
   const safe = (label || "characters").replace(/[^\w-]+/g, "-").slice(0, 40);
   const payload = store.backupPayload(ids);
-  if (!ids) { const d = notes.load(localStorage); if (d.notes.length) payload.notes = notes.exportData(d); }
+  if (!ids) { const d = notes.load(notesStore); if (d.notes.length) payload.notes = notes.exportData(d); }
   shareOrDownload(`character-runner-${safe}-${stamp}.json`, JSON.stringify(payload, null, 1));
 }
 function importPrompt() {
@@ -617,7 +621,7 @@ function importPrompt() {
       let chars = [];
       try { chars = store.parseImport(text); } catch (err) { if (!/"notes"/.test(text)) throw err; }
       chars.forEach(c => store.saveCharacter(store.normalize(c, APP.library)));
-      try { const j = JSON.parse(text); if (j && j.notes) { const d = notes.load(localStorage); notes.mergeImport(d, j.notes); notes.save(d, localStorage); APP.nb = null; } } catch (err) { /* notes are optional */ }
+      try { const j = JSON.parse(text); if (j && j.notes) { const d = notes.load(notesStore); notes.mergeImport(d, j.notes); notes.save(d, notesStore); APP.nb = null; } } catch (err) { /* notes are optional */ }
       const pics = await importPortraits(store.parsePortraits(text));
       toast(`Restored ${chars.length} character${chars.length === 1 ? "" : "s"}${pics ? ` and ${pics} portrait${pics === 1 ? "" : "s"}` : ""}`);
       APP.modal = null; APP.screen = "roster"; APP.char = null; store.setActiveId(null);
@@ -1021,9 +1025,10 @@ const ACTIONS = {
   },
   goHome() { APP.screen = "home"; APP.char = null; render(); window.scrollTo(0, 0); },
   goRoster() { APP.startFrom = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
-  goNotes() {
+  async goNotes() {
+    await APP.kvReady; APP.est = await estimate();
     const s = nbState(APP);
-    if (!s.data) s.data = notes.load(localStorage);
+    if (!s.data) s.data = notes.load(notesStore);
     const before = s.data.migrated.length;
     notes.migrateSheetNotes(s.data, store.listCharacters());
     if (s.data.migrated.length !== before) nbSave();
@@ -1211,7 +1216,7 @@ const ACTIONS = {
   openUpdate() { APP.cu = null; openModal({ type: "contentUpdate" }); },
   cuOpen(el) { const st = cuState(APP); st.open = st.open === el.dataset.k ? "" : el.dataset.k; render(); },
   cuItem(el) { const st = cuState(APP), k = el.dataset.key; if (st.items.has(k)) st.items.delete(k); else st.items.add(k); render(); },
-  cuDone() { closeModal(); },
+  cuDone() { const u = pendingUpdate(APP.library, seenId()); if (u) markSeen(u.id); closeModal(); render(); },
   togglePref(el) {
     const t = PREF_TOGGLES[el.dataset.k];
     if (!t) return;
