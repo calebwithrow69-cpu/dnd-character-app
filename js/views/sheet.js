@@ -21,7 +21,9 @@ const levelLabel = l => (Number(l) === 0 ? "Cantrip" : `Level ${l}`);
 export function sheetTabs(app) {
   return [
     ["stats", "Character", ICONS.stats],
-    ["rules", "Rules", ICONS.book]
+    ["notes", "Notes", ICONS.notes, "goNotes"],
+    ["rules", "Rules", ICONS.book],
+    ["settings", "Settings", ICONS.settings, "openSettings"]
   ];
 }
 
@@ -33,23 +35,19 @@ function sheetBar(c, d, meta) {
   return `<header class="topbar sheetbar"><div class="wrap row sb-phone">
       <button class="iconbtn" data-a="backToRoster" aria-label="Back">${ICONS.back}</button>
       <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">${esc(meta)}</div></div>
-      <button class="iconbtn" data-a="goNotes" aria-label="Notes">${ICONS.notes}</button>
-      <button class="iconbtn" data-a="openEdit" aria-label="Edit character">${ICONS.edit}</button>
-      <button class="iconbtn" data-a="openSettings" aria-label="Settings">${ICONS.settings}</button></div>
+      <button class="iconbtn" data-a="openEdit" aria-label="Edit character">${ICONS.edit}</button></div>
     <div class="wrap row sb-wide">
       <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Characters</span></button>
       <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">Level ${c.level} \u00b7 ${esc(sub)}</div></div>
       <div class="sb-pills">${pill(c.hp.cur + "/" + c.hp.max, "HP")}${pill(d.ac, "AC")}${pill(d.speed, "Speed")}${pill(fmtMod(d.initiative), "Init")}${pill(fmtMod(d.prof), "Prof")}</div>
-      <button class="btn sm" data-a="goNotes">${ICONS.notes}<span>Notes</span></button>
-      <button class="btn sm" data-a="openEdit">${ICONS.edit}<span>Edit</span></button>
-      <button class="btn sm" data-a="openSettings">${ICONS.settings}<span>Settings</span></button></div></header>`;
+      <button class="btn sm" data-a="openEdit">${ICONS.edit}<span>Edit</span></button></div></header>`;
 }
 
 export function renderSheet(app) {
   const c = app.char;
   const d = deriveCharacter(c);
   const tabs = sheetTabs(app);
-  if (!tabs.some(t => t[0] === app.sheetTab)) app.sheetTab = "stats";
+  if (!tabs.some(t => !t[3] && t[0] === app.sheetTab)) app.sheetTab = "stats";
   const tab = app.sheetTab;
   if (tab === "stats" && (app.styleAsk === c.id || (app.prefs.sheetStyle !== "classic" && app.prefs.sheetStyle !== "advanced"))) return stylePicker(app);
 
@@ -108,7 +106,7 @@ export function renderSheet(app) {
       ${body}
     </main>
     <nav class="tabs" aria-label="Sheet sections"><div class="in" style="grid-template-columns:repeat(${tabs.length},1fr)">
-      ${tabs.map(([id, label, icon]) => `<button data-a="sheetTab" data-tab="${id}" ${tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}
+      ${tabs.map(([id, label, icon, act]) => `<button data-a="${act || "sheetTab"}"${act ? "" : ` data-tab="${id}"`} ${!act && tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}
     </div></nav></div>`;
 }
 
