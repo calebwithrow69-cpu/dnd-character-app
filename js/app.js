@@ -51,7 +51,8 @@ import { nbVisible, renderNotes, nbState, nbCats, nbList, nbStats, nbFoot, nbEdi
 import { flourish, toneFor } from "./subtone.js";
 import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
-import { renderModal, renderRollCard, renderShopResults, shopPrice } from "./views/modals.js";
+import { renderModal, renderRollCard } from "./views/modals.js";
+import { renderShopResults, shopPrice } from "./views/shop.js";
 import { renderCxShopResults } from "./views/cxshop.js";
 import { shopStock, pay, fmtPrice } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
@@ -186,7 +187,7 @@ async function init() {
   }
   recheck();
   APP.kvReady = openKv([notes.KEY], localStorage, idbBackend(), { pick: notes.newer, onError: () => toast("Notes not saved") }).then(kv => {
-    notesStore = kv; APP.kv = kv.status; if (APP.screen !== "notes") APP.nb = null;
+    notesStore = kv; APP.kv = kv.status; if (!inNotes()) APP.nb = null;
   }).catch(() => { });
   store.requestPersistence().then(p => { APP.persisted = !!p; }).catch(() => { });
   if (navigator.storage?.persisted) navigator.storage.persisted().then(p => { APP.persisted = p; }).catch(() => { });
@@ -287,9 +288,13 @@ function killCharacter(c, cause = "") {
 }
 // A dead character's sheet can be looked at, not used: everything but the banner (Revive) is inert.
 function lockDead() {
+  if (["settings", "notes"].includes(APP.sheetTab)) { mount.querySelectorAll(".sheetview [data-a=openEdit]").forEach(el => el.setAttribute("inert", "")); return; }
   mount.querySelectorAll(".sheetview main.page > :not(.deadbar), .sheetview [data-a=openEdit], .sheetview nav").forEach(el => el.setAttribute("inert", ""));
 }
 const DEAD_OK = new Set(["reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause", "goNotes"]);
+const inNotes = () => APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes");
+// Sheet pages (Notes, Shop, Settings) open inside the sheet frame like Rules does.
+function openPage(tab) { closeModal(); APP.selItem = null; APP.sheetTab = tab; render(); window.scrollTo(0, 0); }
 function renderNow() {
   if (window.__boot) window.__boot(100);
   const mb = modalRoot.querySelector(".modal-body"), rs = document.querySelector(".results");
@@ -580,7 +585,7 @@ async function pdfNotes(list, name, label) {
 // Leaving the editor for another note: a clean draft just closes, a changed one has to be saved or discarded first.
 function nbLeaveEdit() { const s = APP.nb; if (!s || !s.edit) return true; if (nbDirty(s.edit)) { toast("Save or discard first"); return false; } s.edit = null; return true; }
 function nbRefresh(parts) {
-  const s = APP.nb; if (!s || !s.data || APP.screen !== "notes") return;
+  const s = APP.nb; if (!s || !s.data || !inNotes()) return;
   const put = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
   const n = nbCurrent();
   if (parts.cats) put("nb-cats", nbCats(APP));
@@ -884,7 +889,7 @@ function onInput(e) {
   if (ds.query === "sheet") { APP.sheetQuery = el.value; const r = document.getElementById("results-sheet"); if (r) r.innerHTML = renderSheetSearch(APP); return; }
   if (ds.query === "rules") { APP.rulesQuery = el.value; glState(APP).limit = 150; glRefresh({ tabs: 1, filters: 1, list: 1 }); return; }
   if (ds.query === "notes") { nbState(APP).q = el.value; nbRefresh({ list: 1 }); return; }
-  if ((ds.nb === "title" || ds.nb === "body") && APP.screen === "notes") {
+  if ((ds.nb === "title" || ds.nb === "body") && inNotes()) {
     const e = APP.nb && APP.nb.edit; if (!e) return;
     e.draft[ds.nb] = el.value; nbRefresh({ foot: 1 }); return;
   }
@@ -896,8 +901,8 @@ function onInput(e) {
 
 function onChange(e) {
   const el = e.target, ds = el.dataset, c = APP.char;
-  if (ds.nb === "cat" && APP.screen === "notes") { const e = APP.nb && APP.nb.edit; if (e) e.draft.cat = el.value; return; }
-  if (ds.nb === "sort" && APP.screen === "notes") { nbState(APP).sort = el.value; nbRefresh({ list: 1 }); return; }
+  if (ds.nb === "cat" && inNotes()) { const e = APP.nb && APP.nb.edit; if (e) e.draft.cat = el.value; return; }
+  if (ds.nb === "sort" && inNotes()) { nbState(APP).sort = el.value; nbRefresh({ list: 1 }); return; }
   if (ds.spFile != null && el.files && el.files[0]) {
     const f = el.files[0], name = ds.spFile;
     savePortrait(name, f).then(saved => { spRefresh(); toast(saved ? `Image saved for ${name}` : `Showing for now, but this browser would not save it`); },
@@ -1038,7 +1043,9 @@ const ACTIONS = {
     if (s.data.migrated.length !== before) nbSave();
     if (!s.data.hadBadges) { s.data.hadBadges = true; notes.awardBadges(s.data, notes.stats(s.data.notes).chars); nbSave(); }
     APP.notesFrom = APP.screen === "sheet" && APP.char ? "sheet" : "home";
-    s.sel = null; s.edit = null; s.adding = false; APP.screen = "notes"; render(); window.scrollTo(0, 0);
+    s.sel = null; s.edit = null; s.adding = false;
+    if (APP.notesFrom === "sheet") { openPage("notes"); return; }
+    APP.screen = "notes"; render(); window.scrollTo(0, 0);
   },
   nbBadges() { nbState(APP).bopen = ""; openModal({ type: "badges" }); },
   nbBadge(el) { const s = nbState(APP); s.bopen = s.bopen === el.dataset.id ? "" : el.dataset.id; render(); },
@@ -1152,7 +1159,7 @@ const ACTIONS = {
     catch (e) { const el = mount.querySelector("[data-copy-src]"); if (el) { el.select(); try { document.execCommand("copy"); toast("Link copied"); } catch (e2) { toast("Select the link and copy it"); } } }
   },
   dismissInstall() { APP.installDismissed = true; try { localStorage.setItem(LS_INSTALL, "1"); } catch (e) { } render(); },
-  openSettings() { openModal({ type: "settings" }); },
+  openSettings() { if (APP.char && APP.screen === "sheet") openPage("settings"); else openModal({ type: "settings" }); },
   importPrompt() { importPrompt(); },
   exportAll() { exportChars(null, "backup"); APP.prefs.lastBackup = Date.now(); savePrefs(); },
   setTheme(el) { APP.prefs.theme = el.dataset.v; savePrefs(); applyPrefs(); render(); },
@@ -1272,7 +1279,7 @@ const ACTIONS = {
     // Changing an already-chosen sheet style asks first; the very first pick applies at once.
     if (el.dataset.k === "sheetStyle" && APP.styleAsk) { // the "which sheet?" screen after creating a character: apply at once
       APP.styleAsk = null; APP.prefs.sheetStyle = el.dataset.v; savePrefs(); applyPrefs();
-      if (APP._shopLater) { APP._shopLater = false; APP.charSub = "gear"; APP.classicSub = "gear"; render(); openModal({ type: "shop" }); } else render();
+      if (APP._shopLater) { APP._shopLater = false; APP.charSub = "gear"; APP.classicSub = "gear"; render(); ACTIONS.openShop(); } else render();
       window.scrollTo(0, 0); return;
     }
     if (el.dataset.k === "sheetStyle" && APP.prefs.sheetStyle && APP.prefs.sheetStyle !== el.dataset.v) { APP._style = el.dataset.v; openModal({ type: "confirmStyle" }); return; }
@@ -1287,7 +1294,7 @@ const ACTIONS = {
   styleConfirm() {
     const v = APP.stylePending; if (v !== "classic" && v !== "advanced") return;
     APP.stylePending = null; APP.styleAsk = null; APP.styleStep = null; APP.prefs.sheetStyle = v; savePrefs(); applyPrefs();
-    if (APP._shopLater) { APP._shopLater = false; APP.charSub = "gear"; APP.classicSub = "gear"; render(); openModal({ type: "shop" }); } else render();
+    if (APP._shopLater) { APP._shopLater = false; APP.charSub = "gear"; APP.classicSub = "gear"; render(); ACTIONS.openShop(); } else render();
     window.scrollTo(0, 0);
   },
   confirmStyle() {
@@ -1853,7 +1860,7 @@ const ACTIONS = {
   pickerAllClasses(el) { APP.pickerAllClasses = el.checked; render(); },
 
   // pickers
-  openShop() { APP.shopQuery = ""; APP.shopCat = "All"; APP.shopTrained = true; openModal({ type: "shop" }); },
+  openShop() { APP.shopQuery = ""; APP.shopCat = "All"; APP.shopTrained = true; openPage("shop"); },
   shopTrained(el) { APP.shopTrained = el.dataset.v !== "0"; render(); },
   shopCat(el) { APP.shopCat = el.dataset.cat; render(); },
   buyItem(el) {
@@ -2340,7 +2347,7 @@ function applyLevelUp() {
   c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });
   save();
   APP.lvl = null; APP.screen = "sheet"; APP.sheetTab = "stats";
-  if (APP.shopAfterChoices) { APP.shopAfterChoices = false; if (APP.styleAsk) APP._shopLater = true; else { APP.charSub = "gear"; openModal({ type: "shop" }); } }
+  if (APP.shopAfterChoices) { APP.shopAfterChoices = false; if (APP.styleAsk) APP._shopLater = true; else { APP.charSub = "gear"; APP.shopQuery = ""; APP.shopCat = "All"; APP.shopTrained = true; APP.sheetTab = "shop"; } }
   render(); window.scrollTo(0, 0);
   toast(d.fromCreation ? (APP.charSub === "gear" ? "Now spend your gold on starting gear" : "Level 1 choices saved") : `${c.name} is now level ${c.level}!`);
 }

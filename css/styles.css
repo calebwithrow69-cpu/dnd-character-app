@@ -2312,3 +2312,22 @@ h2.nb-rtitle{margin:14px 16px 0;font-family:var(--display);font-size:1.25rem;let
 .shoplist{margin-top:10px}
 .shop-sum{font:600 .8rem var(--mono);color:var(--muted);white-space:nowrap}
 .choice .purse{margin-top:2px}
+
+/* ---- Shop as a sheet page (js/views/shop.js) ---- */
+.shop-page{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);margin-top:14px}
+.shop-col{display:contents}
+.shop-page .purse{position:sticky;top:76px;z-index:5;box-shadow:0 6px 18px rgba(30,8,12,.3)}
+.shop-ctl{display:grid;gap:10px}
+.shop-page .shop-note{margin:0}
+.shop-main{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 14px 14px;min-width:0}
+.shop-page .shelf{margin:0;padding:0 0 2px}
+.setpage{max-width:760px;margin:16px auto 0}
+@media (min-width:900px){
+  .shop-page{grid-template-columns:320px minmax(0,1fr);align-items:start;gap:18px}
+  .shop-col{display:grid;gap:12px;position:sticky;top:112px;align-self:start}
+  .shop-page .purse{position:static;box-shadow:none}
+  .shop-page .shelf{flex-direction:column;overflow:visible}
+  .shop-page .shelf button{justify-content:flex-start}
+  .shop-page .shelf button em{margin-left:auto}
+}
+.sheetview main.page > .nb{margin-top:14px}

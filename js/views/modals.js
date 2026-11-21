@@ -14,7 +14,6 @@ import { ABILITIES as ABS, ABILITY_LABEL as ABL, SKILLS as SKS } from "../rules.
 import { ALL_TOOLS } from "../choices.js";
 import { enabledFeats } from "../data.js";
 import { customValid, loadCustom } from "../custombg.js";
-import { shopStock, walletCp, fmtPrice } from "../equipment.js";
 import { findTile } from "./character.js";
 import { restOptions, rationsHave, rationsNeed } from "../rest.js";
 import { hpParts, FX_TARGETS } from "../effects.js";
@@ -26,7 +25,6 @@ import { renderBadges, renderLevelUp, renderDiscard } from "./notes.js";
 import { renderContentUpdate } from "./contentupdate.js";
 import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
-import { purseCard, shelfTabs, shelfCounts, shopDecorator, shopRow, shopList } from "./shopkit.js";
 import { trainingFromChar, trainingSummary, isTrained } from "../creation.js";
 
 export function renderModal(app) {
@@ -123,22 +121,6 @@ export function renderModal(app) {
     case "levelMenu": return renderLevelMenu(app);
 
     case "cxShop": return renderCxShop(app);
-    case "shop": {
-      const cat = app.shopCat || "All", trained = app.shopTrained !== false;
-      const discount = (c.feats || []).some(f => /^Crafter\b/.test(f));
-      const cells = ["pp", "gp", "ep", "sp", "cp"].map(k => ({ k, v: +c.coins?.[k] || 0 }));
-      return modalShell("Shop",
-        `<div class="shop-top">
-          ${purseCard({ label: "Purse", big: walletCp(c.coins) > 0 ? fmtPrice(walletCp(c.coins) / 100) : "0 gp", cells, tag: discount ? `<span class="tag">Crafter -20%</span>` : "" })}
-          <div class="shop-find">${searchBox("shop", app.shopQuery, "Search the shop")}
-            <button class="shop-toggle" data-a="shopTrained" data-v="${trained ? 0 : 1}" aria-pressed="${trained}">${ICONS.check}<span>Trained</span></button></div>
-          ${shelfTabs("shopCat", shelfCounts(shopRows(app)), cat)}
-          ${trained ? `<p class="sub2 shop-train">Trained: ${esc(trainingSummary(trainingFromChar(c)))}</p>` : ""}
-        </div>
-        <div class="results shop-list" id="results-shop">${renderShopResults(app)}</div>`,
-        `<span class="sub2 shop-note">Prices: DM rules file, else Player's Handbook</span><button class="btn pri" data-a="closeModal">Done</button>`, "shopm");
-    }
-
     case "cast": {
       const sp = findByName(app.library.spells, m.name) || { name: m.name, level: 1 };
       const rows = slotRows(c.class, c.level).filter(r => r.level >= sp.level);
@@ -483,48 +465,6 @@ export function renderRollCard(app) {
       <div class="lbl">${esc(p.label)}</div><div class="big">${p.total}</div><div class="bd">${p.bd}</div></div>`).join("")}</div>
     ${r.alt ? `<div class="alt">${r.alt}</div>` : ""}
   </div></div>`;
-}
-
-export function shopPrice(c, row) {
-  const crafter = (c.feats || []).some(f => /^Crafter\b/.test(f));
-  return crafter && !row.magic ? Math.round(row.gp * 80) / 100 : row.gp;
-}
-export function fmtWallet(coins) {
-  const parts = ["pp", "gp", "ep", "sp", "cp"].filter(k => +coins?.[k]).map(k => `${coins[k]} ${k}`);
-  return parts.length ? parts.join(", ") : "no money";
-}
-function shopRows(app) {
-  const L = app.library, C = app.campaign, c = app.char, t = trainingFromChar(c), dec = shopDecorator(L, C);
-  return shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing"))
-    .filter(r => app.shopTrained === false || isTrained(app, t, r)).map(dec);
-}
-export function renderShopResults(app) {
-  const c = app.char, q = (app.shopQuery || "").trim().toLowerCase(), cat = app.shopCat || "All";
-  const rows = shopRows(app).filter(r => q ? r.name.toLowerCase().includes(q) : cat === "All" || r.group === cat);
-  const have = walletCp(c.coins), owned = new Map();
-  for (const i of c.inventory) owned.set(i.name, (owned.get(i.name) || 0) + (i.qty || 0));
-  return shopList(rows, { cat, q, row: (r, cap) => {
-    const price = shopPrice(c, r), cost = Math.round(price * 100), n = owned.get(r.name) || 0, key = "shop:" + r.name, open = app.info.has(key);
-    return shopRow(r, { cap, open, status: n ? "Own " + n : "", mainAttrs: `data-a="toggleInfo" data-key="${esc(key)}" aria-expanded="${open}"`,
-      detail: open ? shopDetail(app, r) : "", buy: { action: "buyItem", ok: cost <= have, label: `Buy ${r.name} for ${fmtPrice(price)}`, text: fmtPrice(price) } });
-  } });
-}
-
-function shopDetail(app, r) {
-  const L = app.library, C = app.campaign;
-  if (r.cat === "Armor") {
-    if (r.name === "Shield") return `<p>+2 to AC while you hold it in your off hand.</p>`;
-    const a = ARMOR[r.name];
-    return `<dl class="kv"><dt>Type</dt><dd>${esc(a.cat)} armor</dd><dt>AC</dt><dd>${a.base}${a.dexCap == null ? " + Dex modifier" : a.dexCap ? ` + Dex modifier (max ${a.dexCap})` : ""}</dd>
-      ${a.str ? `<dt>Strength</dt><dd>${a.str}+ or your Speed drops by 10 feet</dd>` : ""}${a.stealth ? `<dt>Stealth</dt><dd>Disadvantage</dd>` : ""}</dl>`;
-  }
-  if (r.cat === "Weapons") {
-    const w = allWeapons(L, C).find(x => x.name === r.name) || {};
-    return `<dl class="kv"><dt>Damage</dt><dd>${esc(w.dice || "")} ${esc(w.dtype || "")}</dd><dt>Type</dt><dd>${esc([w.cat, w.kind].filter(Boolean).join(" "))}</dd>
-      ${w.props ? `<dt>Properties</dt><dd>${esc(w.props)}</dd>` : ""}${w.mastery ? `<dt>Mastery</dt><dd><button class="term" data-term="mastery:${esc(w.mastery)}">${esc(w.mastery)}</button></dd>` : ""}</dl>`;
-  }
-  const it = allItems(L, C).find(x => x.name === r.name);
-  return formatText(it?.text || "");
 }
 
 // ---- delete: one clear confirmation (the toast afterwards offers Undo)

@@ -70,7 +70,7 @@ export function shopRow(r, o) {
 }
 
 // Rows grouped like aisles: by shelf on All, by aisle inside one shelf, one flat list while searching.
-export function shopList(rows, { cat = "All", q = "", row, limit = 300, empty = "Nothing matches." }) {
+export function shopList(rows, { cat = "All", q = "", row, limit = 300, empty = "Nothing matches.", sticky = true }) {
   if (!rows.length) return `<div class="shop-empty">${ICONS.search}<span>${esc(empty)}</span></div>`;
   const shown = rows.slice(0, limit);
   const capOf = r => r.aisle === r.group ? r.group : `${r.group} · ${r.aisle}`;
@@ -81,7 +81,7 @@ export function shopList(rows, { cat = "All", q = "", row, limit = 300, empty = 
     for (const r of shown) { const k = byShelf ? r.group : r.aisle; if (!by.has(k)) by.set(k, []); by.get(k).push(r); }
     const order = byShelf ? SHELVES.map(s => s.k) : AISLE_ORDER;
     const keys = [...by.keys()].sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
-    for (const k of keys) { const g = by.get(k); html += kGroup(k, g.length, { tone: TONE[byShelf ? k : cat] || "faint", sticky: true }) + g.map(r => row(r, byShelf ? r.aisle === r.group ? "" : r.aisle : "")).join(""); }
+    for (const k of keys) { const g = by.get(k); html += kGroup(k, g.length, { tone: TONE[byShelf ? k : cat] || "faint", sticky }) + g.map(r => row(r, byShelf ? r.aisle === r.group ? "" : r.aisle : "")).join(""); }
   }
   return html + (rows.length > limit ? `<p class="sub2">Showing ${limit} of ${rows.length}. Search to narrow it down.</p>` : "");
 }

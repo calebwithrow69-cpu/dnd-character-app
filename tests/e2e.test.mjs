@@ -368,7 +368,7 @@ await check("Home banners: Safari without the install, then backup age", async (
 await check("Export file names carry the date", async () => {
   const p = await open(1100, 800); await openSample(p);
   const today = await p.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
-  await clickA(p, "openSettings"); await p.waitForTimeout(300);
+  await clickA(p, "sheetTab", '[data-tab="settings"]'); await p.waitForTimeout(300);
   await p.locator('details[data-sec="data"] summary').click(); await p.waitForTimeout(150);
   const [dl] = await Promise.all([p.waitForEvent("download"), p.locator('[data-a="exportAll"]').first().click()]);
   assert(dl.suggestedFilename() === `character-runner-backup-${today}.json`, dl.suggestedFilename());
@@ -995,7 +995,7 @@ await check("style chooser: shows first, picking applies at once, switching late
   assert(await p.evaluate(() => !APP.prefs.sheetStyle), "a tap alone must not apply the sheet");
   await pickSheet(p, "classic"); await p.waitForTimeout(350);
   assert(await p.locator(".classic").count() === 1, "classic sheet missing");
-  assert(await p.locator('[data-a="sheetTab"]').count() === 2, "bottom tabs should be Character and Rules only");
+  assert(await p.locator('[data-a="sheetTab"]').count() === 4, "sheet tabs should be Character, Rules, Shop, Settings (Notes is its own action)");
   assert(await p.locator('.profchk').count() === 0, "profs belong on the Notes sub-tab");
   await p.locator('[data-a="classicSub"][data-sub="notes"]').click(); await p.waitForTimeout(250);
   assert(await p.locator('.profchk input').count() === 6, "expected 6 training check boxes");

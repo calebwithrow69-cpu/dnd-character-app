@@ -33,7 +33,7 @@ function daysAgo(ts) {
   return d <= 0 ? "today" : d === 1 ? "yesterday" : d + " days ago";
 }
 
-export function renderSettingsModal(app) {
+export function settingsBody(app) {
   const p = app.prefs || {};
   const L = app.library;
   const theme = p.theme || "auto", size = p.size || "normal";
@@ -114,7 +114,10 @@ export function renderSettingsModal(app) {
     ${section("about", "About and what's new", about, op("about"))}
     ${section("danger", "Reset and repair", danger, op("danger"))}
   </div>`;
-  return modalShell("Settings", body, `<button class="btn pri" data-a="closeModal">Done</button>`);
+  return body;
+}
+export function renderSettingsModal(app) {
+  return modalShell("Settings", settingsBody(app), `<button class="btn pri" data-a="closeModal">Done</button>`);
 }
 
 export function renderChangelogModal() {

@@ -92,10 +92,9 @@ export function nbEdit(app) {
     <div class="nb-foot" id="nb-foot">${nbFoot(app)}</div>`;
 }
 
-export function renderNotes(app) {
+export function notesBody(app) {
   const s = nbState(app);
-  return `${topbar("Notes", "", { back: "nbExit" })}
-    <main class="wrap page wide"><div class="nb" id="nb" data-sel="${s.edit || (s.sel && current(app)) ? 1 : 0}">
+  return `<div class="nb" id="nb" data-sel="${s.edit || (s.sel && current(app)) ? 1 : 0}">
       <div class="nb-side">
         <div class="nb-ctl">
           <button class="btn pri block" data-a="nbNew">${ICONS.plus}<span>New note</span></button>
@@ -109,7 +108,11 @@ export function renderNotes(app) {
       </div>
       <section class="nb-list nb-box" id="nb-list" aria-label="Notes">${nbList(app)}</section>
       <section class="nb-edit nb-box" id="nb-edit" aria-label="Editor">${nbEdit(app)}</section>
-    </div></main>`;
+    </div>`;
+}
+export function renderNotes(app) {
+  return `${topbar("Notes", "", { back: "nbExit" })}
+    <main class="wrap page wide">${notesBody(app)}</main>`;
 }
 
 export function renderBadges(app) {

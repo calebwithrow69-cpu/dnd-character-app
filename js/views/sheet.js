@@ -14,6 +14,9 @@ import { grantsOf } from "../effects.js";
 import { shieldSvg, armorTier } from "../shield.js";
 import { unitWeight, carried, fmtLb } from "../weights.js";
 import { rulesTab, renderRulesResults } from "./glossary.js";
+import { renderShopPage } from "./shop.js";
+import { settingsBody } from "./settings.js";
+import { notesBody } from "./notes.js";
 export { renderRulesResults };
 
 const levelLabel = l => (Number(l) === 0 ? "Cantrip" : `Level ${l}`);
@@ -23,7 +26,8 @@ export function sheetTabs(app) {
     ["stats", "Character", ICONS.stats],
     ["notes", "Notes", ICONS.notes, "goNotes"],
     ["rules", "Rules", ICONS.book],
-    ["settings", "Settings", ICONS.settings, "openSettings"]
+    ["shop", "Shop", ICONS.coin],
+    ["settings", "Settings", ICONS.settings]
   ];
 }
 
@@ -47,7 +51,8 @@ export function renderSheet(app) {
   const c = app.char;
   const d = deriveCharacter(c);
   const tabs = sheetTabs(app);
-  if (!tabs.some(t => !t[3] && t[0] === app.sheetTab)) app.sheetTab = "stats";
+  if (!tabs.some(t => t[0] === app.sheetTab)) app.sheetTab = "stats";
+  if (app.sheetTab === "notes" && !(app.nb && app.nb.data)) app.sheetTab = "stats";
   const tab = app.sheetTab;
   if (tab === "stats" && (app.styleAsk === c.id || (app.prefs.sheetStyle !== "classic" && app.prefs.sheetStyle !== "advanced"))) return stylePicker(app);
 
@@ -73,14 +78,18 @@ export function renderSheet(app) {
   let body;
   const styled = app.prefs.sheetStyle === "advanced" || app.prefs.sheetStyle === "classic";
   if (tab === "stats") body = app.prefs.sheetStyle === "advanced" ? characterBody(app, c, d) : classicBody(app, c, d);
+  else if (tab === "shop") body = renderShopPage(app);
+  else if (tab === "settings") body = `<div class="setpage">${settingsBody(app)}</div>`;
+  else if (tab === "notes") body = notesBody(app);
   else body = rulesTab(app);
-  const wide = tab === "rules" || (tab === "stats" && app.prefs.sheetStyle === "advanced" && app.charSub === "gear");
+  const page = tab === "shop" || tab === "settings" || tab === "notes";
+  const wide = tab === "rules" || tab === "shop" || tab === "notes" || (tab === "stats" && app.prefs.sheetStyle === "advanced" && app.charSub === "gear");
 
   return `<div class="sheetview" data-sheet="${app.prefs.sheetStyle === "advanced" ? "advanced" : "classic"}">
     ${sheetBar(c, d, meta)}
     <main class="wrap page ${wide ? "wide" : ""}">
       ${c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
-      <section class="status" aria-label="Status">
+      ${page ? "" : `<section class="status" aria-label="Status">
         <div class="vitals">
           <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points">
             <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle cx="50" cy="50" r="45" class="ring-fg" pathLength="100" stroke-dasharray="${xpPct} 100"/></svg>
@@ -102,11 +111,11 @@ export function renderSheet(app) {
         </div>
         ${chips ? `<div class="chips">${chips}</div>` : ""}
         ${concBanner(app)}
-      </section>
+      </section>`}
       ${body}
     </main>
     <nav class="tabs" aria-label="Sheet sections"><div class="in" style="grid-template-columns:repeat(${tabs.length},1fr)">
-      ${tabs.map(([id, label, icon, act]) => `<button data-a="${act || "sheetTab"}"${act ? "" : ` data-tab="${id}"`} ${!act && tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}
+      ${tabs.map(([id, label, icon, act]) => `<button data-a="${act || "sheetTab"}"${act ? "" : ` data-tab="${id}"`} ${tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}
     </div></nav></div>`;
 }
 

@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.57";
+export const VERSION = "0.1.58";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.58",
+    date: "2026-11-21",
+    stage: "Pre-build",
+    blurb: "Shop, Notes and Settings open as pages beside the sidebar.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Shop is a sidebar item. Notes, Shop and Settings open in the sheet frame like Rules, not in a pop-up or on a separate screen.",
+          "On a laptop the shop keeps the purse and shelves in a side column next to the list."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.57",
     date: "2026-11-21",
