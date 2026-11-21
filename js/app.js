@@ -41,6 +41,7 @@ import { renderSheet, renderSpellResults, renderGearResults, needsFirstChoices, 
 import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat } from "./views/glossary.js";
 import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
 import { openKv, idbBackend, estimate } from "./kv.js";
+import { nbDirty } from "./views/notes.js";
 import { cuState, cuRecord } from "./views/contentupdate.js";
 import { pendingUpdate, shouldShow, seenId, markSeen } from "./contentupdate.js";
 import * as notes from "./notes.js";
@@ -564,17 +565,20 @@ function applyHp(mode) {
 let notesStore = localStorage; // swapped for the IndexedDB cache once it has opened
 const nbCurrent = () => { const s = APP.nb; return s && s.data ? s.data.notes.find(n => n.id === s.sel) || null : null; };
 function nbSave() { if (APP.nb && APP.nb.data && !notes.save(APP.nb.data, notesStore)) toast("Storage full"); }
-function nbAward(silent) {
-  const s = APP.nb; if (!s || !s.data) return;
-  const won = notes.awardBadges(s.data, notes.stats(s.data.notes).chars);
-  if (won.length) { nbSave(); if (!silent) toast("Badge: " + won[won.length - 1].short); }
+// Levels come from saved notes only. Returns the badges this call earned.
+function nbAward() {
+  const s = APP.nb; if (!s || !s.data) return [];
+  const chars = notes.stats(s.data.notes).chars, won = notes.awardBadges(s.data, chars);
+  if (won.length) { nbSave(); s.levelUp = { won: won.map(b => b.id), last: won[won.length - 1].id, chars }; }
+  return won;
 }
 async function pdfNotes(list, name, label) {
   toast("Making PDF...");
   try { const r = await downloadNotesPdf(list, name, label); toast(r.lost ? "PDF saved. Some characters became ?" : list.length > 1 ? list.length + " notes saved as PDF" : "Note saved as PDF"); }
   catch (e) { console.error(e); toast("PDF failed. Check your connection"); }
 }
-function nbPrune() { const s = APP.nb, n = nbCurrent(); if (s && n && !n.title.trim() && !n.body.trim()) { notes.removeNote(s.data, n.id); s.sel = null; nbSave(); } }
+// Leaving the editor for another note: a clean draft just closes, a changed one has to be saved or discarded first.
+function nbLeaveEdit() { const s = APP.nb; if (!s || !s.edit) return true; if (nbDirty(s.edit)) { toast("Save or discard first"); return false; } s.edit = null; return true; }
 function nbRefresh(parts) {
   const s = APP.nb; if (!s || !s.data || APP.screen !== "notes") return;
   const put = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
@@ -583,8 +587,8 @@ function nbRefresh(parts) {
   if (parts.list) put("nb-list", nbList(APP));
   if (parts.stats) put("nb-stats", nbStats(APP));
   if (parts.edit) put("nb-edit", nbEdit(APP));
-  if (parts.foot && n) put("nb-foot", nbFoot(n));
-  const root = document.getElementById("nb"); if (root) root.dataset.sel = n ? "1" : "0";
+  if (parts.foot) put("nb-foot", nbFoot(APP));
+  const root = document.getElementById("nb"); if (root) root.dataset.sel = s.edit || n ? "1" : "0";
 }
 
 // ---------------- backups ----------------
@@ -881,8 +885,8 @@ function onInput(e) {
   if (ds.query === "rules") { APP.rulesQuery = el.value; glState(APP).limit = 150; glRefresh({ tabs: 1, filters: 1, list: 1 }); return; }
   if (ds.query === "notes") { nbState(APP).q = el.value; nbRefresh({ list: 1 }); return; }
   if ((ds.nb === "title" || ds.nb === "body") && APP.screen === "notes") {
-    const n = nbCurrent(); if (!n) return;
-    notes.edit(n, { [ds.nb]: el.value }); nbSave(); nbAward(); nbRefresh({ list: 1, stats: 1, foot: 1 }); return;
+    const e = APP.nb && APP.nb.edit; if (!e) return;
+    e.draft[ds.nb] = el.value; nbRefresh({ foot: 1 }); return;
   }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
   if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
@@ -892,7 +896,7 @@ function onInput(e) {
 
 function onChange(e) {
   const el = e.target, ds = el.dataset, c = APP.char;
-  if (ds.nb === "cat" && APP.screen === "notes") { const n = nbCurrent(); if (n) { notes.edit(n, { cat: el.value }); nbSave(); nbRefresh({ cats: 1, list: 1 }); } return; }
+  if (ds.nb === "cat" && APP.screen === "notes") { const e = APP.nb && APP.nb.edit; if (e) e.draft.cat = el.value; return; }
   if (ds.nb === "sort" && APP.screen === "notes") { nbState(APP).sort = el.value; nbRefresh({ list: 1 }); return; }
   if (ds.spFile != null && el.files && el.files[0]) {
     const f = el.files[0], name = ds.spFile;
@@ -1034,11 +1038,16 @@ const ACTIONS = {
     if (s.data.migrated.length !== before) nbSave();
     if (!s.data.hadBadges) { s.data.hadBadges = true; notes.awardBadges(s.data, notes.stats(s.data.notes).chars); nbSave(); }
     APP.notesFrom = APP.screen === "sheet" && APP.char ? "sheet" : "home";
-    s.sel = null; s.adding = false; APP.screen = "notes"; render(); window.scrollTo(0, 0);
+    s.sel = null; s.edit = null; s.adding = false; APP.screen = "notes"; render(); window.scrollTo(0, 0);
   },
   nbBadges() { nbState(APP).bopen = ""; openModal({ type: "badges" }); },
   nbBadge(el) { const s = nbState(APP); s.bopen = s.bopen === el.dataset.id ? "" : el.dataset.id; render(); },
-  nbExit() { nbPrune(); if (APP.notesFrom === "sheet" && APP.char) { APP.screen = "sheet"; render(); window.scrollTo(0, 0); } else ACTIONS.goHome(); },
+  nbExit() {
+    const s = nbState(APP);
+    if (s.edit && nbDirty(s.edit)) { openModal({ type: "nbDiscard" }); return; }
+    s.edit = null;
+    if (APP.notesFrom === "sheet" && APP.char) { APP.screen = "sheet"; render(); window.scrollTo(0, 0); } else ACTIONS.goHome();
+  },
   nbCat(el) { const s = nbState(APP); s.cat = el.dataset.cat; s.adding = false; nbRefresh({ cats: 1, list: 1 }); },
   nbCatForm() { nbState(APP).adding = true; nbRefresh({ cats: 1 }); const i = document.querySelector('[data-nb="newcat"]'); if (i) i.focus(); },
   nbAddCat() {
@@ -1048,31 +1057,60 @@ const ACTIONS = {
   },
   nbDelCat() { const s = nbState(APP); if (notes.removeCat(s.data, s.cat)) { s.cat = "all"; nbSave(); nbRefresh({ cats: 1, list: 1, edit: 1 }); } },
   nbNew() {
-    const s = nbState(APP); nbPrune();
-    const n = notes.addNote(s.data, s.cat === "all" ? notes.GENERAL : s.cat);
-    s.sel = n.id; s.mode = "write"; nbSave(); render(); window.scrollTo(0, 0);
+    const s = nbState(APP); if (!nbLeaveEdit()) return;
+    const cat = s.cat === "all" ? notes.GENERAL : s.cat;
+    s.sel = null; s.mode = "write"; s.edit = { id: null, draft: { title: "", body: "", cat }, base: { title: "", body: "", cat } };
+    render(); window.scrollTo(0, 0);
     const t = document.querySelector('[data-nb="title"]'); if (t) t.focus();
   },
-  nbOpen(el) { const s = nbState(APP); nbPrune(); s.sel = el.dataset.id; nbRefresh({ list: 1, edit: 1 }); window.scrollTo(0, 0); },
-  nbBack() { const s = nbState(APP); nbPrune(); s.sel = null; nbRefresh({ list: 1, edit: 1, cats: 1, stats: 1 }); },
+  nbEditStart() {
+    const s = nbState(APP), n = nbCurrent(); if (!n) return;
+    s.mode = "write"; s.edit = { id: n.id, draft: { title: n.title, body: n.body, cat: n.cat }, base: { title: n.title, body: n.body, cat: n.cat } };
+    nbRefresh({ edit: 1, foot: 0 }); const t = document.getElementById("nb-body"); if (t) t.focus();
+  },
+  nbSaveNote() {
+    const s = nbState(APP), e = s.edit; if (!e) return;
+    const d = e.draft; if (!d.title.trim() && !d.body.trim()) { toast("Note is empty"); return; }
+    const before = notes.stats(s.data.notes).chars;
+    let n = e.id && s.data.notes.find(x => x.id === e.id);
+    if (!n) n = notes.addNote(s.data, d.cat);
+    notes.edit(n, { title: d.title, body: d.body, cat: d.cat });
+    s.edit = null; s.sel = n.id; nbSave();
+    const won = nbAward(), gain = notes.stats(s.data.notes).chars - before;
+    toast(gain > 0 ? "Saved. +" + gain.toLocaleString() + " characters" : "Saved");
+    render(); window.scrollTo(0, 0);
+    if (won.length) openModal({ type: "levelUp" });
+  },
+  nbDiscard() {
+    const s = nbState(APP); if (!s.edit) return;
+    if (nbDirty(s.edit)) { openModal({ type: "nbDiscard" }); return; }
+    ACTIONS.nbDiscardGo();
+  },
+  nbDiscardGo() {
+    const s = nbState(APP), had = s.edit; s.edit = null; if (had && !had.id) s.sel = null;
+    if (APP.modal) closeModal(); else render();
+    window.scrollTo(0, 0);
+  },
+  nbOpen(el) { const s = nbState(APP); if (!nbLeaveEdit()) return; s.sel = el.dataset.id; s.mode = "write"; nbRefresh({ list: 1, edit: 1 }); window.scrollTo(0, 0); },
+  nbBack() { const s = nbState(APP); if (s.edit) { ACTIONS.nbDiscard(); return; } s.sel = null; nbRefresh({ list: 1, edit: 1, cats: 1, stats: 1 }); },
   nbPin(el) {
     const s = nbState(APP), n = s.data.notes.find(x => x.id === el.dataset.id); if (!n) return;
-    n.pin = !n.pin; nbSave(); nbRefresh({ list: 1, edit: n.id === s.sel ? 1 : 0 });
+    n.pin = !n.pin; nbSave(); nbRefresh({ list: 1, edit: n.id === s.sel && !s.edit ? 1 : 0 });
   },
   nbMode(el) { nbState(APP).mode = el.dataset.mode; nbRefresh({ edit: 1 }); },
   nbDir() { const s = nbState(APP); s.desc = !s.desc; render(); },
   nbFmt(el) {
-    const ta = document.getElementById("nb-body"), n = nbCurrent(); if (!ta || !n) return;
+    const ta = document.getElementById("nb-body"), e = APP.nb && APP.nb.edit; if (!ta || !e) return;
     const r = applyFormat(ta.value, ta.selectionStart, ta.selectionEnd, el.dataset.f);
     ta.value = r.text; ta.focus(); ta.setSelectionRange(r.start, r.end);
-    notes.edit(n, { body: r.text }); nbSave(); nbAward(); nbRefresh({ list: 1, stats: 1, foot: 1 });
+    e.draft.body = r.text; nbRefresh({ foot: 1 });
   },
   nbCheck(el) {
     const n = nbCurrent(); if (!n) return;
     notes.edit(n, { body: toggleTask(n.body, +el.dataset.line) }); nbSave();
     const md = document.getElementById("nb-md"); if (md) md.innerHTML = renderMd(n.body);
   },
-  nbDelete(el) { const s = nbState(APP); notes.removeNote(s.data, el.dataset.id); s.sel = null; nbSave(); render(); },
+  nbDelete(el) { const s = nbState(APP); notes.removeNote(s.data, el.dataset.id); s.sel = null; s.edit = null; nbSave(); render(); },
   async nbPdf(el) {
     const n = nbState(APP).data.notes.find(x => x.id === el.dataset.id); if (!n) return;
     await pdfNotes([n], notes.titleOf(n), notes.titleOf(n));

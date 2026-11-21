@@ -22,7 +22,7 @@ import { COST_LABEL, isSustained } from "../combat.js";
 import { wieldedId } from "../play.js";
 import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
-import { renderBadges } from "./notes.js";
+import { renderBadges, renderLevelUp, renderDiscard } from "./notes.js";
 import { renderContentUpdate } from "./contentupdate.js";
 import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
@@ -433,6 +433,8 @@ export function renderModal(app) {
       return renderChangelogModal(app);
 
     case "badges": return renderBadges(app);
+    case "levelUp": return renderLevelUp(app);
+    case "nbDiscard": return renderDiscard(app);
     case "contentUpdate":
       return renderContentUpdate(app);
 

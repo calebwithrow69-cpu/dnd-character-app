@@ -2241,3 +2241,24 @@ textarea.nb-body{display:block;box-sizing:border-box;width:calc(100% - 32px);mar
 .bd-len,.bd-left{color:var(--muted);font-family:var(--mono);font-size:.74rem}
 .bd-facts{margin:8px 0 0;padding-left:1.1em}
 .bd-facts li{margin:0 0 6px;line-height:1.5}
+
+/* notes: read view, editor actions, note level */
+.nb-save{min-height:36px;padding:0 14px;gap:6px;display:inline-flex;align-items:center}
+.nb-save svg,.nb-editbtn svg{width:16px;height:16px}
+.nb-editbtn{margin-left:auto;min-height:36px;padding:0 12px;display:inline-flex;align-items:center;gap:6px}
+.nb-head .nb-cattag{margin-right:auto}
+.nb-head .nb-mode{margin-right:auto}
+h2.nb-rtitle{margin:14px 16px 0;font-family:var(--display);font-size:1.25rem;letter-spacing:.03em;overflow-wrap:anywhere}
+.nb-level{border-color:var(--amber)}
+.nb-lv{display:flex;align-items:center;gap:12px}
+.nb-lv .bd-seal{width:48px;height:48px;font-size:1.1rem}
+.nb-lv b{display:block;font-size:1rem}
+.nb-lv small{display:block;margin-top:2px}
+.bd-seal.big{width:84px;height:84px;font-size:2rem}
+.lu{display:grid;justify-items:center;gap:8px;text-align:center;padding:6px 0}
+.lu .bd-seal.big{animation:luPop .6s cubic-bezier(.2,1.4,.4,1) both}
+.lu-n{font-family:var(--display);font-size:1.3rem;letter-spacing:.04em;color:var(--amber)}
+.lu-a{margin:0}
+.lu-f{margin:0;color:var(--muted);font-size:.9rem}
+@keyframes luPop{from{transform:scale(.3) rotate(-25deg);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.lu .bd-seal.big{animation:none}}

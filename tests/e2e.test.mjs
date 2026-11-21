@@ -236,7 +236,7 @@ await check("Content update: opened from Settings, three counts, before and afte
   await p.locator('details[data-sec="about"] summary').click(); await p.waitForTimeout(150);
   await p.locator('[data-a="openUpdate"]').click(); await p.waitForTimeout(350);
   assert(/Content update/i.test(await p.locator(".modal-head h2").innerText()), "header");
-  const counts = await p.locator(".cu-card b").allInnerTexts(); assert(counts.join() === "2,2,0", "counts " + counts.join());
+  const counts = await p.locator(".cu-card b").allInnerTexts(); assert(counts.join() === "6,2,0", "counts " + counts.join());
   assert(await p.locator(".cu-card.removed").isDisabled(), "empty Removed should not open");
   await p.locator(".cu-card.changed").click(); await p.waitForTimeout(200);
   assert(await p.locator(".cu-item").count() === 2 && await p.locator(".cu-eff.nerf").count() >= 2, "changed list with Nerf tags");
@@ -244,7 +244,7 @@ await check("Content update: opened from Settings, three counts, before and afte
   assert(await p.locator(".cu-ba .cu-lab", { hasText: "Before" }).count() >= 1 && await p.locator(".cu-ba .cu-lab", { hasText: "After" }).count() >= 1, "before and after");
   assert(await p.locator(".cu-ba del").count() >= 1 && await p.locator(".cu-ba ins").count() >= 1, "changed words marked");
   await p.locator(".cu-card.new").click(); await p.waitForTimeout(200);
-  assert(await p.locator(".cu-item").count() === 2 && await p.locator(".cu-eff").count() === 0, "new list has no buff/nerf tags");
+  assert(await p.locator(".cu-item").count() === 6 && await p.locator(".cu-eff").count() === 0, "new list has no buff/nerf tags");
   await p.locator('[data-a="cuDone"]').click(); await p.waitForTimeout(250);
   assert(await p.locator(".modal").count() === 0, "Done should close it");
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
@@ -260,7 +260,7 @@ await check("Content update: stays pending until Done, with a Home banner; never
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
   assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "an existing player gets the popup");
   await p.keyboard.press("Escape"); await p.waitForTimeout(250);
-  assert(/4 rule changes/.test(await p.locator('.hwarn[data-a="openUpdate"]').innerText()), "closing it leaves a banner on Home");
+  assert(/8 rule changes/.test(await p.locator('.hwarn[data-a="openUpdate"]').innerText()), "closing it leaves a banner on Home");
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
   assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "still pending after closing without Done");
   await p.locator('[data-a="cuDone"]').click(); await p.waitForTimeout(300);
@@ -278,8 +278,8 @@ await check("Content update: two updates since the last check read as one total"
   });
   await clickA(p, "openSettings"); await p.waitForTimeout(300); await p.locator('details[data-sec="about"] summary').click(); await p.waitForTimeout(150);
   await p.locator('[data-a="openUpdate"]').click(); await p.waitForTimeout(300);
-  assert(/2 updates/.test(await p.locator(".cu-date").innerText()), "header counts the updates");
-  assert((await p.locator(".cu-card b").allInnerTexts()).join() === "2,2,0", "one total per entry, not per update");
+  assert(/3 updates/.test(await p.locator(".cu-date").innerText()), "header counts the updates");
+  assert((await p.locator(".cu-card b").allInnerTexts()).join() === "6,2,0", "one total per entry, not per update");
   await p.locator(".cu-card.changed").click(); await p.waitForTimeout(150);
   assert(await p.locator(".cu-item", { hasText: "Water Bullet" }).locator(".cu-eff.mixed").count() >= 1, "nerf then buff reads as mixed");
   await p.locator('[data-a="cuDone"]').click(); await p.waitForTimeout(250);
@@ -288,7 +288,7 @@ await check("Content update: two updates since the last check read as one total"
   await clickA(p, "openSettings"); await p.waitForTimeout(250);
   if (!await p.locator('[data-a="openUpdate"]').isVisible()) await p.locator('details[data-sec="about"] summary').click();
   await p.waitForTimeout(150); await p.locator('[data-a="openUpdate"]').click(); await p.waitForTimeout(300);
-  assert((await p.locator(".cu-card b").allInnerTexts()).join() === "0,1,0" && !/2 updates/.test(await p.locator(".cu-date").innerText()), "after Done, Settings shows only the newest update");
+  assert((await p.locator(".cu-card b").allInnerTexts()).join() === "0,1,0" && !/\d updates/.test(await p.locator(".cu-date").innerText()), "after Done, Settings shows only the newest update");
   noErrs(p); await p.context().close();
 });
 
@@ -303,11 +303,49 @@ await check("Notes storage: old localStorage notes move to IndexedDB once and st
   assert(st.legacy === null && st.idb === L && st.backup === L, "moved with a backup copy");
   await clickA(p, "goNotes"); await p.waitForTimeout(500);
   assert(/From before/.test(await p.locator("#nb-list").innerText()), "the old note is listed");
-  await clickA(p, "nbNew"); await p.waitForTimeout(250); await p.locator(".nb-title").fill("After"); await p.waitForTimeout(300);
+  await clickA(p, "nbNew"); await p.waitForTimeout(250); await p.locator(".nb-title").fill("After"); await p.waitForTimeout(300); await p.locator('[data-a="nbSaveNote"]').click(); await p.waitForTimeout(400);
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600); await clickA(p, "goNotes"); await p.waitForTimeout(500);
   const list = await p.locator("#nb-list").innerText(); assert(/From before/.test(list) && /After/.test(list), "both notes survive a reload: " + list.slice(0, 80));
   assert(await p.evaluate(() => localStorage.getItem("dnd-notes-v1")) === null, "nothing written back to localStorage");
   assert(/of [\d.]+ (MB|GB)/.test(await p.locator(".nb-card", { hasText: "Storage" }).innerText()), "browser-reported quota");
+  noErrs(p); await p.context().close();
+});
+
+await check("Notes: write, save with the check, discard with a confirm, read, then edit", async () => {
+  const p = await open(390, 844, { touch: true }); await clickA(p, "goNotes"); await p.waitForTimeout(500);
+  const list = () => p.locator("#nb-list").innerText();
+  await clickA(p, "nbNew"); await p.waitForTimeout(250);
+  assert(await p.locator(".nb-save").isVisible() && await p.locator("#nb-body").isVisible(), "editor with a Save button");
+  assert(/Blank page|level|Level/i.test(await p.locator("#nb-foot").innerText()), "live level in the footer: " + await p.locator("#nb-foot").innerText());
+  await p.locator(".nb-title").fill("Draft one"); await p.locator("#nb-body").fill("Some words here");
+  assert(!/Draft one/.test(await list()), "a draft is not a note yet");
+  await p.locator('[data-a="nbDiscard"]').click(); await p.waitForTimeout(250);
+  assert(/discard/i.test(await p.locator(".modal-head h2").innerText()), "asks before discarding");
+  await p.locator('[data-a="closeModal"]').first().click(); await p.waitForTimeout(250);
+  assert(await p.locator("#nb-body").inputValue() === "Some words here", "Keep editing keeps the text");
+  await p.locator('[data-a="nbDiscard"]').click(); await p.waitForTimeout(250); await p.locator('[data-a="nbDiscardGo"]').click(); await p.waitForTimeout(300);
+  assert(!/Draft one/.test(await list()) && await p.locator("#nb-body").count() === 0, "discarded: not saved, editor closed");
+  await clickA(p, "nbNew"); await p.waitForTimeout(250); await p.locator('[data-a="nbSaveNote"]').click(); await p.waitForTimeout(250);
+  assert(/Note is empty|empty/i.test(await p.locator("#toast").innerText()) && await p.locator("#nb-body").count() === 1, "an empty note is not saved");
+  await p.locator(".nb-title").fill("Real note"); await p.locator("#nb-body").fill("- [ ] first task\n\nBody text " + "x".repeat(200));
+  await p.locator('[data-a="nbSaveNote"]').click(); await p.waitForTimeout(500);
+  assert(/Real note/.test(await list()), "saved note is listed");
+  assert(await p.locator("#nb-body").count() === 0 && await p.locator(".nb-editbtn").isVisible() && /Real note/.test(await p.locator(".nb-rtitle").innerText()), "saved note opens in the read view with an Edit button");
+  assert(/level up/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "crossing a level shows the level-up card");
+  await p.locator('[data-a="closeModal"]').first().click(); await p.waitForTimeout(250);
+  await p.locator('[data-a="nbBack"]').click(); await p.waitForTimeout(250);
+  await p.locator('[data-a="nbOpen"]').first().click(); await p.waitForTimeout(250);
+  assert(await p.locator("#nb-body").count() === 0, "tapping a note reads it");
+  await p.locator('[data-a="nbEditStart"]').click(); await p.waitForTimeout(250);
+  await p.locator(".nb-title").fill("Real note v2"); await p.locator('[data-a="nbDiscard"]').click(); await p.waitForTimeout(250);
+  await p.locator('[data-a="nbDiscardGo"]').click(); await p.waitForTimeout(300);
+  assert(/Real note$/.test((await p.locator(".nb-rtitle").innerText()).trim()), "discarding an edit restores the saved note");
+  await p.locator('[data-a="nbEditStart"]').click(); await p.waitForTimeout(250);
+  await p.locator(".nb-title").fill("Real note v2"); await p.locator('[data-a="nbSaveNote"]').click(); await p.waitForTimeout(400);
+  assert(/Real note v2/.test(await p.locator(".nb-rtitle").innerText()), "saving an edit updates the note");
+  await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(500); await clickA(p, "goNotes"); await p.waitForTimeout(500);
+  assert(/Real note v2/.test(await list()), "persists");
+  assert(/Level/i.test(await p.locator(".nb-level").innerText()) && /to level/.test(await p.locator(".nb-level").innerText()), "sidebar shows the note level");
   noErrs(p); await p.context().close();
 });
 

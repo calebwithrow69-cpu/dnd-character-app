@@ -51,11 +51,11 @@ test("seen survives and ignores a broken store", () => {
   const s = mem(); assert(C.seenId(s) === "", "empty"); C.markSeen("u9", s); assert(C.seenId(s) === "u9", "stored");
   assert(C.seenId({ getItem() { throw new Error("x"); } }) === "", "throwing store");
 });
-const H = L.updates || [], U = H[H.length - 1];
+const H = L.updates || [], U = H.find(r => r.items.some(i => i.name === "Evil Eye")) || H[H.length - 1]; // the first test update
 test("the rules file carries the update history with a note for the next editor", () => {
   assert(Array.isArray(L.updates) && H.length >= 1 && H.length <= 12 && C.updatesOf(L).length === H.length, "history");
   assert(/FUTURE CLAUDE/.test(L.updatesNote) && /APPENDS/.test(L.updatesNote) && /squashed/.test(L.updatesNote), "note");
-  assert(L.update && L.update.id === U.id, "newest mirrored for older app versions");
+  assert(L.update && L.update.id === H[H.length - 1].id, "newest mirrored for older app versions");
   assert(H.every(r => /^\d{4}-\d\d-\d\d-[0-9a-f]{6}$/.test(r.id) && !("_note" in r)) && new Set(H.map(r => r.id)).size === H.length, "ids");
 });
 test("changed items explain themselves and mark buff or nerf per change", () => {

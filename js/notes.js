@@ -148,4 +148,12 @@ export function awardBadges(data, chars, now = Date.now()) {
   for (const b of BADGES) if (chars >= b.n && !data.badges[b.id]) { data.badges[b.id] = now; won.push(b); }
   return won;
 }
+// Note level: one level per length milestone reached (the badges, in order). `chars` may be a projection
+// while a note is being written; a badge already earned is never taken back.
+export function levelInfo(data, chars) {
+  const have = BADGES.filter(b => data.badges[b.id] || b.n <= chars).length;
+  const at = have ? BADGES[have - 1] : null, next = BADGES[have] || null, from = at ? at.n : 0;
+  return { level: have, max: BADGES.length, at, next, rank: at ? at.short : "Blank page", tier: at ? at.tier : 1,
+    left: next ? Math.max(0, next.n - chars) : 0, pct: next ? Math.max(0, Math.min(100, (chars - from) / (next.n - from) * 100)) : 100 };
+}
 export function badgeCount(data) { return BADGES.filter(b => data.badges[b.id]).length; }

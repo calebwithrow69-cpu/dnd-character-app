@@ -107,4 +107,12 @@ test("badges survive save and load, junk ids are dropped, backups merge the earl
   assert(Object.keys(N.clean({ badges: { nope: 5, tweet: 7, sms1: "x" } }).badges).join() === "tweet", "junk dropped");
   const b = N.load(mem()); b.badges.tweet = 9; N.mergeImport(b, N.exportData(d)); assert(b.badges.tweet === 5 && N.badgeCount(b) === 3, "earliest wins");
 });
+test("note level is the number of length milestones reached, with progress to the next", () => {
+  const d = N.load(mem()), b = N.BADGES;
+  let l = N.levelInfo(d, 0); assert(l.level === 0 && l.rank === "Blank page" && l.next === b[0] && l.left === b[0].n && l.pct === 0, "blank");
+  l = N.levelInfo(d, b[2].n); assert(l.level === 3 && l.at === b[2] && l.next === b[3] && l.left === b[3].n - b[2].n && l.pct === 0, "third level exactly");
+  const mid = Math.round((b[2].n + b[3].n) / 2); l = N.levelInfo(d, mid); assert(l.level === 3 && l.pct > 40 && l.pct < 60, "halfway " + l.pct);
+  d.badges[b[4].id] = 1; assert(N.levelInfo(d, 0).level >= 1, "an earned badge is never taken back");
+  const top = N.levelInfo(N.load(mem()), b[b.length - 1].n + 5); assert(top.level === b.length && top.next === null && top.pct === 100 && top.left === 0, "top level");
+});
 console.log(`\n${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);

@@ -2,11 +2,29 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.55";
+export const VERSION = "0.1.56";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.56",
+    date: "2026-11-21",
+    stage: "Pre-build",
+    blurb: "Notes: read and write are separate. Badges became note levels.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Notes open in a read view with an Edit button at the top right.",
+          "New and edited notes use an editor with a Save check and Discard. Nothing is stored until Save. Discard asks first.",
+          "Note level replaces the badge list: one level per length milestone, with a live count to the next level while you write.",
+          "Saving a note that crosses a level shows a level-up card with a fun fact.",
+          "Spells: Gift, Vampiric Claws, Quicksand, Life Siphon."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.55",
     date: "2026-11-21",
