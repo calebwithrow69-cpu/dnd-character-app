@@ -21,7 +21,8 @@ export const CHANGELOG = [
           "Markdown editor with toolbar, preview and checklists.",
           "Counters for notes, characters, words and storage, with book-length milestones.",
           "22 length badges from the first text message to War and Peace, each with an explanation and fun facts.",
-          "Old sheet notes move into the ledger. Full backups include notes. Export notes as Markdown."
+          "Old sheet notes move into the ledger. Full backups include notes.",
+          "Export notes as Markdown, or as a PDF: one note, or everything in the current category or search."
         ]
       }
     ]

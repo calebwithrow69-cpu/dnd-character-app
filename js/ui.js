@@ -214,6 +214,7 @@ export const ICONS = {
   shield: svg('<path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/>'),
   ring: svg('<circle cx="12" cy="14" r="6"/><path d="M9 7l3-4 3 4"/>'),
   scroll: svg('<path d="M6 4h10a2 2 0 012 2v12a2 2 0 002 2H8a2 2 0 01-2-2V4zM6 4a2 2 0 00-2 2v2h4"/>'),
+  download: svg('<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>'),
   notes: svg('<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'),
   trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
   plus: svg('<path d="M12 5v14M5 12h14"/>'),

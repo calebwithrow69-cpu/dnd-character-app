@@ -293,6 +293,22 @@ await check("Notes ledger: create, count, categorize, search, preview checklist,
   assert(await hscroll(p) <= 0, "hscroll"); noErrs(p); await p.context().close();
 });
 
+await check("Notes PDF: one note and the filtered list download as dated PDFs", async () => {
+  const p = await open(1280, 860); await clickA(p, "goNotes"); await p.waitForTimeout(250);
+  const today = await p.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
+  const mk = async (t, b, cat) => { await clickA(p, "nbNew"); await p.fill('[data-nb="title"]', t); await p.fill('[data-nb="body"]', b); await p.selectOption('[data-nb="cat"]', cat); await p.waitForTimeout(80); };
+  await mk("Orin the Smith", "# Smith\n- [x] met him\nHe owes us **a favour**.", "NPC"); await mk("Loot", "3 potions", "Loot");
+  const grab = async sel => { const [dl] = await Promise.all([p.waitForEvent("download"), p.locator(sel).first().click()]); const buf = await (await import("node:fs")).promises.readFile(await dl.path()); return { name: dl.suggestedFilename(), head: buf.slice(0, 5).toString(), size: buf.length }; };
+  await p.locator(".nb-open", { hasText: "Orin" }).click(); await p.waitForTimeout(150);
+  const one = await grab('[data-a="nbPdf"]');
+  assert(one.name === `Orin-the-Smith-${today}.pdf` && one.head === "%PDF-" && one.size > 1000, JSON.stringify(one));
+  await p.locator('[data-a="nbCat"][data-cat="NPC"]').click(); await p.waitForTimeout(120);
+  const npc = await grab('[data-a="nbPdfAll"]'); assert(npc.name === `notes-NPC-${today}.pdf` && npc.head === "%PDF-", JSON.stringify(npc));
+  await p.locator('[data-a="nbCat"][data-cat="all"]').click(); await p.waitForTimeout(120);
+  const all = await grab('[data-a="nbPdfAll"]'); assert(all.name === `notes-all-${today}.pdf` && all.size > npc.size, JSON.stringify(all) + JSON.stringify(npc));
+  noErrs(p); await p.context().close();
+});
+
 await check("Notes badges: earned by length, facts unlock, kept after delete (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await clickA(p, "goNotes"); await p.waitForTimeout(250);
   const total = n => p.evaluate(k => Object.keys(JSON.parse(localStorage.getItem("dnd-notes-v1")).badges).length, 0);

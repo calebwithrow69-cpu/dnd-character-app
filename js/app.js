@@ -43,8 +43,9 @@ import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
 import { cuState } from "./views/contentupdate.js";
 import { hasUpdate, shouldShow, seenId, markSeen } from "./contentupdate.js";
 import * as notes from "./notes.js";
+import { downloadNotesPdf } from "./notespdf.js";
 import { applyFormat, toggleTask, renderMd } from "./markdown.js";
-import { renderNotes, nbState, nbCats, nbList, nbStats, nbFoot, nbEdit } from "./views/notes.js";
+import { nbVisible, renderNotes, nbState, nbCats, nbList, nbStats, nbFoot, nbEdit } from "./views/notes.js";
 import { flourish, toneFor } from "./subtone.js";
 import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
@@ -564,6 +565,11 @@ function nbAward(silent) {
   const won = notes.awardBadges(s.data, notes.stats(s.data.notes).chars);
   if (won.length) { nbSave(); if (!silent) toast("Badge: " + won[won.length - 1].short); }
 }
+async function pdfNotes(list, name, label) {
+  toast("Making PDF...");
+  try { const r = await downloadNotesPdf(list, name, label); toast(r.lost ? "PDF saved. Some characters became ?" : list.length > 1 ? list.length + " notes saved as PDF" : "Note saved as PDF"); }
+  catch (e) { console.error(e); toast("PDF failed. Check your connection"); }
+}
 function nbPrune() { const s = APP.nb, n = nbCurrent(); if (s && n && !n.title.trim() && !n.body.trim()) { notes.removeNote(s.data, n.id); s.sel = null; nbSave(); } }
 function nbRefresh(parts) {
   const s = APP.nb; if (!s || !s.data || APP.screen !== "notes") return;
@@ -1062,6 +1068,14 @@ const ACTIONS = {
     const md = document.getElementById("nb-md"); if (md) md.innerHTML = renderMd(n.body);
   },
   nbDelete(el) { const s = nbState(APP); notes.removeNote(s.data, el.dataset.id); s.sel = null; nbSave(); render(); },
+  async nbPdf(el) {
+    const n = nbState(APP).data.notes.find(x => x.id === el.dataset.id); if (!n) return;
+    await pdfNotes([n], notes.titleOf(n), notes.titleOf(n));
+  },
+  async nbPdfAll() {
+    const s = nbState(APP), list = nbVisible(APP); if (!list.length) { toast("No notes"); return; }
+    await pdfNotes(list, "notes-" + (s.cat === "all" ? "all" : s.cat), "Notes - " + (s.cat === "all" ? "All" : s.cat));
+  },
   nbExport() { const d = nbState(APP).data; if (!d.notes.length) { toast("No notes"); return; } shareOrDownload(`notes-${dateStamp()}.md`, notes.toMarkdownFile(d)); },
   goRules() { APP.screen = "rules"; render(); window.scrollTo(0, 0); },
   homeContinue() {

@@ -87,3 +87,45 @@ export function applyFormat(text, start, end, kind) {
     default: return { text, start, end };
   }
 }
+
+// ---- Structure for non-HTML outputs (the notes PDF). Same syntax as renderMd, returned as data.
+// Inline runs: {s, b, i, st, code, link}. Blocks: h {lvl,runs} | p {runs} | li {ord,task,done,runs} | quote {runs} | code {text} | hr.
+export function inlineRuns(src) {
+  const out = []; let b = false, it = false, st = false, buf = "", i = 0;
+  const flush = () => { if (buf) { out.push({ s: buf, b, i: it, st }); buf = ""; } };
+  const closes = (tok, from) => src.indexOf(tok, from) > 0;
+  const word = c => /\w/.test(c || "");
+  while (i < src.length) {
+    const ch = src[i], prev = src[i - 1], next = src[i + 1];
+    if (ch === "`") { const j = src.indexOf("`", i + 1); if (j > i) { flush(); out.push({ s: src.slice(i + 1, j), code: true }); i = j + 1; continue; } }
+    if (ch === "[") {
+      const m = /^\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/.exec(src.slice(i));
+      if (m) { flush(); out.push({ s: m[1], b, i: it, st, link: m[2] }); i += m[0].length; continue; }
+    }
+    if (src.startsWith("**", i) && (b || closes("**", i + 2))) { flush(); b = !b; i += 2; continue; }
+    if (src.startsWith("~~", i) && (st || closes("~~", i + 2))) { flush(); st = !st; i += 2; continue; }
+    if (ch === "*" && next !== "*" && prev !== "*" && ((!it && next && !/\s/.test(next) && closes("*", i + 1)) || (it && prev && !/\s/.test(prev)))) { flush(); it = !it; i++; continue; }
+    if (ch === "_" && ((!it && !word(prev) && next && !/\s/.test(next) && closes("_", i + 1)) || (it && !word(next) && prev && !/\s/.test(prev)))) { flush(); it = !it; i++; continue; }
+    buf += ch; i++;
+  }
+  flush(); return out;
+}
+
+export function parseMd(src) {
+  const lines = String(src || "").replace(/\r\n?/g, "\n").split("\n"), out = [];
+  let i = 0, para = [];
+  const flush = () => { if (para.length) { out.push({ t: "p", runs: inlineRuns(para.join("\n")) }); para = []; } };
+  while (i < lines.length) {
+    const ln = lines[i]; let m;
+    if (/^```/.test(ln)) { flush(); const buf = []; i++; while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]); out.push({ t: "code", text: buf.join("\n") }); i++; continue; }
+    if (!ln.trim()) { flush(); i++; continue; }
+    if ((m = /^(#{1,3})\s+(.*)$/.exec(ln))) { flush(); out.push({ t: "h", lvl: m[1].length, runs: inlineRuns(m[2]) }); i++; continue; }
+    if (/^(-{3,}|\*{3,})\s*$/.test(ln)) { flush(); out.push({ t: "hr" }); i++; continue; }
+    if ((m = /^>\s?(.*)$/.exec(ln))) { flush(); out.push({ t: "quote", runs: inlineRuns(m[1]) }); i++; continue; }
+    if ((m = /^\s*[-*]\s+\[([ xX])\]\s+(.*)$/.exec(ln))) { flush(); out.push({ t: "li", task: true, done: m[1] !== " ", runs: inlineRuns(m[2]) }); i++; continue; }
+    if ((m = /^\s*[-*]\s+(.*)$/.exec(ln))) { flush(); out.push({ t: "li", runs: inlineRuns(m[1]) }); i++; continue; }
+    if ((m = /^\s*(\d+)[.)]\s+(.*)$/.exec(ln))) { flush(); out.push({ t: "li", ord: +m[1], runs: inlineRuns(m[2]) }); i++; continue; }
+    para.push(ln); i++;
+  }
+  flush(); return out;
+}

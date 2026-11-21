@@ -64,6 +64,7 @@ export function nbEdit(app) {
   return `<div class="nb-head"><button class="gl-back" data-a="nbBack">${ICONS.back}Notes</button>
       <select class="nb-sel" data-nb="cat" aria-label="Category">${s.data.cats.map(c => `<option${c === n.cat ? " selected" : ""}>${esc(c)}</option>`).join("")}</select>
       <div class="seg nb-mode"><button data-a="nbMode" data-mode="write" aria-pressed="${s.mode === "write"}">Write</button><button data-a="nbMode" data-mode="preview" aria-pressed="${s.mode === "preview"}">Preview</button></div>
+      <button class="iconbtn" data-a="nbPdf" data-id="${esc(n.id)}" aria-label="Download PDF">${ICONS.download}</button>
       <button class="gl-star big" data-a="nbPin" data-id="${esc(n.id)}" aria-pressed="${n.pin}" aria-label="${n.pin ? "Unpin" : "Pin"} note">${ICONS.star}</button>
       <button class="iconbtn nb-del" data-a="askRemove" data-do="nbDelete" data-what="note" data-name="${esc(N.titleOf(n))}" data-id="${esc(n.id)}" aria-label="Delete note">${ICONS.trash}</button></div>
     <input class="f nb-title" data-nb="title" value="${esc(n.title)}" maxlength="120" placeholder="Title" aria-label="Title">
@@ -87,7 +88,7 @@ export function renderNotes(app) {
             <button class="btn sm" data-a="nbDir" aria-label="${s.desc ? "Descending" : "Ascending"}">${s.desc ? "Newest first" : "Oldest first"}</button></div>
         </div>
         <div class="nb-stats" id="nb-stats">${nbStats(app)}</div>
-        <div class="nb-ctl end"><button class="btn block" data-a="nbExport">Export notes</button></div>
+        <div class="nb-ctl end"><button class="btn block" data-a="nbPdfAll">${ICONS.download}<span>Export PDF</span></button><button class="btn block" data-a="nbExport">Export Markdown</button></div>
       </div>
       <section class="nb-list nb-box" id="nb-list" aria-label="Notes">${nbList(app)}</section>
       <section class="nb-edit nb-box" id="nb-edit" aria-label="Editor">${nbEdit(app)}</section>
