@@ -1103,7 +1103,7 @@ await check("creation shop: buy trained gear with the gold, see it on the new ch
   const bought = await p.evaluate(() => APP.createDraft.cart.slice());
   assert(bought.length === 1, "nothing in the list after buying: " + JSON.stringify(bought));
   await clickA(p, "closeModal"); await p.waitForTimeout(300);
-  assert((await p.locator(".optcard.locked", { hasText: bought[0].name }).count()) >= 1, "purchase not shown on the step");
+  assert((await p.locator(".shopitem", { hasText: bought[0].name }).count()) >= 1, "purchase not shown on the step");
   await clickA(p, "openProgress"); await clickA(p, "gotoChapter", '[data-i="6"]'); await p.waitForTimeout(300);
   const left = await p.evaluate(async () => { const m = await import("/js/creation.js"); return m.walletLeftCp(APP, APP.createDraft); });
   await clickA(p, "finishCreate"); await p.waitForTimeout(1500);

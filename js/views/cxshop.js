@@ -1,35 +1,36 @@
 // The shop inside character creation: gear the character is trained to use, paid for with the gold from the equipment options.
-// All data and rules live in ../creation.js. ASCII only in this file.
+// All data and rules live in ../creation.js, the look in shopkit.js. ASCII only in this file.
 import { esc, modalShell, searchBox } from "../ui.js";
 import { fmtPrice } from "../equipment.js";
 import { creationStock, trainingFor, trainingSummary, priceCp, startCp, walletLeftCp, cartRows } from "../creation.js";
+import { purseCard, shelfTabs, shelfCounts, shopDecorator, shopRow, shopList } from "./shopkit.js";
 
-const CATS = ["All", "Weapons", "Armor", "Tools", "Gear"];
+const gp = cp => (cp > 0 ? fmtPrice(cp / 100) : "0 gp");
 
 export function renderCxShop(app) {
   const d = app.createDraft; if (!d) return "";
-  const cat = app.cxShopCat || "All", t = trainingFor(app, d);
+  const cat = app.cxShopCat || "All", t = trainingFor(app, d), dec = shopDecorator(app.library, app.campaign);
+  const start = startCp(app, d), left = walletLeftCp(app, d), items = cartRows(app, d).reduce((n, x) => n + x.qty, 0);
   return modalShell("Shop",
-    `<p class="small"><b class="num" id="cxshop-left">${esc(fmtPrice(walletLeftCp(app, d) / 100) || "0 gp")}</b> left of <span class="num">${esc(fmtPrice(startCp(app, d) / 100) || "0 gp")}</span></p>
-     <p class="sub2">Trained: ${esc(trainingSummary(t))}</p>
-     ${searchBox("cxshop", app.cxShopQuery, "Search the shop")}
-     <div class="seg" style="margin-top:10px" role="group" aria-label="Category">${CATS.map(k => `<button data-a="cxShopCat" data-cat="${k}" aria-pressed="${cat === k}">${k}</button>`).join("")}</div>
-     <div class="results" id="results-cxshop">${renderCxShopResults(app)}</div>`,
-    `<button class="btn pri" data-a="closeModal">Done</button>`);
+    `<div class="shop-top">
+      ${purseCard({ label: "Gold left", big: gp(left), id: "cxshop-left", cells: [{ k: "Start", v: gp(start) }, { k: "Items", v: items }], bar: start ? (start - left) / start * 100 : 0 })}
+      ${searchBox("cxshop", app.cxShopQuery, "Search the shop")}
+      ${shelfTabs("cxShopCat", shelfCounts(creationStock(app, d).map(dec)), cat, ["Magic"])}
+      <p class="sub2 shop-train">Trained: ${esc(trainingSummary(t))}</p>
+    </div>
+    <div class="results shop-list" id="results-cxshop">${renderCxShopResults(app)}</div>`,
+    `<button class="btn pri" data-a="closeModal">Done</button>`, "shopm");
 }
 
 export function renderCxShopResults(app) {
   const d = app.createDraft; if (!d) return "";
-  const q = (app.cxShopQuery || "").trim().toLowerCase(), cat = app.cxShopCat || "All";
-  const rows = creationStock(app, d).filter(r => (cat === "All" || r.group === cat) && (!q || r.name.toLowerCase().includes(q)));
-  if (!rows.length) return `<p class="muted small" style="padding:12px 0">${q ? "Nothing matches." : "Nothing here for your training."}</p>`;
+  const q = (app.cxShopQuery || "").trim().toLowerCase(), cat = app.cxShopCat || "All", dec = shopDecorator(app.library, app.campaign);
+  const rows = creationStock(app, d).map(dec).filter(r => q ? r.name.toLowerCase().includes(q) : cat === "All" || r.group === cat);
   const left = walletLeftCp(app, d), have = new Map(cartRows(app, d).map(x => [x.name, x.qty]));
-  return rows.slice(0, 120).map(r => {
+  return shopList(rows, { cat, q, empty: q ? "Nothing matches." : "Nothing here for your training.", row: (r, cap) => {
     const cp = priceCp(app, d, r), n = have.get(r.name) || 0;
-    return `<div class="shopitem"><div class="rowline shoprow">
-      <div class="nm"><span>${esc(r.name)}</span><span class="sub2">${esc([r.group, r.sub].filter(Boolean).join(" · ").slice(0, 80))}${n ? ` · in your list: ${n}` : ""}</span></div>
-      ${n ? `<button class="btn sm" data-a="cxUnbuy" data-name="${esc(r.name)}" aria-label="Remove one ${esc(r.name)}">-</button>` : ""}
-      <button class="btn sm ${cp <= left ? "pri" : ""}" data-a="cxBuy" data-name="${esc(r.name)}" ${cp > left ? "disabled" : ""} aria-label="Add ${esc(r.name)} for ${esc(fmtPrice(cp / 100))}">${esc(fmtPrice(cp / 100))}</button>
-    </div></div>`;
-  }).join("") + (rows.length > 120 ? `<p class="sub2">Showing 120 of ${rows.length}. Search to narrow it down.</p>` : "");
+    return shopRow(r, { cap, listed: n > 0, status: n ? "\u00d7" + n : "",
+      minus: n ? { action: "cxUnbuy", label: `Remove one ${r.name}` } : null,
+      buy: { action: "cxBuy", ok: cp <= left, label: `Add ${r.name} for ${fmtPrice(cp / 100)}`, text: fmtPrice(cp / 100) } });
+  } });
 }

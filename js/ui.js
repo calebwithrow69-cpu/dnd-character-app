@@ -219,6 +219,8 @@ export const ICONS = {
   notes: svg('<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'),
   trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
   plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  minus: svg('<path d="M5 12h14"/>'),
+  coin: svg('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>'),
   star: svg('<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5l-5.4 3 1.2-6L3.3 9.3l6.1-.7z"/>'),
   bow: svg('<path d="M6 3c8 2 12 7 12 9s-4 7-12 9M6 3v18M6 12h14M16 8l4 4-4 4"/>'),
   flag: svg('<path d="M6 21V4M6 5h11l-2 4 2 4H6"/>'),
@@ -240,9 +242,9 @@ export function empty(title, body) {
   return `<div class="empty"><h3>${esc(title)}</h3><p>${esc(body)}</p></div>`;
 }
 
-export function modalShell(title, body, footer = "") {
+export function modalShell(title, body, footer = "", cls = "") {
   return `<div class="modal-back" data-a="closeModalBackdrop">
-    <div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="modal ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
       <div class="modal-head"><h2>${esc(title)}</h2>
         <button class="iconbtn" data-a="closeModal" aria-label="Close">${ICONS.close}</button></div>
       <div class="modal-body">${body}</div>

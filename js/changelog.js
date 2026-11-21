@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.56";
+export const VERSION = "0.1.57";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.57",
+    date: "2026-11-21",
+    stage: "Pre-build",
+    blurb: "Shop redesign: purse card, shelf tabs, aisles, price tags.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Both shops share one look: purse card with coin counts, shelf tabs with item counts, aisle headings, price tags.",
+          "Armor rows show AC, Strength and Stealth. Tools get their own shelf on the sheet shop."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.56",
     date: "2026-11-21",

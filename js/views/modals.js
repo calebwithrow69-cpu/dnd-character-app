@@ -26,6 +26,7 @@ import { renderBadges, renderLevelUp, renderDiscard } from "./notes.js";
 import { renderContentUpdate } from "./contentupdate.js";
 import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
+import { purseCard, shelfTabs, shelfCounts, shopDecorator, shopRow, shopList } from "./shopkit.js";
 import { trainingFromChar, trainingSummary, isTrained } from "../creation.js";
 
 export function renderModal(app) {
@@ -123,18 +124,19 @@ export function renderModal(app) {
 
     case "cxShop": return renderCxShop(app);
     case "shop": {
-      const cats = ["All", "Weapons", "Armor", "Gear", "Magic & potions"];
-      const cat = app.shopCat || "All";
+      const cat = app.shopCat || "All", trained = app.shopTrained !== false;
       const discount = (c.feats || []).some(f => /^Crafter\b/.test(f));
+      const cells = ["pp", "gp", "ep", "sp", "cp"].map(k => ({ k, v: +c.coins?.[k] || 0 }));
       return modalShell("Shop",
-        `<p class="small">You have <b class="num">${esc(fmtWallet(c.coins))}</b>.${discount ? ` <span class="tag green">Crafter: 20% off nonmagical</span>` : ""}</p>
-         <div class="seg" style="margin-top:8px" role="group" aria-label="Gear shown"><button data-a="shopTrained" data-v="1" aria-pressed="${app.shopTrained !== false}">Trained</button><button data-a="shopTrained" data-v="0" aria-pressed="${app.shopTrained === false}">All gear</button></div>
-         ${app.shopTrained !== false ? `<p class="sub2" style="margin-top:6px">Weapons, armor and tools shown: ${esc(trainingSummary(trainingFromChar(c)))}. Adventuring gear and magic items need no training.</p>` : ""}
-         ${searchBox("shop", app.shopQuery, "Search the shop")}
-         <div class="seg" style="margin-top:10px" role="group" aria-label="Category">${cats.map(k => `<button data-a="shopCat" data-cat="${esc(k)}" aria-pressed="${cat === k}">${esc(k === "Magic & potions" ? "Magic" : k)}</button>`).join("")}</div>
-         <div class="results" id="results-shop">${renderShopResults(app)}</div>
-         <p class="sub2" style="margin-top:8px">Prices: DM rules file, else Player's Handbook.</p>`,
-        `<button class="btn pri" data-a="closeModal">Done</button>`);
+        `<div class="shop-top">
+          ${purseCard({ label: "Purse", big: walletCp(c.coins) > 0 ? fmtPrice(walletCp(c.coins) / 100) : "0 gp", cells, tag: discount ? `<span class="tag">Crafter -20%</span>` : "" })}
+          <div class="shop-find">${searchBox("shop", app.shopQuery, "Search the shop")}
+            <button class="shop-toggle" data-a="shopTrained" data-v="${trained ? 0 : 1}" aria-pressed="${trained}">${ICONS.check}<span>Trained</span></button></div>
+          ${shelfTabs("shopCat", shelfCounts(shopRows(app)), cat)}
+          ${trained ? `<p class="sub2 shop-train">Trained: ${esc(trainingSummary(trainingFromChar(c)))}</p>` : ""}
+        </div>
+        <div class="results shop-list" id="results-shop">${renderShopResults(app)}</div>`,
+        `<span class="sub2 shop-note">Prices: DM rules file, else Player's Handbook</span><button class="btn pri" data-a="closeModal">Done</button>`, "shopm");
     }
 
     case "cast": {
@@ -491,24 +493,21 @@ export function fmtWallet(coins) {
   const parts = ["pp", "gp", "ep", "sp", "cp"].filter(k => +coins?.[k]).map(k => `${coins[k]} ${k}`);
   return parts.length ? parts.join(", ") : "no money";
 }
+function shopRows(app) {
+  const L = app.library, C = app.campaign, c = app.char, t = trainingFromChar(c), dec = shopDecorator(L, C);
+  return shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing"))
+    .filter(r => app.shopTrained === false || isTrained(app, t, r)).map(dec);
+}
 export function renderShopResults(app) {
-  const L = app.library, C = app.campaign, c = app.char;
-  const q = (app.shopQuery || "").trim().toLowerCase();
-  const cat = app.shopCat || "All";
-  const rows = shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing"))
-    .filter(r => (cat === "All" || r.cat === cat) && (!q || r.name.toLowerCase().includes(q)) && (app.shopTrained === false || isTrained(app, trainingFromChar(c), r)));
-  if (!rows.length) return `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`;
-  const have = walletCp(c.coins);
-  return rows.slice(0, 120).map(r => {
-    const gp = shopPrice(c, r), cost = Math.round(gp * 100);
-    const owned = c.inventory.filter(i => i.name === r.name).reduce((t, i) => t + (i.qty || 0), 0);
-    const key = "shop:" + r.name, open = app.info.has(key);
-    return `<div class="shopitem ${open ? "open" : ""}"><div class="rowline shoprow">
-      <button class="nm" data-a="toggleInfo" data-key="${esc(key)}" aria-expanded="${open}">
-        <span>${esc(r.name)}</span><span class="sub2">${esc([r.cat, r.sub].filter(Boolean).join(" · ").slice(0, 70))}${owned ? ` · you have ${owned}` : ""}</span></button>
-      <button class="btn sm ${cost <= have ? "pri" : ""}" data-a="buyItem" data-name="${esc(r.name)}" ${cost > have ? "disabled" : ""} aria-label="Buy ${esc(r.name)} for ${esc(fmtPrice(gp))}">${esc(fmtPrice(gp))}</button>
-    </div>${open ? `<div class="about">${shopDetail(app, r)}</div>` : ""}</div>`;
-  }).join("") + (rows.length > 120 ? `<p class="sub2">Showing 120 of ${rows.length}. Search to narrow it down.</p>` : "");
+  const c = app.char, q = (app.shopQuery || "").trim().toLowerCase(), cat = app.shopCat || "All";
+  const rows = shopRows(app).filter(r => q ? r.name.toLowerCase().includes(q) : cat === "All" || r.group === cat);
+  const have = walletCp(c.coins), owned = new Map();
+  for (const i of c.inventory) owned.set(i.name, (owned.get(i.name) || 0) + (i.qty || 0));
+  return shopList(rows, { cat, q, row: (r, cap) => {
+    const price = shopPrice(c, r), cost = Math.round(price * 100), n = owned.get(r.name) || 0, key = "shop:" + r.name, open = app.info.has(key);
+    return shopRow(r, { cap, open, status: n ? "Own " + n : "", mainAttrs: `data-a="toggleInfo" data-key="${esc(key)}" aria-expanded="${open}"`,
+      detail: open ? shopDetail(app, r) : "", buy: { action: "buyItem", ok: cost <= have, label: `Buy ${r.name} for ${fmtPrice(price)}`, text: fmtPrice(price) } });
+  } });
 }
 
 function shopDetail(app, r) {

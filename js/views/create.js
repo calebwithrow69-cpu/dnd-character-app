@@ -2,12 +2,13 @@
 // portrait list; then ability scores (with the background bonus), skills and gear, and a
 // final page for the name and roleplay details. "View progress" opens a sheet of every chapter.
 // All data and validation live in ../creation.js. ASCII only in this file.
-import { esc, topbar, formatText, searchBox, infoRow, snipOf } from "../ui.js";
+import { esc, topbar, formatText, searchBox, infoRow, snipOf, kRow, ICONS } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
 import { ABILITIES, ABILITY_LABEL, ABILITY_BY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize, primaryAbilities } from "../rules.js";
 import { speciesFit } from "../speciesfit.js";
 import { variantDef, stripVariantText, draftChoices, optionsFor, isAnswered, backgroundToolChoice, backgroundFeatNames, bgSkillIds, bgAbilityIds } from "../choices.js";
 import { fmtPrice } from "../equipment.js";
+import { purseCard, shopDecorator } from "./shopkit.js";
 import { parseSpecies, classifyText } from "../species.js";
 import { renderCodexList, renderControls, matchChoices } from "./codex.js";
 import { levelBody, levelWhy } from "./levelup.js";
@@ -356,10 +357,13 @@ function expertisePanel(app, d) {
 }
 
 function shopPanel(app, d) {
-  const start = startCp(app, d), left = walletLeftCp(app, d), rows = cartRows(app, d);
-  return `<div class="choice"><div class="choice-head"><h3>Shop</h3><span class="sub2">${esc(fmtPrice(left / 100) || "0 gp")} left of ${esc(fmtPrice(start / 100) || "0 gp")}</span></div>
-    ${rows.length ? `<div class="optlist">${rows.map(x => `<div class="optcard locked"><span class="grow"><b>${esc(x.name)}${x.qty > 1 ? " x" + x.qty : ""}</b><span>${esc(fmtPrice(priceCp(app, d, x.row) * x.qty / 100))}</span></span><button class="btn sm" data-a="cxUnbuy" data-name="${esc(x.name)}" aria-label="Remove one ${esc(x.name)}">Remove</button></div>`).join("")}</div>` : ""}
-    <button class="btn pri block" data-a="cxOpenShop" style="margin-top:8px">Open shop</button></div>`;
+  const start = startCp(app, d), left = walletLeftCp(app, d), rows = cartRows(app, d), dec = shopDecorator(app.library, app.campaign);
+  const g = cp => (cp > 0 ? fmtPrice(cp / 100) : "0 gp");
+  return `<div class="choice"><div class="choice-head"><h3>Shop</h3></div>
+    ${purseCard({ label: "Gold left", big: g(left), cells: [{ k: "Start", v: g(start) }, { k: "Items", v: rows.reduce((n, x) => n + x.qty, 0) }], bar: start ? (start - left) / start * 100 : 0 })}
+    ${rows.length ? `<div class="k-list shoplist">${rows.map(x => { const r = dec(x.row); return kRow({ icon: ICONS[r.icon] || "", tone: r.tone, title: x.name, cap: r.aisle, sub: r.sub, status: x.qty > 1 ? "\u00d7" + x.qty : "", cls: "shopitem on",
+      actions: `<span class="num shop-sum">${esc(g(priceCp(app, d, x.row) * x.qty))}</span><button class="btn sm shop-minus" data-a="cxUnbuy" data-name="${esc(x.name)}" aria-label="Remove one ${esc(x.name)}">${ICONS.minus}</button>` }); }).join("")}</div>` : ""}
+    <button class="btn pri block" data-a="cxOpenShop" style="margin-top:10px">Open shop</button></div>`;
 }
 
 function skillsGearBody(app, d) {
