@@ -88,8 +88,8 @@ export function renderSheet(app) {
   return `<div class="sheetview" data-sheet="${app.prefs.sheetStyle === "advanced" ? "advanced" : "classic"}">
     ${sheetBar(c, d, meta)}
     <main class="wrap page ${wide ? "wide" : ""}">
-      ${c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
-      ${page ? "" : `<section class="status" aria-label="Status">
+      ${tab === "rules" ? "" : c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
+      ${page || tab === "rules" ? "" : `<section class="status" aria-label="Status">
         <div class="vitals">
           <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points">
             <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle cx="50" cy="50" r="45" class="ring-fg" pathLength="100" stroke-dasharray="${xpPct} 100"/></svg>
@@ -102,13 +102,13 @@ export function renderSheet(app) {
           </button>
           <button class="shieldbtn tier-${armorTier(d.ac).key}" data-a="openAc" aria-label="Armor class ${d.ac}, ${armorTier(d.ac).name}">${shieldSvg(d.ac)}<b>${d.ac}</b><span>AC</span></button>
         </div>
-        <p class="xpline">${c.level >= 20 ? "Max level" : `${(c.xp || 0).toLocaleString()} XP \u00b7 ${xpReady ? "ready for level " + (c.level + 1) : (xpForLevel(c.level + 1) - (c.xp || 0)).toLocaleString() + " to level " + (c.level + 1)}`}</p>
-        <div class="quick">
+        ${app.prefs.showxp === false ? "" : `<p class="xpline">${c.level >= 20 ? "Max level" : `${(c.xp || 0).toLocaleString()} XP \u00b7 ${xpReady ? "ready for level " + (c.level + 1) : (xpForLevel(c.level + 1) - (c.xp || 0)).toLocaleString() + " to level " + (c.level + 1)}`}</p>`}
+        ${app.prefs.showquick === false ? "" : `<div class="quick">
           <button data-a="rollInit"><b>${fmtMod(d.initiative)}</b><span>Initiative · roll</span></button>
           <button data-a="openBreakdown" aria-label="Speed ${d.speed} feet"><b>${d.speed}</b><span>Speed ft</span></button>
           <div><b>${fmtMod(d.prof)}</b><span>Proficiency</span></div>
           <button data-term="Passive Perception"><b>${d.passivePerception}</b><span>Passive Perception</span></button>
-        </div>
+        </div>`}
         ${chips ? `<div class="chips">${chips}</div>` : ""}
         ${concBanner(app)}
       </section>`}

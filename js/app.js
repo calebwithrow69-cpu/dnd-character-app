@@ -14,6 +14,7 @@ import { spUiDefault, favKey } from "./views/codex.js";
 import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
 import { renderRulesets, rsActions, rsUiDefault } from "./views/rulesets.js";
 import { applyPatch, loadPatch } from "./dm.js";
+import { exportSettings, cleanSettings, resetKeys } from "./prefsdata.js";
 import { toast, platform, dateStamp, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
@@ -109,6 +110,10 @@ function applyPrefs() {
   setAttr("data-font", APP.prefs.font === "plain", "plain");
   setAttr("data-motion", APP.prefs.motion === "reduced", "reduced");
   setAttr("data-tap", !!APP.prefs.bigtap, "big");
+  setAttr("data-accent", APP.prefs.accent && APP.prefs.accent !== "oxblood", APP.prefs.accent);
+  setAttr("data-corners", APP.prefs.corners && APP.prefs.corners !== "soft", APP.prefs.corners);
+  setAttr("data-density", APP.prefs.density && APP.prefs.density !== "normal", APP.prefs.density);
+  setAttr("data-width", APP.prefs.width === "wide", "wide");
   setHaptics(APP.prefs.haptics !== "off");
   setVolume(APP.prefs.vol == null ? 70 : APP.prefs.vol);
   syncWake();
@@ -440,6 +445,8 @@ const PREF_TOGGLES = {
   vignette: { get: p => p.vignette !== false, set: (p, v) => { p.vignette = v; } },
   contrast: { get: p => p.contrast === "high", set: (p, v) => { p.contrast = v ? "high" : "normal"; } },
   bigtap: { get: p => !!p.bigtap, set: (p, v) => { p.bigtap = v; } },
+  showxp: { get: p => p.showxp !== false, set: (p, v) => { p.showxp = v; } },
+  showquick: { get: p => p.showquick !== false, set: (p, v) => { p.showquick = v; } },
   turns: { get: p => p.turns !== false, set: (p, v) => { p.turns = v; } },
   keys: { get: p => p.keys !== false, set: (p, v) => { p.keys = v; } },
   cxfx: { get: p => p.cxfx !== false, set: (p, v) => { p.cxfx = v; } },
@@ -1273,7 +1280,7 @@ const ACTIONS = {
       if (v) sfx("confirm");
     }
     if (el.dataset.k === "haptics" && v) { try { navigator.vibrate(30); } catch (e) { } }
-    if (["vignette", "contrast", "bigtap", "turns", "concprompt", "gwm"].includes(el.dataset.k)) render();
+    if (["vignette", "contrast", "bigtap", "turns", "concprompt", "gwm", "showxp", "showquick"].includes(el.dataset.k)) render();
   },
   setPrefV(el) {
     // Changing an already-chosen sheet style asks first; the very first pick applies at once.
@@ -1302,6 +1309,23 @@ const ACTIONS = {
     toast("Switched to the " + APP.prefs.sheetStyle + " sheet");
   },
   searchRules() { APP.rulesQuery = APP.sheetQuery; Object.assign(glState(APP), { cat: "all", picked: true, sel: null, f: {}, sort: "", desc: false, limit: 150 }); APP.sheetTab = "rules"; render(); window.scrollTo(0, 0); },
+  resetSection(el) {
+    if (!window.confirm("Reset this section to its defaults?")) return;
+    resetKeys(APP.prefs, el.dataset.sec); savePrefs(); applyPrefs(); render(); toast("Section reset");
+  },
+  exportPrefs() { shareOrDownload(`the-sheet-settings-${dateStamp()}.json`, JSON.stringify(exportSettings(APP.prefs), null, 1)); },
+  importPrefs() {
+    const input = Object.assign(document.createElement("input"), { type: "file", accept: ".json,application/json" });
+    input.onchange = async () => {
+      const f = input.files && input.files[0]; if (!f) return;
+      try {
+        const got = cleanSettings(JSON.parse(await f.text()));
+        const n = Object.keys(got).length; if (!n) { toast("No settings in that file"); return; }
+        Object.assign(APP.prefs, got); savePrefs(); applyPrefs(); render(); toast(n + " settings applied");
+      } catch (e) { toast("Not a settings file"); }
+    };
+    input.click();
+  },
   testSound() { sfx("confirm"); sfx("dice"); },
   resetPrefs() {
     if (!window.confirm("Put every setting back to its default? Your characters are not touched.")) return;

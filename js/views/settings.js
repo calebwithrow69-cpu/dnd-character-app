@@ -23,8 +23,9 @@ function choice(k, label, hint, options, cur, extra = {}) {
   </div>`;
 }
 
-function section(id, title, body, open) {
-  return `<details class="setsec" data-sec="${id}" ${open ? "open" : ""}><summary><span>${esc(title)}</span></summary><div class="setbody">${body}</div></details>`;
+function section(id, title, body, open, resettable) {
+  const reset = resettable ? `<div class="setrow col" data-s="reset defaults ${esc(title.toLowerCase())}"><button class="btn sm" data-a="resetSection" data-sec="${id}">Reset section</button></div>` : "";
+  return `<details class="setsec" data-sec="${id}" ${open ? "open" : ""}><summary><span>${esc(title)}</span></summary><div class="setbody">${body}${reset}</div></details>`;
 }
 
 function daysAgo(ts) {
@@ -43,8 +44,11 @@ export function settingsBody(app) {
 
   const appearance =
     choice("theme", "Theme", "Auto follows your device.", [["auto", "Auto"], ["dark", "Dark Tome"], ["light", "Parchment"]], theme, { kw: "dark light mode" }) +
-    choice("size", "Text size", "", [["normal", "Normal"], ["large", "Large"], ["xl", "Extra large"]], size, { kw: "font zoom" }) +
-    choice("font", "Text style", "Plain is easier to read for some people.", [["tome", "Tome serif"], ["plain", "Plain sans"]], p.font || "tome", { kw: "font dyslexia readable" });
+    choice("accent", "Accent colour", "Buttons, highlights and tabs.", [["oxblood", "Oxblood"], ["teal", "Teal"], ["violet", "Violet"], ["gold", "Gold"], ["blue", "Blue"], ["green", "Green"]], p.accent || "oxblood", { kw: "color colour highlight theme" }) +
+    choice("size", "Text size", "", [["small", "Small"], ["normal", "Normal"], ["large", "Large"], ["xl", "Extra large"]], size, { kw: "font zoom" }) +
+    choice("font", "Text style", "Plain is easier to read for some people.", [["tome", "Tome serif"], ["plain", "Plain sans"]], p.font || "tome", { kw: "font dyslexia readable" }) +
+    choice("corners", "Corners", "", [["sharp", "Sharp"], ["soft", "Soft"], ["round", "Round"]], p.corners || "soft", { kw: "radius shape panels" }) +
+    choice("density", "Spacing", "", [["compact", "Compact"], ["normal", "Normal"], ["roomy", "Roomy"]], p.density || "normal", { kw: "density compact padding gap" });
 
   const feel =
     sw("sfx", "Button sounds", "Soft taps, page turns and dice clatter.", sfxOn, { kw: "sound audio" }) +
@@ -55,11 +59,16 @@ export function settingsBody(app) {
     </div>` +
     sw("haptics", "Vibration on tap", HAS_VIBRATE ? "A tiny buzz on supported phones." : "Not supported on this device (iPhones do not allow it).", p.haptics !== "off" && HAS_VIBRATE, { disabled: !HAS_VIBRATE, kw: "buzz haptic" });
 
+  const sheet =
+    choice("sheetStyle", "Character sheet", "Changing it asks you to confirm.", [["classic", "Classic"], ["advanced", "Advanced"]], p.sheetStyle || "classic", { kw: "sheet layout classic advanced beginner" }) +
+    choice("startTab", "Open characters on", "Which tab shows first.", [["stats", "Character"], ["rules", "Rules"]], p.startTab || "stats", { kw: "default start tab" }) +
+    choice("width", "Laptop width", "Standard or full window.", [["standard", "Standard"], ["wide", "Wide"]], p.width || "standard", { kw: "wide layout desktop screen" }) +
+    sw("showxp", "Show XP line", "Experience under the level seal.", p.showxp !== false, { kw: "experience points level" }) +
+    sw("showquick", "Show quick stats", "Initiative, speed, proficiency, passive perception.", p.showquick !== false, { kw: "initiative speed passive perception header" });
+
   const play =
     sw("wake", "Keep screen awake", HAS_WAKE ? "Stops your phone sleeping while the app is open at the table." : "Not supported on this browser.", !!p.wake && HAS_WAKE, { disabled: !HAS_WAKE, kw: "sleep screen on" }) +
     sw("vignette", "Red edge glow at low HP", "The screen edges pulse red when you are nearly down.", p.vignette !== false, { kw: "vignette danger" }) +
-    choice("sheetStyle", "Character sheet", "Classic follows the printed 2024 sheet on one page. Advanced adds Play Mode, loadouts and tabs. Changing it asks you to confirm.", [["classic", "Classic"], ["advanced", "Advanced"]], p.sheetStyle || "classic", { kw: "sheet layout classic advanced beginner" }) +
-    choice("startTab", "Open characters on", "Which tab shows first.", [["stats", "Character"], ["rules", "Rules"]], p.startTab || "stats", { kw: "default start tab" }) +
     choice("rollfx", "Roll animation", "The full-screen dice roll. Crits only skips the tumble but keeps the natural 1 and 20 effects. Off keeps the screen but drops the motion.", [["full", "Full"], ["crits", "Crits only"], ["off", "Off"]], p.rollfx || "full", { kw: "dice animation effects natural 20 natural 1 reduce motion" }) +
     sw("cxfx", "Character creation effects", "Falling leaves, sparks, stars and colour changes behind the creation screens, and the seal when you finish. Turn off for a plain screen.", p.cxfx !== false, { kw: "creation effects particles animation reduce motion" }) +
     sw("keys", "Keyboard shortcuts", "Play Mode on a laptop: / search, J and K move, Enter uses, N next turn, 1 2 3 mark Action, Bonus Action and Reaction. Also shows the shortcut bar.", p.keys !== false, { kw: "keyboard keys hotkeys shortcuts buttons controls" });
@@ -75,6 +84,12 @@ export function settingsBody(app) {
       <button class="btn block" data-a="exportAll">Export all</button>
       <button class="btn block" data-a="importPrompt">Restore backup</button>
       <div class="sethint">${app.persisted ? "This browser has agreed to keep your data." : "Tip: installing the app to your home screen keeps your data safest."}</div>
+    </div>` +
+    choice("backupDays", "Backup reminder", "Banner on Home when a backup is overdue.", [["7", "7 days"], ["14", "14 days"], ["30", "30 days"], ["0", "Off"]], String(p.backupDays != null ? p.backupDays : 14), { kw: "backup banner warning" }) +
+    `<div class="setrow col" data-s="settings export import copy transfer device">
+      <div class="setinfo"><div class="setlabel">Settings file</div><div class="sethint">Move your settings to another device.</div></div>
+      <button class="btn block" data-a="exportPrefs">Export settings</button>
+      <button class="btn block" data-a="importPrefs">Import settings</button>
     </div>` +
     `<div class="setrow col" data-s="update rules data refresh check">
       <div class="setinfo"><div class="setlabel">Rules data</div><div class="sethint">App updates install themselves: at launch, or with an Update now bar. ${L ? esc((app.campaign && app.campaign.name) || "Campaign") + ": " + L.classes.length + " classes, " + L.species.length + " species, " + L.spells.length + " spells, " + L.items.length + " items." : ""}</div></div>
@@ -106,11 +121,12 @@ export function settingsBody(app) {
   const body = `<div class="stack">
     <div class="search"><input class="f" type="search" placeholder="Search settings" aria-label="Search settings" data-set-search="1" autocomplete="off"></div>
     <div id="set-empty" class="sethint hide">No settings match that.</div>
-    ${section("appearance", "Appearance", appearance, op("appearance"))}
-    ${section("feel", "Sound and feel", feel, op("feel"))}
-    ${section("play", "Play", play, op("play"))}
-    ${section("access", "Accessibility", access, op("access"))}
-    ${section("data", "Data and backups", data, op("data"))}
+    ${section("appearance", "Appearance", appearance, op("appearance"), true)}
+    ${section("sheet", "Character sheet", sheet, op("sheet"), true)}
+    ${section("feel", "Sound and feel", feel, op("feel"), true)}
+    ${section("play", "Play", play, op("play"), true)}
+    ${section("access", "Accessibility", access, op("access"), true)}
+    ${section("data", "Data and backups", data, op("data"), true)}
     ${section("about", "About and what's new", about, op("about"))}
     ${section("danger", "Reset and repair", danger, op("danger"))}
   </div>`;

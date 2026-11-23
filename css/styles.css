@@ -1972,12 +1972,12 @@ body.cx-on .btn.incomplete{opacity:.6}
 .sp-warn i{flex:none;width:18px;height:18px;border-radius:50%;background:var(--amber);color:var(--amber-ink);font:700 .75rem/18px var(--mono);font-style:normal;text-align:center}
 
 /* ===== Classic sheet v2: floating header and dock, card panels, underline tabs ===== */
-.sheetview[data-sheet="classic"] .topbar.sheetbar{margin:10px 12px 0;top:10px;border-radius:18px;box-shadow:0 10px 28px rgba(30,8,12,.3)}
+.sheetview[data-sheet] .topbar.sheetbar{margin:10px 12px 0;top:10px;border-radius:18px;box-shadow:0 10px 28px rgba(30,8,12,.3)}
 .sheetview[data-sheet="classic"] .status{background:var(--panel);border:1px solid var(--line);border-radius:var(--card-r);padding:18px 14px 14px;margin-top:14px;box-shadow:0 8px 22px rgba(30,8,12,.1)}
 .sheetview[data-sheet="classic"] .status .xpline{margin:10px 0 0;color:var(--muted)}
 .sheetview[data-sheet="classic"] .status .quick{margin-top:12px;border-radius:12px}
-.sheetview[data-sheet="classic"] nav.tabs{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border-radius:20px;box-shadow:0 10px 28px rgba(30,8,12,.35)}
-.sheetview[data-sheet="classic"] nav.tabs button{border-radius:16px}
+.sheetview[data-sheet] nav.tabs{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border-radius:20px;box-shadow:0 10px 28px rgba(30,8,12,.35)}
+.sheetview[data-sheet] nav.tabs button{border-radius:16px}
 
 .sheetview[data-sheet="classic"] .subtabs.seg{display:flex;gap:0;margin:2px 0 14px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;box-shadow:none;overflow-x:auto;scrollbar-width:none}
 .sheetview[data-sheet="classic"] .subtabs.seg::-webkit-scrollbar{display:none}
@@ -1997,11 +1997,11 @@ body.cx-on .btn.incomplete{opacity:.6}
 .sheetview[data-sheet="classic"] .classic .abrow .term:hover{text-decoration:underline dotted var(--amber);text-underline-offset:3px;background:none}
 .sheetview[data-sheet="classic"] .classic .rowline{padding-inline:2px}
 @media (min-width:1100px){
-  .sheetview[data-sheet="classic"]{padding-left:120px}
-  .sheetview[data-sheet="classic"] .topbar.sheetbar{margin:12px 28px 0 20px}
-  .sheetview[data-sheet="classic"] nav.tabs{left:16px;right:auto;top:104px;bottom:auto;width:88px;padding:8px;border:1px solid #ffffff1f;border-radius:22px;background:linear-gradient(180deg,var(--card-hi),var(--card-lo))}
-  .sheetview[data-sheet="classic"] nav.tabs .in{gap:6px}
-  .sheetview[data-sheet="classic"] nav.tabs button{min-height:72px;border-radius:16px}
+  .sheetview[data-sheet]{padding-left:120px}
+  .sheetview[data-sheet] .topbar.sheetbar{margin:12px 28px 0 20px}
+  .sheetview[data-sheet] nav.tabs{left:16px;right:auto;top:104px;bottom:auto;width:88px;padding:8px;border:1px solid #ffffff1f;border-radius:22px;background:linear-gradient(180deg,var(--card-hi),var(--card-lo))}
+  .sheetview[data-sheet] nav.tabs .in{gap:6px}
+  .sheetview[data-sheet] nav.tabs button{min-height:72px;border-radius:16px}
   .sheetview[data-sheet="classic"] .classic{background:none;border:0;box-shadow:none;padding:0;border-radius:0}
   .sheetview[data-sheet="classic"] .classic::before{display:none}
   .sheetview[data-sheet="classic"] .cl-top{gap:20px}
@@ -2015,7 +2015,7 @@ body.cx-on .btn.incomplete{opacity:.6}
 .sheetview[data-sheet="classic"] .hptext .muted{white-space:nowrap;font-size:.85rem}
 .sheetview[data-sheet="classic"] .hptext .hpedit{flex-basis:100%}
 .sheetview[data-sheet="classic"] .subtabs.seg button{flex:1 1 0;min-width:0;padding:0 4px;letter-spacing:.06em;font-size:.66rem}
-.sheetview[data-sheet="classic"] nav.tabs button{font-size:.6rem;letter-spacing:.08em}
+.sheetview[data-sheet] nav.tabs button{font-size:.6rem;letter-spacing:.08em}
 @media (min-width:1100px){.sheetview[data-sheet="classic"] .subtabs.seg button{font-size:.72rem;letter-spacing:.14em}}
 
 /* ---- Rules glossary: search, tabs, filters, list + entry pane ---- */
@@ -2331,3 +2331,31 @@ h2.nb-rtitle{margin:14px 16px 0;font-family:var(--display);font-size:1.25rem;let
   .shop-page .shelf button em{margin-left:auto}
 }
 .sheetview main.page > .nb{margin-top:14px}
+/* ---- Settings: accent, corners, spacing, width, small text ---- */
+:root[data-accent="teal"][data-mode="dark"]{--amber:#4FB3A5;--amber-dim:#173A35}
+:root[data-accent="teal"][data-mode="light"]{--amber:#1F6B5E;--amber-dim:#CFE3DD}
+:root[data-accent="violet"][data-mode="dark"]{--amber:#A78BDA;--amber-dim:#2E2347}
+:root[data-accent="violet"][data-mode="light"]{--amber:#5B45B0;--amber-dim:#DCD5EE}
+:root[data-accent="gold"][data-mode="dark"]{--amber:#E0B04A;--amber-dim:#3D3015}
+:root[data-accent="gold"][data-mode="light"]{--amber:#8A6200;--amber-dim:#EBDDB5}
+:root[data-accent="blue"][data-mode="dark"]{--amber:#7FA8D9;--amber-dim:#1D2D44}
+:root[data-accent="blue"][data-mode="light"]{--amber:#2F5F8F;--amber-dim:#D3DFEC}
+:root[data-accent="green"][data-mode="dark"]{--amber:#7DBE6B;--amber-dim:#233A1D}
+:root[data-accent="green"][data-mode="light"]{--amber:#3F6B3A;--amber-dim:#D5E3CF}
+:root[data-corners="sharp"]{--card-r:6px;--card-ri:4px}
+:root[data-corners="round"]{--card-r:26px;--card-ri:16px}
+:root[data-corners="sharp"] .panel,:root[data-corners="sharp"] .abblk,:root[data-corners="sharp"] .status{border-radius:4px!important}
+:root[data-corners="round"] .panel,:root[data-corners="round"] .abblk,:root[data-corners="round"] .status{border-radius:24px!important}
+:root[data-density="compact"] .rowline{padding-block:3px;min-height:36px}
+:root[data-density="compact"] .abrow{min-height:28px}
+:root[data-density="compact"] .k-main{min-height:44px;padding-block:3px}
+:root[data-density="compact"] .panel{margin-top:8px}
+:root[data-density="compact"] .panel-body{padding-block:10px}
+:root[data-density="roomy"] .rowline{padding-block:12px}
+:root[data-density="roomy"] .abrow{min-height:42px}
+:root[data-density="roomy"] .k-main{min-height:66px;padding-block:9px}
+:root[data-density="roomy"] .panel{margin-top:20px}
+html[data-size="small"] body{zoom:.92}
+@media (min-width:1100px){
+  :root[data-width="wide"] .sheetview .wrap,:root[data-width="wide"] .sheetview main.wide{max-width:none}
+}

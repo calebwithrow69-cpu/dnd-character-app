@@ -2,11 +2,29 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.58";
+export const VERSION = "0.1.59";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.59",
+    date: "2026-11-22",
+    stage: "Pre-build",
+    blurb: "Settings overhaul. Advanced sheet rail matches Classic.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Settings: accent colour, corner shape, spacing, small text, laptop width.",
+          "Settings: Character sheet section with XP line and quick stats switches.",
+          "Settings: backup reminder interval, Reset section on every section, settings file export and import.",
+          "Advanced sheet: floating side rail and header match the Classic sheet.",
+          "Rules tab on the sheet no longer shows the character header."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.58",
     date: "2026-11-21",

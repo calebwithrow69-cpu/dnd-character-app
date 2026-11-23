@@ -77,6 +77,8 @@ export function storageBanner(app, { now = Date.now(), nav = navigator } = {}) {
   const standalone = !!(nav.standalone || (typeof matchMedia === "function" && matchMedia("(display-mode: standalone)").matches));
   if (safariAtRisk(nav, standalone)) return `<button class="hwarn" data-a="openSettings">Safari erases data. Install</button>`;
   const last = app.prefs && app.prefs.lastBackup;
-  if (!last || now - last > BACKUP_DAYS * 864e5) return `<button class="hwarn" data-a="exportAll">${last ? `Last backup ${Math.floor((now - last) / 864e5)} days ago. Back up now.` : "No backup yet. Back up now."}</button>`;
+  const days = app.prefs && app.prefs.backupDays != null ? parseInt(app.prefs.backupDays, 10) : BACKUP_DAYS;
+  if (days === 0) return "";
+  if (!last || now - last > (days || BACKUP_DAYS) * 864e5) return `<button class="hwarn" data-a="exportAll">${last ? `Last backup ${Math.floor((now - last) / 864e5)} days ago. Back up now.` : "No backup yet. Back up now."}</button>`;
   return "";
 }
