@@ -2,11 +2,33 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.59";
+export const VERSION = "0.1.60";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.60",
+    date: "2026-11-23",
+    stage: "Pre-build",
+    blurb: "Advanced sheet overhaul and a segmented HP bar.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "The HP bar is segmented, with the number on the bar, a lit edge, and a layout that fits at 360px.",
+          "Play has one filter row (Action, Bonus, Reaction, Ready) and a Show menu for sources. The Sections list is gone.",
+          "The level 1 to 20 timeline moved from Play to Features as Progression.",
+          "Play's side column holds hit dice, Heroic Inspiration, short and long rest next to spell slots and trackers.",
+          "The Hotbar shrinks to one line while it is empty.",
+          "More is now Stats: an ability radar with six score tiles, saving throws and skills with roll buttons, proficiencies and languages.",
+          "Rolls is all dice: a tray (d4 to d100, count, modifier), pinned checks, saved formulas and recent rolls.",
+          "Spells and the bag have a filter row and search.",
+          "Turn tracker and concentration prompts moved to Settings. Conditions are added from the chip row under the level seal."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.59",
     date: "2026-11-22",

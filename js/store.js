@@ -75,8 +75,11 @@ export function normalize(c, library) {
     : (h.kind === "attack" || h.kind === "item") ? out.inventory.some(i => i.id === h.id)
     : h.kind === "ability" ? true : false));
   out.loadouts = (Array.isArray(c.loadouts) ? c.loadouts : []).filter(l => l && l.id && l.name && l.eq && typeof l.eq === "object").slice(0, 12);
+  // Rolls tab: pinned checks ("init", "abil:str", "save:con", "skill:stealth") and saved dice formulas
+  out.pins = (Array.isArray(c.pins) ? c.pins : ["init"]).filter((k, i, a) => typeof k === "string" && /^(init|(abil|save):[a-z]{3}|skill:[a-z-]+)$/.test(k) && a.indexOf(k) === i).slice(0, 12);
+  out.formulas = (Array.isArray(c.formulas) ? c.formulas : []).filter((f, i, a) => typeof f === "string" && /^[0-9dD+\-\s]{2,30}$/.test(f) && a.indexOf(f) === i).slice(0, 12);
   out.levelLog = c.levelLog || [];
-  out.dead = c.dead && typeof c.dead === "object" ? { cause: String(c.dead.cause || "").slice(0, 300), at: String(c.dead.at || "").slice(0, 10) } : null;
+  out.dead =c.dead && typeof c.dead === "object" ? { cause: String(c.dead.cause || "").slice(0, 300), at: String(c.dead.at || "").slice(0, 10) } : null;
   out.hpRoll = c.hpRoll && c.hpRoll.level ? { level: Number(c.hpRoll.level), v: Number(c.hpRoll.v) } : undefined;
   out.custom = (Array.isArray(c.custom) ? c.custom : []).filter(x => x && x.id && x.t).map(x => ({ id: x.id, t: x.t, v: Number(x.v) || 0, label: x.label || "Custom" }));
   out.schema = 3;

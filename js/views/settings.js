@@ -68,6 +68,8 @@ export function settingsBody(app) {
 
   const play =
     sw("wake", "Keep screen awake", HAS_WAKE ? "Stops your phone sleeping while the app is open at the table." : "Not supported on this browser.", !!p.wake && HAS_WAKE, { disabled: !HAS_WAKE, kw: "sleep screen on" }) +
+    sw("turns", "Turn tracker", "Action, Bonus Action and Reaction pips on the Play tab.", p.turns !== false, { kw: "combat round action reaction" }) +
+    sw("concprompt", "Concentration prompts", "When you are hit while concentrating, asks for the Constitution save.", !!p.concprompt, { kw: "concentration save" }) +
     sw("vignette", "Red edge glow at low HP", "The screen edges pulse red when you are nearly down.", p.vignette !== false, { kw: "vignette danger" }) +
     choice("rollfx", "Roll animation", "The full-screen dice roll. Crits only skips the tumble but keeps the natural 1 and 20 effects. Off keeps the screen but drops the motion.", [["full", "Full"], ["crits", "Crits only"], ["off", "Off"]], p.rollfx || "full", { kw: "dice animation effects natural 20 natural 1 reduce motion" }) +
     sw("cxfx", "Character creation effects", "Falling leaves, sparks, stars and colour changes behind the creation screens, and the seal when you finish. Turn off for a plain screen.", p.cxfx !== false, { kw: "creation effects particles animation reduce motion" }) +

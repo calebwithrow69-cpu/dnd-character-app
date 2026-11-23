@@ -32,10 +32,7 @@ function spawn(n, f) { for (let i = 0; i < n && view.part.length < 220; i++) vie
 export function mountHp(canvas, st) {
   cv = canvas; ctx = cv.getContext("2d"); theme();
   const stage = cv.parentElement;
-  dpr = Math.min(2, window.devicePixelRatio || 1);
-  CW = stage.clientWidth + PADX * 2; CH = TH + PADT + PADB;
-  cv.width = Math.round(CW * dpr); cv.height = Math.round(CH * dpr);
-  cv.style.width = CW + "px"; cv.style.height = CH + "px";
+  sizeCanvas(stage); watch(stage);
   view.max = Math.max(1, st.max); view.cur = st.cur; view.temp = st.temp;
   view.down = st.cur <= 0; view.dead = !!st.dead; view.calm = !!st.calm;
   if (!view.init || view.id !== st.id) {
@@ -43,6 +40,20 @@ export function mountHp(canvas, st) {
   } else if (Math.abs(view.disp - st.cur) > view.max) { view.disp = st.cur; view.ghost = st.cur; view.shown = st.cur; }
   if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
   draw();
+}
+let ro = null, roEl = null;
+function watch(stage) {
+  if (!window.ResizeObserver || roEl === stage) return;
+  if (ro) ro.disconnect();
+  roEl = stage; let w0 = stage.clientWidth;
+  ro = new ResizeObserver(() => { if (!cv || !stage.isConnected || stage.clientWidth === w0) return; w0 = stage.clientWidth; sizeCanvas(stage); draw(); });
+  ro.observe(stage);
+}
+function sizeCanvas(stage) {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  CW = stage.clientWidth + PADX * 2; CH = TH + PADT + PADB;
+  cv.width = Math.round(CW * dpr); cv.height = Math.round(CH * dpr);
+  cv.style.width = CW + "px"; cv.style.height = CH + "px";
 }
 export function unmountHp() { cv = null; }
 
@@ -58,7 +69,7 @@ function frame(now) {
   if (!active() && !view.calm) { idleSkip += dt; if (idleSkip < 0.08) return; update(idleSkip); idleSkip = 0; draw(); return; }
   update(dt); draw();
   const num = cv.closest(".hpwrap")?.querySelector(".hpnum"), v = Math.round(view.shown);
-  if (num) { if (num.textContent !== String(v)) num.textContent = v; num.classList.toggle("low", view.cur / view.max < 0.34); }
+  if (num) { if (num.textContent !== String(v)) num.textContent = v; num.classList.toggle("low", view.cur / view.max < 0.34); cv.parentElement.classList.toggle("low", view.cur / view.max < 0.34); }
 }
 function update(dt) {
   view.t += dt;
@@ -124,10 +135,17 @@ function draw() {
     ctx.restore();
     if (view.soft && view.cur > view.disp + 0.2) { const hx = x0 + w * clamp(view.cur / max, 0, 1); ctx.fillStyle = `rgba(150,255,180,${0.35 + 0.2 * Math.sin(view.t * 12)})`; ctx.fillRect(fx, y0, hx - fx, h); }
   } else if (view.soft && view.cur > 0) { const hx = x0 + w * clamp(view.cur / max, 0, 1); ctx.fillStyle = "rgba(150,255,180,.4)"; ctx.fillRect(x0, y0, hx - x0, h); }
-  // measure marks, kept to about a dozen
-  let step = max <= 40 ? 5 : 10; while (max / step > 14) step *= 2;
-  ctx.strokeStyle = "rgba(0,0,0,.28)"; ctx.lineWidth = 1;
-  for (let v = step; v < max; v += step) { const tx = Math.round(x0 + w * v / max) + 0.5; ctx.beginPath(); ctx.moveTo(tx, y0 + h - 6); ctx.lineTo(tx, y0 + h); ctx.stroke(); }
+  // segments: equal chunks of the maximum, cut by slanted gaps; the chunk the fill edge sits in is lit
+  const n = clamp(Math.round(max / 10), 5, 16), sw = w / n, sk = 5;
+  if (fx > x0 + 0.5) {
+    const k = Math.min(n - 1, Math.floor((fx - x0) / sw)), lit = 0.10 + 0.07 * Math.sin(view.t * 3.2);
+    ctx.fillStyle = `rgba(255,255,255,${lit})`; ctx.beginPath(); ctx.moveTo(x0 + k * sw + sk, y0); ctx.lineTo(Math.min(fx, x0 + (k + 1) * sw) + sk, y0); ctx.lineTo(Math.min(fx, x0 + (k + 1) * sw), y0 + h); ctx.lineTo(x0 + k * sw, y0 + h); ctx.closePath(); ctx.fill();
+  }
+  ctx.strokeStyle = "rgba(8,5,5,.78)"; ctx.lineWidth = 2.2;
+  for (let i = 1; i < n; i++) { const tx = Math.round(x0 + sw * i) + 0.5; ctx.beginPath(); ctx.moveTo(tx + sk, y0 - 1); ctx.lineTo(tx - sk, y0 + h + 1); ctx.stroke(); }
+  ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 1;
+  for (let i = 1; i < n; i++) { const tx = Math.round(x0 + sw * i) + 2; ctx.beginPath(); ctx.moveTo(tx + sk, y0); ctx.lineTo(tx - sk, y0 + h); ctx.stroke(); }
+  if (fx > x0 + 3 && !down) { const ea = 0.55 + 0.25 * Math.sin(view.t * 6); ctx.save(); ctx.shadowColor = `hsl(${hue},90%,70%)`; ctx.shadowBlur = 9; ctx.strokeStyle = `rgba(255,255,255,${ea})`; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(fx + 1, y0 + 2); ctx.lineTo(fx + 1, y0 + h - 2); ctx.stroke(); ctx.restore(); }
   // temp HP shield
   const tw = w * clamp(view.tdisp / max, 0, 1);
   if (tw > 1) {

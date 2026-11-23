@@ -115,9 +115,24 @@ for (const [name, w, h, o] of [VIEWS[0], VIEWS[2], VIEWS[4]]) {
 await check("advanced sheet: every Character sub-tab opens (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
   await goAdvanced(p);
-  const subs = await p.locator('[data-a="charSub"]').evaluateAll(es => es.map(e => e.dataset.v || e.dataset.t || e.textContent.trim()));
-  assert(subs.length >= 5, "expected 5 sub-tabs, got " + subs.length);
-  for (let i = 0; i < subs.length; i++) { await p.locator('[data-a="charSub"]').nth(i).click(); await p.waitForTimeout(250); assert(await hscroll(p) <= 0, "hscroll on sub-tab " + i); }
+  const subs = await p.locator('.subtabs [data-a="charSub"]').evaluateAll(es => es.map(e => e.dataset.v || e.dataset.t || e.textContent.trim()));
+  assert(subs.length === 6, "expected 6 sub-tabs, got " + subs.length);
+  for (let i = 0; i < subs.length; i++) { await p.locator('.subtabs [data-a="charSub"]').nth(i).click(); await p.waitForTimeout(250); assert(await hscroll(p) <= 0, "hscroll on sub-tab " + i); }
+  noErrs(p); await p.context().close();
+});
+
+await check("Stats and Rolls: radar, check rolls, pin persists, dice tray rolls", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
+  await p.locator('[data-a="charSub"][data-sub="stats"]').click(); await p.waitForTimeout(300);
+  assert(await p.locator(".st-radar").count() === 1, "no radar");
+  assert(await p.locator(".st-six").count() === 6, "expected six ability tiles");
+  await p.locator('[data-a="togglePin"]').first().click(); await p.waitForTimeout(300);
+  assert(await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-roster-v1")).gandork.pins.length) >= 2, "pin was not stored");
+  await p.locator('[data-a="charSub"][data-sub="rolls"]').click(); await p.waitForTimeout(300);
+  assert(await p.locator('[data-a="rollPin"]').count() >= 2, "pin missing on Rolls");
+  await p.locator('[data-a="trayAdd"][data-sides="6"]').click(); await p.locator('[data-a="trayAdd"][data-sides="6"]').click(); await p.locator('[data-a="trayRoll"]').click(); await p.waitForTimeout(600);
+  assert(await p.locator("#rstage").count() > 0, "tray roll showed no roll card");
+  assert(await hscroll(p) <= 0, "hscroll on Rolls");
   noErrs(p); await p.context().close();
 });
 
@@ -504,14 +519,14 @@ await check("a new character always asks which sheet to use, even after a style 
 await check("Play Mode: first sub-tab, groups, dimmed buttons, standard actions, roll stage (phone + laptop)", async () => {
   for (const [w, h, o] of [[390, 844, { touch: true }], [1280, 800, {}]]) {
     const p = await open(w, h, o); await openSample(p); await goAdvanced(p);
-    const first = await p.locator('[data-a="charSub"]').first().textContent();
+    const first = await p.locator('.subtabs [data-a="charSub"]').first().textContent();
     assert(/^Play/.test(first), "Play Mode is not the first sub-tab: " + first);
     assert(await p.locator(".row").count() > 0, "no rows in Play Mode");
     assert(await p.locator(".row .r-ic svg").count() > 0, "rows have no icons");
     assert(await p.locator(".pgrp").count() > 0, "no groups");
     // standard actions are opt-in
     assert(await p.locator('[data-row="std:dodge"]').count() === 0, "standard actions shown by default");
-    await p.locator('[data-a="playShow"][data-k="std"]').click(); await p.waitForTimeout(250);
+    await p.locator('[data-a="playShowMenu"]').click(); await p.waitForTimeout(150); await p.locator('[data-a="playShow"][data-k="std"]').click(); await p.waitForTimeout(250); await p.locator('.pm-list').first().click({ position: { x: 4, y: 4 } }); await p.waitForTimeout(150);
     for (const id of ["std:dodge", "std:influence", "std:oa"]) assert(await p.locator('[data-row="' + id + '"]').count() === 1, "missing " + id);
     // spend the Action: Dodge dims, Opportunity Attack (Reaction) does not
     await p.locator('[data-a="playUse"][data-id="std:dodge"]').click(); await p.waitForTimeout(250);
@@ -532,7 +547,7 @@ await check("Play Mode: first sub-tab, groups, dimmed buttons, standard actions,
 
 await check("roll stage: nat 20 / nat 1 effects, advantage and disadvantage, Lucky, Primal Strike (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
-  await p.locator('[data-a="charSub"][data-sub="rolls"]').click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="charSub"][data-sub="stats"]').click(); await p.waitForTimeout(300);
   const seq = async list => p.evaluate(l => { window.__q = l.slice(); crypto.getRandomValues = a => { a[0] = (window.__q.length ? window.__q.shift() : 10) - 1; return a; }; }, list);
   const start = async () => { await p.locator('[data-a="rollSkill"], [data-a="rollAbility"], [data-a="rollSave"]').first().click({ timeout: 4000 }); await p.waitForTimeout(300); };
   const close = async () => { await p.locator(".rs-done").click(); await p.waitForTimeout(400); };
@@ -638,7 +653,7 @@ await check("Play Mode: spending abilities ask first, one Activate/End button, a
 
 await check("roll card: Heroic Inspiration rerolls one chosen damage die and is used up (laptop)", async () => {
   const p = await open(1280, 800, {}); await openSample(p); await goAdvanced(p);
-  await clickA(p, "charSub", '[data-sub="more"]');
+  await clickA(p, "charSub", '[data-sub="play"]');
   const insp = p.locator('[data-a="toggleInsp"]').first(); assert(await insp.count() === 1, "no Heroic Inspiration button");
   if (!/have it/i.test(await insp.innerText())) await insp.click(); await p.waitForTimeout(300);
   await clickA(p, "charSub", '[data-sub="play"]');
@@ -655,7 +670,7 @@ await check("roll card: Heroic Inspiration rerolls one chosen damage die and is 
   assert(await p.locator("#rstage .rs-opts .rs-chip.rr").count() === 0, "Inspiration still offered after use");
   assert(/\u2192/.test(await p.locator("#rstage .rs-res").innerText()), "the reroll is not shown in the damage line");
   await p.locator("#rstage .rs-done").click(); await p.waitForTimeout(300);
-  await clickA(p, "charSub", '[data-sub="more"]');
+  await clickA(p, "charSub", '[data-sub="play"]');
   assert(/none/i.test(await p.locator('[data-a="toggleInsp"]').first().innerText()), "Inspiration was not spent");
   noErrs(p); await p.context().close();
 });
@@ -735,7 +750,7 @@ await check("Starry Form: turn on shows an Active chip, survives reload, long re
   await p.locator('[data-a="endActive"]').first().click(); await p.waitForTimeout(300);
   assert(await p.locator(".chip.fx").count() === 0, "chip x did not turn it off");
   await p.locator('[data-a="playUse"][data-id*="Starry Form"]').first().click(); await p.waitForTimeout(300);
-  await p.locator('[data-a="charSub"][data-sub="more"]').click(); await p.waitForTimeout(300);
+  await p.locator('[data-a="charSub"][data-sub="play"]').click(); await p.waitForTimeout(300);
   await clickA(p, "openLongRest"); await clickA(p, "confirmLongRest"); await p.waitForTimeout(400);
   assert(await p.locator(".chip.fx").count() === 0, "long rest did not clear it");
   noErrs(p); await p.context().close();

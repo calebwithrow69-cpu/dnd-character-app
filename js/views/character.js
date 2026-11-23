@@ -1,49 +1,27 @@
-// The Advanced sheet: Play Mode / Spells / Gear / Rolls / Features / More. (Classic is js/views/classic.js.)
-import { trackersPanel } from "./trackers.js";
-import { esc, ICONS, conditionIcon, formatText, activeChips, kRow, kGroup } from "../ui.js";
-import { ABILITIES, ABILITY_LABEL, ABILITY_SHORT, fmtMod } from "../rules.js";
+// The Advanced sheet: Play Mode / Spells / Gear / Rolls / Features / Stats. (Classic is js/views/classic.js.)
+import { esc, kRow, kGroup } from "../ui.js";
 import { findByName, subclassesFor } from "../data.js";
 import { CASTER_TYPE } from "../rules.js";
 import { optionNames, optionGroup } from "../progression.js";
+import { needsFirstChoices, spellsTab, loadoutGearTab } from "./sheet.js";
+import { playTab, trackHtml } from "./play.js";
+import { statsTab, rollsTab } from "./stats.js";
 import { buildCombat } from "../combat.js";
-import { diceTab, needsFirstChoices, spellsTab, loadoutGearTab } from "./sheet.js";
-import { playTab } from "./play.js";
-import { profsChecks } from "./classic.js";
 import { playEntries } from "../play.js";
 
 export function subtabsFor(c) {
   const caster = !!CASTER_TYPE[c.class] || (c.spellcasting.spells || []).length > 0;
-  return [["play", "Play"], caster ? ["spells", "Spells"] : null, ["gear", "Gear"], ["rolls", "Rolls"], ["features", "Features"], ["more", "More"]].filter(Boolean);
+  return [["play", "Play"], caster ? ["spells", "Spells"] : null, ["gear", "Gear"], ["rolls", "Rolls"], ["features", "Features"], ["stats", "Stats"]].filter(Boolean);
 }
 
 export function characterBody(app, c, d) {
   const tabs = subtabsFor(c);
-  const sub = tabs.some(s => s[0] === app.charSub) ? app.charSub : "play";
+  const sub = tabs.some(s => s[0] === app.charSub) ? app.charSub : app.charSub === "more" ? "stats" : "play";
   const body = sub === "play" ? playTab(app, c, d) : sub === "spells" ? spellsTab(app, c, d) : sub === "gear" ? loadoutGearTab(app, c, d)
-    : sub === "rolls" ? rollsTab(app, c, d) : sub === "features" ? featuresTab(app, c, d) : toolsTab(app, c, d) + notesTab(app, c, d);
+    : sub === "rolls" ? rollsTab(app, c, d) : sub === "features" ? featuresTab(app, c, d) : statsTab(app, c, d);
   return `<div class="subtabs seg" role="group" aria-label="Character sections" style="--n:${tabs.length}">
       ${tabs.map(([id, label]) => `<button data-a="charSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}
     </div>${body}`;
-}
-
-const switchRow = (k, label, hint, on) => `<div class="setrow"><div class="setinfo"><div class="setlabel">${label}</div><div class="sethint">${hint}</div></div>
-  <button class="switch" role="switch" aria-checked="${on ? "true" : "false"}" aria-label="${esc(label)}" data-a="togglePref" data-k="${k}"><i></i></button></div>`;
-
-// ---------------- Rolls ----------------
-function rollsTab(app, c, d) {
-  return `
-    <div class="panel"><div class="panel-head"><h2>Abilities</h2></div><div class="panel-body">
-      <div class="grid3 grid6">
-        ${ABILITIES.map(a => `<button class="abil" data-a="rollAbility" data-ab="${a}">
-          <span class="an">${ABILITY_SHORT[a]}</span><span class="am" style="display:block">${c.abilities[a]}</span><span class="as">${fmtMod(d.mods[a])}</span></button>`).join("")}
-      </div></div></div>
-    ${kGroup("Saving throws", c.saveProf.length + " proficient", { tone: "amber" })}<div class="k-list">
-      ${ABILITIES.map(a => kRow({ glyph: ABILITY_SHORT[a], tone: c.saveProf.includes(a) ? "amber" : "faint", title: ABILITY_LABEL[a], cap: c.saveProf.includes(a) ? "Proficient" : "",
-        status: fmtMod(d.saves[a]), mainAttrs: `data-a="rollSave" data-ab="${a}"` })).join("")}</div>
-    ${kGroup("Skills", "dot = proficiency, row = roll", { tone: "blue" })}<div class="k-list">
-      ${d.skills.map(s => kRow({ glyph: ABILITY_SHORT[s.ability], tone: s.expert ? "amber" : s.proficient ? "blue" : "faint", title: s.label,
-        cap: s.expert ? "Expertise" : s.proficient ? "Proficient" : "", status: fmtMod(s.bonus), mainAttrs: `data-a="rollSkill" data-id="${s.id}"`,
-        actions: `<button class="pip" data-a="cycleSkill" data-id="${s.id}" aria-label="${s.label} proficiency: ${s.expert ? "expertise" : s.proficient ? "proficient" : "none"}"><i style="width:14px;height:14px;${s.expert ? "box-shadow:0 0 0 3px var(--amber-dim),0 0 0 5px var(--amber);" : ""}${s.proficient || s.expert ? "" : "background:transparent;border-color:var(--faint)"}"></i></button>` })).join("")}</div>`;
 }
 
 // ---------------- Features ----------------
@@ -69,50 +47,15 @@ function featuresTab(app, c, d) {
     <div class="panel"><div class="panel-head"><h2>Level ${c.level} ${esc(c.class)}</h2>
       <button class="btn sm pri" data-a="openLevelMenu" ${c.level >= 20 ? "disabled" : ""}>Level up</button></div>
       ${warn ? `<div class="panel-body flush">${warn}</div>` : ""}</div>
+    <div class="pm prog-wrap"><div class="prog-head">${kGroup("Progression", "level 1 to 20", { tone: "blue" })}</div>${trackHtml(app, c)}</div>
     ${kGroup("Class", classRows.length, { tone: "amber" })}<div class="k-list">${classRows.map(r => rowOf(r, "amber")).join("")}</div>
     ${kGroup("Species and background", 2, { tone: "green" })}<div class="k-list">
       ${rowOf({ name: `${c.species} traits`, sub: "Species", kind: "species", dn: c.species }, "green")}
       ${rowOf({ name: c.background, sub: "Background", kind: "background", dn: c.background }, "blue")}</div>
     ${kGroup("Feats", c.feats.length, { tone: "feat" })}<div class="k-list">
       ${c.feats.map((f, i) => rowOf({ name: f, sub: "Feat", kind: "feat", i }, "feat")).join("")}</div>
-    <div class="btnrow" style="margin-top:10px"><button class="btn" data-a="openPicker" data-picker="feats">Add a feat</button></div>`;
-}
-
-// ---------------- Tools ----------------
-function toolsTab(app, c, d) {
-  const hd = c.hitDice;
-  return `
-    <div class="panel"><div class="panel-head"><h2>Turn helpers</h2><span class="sub2">Off unless you want them</span></div><div class="panel-body" style="padding:0 14px">
-      ${switchRow("turns", "Turn tracker", "Action, Bonus Action, Reaction on Play tab.", !!app.prefs.turns)}
-      ${switchRow("concprompt", "Concentration prompts", "When you're hit while concentrating, asks you to make the Constitution save instead of just a note.", !!app.prefs.concprompt)}
-    </div></div>
-    <div class="panel"><div class="panel-head"><h2>Rests and inspiration</h2></div><div class="panel-body stack">
-      <div class="rowline" style="border:0"><span class="nm">Hit dice left</span><b>${hd.total - hd.spent} / ${hd.total} <span class="sub2">d${hd.die}</span></b></div>
-      <div class="btnrow"><button class="btn" data-a="openShortRest">Short rest</button><button class="btn" data-a="openLongRest">Long rest</button></div>
-      <button class="btn ${c.inspiration ? "pri" : ""}" data-a="toggleInsp" aria-pressed="${!!c.inspiration}">Heroic Inspiration: ${c.inspiration ? "have it" : "none"}</button>
-      <p class="sub2">Heroic Inspiration: reroll any die, keep the new roll. Max one.</p>
-    </div></div>
-    ${trackersPanel(c)}
-    <div class="panel"><div class="panel-head"><h2>Conditions</h2><button class="btn sm" data-a="openConditions">Change</button></div>
-      <div class="panel-body">${c.conditions.length || c.exhaustion || (c.active || []).length ? `<div class="chips" style="margin:0">${activeChips(c, true)}${c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button></span>`).join("")}${c.exhaustion ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion}</button></span>` : ""}</div><p class="sub2" style="margin-top:8px"></p>` : `<span class="muted small">None</span>`}</div></div>
-    <h2 class="toolh">Dice tray</h2>
-    ${diceTab(app)}`;
-}
-
-
-// ---------------- Notes ----------------
-function notesTab(app, c) {
-  return `
-    <div class="panel"><div class="panel-head"><h2>Notes</h2></div><div class="panel-body">
-      <button class="btn block" data-a="goNotes">${ICONS.notes}<span>Open notes</span></button></div></div>
-    ${c.classFeatureNotes ? `<div class="panel"><div class="panel-head"><h2>Class notes</h2></div><div class="panel-body">
-      <textarea class="f" data-field="classFeatureNotes" aria-label="Class notes">${esc(c.classFeatureNotes)}</textarea></div></div>` : ""}
-    <div class="panel"><div class="panel-head"><h2>Proficiencies &amp; languages</h2></div><div class="panel-body stack">
-      ${profsChecks(c)}
-      <div class="field"><label>Tools and other training</label><textarea class="f" data-field="profsText" style="min-height:60px">${esc(c.profsText)}</textarea></div>
-      <div class="field"><label>Languages</label><input class="f" data-field="languages" value="${esc(c.languages)}"></div>
-    </div></div>
-    <button class="btn block pdfbtn" data-a="downloadPdf">Download character sheet (PDF)</button>`;
+    <div class="btnrow" style="margin-top:10px"><button class="btn" data-a="openPicker" data-picker="feats">Add a feat</button></div>
+    ${c.classFeatureNotes ? `<div class="panel" style="margin-top:14px"><div class="panel-head"><h2>Class notes</h2></div><div class="panel-body"><textarea class="f" data-field="classFeatureNotes" aria-label="Class notes">${esc(c.classFeatureNotes)}</textarea></div></div>` : ""}`;
 }
 
 export function findTile(app, c, d, id) {

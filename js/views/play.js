@@ -8,7 +8,7 @@ import { COST_LABEL, isSustained } from "../combat.js";
 import { detailFor, hotbar } from "./sheet.js";
 
 const GROUPS = [["Action", "Action"], ["Bonus", "Bonus Action"], ["Reaction", "Reaction"], ["Other", "Other"], ["Feat", "Feats"], ["Passive", "Passive"]];
-const FILTERS = [["All", "All"], ["Action", "Action"], ["Bonus", "Bonus Action"], ["Reaction", "Reaction"], ["Avail", "Available"]];
+const FILTERS = [["All", "All"], ["Action", "Action"], ["Bonus", "Bonus"], ["Reaction", "Reaction"], ["Avail", "Ready"]];
 const ORD = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 const CHECK = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
@@ -93,10 +93,15 @@ function slotsRail(c, d) {
   const res = (c.resources || []).length ? `<section><h3>Trackers</h3><div class="res">${c.resources.map((r, i) => `<div class="r"><div class="n"><span>${esc(r.name)}</span><b>${r.max - r.used}/${r.max}</b></div>${r.max <= 8
     ? `<div class="pips">${Array.from({ length: r.max }, (_, k) => `<button class="pip ${k < r.max - r.used ? "" : "used"}" data-a="toggleResource" data-i="${i}" data-k="${k}" aria-label="${esc(r.name)} ${k + 1}, ${k < r.max - r.used ? "available" : "used"}"></button>`).join("")}</div>`
     : `<span class="stepper"><button data-a="resStep" data-i="${i}" data-n="1" aria-label="Use one">−</button><b>${r.max - r.used}</b><button data-a="resStep" data-i="${i}" data-n="-1" aria-label="Regain one">+</button></span>`}</div>`).join("")}</div></section>` : "";
-  return slots + res;
+  const hd = c.hitDice || { total: 0, spent: 0, die: 8 };
+  const rest = `<section class="pm-rest"><h3>Rest</h3><div class="res"><div class="r"><div class="n"><span>Hit dice</span><b>${hd.total - hd.spent}/${hd.total} d${hd.die}</b></div></div>
+    <button class="btn sm block" data-a="toggleInsp" aria-pressed="${!!c.inspiration}">Heroic Inspiration: ${c.inspiration ? "Have it" : "None"}</button>
+    <div class="btnrow"><button class="btn sm" data-a="openShortRest">Short rest</button><button class="btn sm" data-a="openLongRest">Long rest</button></div>
+    <button class="linkbtn pm-lvl" data-a="charSub" data-sub="features">Level ${c.level} \u00b7 Progression</button></div></section>`;
+  return slots + res + rest;
 }
 
-function trackHtml(app, c) {
+export function trackHtml(app, c) {
   const trk = levelTrack(app, c), cur = app.playLv || c.level, node = trk.find(t => t.lv === cur) || trk[0];
   const tp = Math.max(0, Math.min(1, (c.level - 1) / (trk.length - 1)));
   const tip = t => `<span class="tip"><b>Level ${t.lv}</b>${t.features.length ? t.features.map(f => esc(f.name)).join(", ") + "<br>" : ""}${t.extra.slice(0, 4).map(esc).join("<br>")}</span>`;
@@ -166,22 +171,21 @@ export function playTab(app, c, d) {
         <button class="tk next" data-a="turnNext">${t.round ? "Next turn" : "Start combat"}</button>${t.round ? `<button class="tk" data-a="turnEnd">End</button><span class="rnd">Round <b>${t.round}</b></span>` : ""}<button class="tk" data-a="togglePref" data-k="turns" aria-pressed="true">Turn tracker: On</button></div>`
     : `<div class="tracker"><button class="tk next" data-a="togglePref" data-k="turns" aria-pressed="false">Turn tracker: Off</button></div>`;
   const keys = app.prefs.keys !== false;
-  const nav = flat.map(([k, label, n]) => `<button data-a="playJump" data-g="${k}"><span>${label}</span><b>${n}</b></button>`).join("");
   return `<div class="pm ${keys ? "withkeys" : ""}">
     <div class="pm-cmd">
       <div class="r">${tracker}
         <label class="srch"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg><input id="pm-q" type="search" placeholder="Search" aria-label="Search abilities" value="${esc(app.playQ || "")}" autocomplete="off"><kbd>/</kbd></label></div>
-      <div class="r"><span class="lab">Show</span>${SOURCES.map(([k, l]) => `<button class="src" data-a="playShow" data-k="${k}" role="checkbox" aria-checked="${show[k]}" aria-pressed="${show[k]}"><span class="bx">${CHECK}</span>${l} <b>${all.filter(e => (e.type === "std" ? "std" : e.type) === k).length}</b></button>`).join("")}
-        <span class="sep"></span><span class="lab">Filter</span><div class="fchips" role="group" aria-label="Filter by action type">${FILTERS.map(([k, l]) => `<button class="fc" data-a="playFilter" data-k="${k}" aria-pressed="${filter === k}">${l} <b>${count(k)}</b></button>`).join("")}</div></div>
+      <div class="r pm-filter"><div class="fseg" role="group" aria-label="Filter by action type">${FILTERS.map(([k, l]) => `<button class="fc" data-a="playFilter" data-k="${k}" aria-pressed="${filter === k}">${l} <b>${count(k)}</b></button>`).join("")}</div>
+        <div class="psm"><button class="btn sm showbtn" data-a="playShowMenu" aria-expanded="${!!app.playShowMenu}" aria-haspopup="true">Show <b>${SOURCES.filter(([k]) => show[k]).length}/${SOURCES.length}</b></button>
+          ${app.playShowMenu ? `<div class="psm-menu" role="group" aria-label="Show">${SOURCES.map(([k, l]) => `<button class="src" data-a="playShow" data-k="${k}" role="checkbox" aria-checked="${show[k]}" aria-pressed="${show[k]}"><span class="bx">${CHECK}</span>${l} <b>${all.filter(e => (e.type === "std" ? "std" : e.type) === k).length}</b></button>`).join("")}</div>` : ""}</div></div>
     </div>
     ${dying ? deathPanel(c) : ""}
     ${hotbar(app, c, d)}
     ${gwmRow(app, c)}
     <div class="pm-main">
-      <aside class="pm-rail" aria-label="Sections"><section><h3>Sections</h3><nav class="nav">${nav}</nav></section>${slotsRail(c, d)}</aside>
+      <aside class="pm-rail" aria-label="Resources">${slotsRail(c, d)}</aside>
       <div class="pm-list">
         <div class="pm-slots">${slotsRail(c, d)}</div>
-        ${show.feature ? trackHtml(app, c) : ""}
         ${groups || `<p class="muted small" style="padding:18px 0">Nothing matches. <button class="linkbtn" data-a="playClear">Reset filters</button></p>`}
         
       </div>

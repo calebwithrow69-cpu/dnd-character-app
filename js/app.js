@@ -3,6 +3,7 @@ import * as store from "./store.js";
 import { feedback, sfx, setSfxEnabled, setHaptics, setVolume, preloadSamples } from "./sfx.js";
 import { mountHp, unmountHp, applyHp as hpFx } from "./hpbar.js";
 import { findTile } from "./views/character.js";
+import { trayFormula } from "./views/stats.js";
 import { turnBlock, isSustained } from "./combat.js";
 import { attacksPerAction } from "./attackctx.js";
 import { playRollStage, startRoll, rollStageOpen } from "./rollstage.js";
@@ -703,6 +704,7 @@ function bindEvents() {
 }
 
 function onClick(e) {
+  if (APP.playShowMenu && !(e.target.closest && e.target.closest(".psm"))) { APP.playShowMenu = false; render(); }
   const el = e.target.closest("[data-a]");
   if (!el) return;
   if (el.tagName === "SELECT") return; // a dropdown acts when its value changes, not when it is tapped open
@@ -849,6 +851,9 @@ function onInput(e) {
   const el = e.target, ds = el.dataset;
   if (el.id === "f-name" && APP.createDraft) { APP.createDraft.name = el.value; refreshWizardChrome(); return; }
   if (el.id === "pm-q") { APP.playQ = el.value; render(); return; }
+  if (el.id === "st-q") { APP.stQ = el.value; render(); return; }
+  if (el.id === "sp-q") { APP.spQ = el.value; render(); return; }
+  if (el.id === "bag-q") { APP.bagQ = el.value; render(); return; }
   if (el.id === "f-formula") { APP.diceFormula = el.value; return; }
   if (el.id === "hp-amt") { updateHpPreview(); return; }
   if (ds.prefRange) {
@@ -1235,6 +1240,7 @@ const ACTIONS = {
     APP.prefs.playShow = next; savePrefs(); render();
   },
   playFilter(el) { APP.playFilter = el.dataset.k; render(); },
+  playShowMenu() { APP.playShowMenu = !APP.playShowMenu; render(); },
   playSel(el) {
     const id = el.dataset.id;
     if (matchMedia("(min-width:1100px)").matches) { APP.playSel = id; render(); return; }
@@ -2119,6 +2125,46 @@ const ACTIONS = {
     showRoll(r.formula, [{ label: "Total", total: r.total, bd: describeGroups(r) }]);
   },
   dismissRoll() { APP.roll = null; render(); },
+  // Rolls tab: dice tray, pinned checks, saved formulas
+  trayAdd(el) { const t = APP.tray = APP.tray || { n: {}, mod: 0 }, s = +el.dataset.sides; t.n[s] = Math.min(20, (t.n[s] || 0) + 1); render(); },
+  trayMod(el) { const t = APP.tray = APP.tray || { n: {}, mod: 0 }; t.mod = Math.max(-30, Math.min(30, (t.mod || 0) + +el.dataset.n)); render(); },
+  trayClear() { APP.tray = { n: {}, mod: 0 }; render(); },
+  trayRoll() {
+    const t = APP.tray || { n: {}, mod: 0 }, f = trayFormula(t);
+    if (!f) return;
+    const kinds = Object.keys(t.n).filter(k => t.n[k]);
+    if (kinds.length === 1 && kinds[0] === "20" && t.n[20] === 1) { d20Test("d20", t.mod || 0); return; }
+    const r = rollFormula(f);
+    if (!r) { toast("Couldn't read that formula"); return; }
+    showRoll(r.formula, [{ label: "Total", total: r.total, bd: describeGroups(r) }]);
+  },
+  saveFormula() {
+    const c = APP.char, f = trayFormula(APP.tray || { n: {}, mod: 0 });
+    if (!f) return;
+    if ((c.formulas || []).includes(f)) { toast("Already saved"); return; }
+    if ((c.formulas || []).length >= 12) { toast("12 formulas saved. Remove one first"); return; }
+    c.formulas = [...(c.formulas || []), f]; saveAndRender(); toast("Formula saved");
+  },
+  dropFormula(el) { APP.char.formulas = (APP.char.formulas || []).filter(f => f !== el.dataset.f); saveAndRender(); },
+  rollFormula(el) { APP.diceFormula = el.dataset.f; ACTIONS.customRoll(); },
+  togglePin(el) {
+    const c = APP.char, k = el.dataset.k, cur = c.pins || [];
+    if (cur.includes(k)) c.pins = cur.filter(x => x !== k);
+    else if (cur.length >= 12) { toast("12 checks pinned. Unpin one first"); return; }
+    else c.pins = [...cur, k];
+    saveAndRender();
+  },
+  rollPin(el) {
+    const [t, id] = el.dataset.k.split(":");
+    if (el.dataset.k === "init") ACTIONS.rollInit();
+    else if (t === "abil") ACTIONS.rollAbility({ dataset: { ab: id } });
+    else if (t === "save") ACTIONS.rollSave({ dataset: { ab: id } });
+    else if (t === "skill") ACTIONS.rollSkill({ dataset: { id } });
+  },
+  stFilter(el) { APP.stF = el.dataset.k; render(); },
+  spLv(el) { APP.spLv = el.dataset.lv === "All" ? null : +el.dataset.lv; render(); },
+  spPrep() { APP.spPrep = !APP.spPrep; render(); },
+  bagCat(el) { APP.bagCat = el.dataset.k; render(); },
   clearHistory() { APP.history = []; render(); },
 
   // egg

@@ -69,7 +69,7 @@ export function renderSheet(app) {
     ...c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button><button class="chip-x" data-a="removeCondition" data-name="${esc(x)}" aria-label="Remove ${esc(x)}">${ICONS.close}</button></span>`),
     c.exhaustion > 0 ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion} <span class="sub2" style="color:inherit">−${c.exhaustion * 2} to d20s</span></button></span>` : "",
     dying ? `<span class="chip cond"><button class="chip-main" data-term="Death Saving Throw">${conditionIcon("Unconscious")}${c.deathSaves.fail >= 3 ? "Dead" : c.deathSaves.success >= 3 ? "Stable at 0 HP" : "Dying"}</button></span>` : ""
-  ].join("");
+  ].join("") + (app.prefs.sheetStyle === "advanced" ? `<button class="chip addcond" data-a="openConditions" aria-label="Add condition">${ICONS.plus || "+"}<span>Condition</span></button>` : "");
 
   const xpPct = c.level >= 20 ? 100 : Math.max(0, Math.min(100, Math.round(((c.xp || 0) - xpForLevel(c.level)) / Math.max(1, xpForLevel(c.level + 1) - xpForLevel(c.level)) * 100)));
   const xpReady = c.level < 20 && (c.xp || 0) >= xpForLevel(c.level + 1);
@@ -83,7 +83,7 @@ export function renderSheet(app) {
   else if (tab === "notes") body = notesBody(app);
   else body = rulesTab(app);
   const page = tab === "shop" || tab === "settings" || tab === "notes";
-  const wide = tab === "rules" || tab === "shop" || tab === "notes" || (tab === "stats" && app.prefs.sheetStyle === "advanced" && app.charSub === "gear");
+  const wide = tab === "rules" || tab === "shop" || tab === "notes" || (tab === "stats" && app.prefs.sheetStyle === "advanced" && ["gear", "stats", "rolls"].includes(app.charSub));
 
   return `<div class="sheetview" data-sheet="${app.prefs.sheetStyle === "advanced" ? "advanced" : "classic"}">
     ${sheetBar(c, d, meta)}
@@ -97,8 +97,8 @@ export function renderSheet(app) {
             ${xpReady ? `<span class="canlevel">Level up</span>` : ""}
           </button>
           <button class="hpwrap hpbtn" data-a="openHp" aria-label="Hit points ${c.hp.cur} of ${c.hp.max}${c.hp.temp ? ", " + c.hp.temp + " temporary" : ""}">
-            <span class="hpstage"><canvas id="hpc" aria-hidden="true"></canvas></span>
-            <span class="hptext"><b class="hpnum">${c.hp.cur}</b><span class="muted">/ ${c.hp.max} HP${c.hp.temp ? ` · +${c.hp.temp} temp` : ""}</span><span class="hpedit">${ICONS.edit}Change</span></span>
+            <span class="hpstage"><canvas id="hpc" aria-hidden="true"></canvas><span class="hpover" aria-hidden="true"><b class="hpnum">${c.hp.cur}</b><i>/ ${c.hp.max}</i><em>HP</em></span></span>
+            <span class="hptext">${c.hp.temp ? `<span class="hptmp">+${c.hp.temp} temp</span>` : `<span></span>`}<span class="hpedit">${ICONS.edit}Change</span></span>
           </button>
           <button class="shieldbtn tier-${armorTier(d.ac).key}" data-a="openAc" aria-label="Armor class ${d.ac}, ${armorTier(d.ac).name}">${shieldSvg(d.ac)}<b>${d.ac}</b><span>AC</span></button>
         </div>
@@ -172,6 +172,7 @@ export function hotbar(app, c, d) {
       ${edit ? `<button class="hb-x" data-a="removeHotbar" data-i="${i}" aria-label="Remove ${esc(label)} from hotbar">${ICONS.close}</button>` : ""}
     </div>`;
   }).join("");
+  if (!(c.hotbar || []).length) return `<div class="hb-slim"><span class="lab">Hotbar</span><span class="muted small">Empty</span><button class="btn sm" data-a="openHotbarAdd">Add</button></div>`;
   return `<div class="panel hotbar-panel"><div class="panel-head"><h2>Hotbar</h2>
       <span class="btnrow">
         <button class="btn sm" data-a="openHotbarAdd">Add</button>
@@ -188,14 +189,22 @@ export function needsFirstChoices(app, c) {
 }
 
 // ---------------- Spells ----------------
+const ORD_SHORT = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 export function spellsTab(app, c, d) {
   const info = d.spellInfo;
   const L = app.library;
   const known = c.spellcasting.spells.map(s => ({ ...s, ref: findByName(enabledSpells(L, app.campaign), s.name) || findByName(L.spells, s.name) }));
   const prepared = known.filter(s => s.ref && s.ref.level > 0 && (s.prepared || s.always)).length;
 
+  const lvOf = s => s.ref ? s.ref.level : 1;
+  const sq = (app.spQ || "").trim().toLowerCase(), slv = app.spLv == null ? "All" : app.spLv;
+  const shownK = known.filter(s => (slv === "All" || lvOf(s) === slv) && (!app.spPrep || lvOf(s) === 0 || s.prepared || s.always) && (!sq || s.name.toLowerCase().includes(sq)));
+  const allLv = [...new Set(known.map(lvOf))].sort((a, b) => a - b);
+  const filterBar = known.length ? `<div class="sp2-find"><div class="seg" role="group" aria-label="Spell level"><button data-a="spLv" data-lv="All" aria-pressed="${slv === "All"}">All</button>${allLv.map(l => `<button data-a="spLv" data-lv="${l}" aria-pressed="${slv === l}">${l === 0 ? "Cantrip" : ORD_SHORT[l] || l}</button>`).join("")}</div>
+      <button class="btn sm ${app.spPrep ? "pri" : ""}" data-a="spPrep" aria-pressed="${!!app.spPrep}">Prepared only</button>
+      <label class="st-q"><span class="sr">Search spells</span>${ICONS.search}<input id="sp-q" type="search" placeholder="Search" value="${esc(app.spQ || "")}" autocomplete="off"></label></div>` : "";
   const byLevel = {};
-  known.forEach(s => { const lv = s.ref ? s.ref.level : 1; (byLevel[lv] = byLevel[lv] || []).push(s); });
+  shownK.forEach(s => { const lv = lvOf(s); (byLevel[lv] = byLevel[lv] || []).push(s); });
   const levels = Object.keys(byLevel).map(Number).sort((a, b) => a - b);
 
   return `
@@ -215,7 +224,8 @@ export function spellsTab(app, c, d) {
       }).join("") + (info.slots.some(r => r.pact) ? `<p class="sub2">Pact slots come back on a short rest.</p>` : "") : `<p class="muted small">No spell slots at this level.</p>`}
       <p class="sub2 sp2-key">✦ always prepared</p></div>
     <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><button class="btn sm pri" data-a="openPicker" data-picker="spells">Add spells</button></div>
-      ${known.length ? levels.map(lv => kGroup(levelLabel(lv), byLevel[lv].length, { tone: lv === 0 ? "faint" : "amber" }) + `<div class="k-list">` + byLevel[lv].map(s => {
+      ${filterBar}
+      ${known.length ? (levels.length ? "" : `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`) + levels.map(lv => kGroup(levelLabel(lv), byLevel[lv].length, { tone: lv === 0 ? "faint" : "amber" }) + `<div class="k-list">` + byLevel[lv].map(s => {
         const r = s.ref;
         const sub = r ? [r.time, r.range].filter(Boolean).join(" \u00b7 ") : "";
         const tag = r?.conc ? "Concentration" : r?.ritual ? "Ritual" : s.always ? "Always prepared" : "";
@@ -390,8 +400,11 @@ export function weightBar(c) {
   const w = carried(c), pct = Math.min(100, Math.round(w.total / w.capacity * 100));
   return `<div class="wbar ${w.total > w.capacity ? "over" : ""}"><div class="wl"><span>Carrying <b>${fmtLb(w.total)}</b> of ${w.capacity} lb</span>${w.coins ? `<span class="sub2">coins ${fmtLb(w.coins)}</span>` : ""}</div><div class="track" aria-hidden="true"><i style="width:${pct}%"></i></div>${w.unknown ? `<p class="sub2">${w.unknown} item${w.unknown === 1 ? "" : "s"} with no listed weight are not counted.</p>` : ""}</div>`;
 }
+const BAG_CATS = [["All", "All"], ["weapon", "Weapons"], ["armor", "Armor"], ["potion", "Potions"], ["gear", "Gear"]];
 function bagGrid(app, c) {
-  const items = sortedInventory(app, c);
+  const bq = (app.bagQ || "").trim().toLowerCase(), bc = app.bagCat || "All";
+  const inCat = it => { const k = itemCategory(it); return bc === "All" || (bc === "armor" ? (k === "armor" || k === "shield") : bc === "gear" ? !["weapon", "armor", "shield", "potion"].includes(k) : k === bc); };
+  const items = sortedInventory(app, c).filter(it => inCat(it) && (!bq || it.name.toLowerCase().includes(bq)));
   const where = id => slotsOf(c, id).map(k => SLOTS.find(s => s.key === k).label).join(" + ");
   return `<div class="panel" data-drop-bag="1"><div class="panel-head"><h2>Bag <span class="sub2">${c.inventory.length}</span></h2>
       <span class="btnrow">
@@ -399,6 +412,8 @@ function bagGrid(app, c) {
         <button class="btn sm" data-a="openShop">Shop</button><button class="btn sm" data-a="openPicker" data-picker="items">Add</button>
       </span></div>
     <div class="panel-body">
+      ${c.inventory.length > 5 ? `<div class="st-find"><div class="seg" role="group" aria-label="Bag category">${BAG_CATS.map(([k, l]) => `<button data-a="bagCat" data-k="${k}" aria-pressed="${bc === k}">${l}</button>`).join("")}</div>
+        <label class="st-q"><span class="sr">Search bag</span>${ICONS.search}<input id="bag-q" type="search" placeholder="Search" value="${esc(app.bagQ || "")}" autocomplete="off"></label></div>` : ""}
       ${items.length ? `<div class="bag-list" role="list"><div class="bl-head" aria-hidden="true"><span></span><span>Item</span><span class="q">Qty</span><span class="w">Weight</span><span></span></div>${items.map(it => {
     const k = slotOf(c, it.id), cat = itemCategory(it), u = unitWeight(it), q = it.qty == null ? 1 : it.qty;
     return `<div class="bl-row ${k ? "equipped" : ""} ${app.selItem === it.id ? "selected" : ""} ${it.qty ? "" : "empty"} cat-${cat}" role="listitem"
@@ -413,7 +428,7 @@ function bagGrid(app, c) {
   }).join("")}</div>
       ${weightBar(c)}
       `
-      : `<p class="muted small" style="padding:12px 0">Your bag is empty.</p>`}
+      : `<p class="muted small" style="padding:12px 0">${c.inventory.length ? "Nothing matches." : "Your bag is empty."}</p>`}
     </div></div>`;
 }
 
