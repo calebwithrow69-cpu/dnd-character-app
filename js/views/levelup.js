@@ -1,6 +1,6 @@
 // Full-screen level-up, one decision per step (Baldur's Gate style).
 import { subclassSpellGrants } from "../subclassspells.js";
-import { subRow } from "./subclass.js";
+import { subRow, subList } from "./subclass.js";
 import { esc, topbar, formatText, searchBox, infoRow, glossaryEntry, ICONS, kRow, kGroup, snipOf } from "../ui.js";
 import { detailFor, spellSub } from "./sheet.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, abilityMod, fmtMod, hpAverageGain, slotRows } from "../rules.js";
@@ -69,7 +69,7 @@ const masteryDetail = w => `<p class="sub2" style="margin-bottom:8px">${esc([w.c
 
 function asiFeatItems(app) {
   const c = app.char, d = app.lvl;
-  const base = enabledFeats(app.library, app.campaign).filter(f => /^General|^Epic|^Origin/i.test(f.type || "") && (!c.feats.includes(f.name) || /Repeatable/i.test(f.text || "")))
+  const base = enabledFeats(app.library, app.campaign).filter(f => f.name !== ASI_FEAT || !d.gapMode).filter(f => /^General|^Epic|^Origin/i.test(f.type || "") && (!c.feats.includes(f.name) || /Repeatable/i.test(f.text || "")))
     .map(f => { const e = featEligible(f, { ...c }, d.next); return { f, ok: e.ok, why: e.why || "" }; });
   const rec = recommendFeats(c, base);
   return base.map(i => ({ ...i, rec: rec.get(i.f.name) || null }));
@@ -128,7 +128,7 @@ export function renderLevelResults(app) {
   const p = plan(app), step = p.steps[d.step];
   const q = (d.query || "").trim().toLowerCase();
   const match = x => !q || x.name.toLowerCase().includes(q);
-  if (step.id === "asi") {
+  if (step.id === "asi" || step.id === "subgap") {
     return renderFeatGrid(app, asiFeatItems(app), d.feat);
   }
   if (step.id === "cantrips" || step.id === "spells") {
@@ -177,8 +177,19 @@ export function levelBody(app) {
   }
 
   else if (step.id === "subclass") {
-    const subs = subclassesFor(L, c.class).slice().sort((a, b) => a.name.localeCompare(b.name));
+    const subs = subList(app);
     body = `<div class="sclist">` + subs.map(sc => subRow(app, sc)).join("") + `</div>`;
+  }
+
+  else if (step.id === "subgap") {
+    const fi = d.gapMode === "feat" ? asiFeatItems(app) : [];
+    body = `<p class="gapnote"><b>Level ${step.lv}</b> ${esc(step.sub)}: not in the game yet.</p>
+      <div class="seg" role="group" aria-label="Instead">
+        <button data-a="lvlGap" data-v="dm" aria-pressed="${d.gapMode === "dm"}">Tell my DM</button>
+        <button data-a="lvlGap" data-v="feat" aria-pressed="${d.gapMode === "feat"}">Take a feat</button></div>
+      ${d.gapMode === "dm" ? `<p class="sub2" style="margin-top:10px">Nothing is gained now. The DM can add the feature.</p>` : ""}
+      ${d.gapMode === "feat" ? `${renderFeatChosen(app)}<div style="margin-top:12px">${searchBox("lvl", d.query, "Search feats")}</div>${renderFeatControls(app, fi)}
+      <div id="lvl-results">${renderLevelResults(app)}</div>${renderFeatSheet(app, fi, d.feat, "lvlFeat")}` : ""}`;
   }
 
   else if (step.id === "asi") {
@@ -253,6 +264,7 @@ export function levelBody(app) {
     const lines = [];
     if (!d.fromCreation) lines.push(["Hit points", `+${hpGain(c, d)} (max ${c.hp.max} → ${c.hp.max + hpGain(c, d)})`]);
     if (d.subclass) lines.push(["Subclass", d.subclass]);
+    { const g = p.steps.find(x => x.id === "subgap"); if (g && d.gapMode === "dm") lines.push([`Level ${g.lv} ${g.sub}`, "Ask the DM"]); }
     if (d.feat && d.feat !== ASI_FEAT) {
       lines.push(["Feat", d.feat]);
       const f = featDef(app, d.feat);

@@ -125,6 +125,7 @@ export function settingsBody(app) {
     </div>`;
   const experimental = sw("experimental", "Loot boxes", "Adds a Loot boxes shelf to the Shop", !!p.experimental, { kw: "experimental beta gamble random" });
   const about =
+    sw("updateSplash", "Update window", "Lists what changed after each update", p.updateSplash !== false, { kw: "whats new changelog splash popup updates" }) +
     tourRow +
     `<div class="setrow col" data-s="version changelog whats new about testers">
       <div class="setinfo"><div class="setlabel">The Sheet ${esc(VERSION)} <span class="tag amber">${esc(STAGE)}</span></div><div class="sethint">Tester build: ${esc(TESTERS)}.</div></div>

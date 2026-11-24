@@ -4,6 +4,7 @@
 // 2024 ability-score levels below are used and spell counts are left open.
 
 import { parseList, slotRows, SKILLS } from "./rules.js";
+import { SUBCLASS_LEVELS } from "./data.js";
 
 // Which trailing columns of each class table hold the counts we need,
 // counted from the right-hand end of a row.
@@ -110,6 +111,11 @@ export function levelUpPlan(L, c, next, draft = {}, { fromCreation = false } = {
   const subs = L.subclasses.filter(s => s.cls === c.class);
   if (next >= 3 && !c.subclass && subs.length) steps.push({ id: "subclass", label: "Subclass" });
   if (isAsiLevel(cls, next)) steps.push({ id: "asi", label: next === 19 ? "Epic boon" : "Ability or feat" });
+  { // a level where the class expects a subclass feature and the chosen subclass has none: skip, or take a feat
+    const subName = c.subclass || draft.subclass, sub = subName && L.subclasses.find(x => x.name === subName && x.cls === c.class);
+    if (!fromCreation && sub && next >= 3 && (SUBCLASS_LEVELS[c.class] || []).includes(next) && !steps.some(x => x.id === "asi")
+      && !(sub.features || []).some(f => !f.intro && f.lv === next)) steps.push({ id: "subgap", label: "Subclass feature", lv: next, sub: sub.name });
+  }
   if (hasFeature(cls, next, /^Fighting Style$/i)) steps.push({ id: "style", label: "Fighting style" });
   const orderFeat = (cls?.features || []).find(f => f.lv === next && ORDER_RE.test(f.name));
   if (orderFeat) { const options = parseOrderOptions(orderFeat.text); if (options.length) steps.push({ id: "order", label: orderFeat.name, feature: orderFeat.name, options }); }
@@ -173,6 +179,7 @@ export function stepValidFor(c, d, step) {
   switch (step.id) {
     case "hp": return d.hpMode === "avg" || !!d.rolled;
     case "subclass": return !!d.subclass;
+    case "subgap": return d.gapMode === "dm" || (d.gapMode === "feat" && !!d.feat && d.feat !== "Ability Score Improvement" && (!d.featNeedsAb || !!d.featAb));
     case "asi":
       if (!d.feat) return false;
       if (d.feat !== "Ability Score Improvement") return !d.featNeedsAb || !!d.featAb;

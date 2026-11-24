@@ -1,5 +1,6 @@
 import { esc, modalShell, searchBox, ICONS, hotbarToggle } from "../ui.js";
 import { boxById, boxByName } from "../lootbox.js";
+import { renderWhatsNew } from "./whatsnew.js";
 import { oddsList } from "./lootbox.js";
 import {
   ABILITIES, ABILITY_LABEL, CONDITIONS, abilityMod, fmtMod, deriveCharacter, hpAverageGain, slotRows
@@ -444,6 +445,7 @@ export function renderModal(app) {
     case "badges": return renderBadges(app);
     case "levelUp": return renderLevelUp(app);
     case "nbDiscard": return renderDiscard(app);
+    case "whatsNew": return renderWhatsNew(app);
     case "contentUpdate":
       return renderContentUpdate(app);
 

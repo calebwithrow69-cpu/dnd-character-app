@@ -10,7 +10,8 @@ import { playRollStage, startRoll, rollStageOpen } from "./rollstage.js";
 import { playShow, healingFormula, SOURCES, wieldedId, playEntries } from "./play.js";
 import { captureLevel, diffLevel, deLevel } from "./levelfix.js";
 import { ridersFor, rerollsFor, ensureLuck, shortRestRefill } from "./riders.js";
-import { VERSION } from "./changelog.js";
+import { VERSION, CHANGELOG } from "./changelog.js";
+import { splashPlan } from "./whatsnew.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
 import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
@@ -56,7 +57,6 @@ import * as notes from "./notes.js";
 import { downloadNotesPdf } from "./notespdf.js";
 import { applyFormat, toggleTask, renderMd } from "./markdown.js";
 import { nbVisible, renderNotes, nbState, nbCats, nbList, nbStats, nbFoot, nbEdit } from "./views/notes.js";
-import { flourish, toneFor } from "./subtone.js";
 import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
 import { renderModal, renderRollCard } from "./views/modals.js";
@@ -162,10 +162,11 @@ async function init() {
     return;
   }
 
+  APP._prevVersion = APP.prefs.seenVersion || "";
   if (APP.prefs.seenVersion !== VERSION) {
     const first = !APP.prefs.seenVersion;
     APP.prefs.seenVersion = VERSION; savePrefs();
-    if (!first) setTimeout(() => toast("Updated to " + VERSION + ". See Settings > What's new."), 800);
+    if (!first && APP.prefs.updateSplash === false) setTimeout(() => toast("Updated to " + VERSION), 800);
   }
 
   fetch("data/seed-gandork.json").then(r => (r.ok ? r.json() : null)).then(d => { APP.seedGandork = d; if (APP.screen === "roster" || APP.screen === "home") render(); }).catch(() => { });
@@ -284,13 +285,17 @@ function restoreLevelUp() {
   } catch (e) { try { localStorage.removeItem(LS_LVL); } catch (e2) { } return false; }
 }
 
-// The content update opens once per device. A device with no characters starts at the current update.
+// After an update (app version or waiting rule changes) one window lists what changed. A device with no characters
+// and no marker is new and starts at the current version. Settings > About turns it off.
 function maybeShowUpdate() {
   if (!APP.library || APP.modal || APP.screen === "create" || APP.screen === "locked") return;
-  const seen = seenId(), u = pendingUpdate(APP.library, seen), automated = !!navigator.webdriver, hasCharacters = store.listCharacters().length > 0;
-  if (!u) return;
-  if (!automated && !seen && !hasCharacters) { markSeen(u.id); return; }
-  if (shouldShow(u, { seen, hasCharacters, automated })) { APP.cu = null; openModal({ type: "contentUpdate" }); }
+  const seen = seenId(), automated = !!navigator.webdriver, hasCharacters = store.listCharacters().length > 0, u = pendingUpdate(APP.library, seen);
+  if (u && !automated && !seen && !hasCharacters) { markSeen(u.id); return; }
+  const pc = u && shouldShow(u, { seen, hasCharacters, automated }) ? u : null;
+  const p = splashPlan({ prev: APP._prevVersion, version: VERSION, enabled: APP.prefs.updateSplash !== false, automated, hasContent: !!pc, changelog: CHANGELOG });
+  if (!p.show) return;
+  APP._prevVersion = VERSION;
+  APP.wn = { list: p.list, more: p.more, content: pc }; APP.cu = null; openModal({ type: "whatsNew" });
 }
 
 // The Rules screen updates in pieces so the list keeps its scroll and the search box its focus.
@@ -480,6 +485,7 @@ const PREF_TOGGLES = {
   keys: { get: p => p.keys !== false, set: (p, v) => { p.keys = v; } },
   cxfx: { get: p => p.cxfx !== false, set: (p, v) => { p.cxfx = v; } },
   concprompt: { get: p => !!p.concprompt, set: (p, v) => { p.concprompt = v; if (!v) APP.concPrompt = null; } },
+  updateSplash: { get: p => p.updateSplash !== false, set: (p, v) => { p.updateSplash = v; } },
   experimental: { get: p => !!p.experimental, set: (p, v) => { p.experimental = v; if (!v && APP.shopCat === "loot") APP.shopCat = "All"; } },
   gwm: { get: () => !!APP.gwm, set: (p, v) => { APP.gwm = v; } }
 };
@@ -1320,6 +1326,9 @@ const ACTIONS = {
   openUpdate() { APP.cu = null; openModal({ type: "contentUpdate" }); },
   cuOpen(el) { const st = cuState(APP); st.open = st.open === el.dataset.k ? "" : el.dataset.k; render(); },
   cuItem(el) { const st = cuState(APP), k = el.dataset.key; if (st.items.has(k)) st.items.delete(k); else st.items.add(k); render(); },
+  wnDone() { const u = APP.wn && APP.wn.content; if (u) markSeen(u.id); closeModal(); render(); },
+  wnRules() { APP.cu = null; APP.modal = { type: "contentUpdate" }; render(); },
+  wnOff() { APP.prefs.updateSplash = false; savePrefs(); closeModal(); toast("Update window off"); },
   cuDone() { const u = pendingUpdate(APP.library, seenId()); if (u) markSeen(u.id); closeModal(); render(); },
   togglePref(el) {
     const t = PREF_TOGGLES[el.dataset.k];
@@ -1788,6 +1797,7 @@ const ACTIONS = {
     render();
   },
   lvlGainOpen(el) { const d = APP.lvl; d.gainOpen = d.gainOpen === el.dataset.name ? "" : el.dataset.name; render(); },
+  lvlGap(el) { const d = APP.lvl; d.gapMode = d.gapMode === el.dataset.v ? "" : el.dataset.v; Object.assign(d, { feat: "", featAb: "", featNeedsAb: false, fxOpen: false, query: "" }); render(); },
   lvlSubclass(el) { APP.lvl.subclass = el.dataset.name; render(); },
   scOpen(el) { openModal({ type: "subclass", name: el.dataset.name }); },
   scStep(el) {
@@ -1797,11 +1807,7 @@ const ACTIONS = {
   scPick(el) {
     const name = el.dataset.name, was = APP.lvl.subclass === name;
     APP.lvl.subclass = was ? "" : name; render();
-    if (was) return;
-    const calm = APP.prefs.motion === "reduced" || matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const sc = scList(APP).find(x => x.name === name);
-    flourish(modalRoot, toneFor(sc, APP.char.class).fx, calm);
-    setTimeout(() => { if (APP.modal && APP.modal.type === "subclass") closeModal(); }, calm ? 150 : 900);
+    if (!was) setTimeout(() => { if (APP.modal && APP.modal.type === "subclass") closeModal(); }, 120);
   },
   lvlAsiMode(el) { APP.lvl.asiMode = el.dataset.v; APP.lvl.query = ""; render(); },
   lvlAsiSplit(el) { Object.assign(APP.lvl, { asiSplit: el.dataset.v, a2: "", a1a: "", a1b: "" }); render(); },
@@ -2482,7 +2488,7 @@ function applyLevelUp() {
   syncHp(c); // make sure the dice total exists before anything is added to it
   const snap = captureLevel(c);
   const hpBefore = c.hp.max;
-  if (ids.has("asi")) {
+  if (ids.has("asi") || (ids.has("subgap") && d.gapMode === "feat")) {
     if (d.feat && d.feat !== ASI_FEAT) {
       const f = featDef(APP, d.feat);
       c.feats.push(d.feat); log.push("Feat: " + d.feat);
@@ -2490,6 +2496,7 @@ function applyLevelUp() {
     }
     else { const r = asiResult(c, d); ABILITIES.forEach(a => { if (r[a] !== c.abilities[a]) log.push(`${ABILITY_LABEL[a]} ${c.abilities[a]}\u2192${r[a]}`); }); c.abilities = r; }
   }
+  { const g = p.steps.find(x => x.id === "subgap"); if (g && d.gapMode === "dm") log.push(`Level ${g.lv} ${g.sub} feature: ask the DM`); }
   if (!d.fromCreation) {
     const die = c.hitDice.die || 8;
     const diceGain = d.hpMode === "roll" && d.rolled ? Math.max(1, d.rolled) : hpAverageGain(die, 0);

@@ -440,12 +440,12 @@ await check("Content update: stays pending until Done, with a Home banner; never
   assert(await p.locator(".modal").count() === 0, "acknowledged: no popup on a new device");
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => localStorage.removeItem("dnd-update-seen"));
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
-  assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "an existing player gets the popup");
+  assert(/What.s new/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")) && await p.locator(".wn-rules").count() === 1, "an existing player gets the update window with the rule changes");
   await p.keyboard.press("Escape"); await p.waitForTimeout(250);
   assert(/8 rule changes/.test(await p.locator('.hwarn[data-a="openUpdate"]').innerText()), "closing it leaves a banner on Home");
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
-  assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "still pending after closing without Done");
-  await p.locator('[data-a="cuDone"]').click(); await p.waitForTimeout(300);
+  assert(/What.s new/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "still pending after closing without Done");
+  await p.locator('[data-a="wnRules"]').click(); await p.waitForSelector(".cu-cards"); await p.locator('[data-a="cuDone"]').click(); await p.waitForTimeout(300);
   assert(await p.locator(".modal").count() === 0 && await p.locator('.hwarn[data-a="openUpdate"]').count() === 0, "Done clears the popup and the banner");
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
   assert(await p.locator(".modal").count() === 0, "checked updates stay closed"); noErrs(p); await p.context().close();
@@ -1369,6 +1369,73 @@ await check("Tabs: unvisited sections carry a dot until opened; sheet tour offer
   assert(await p.locator("#tour-root [data-a='tourNext']").count() === 0, "tour offered a second time");
   assert(await p.locator('nav.tabs [data-tab="rules"] .newdot').count() === 0, "Rules dot came back");
   assert(await p.locator('nav.tabs [data-tab="shop"] .newdot').count() === 1, "Shop dot lost");
+  assert(p.errs.length === 0, p.errs.join(" || ")); await ctx.close();
+});
+
+await check("Subclass picker: stats, one recommendation, level strip, empty levels; gap step offers DM or feat", async () => {
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await openSample(p);
+    await p.evaluate(() => { const c = APP.char; c.class = "Fighter"; c.subclass = ""; c.level = 2; c.xp = 300; c.abilities = { str: 17, dex: 12, con: 15, int: 8, wis: 10, cha: 8 }; CR.ACTIONS.openLevelUp(); });
+    await p.waitForSelector('[data-a="lvlNext"]');
+    for (let i = 0; i < 6 && await p.locator(".scrow").count() === 0; i++) {
+      if (await p.locator('[data-a="lvlHp"][data-mode="avg"]:visible').count()) await p.locator('[data-a="lvlHp"][data-mode="avg"]').click();
+      await p.locator('[data-a="lvlNext"]:visible').first().click(); await p.waitForTimeout(250);
+    }
+    await p.waitForSelector(".scrow");
+    const rows = await p.locator(".scrow").count(); assert(rows >= 8, "subclass rows: " + rows);
+    assert(await p.locator(".scrow .tag.amber").count() === 1, "exactly one Recommended");
+    assert(/Recommended/.test(await p.locator(".scrow").first().innerText()), "recommended is not first");
+    assert(await p.locator(".scrow .stchip").count() >= 3, "stat chips missing");
+    assert(await p.locator(".scrow .lvp.gap").count() >= 2, "empty levels not marked");
+    assert(await p.locator(".scrow").first().evaluate(el => el.scrollWidth <= el.clientWidth + 1), "row overflows");
+    assert(await hscroll(p) <= 2, "list scrolls sideways");
+    await p.screenshot({ path: `/tmp/sub-list-${w}.png` });
+    await p.locator('.scrow:has-text("Banneret")').click(); await p.waitForSelector(".scpage");
+    const txt = await p.locator(".scpage").innerText();
+    assert(/CHA/.test(txt) && /Not a Fighter stat/i.test(txt), "Banneret should show a Charisma need flagged as off-class: " + txt.slice(0, 160));
+    assert(/level 15/i.test(txt) && /level 18/i.test(txt) && (txt.match(/Not in the game yet/g) || []).length === 2, "empty levels 15 and 18 should read Not in the game yet: " + JSON.stringify(txt.slice(-500)));
+    assert(await p.locator(".scpage .burst, .scpage .hero").count() === 0, "cinematic parts should be gone");
+    await p.screenshot({ path: `/tmp/sub-page-${w}.png` });
+    await p.locator('[data-a="scPick"]').click(); await p.waitForTimeout(500);
+    assert(await p.locator(".scpage").count() === 0, "page did not close after choosing");
+    assert(await p.evaluate(() => APP.lvl.subclass === "Banneret"), "choice not kept");
+    noErrs(p);
+    // a gap level: Fighter 15 with a subclass that has nothing there
+    await p.evaluate(() => { const c = APP.char; APP.lvl = null; APP.screen = "sheet"; c.subclass = "Banneret"; c.level = 14; c.xp = 165000; CR.ACTIONS.openLevelUp(); });
+    await p.waitForSelector('[data-a="lvlNext"]');
+    for (let i = 0; i < 6 && await p.locator('[data-a="lvlGap"]').count() === 0; i++) { if (await p.locator('[data-a="lvlHp"][data-mode="avg"]:visible').count()) await p.locator('[data-a="lvlHp"][data-mode="avg"]').click(); await p.locator('[data-a="lvlNext"]:visible').first().click(); await p.waitForTimeout(250); }
+    assert(await p.locator('[data-a="lvlGap"]').count() === 2, "gap step missing");
+    assert(await p.locator('[data-a="lvlNext"]:visible').first().isDisabled(), "gap step must need a choice");
+    await p.locator('[data-a="lvlGap"][data-v="dm"]').click(); assert(await p.locator('[data-a="lvlNext"]:visible').first().isEnabled(), "Tell my DM should allow continuing");
+    await p.locator('[data-a="lvlGap"][data-v="feat"]').click(); assert(await p.locator('[data-a="lvlNext"]:visible').first().isDisabled(), "feat mode needs a feat");
+    assert(!/Ability Score Improvement/.test(await p.locator("#lvl-results").innerText()), "ASI offered as the feat");
+    await p.screenshot({ path: `/tmp/sub-gap-${w}.png` });
+    noErrs(p); await p.context().close();
+  }
+});
+await check("Update window: catch-up since the last version, rules inside, off switch", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block" });
+  await ctx.addInitScript(() => { try { localStorage.setItem("dnd-storage-intro-v1", "1"); if (localStorage.getItem("__wd0") === "1") Object.defineProperty(navigator, "webdriver", { get: () => false }); } catch (e) { } });
+  const p = await ctx.newPage(); p.errs = []; p.on("pageerror", e => p.errs.push(String(e)));
+  await p.goto(URL_); await p.waitForSelector("#home-book");
+  await clickA(p, "goRoster"); await clickA(p, "importGandork");
+  await p.evaluate(() => { localStorage.setItem("__wd0", "1"); const pr = JSON.parse(localStorage.getItem("dnd-prefs-v1") || "{}"); pr.seenVersion = "0.1.60"; localStorage.setItem("dnd-prefs-v1", JSON.stringify(pr)); });
+  await p.reload(); await p.waitForSelector(".wnmodal", { timeout: 8000 });
+  const n = await p.locator(".wn-entry").count(); assert(n >= 4, "expected every version since 0.1.60, got " + n);
+  assert(await p.locator(".wn-entry[open]").count() === 1, "only the newest entry should be open");
+  assert(/0\.1\.65/.test(await p.locator(".wn-entry").first().innerText()), "newest first");
+  await p.screenshot({ path: "/tmp/wn-390.png" });
+  await p.locator('[data-a="wnDone"]').click(); await p.waitForTimeout(300);
+  await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(800);
+  assert(await p.locator(".wnmodal").count() === 0, "window came back after Done");
+  // turn off from the window itself
+  await p.evaluate(() => { const pr = JSON.parse(localStorage.getItem("dnd-prefs-v1")); pr.seenVersion = "0.1.60"; localStorage.setItem("dnd-prefs-v1", JSON.stringify(pr)); });
+  await p.reload(); await p.waitForSelector(".wnmodal"); await p.locator('[data-a="wnOff"]').click(); await p.waitForTimeout(300);
+  assert(await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-prefs-v1")).updateSplash === false), "off switch not saved");
+  await p.evaluate(() => { const pr = JSON.parse(localStorage.getItem("dnd-prefs-v1")); pr.seenVersion = "0.1.60"; localStorage.setItem("dnd-prefs-v1", JSON.stringify(pr)); });
+  await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(800);
+  assert(await p.locator(".wnmodal").count() === 0, "window opened while turned off");
   assert(p.errs.length === 0, p.errs.join(" || ")); await ctx.close();
 });
 

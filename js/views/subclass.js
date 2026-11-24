@@ -1,12 +1,21 @@
-// Full-screen subclass page for the level-up choice: one scroll, every feature
-// visible, nothing to expand. Rules text is shown exactly as written; the
-// seal, colour and texture come from the subclass's tone (js/subtone.js).
+// Subclass choice: a list (stat chips, level strip, one recommendation from the character's scores) and a plain
+// detail page with the full level template. Rules text is shown exactly as written; seal and colour come from
+// the subclass's tone (js/subtone.js). Slots the class expects but the subclass lacks are shown as empty.
 import { esc, formatText, ICONS } from "../ui.js";
-import { subclassesFor, subclassGaps } from "../data.js";
+import { subclassesFor } from "../data.js";
 import { toneFor } from "../subtone.js";
+import { assess, template, abShort, abLong } from "../subclassinfo.js";
 
+const classOf = app => app.library.classes.find(x => x.name === app.char.class);
+// Recommendation and stat needs for the subclasses on offer, from the character's current scores.
+export function subInfo(app) {
+  const subs = subclassesFor(app.library, app.char.class);
+  return assess(subs, classOf(app), app.char.abilities);
+}
+// The recommended one first, then by name.
 export function subList(app) {
-  return subclassesFor(app.library, app.char.class).slice().sort((a, b) => a.name.localeCompare(b.name));
+  const info = subInfo(app);
+  return subclassesFor(app.library, app.char.class).slice().sort((a, b) => (info.get(b.name).rec - info.get(a.name).rec) || a.name.localeCompare(b.name));
 }
 export function toneStyle(t) { return `--h:${t.h}`; }
 export function seal(t, cls = "") {
@@ -16,44 +25,47 @@ function tagline(intro, name) {
   const first = String(intro?.text || "").split(/\n{2,}/)[0].trim();
   return first && first.length < 50 && !/[.!?\d]$|\d/.test(first) && !first.toLowerCase().includes(String(name).toLowerCase()) ? first : "";
 }
+const mod = s => { const m = Math.floor(((+s || 10) - 10) / 2); return (m >= 0 ? "+" : "") + m; };
+function chips(needs, withMod = true) {
+  return needs.map(n => `<span class="stchip ${n.tone}${n.off ? " off" : ""}" title="${esc(abLong(n.ab))} ${n.score}"><b>${abShort(n.ab)}</b>${n.score}${withMod ? ` <i>${mod(n.score)}</i>` : ""}</span>`).join("");
+}
+function strip(sc) {
+  return template(sc).map(r => `<span class="lvp${r.missing ? " gap" : ""}" title="${r.missing ? "Level " + r.lv + ": not in the game yet" : "Level " + r.lv}"><i></i>${r.lv}</span>`).join("");
+}
 
 export function renderSubclassPage(app) {
   const c = app.char, d = app.lvl, m = app.modal;
   const subs = subList(app), i = Math.max(0, subs.findIndex(s => s.name === m.name));
   const sc = subs[i];
   if (!sc) return "";
+  const info = subInfo(app).get(sc.name);
   const t = toneFor(sc, c.class);
   const intro = (sc.features || []).find(f => f.intro) || null;
-  const feats = (sc.features || []).filter(f => !f.intro).slice().sort((a, b) => a.lv - b.lv);
   const tag = tagline(intro, sc.name);
-  const rest = intro ? (tag ? String(intro.text).split(/\n{2,}/).slice(1).join("\n\n") : intro.text) : "";
-  const levels = [...new Set(feats.map(f => f.lv))];
-  const chosen = d && d.subclass === sc.name, now = d ? d.next : 0;
-  const dots = levels.map(lv => `<span class="lvd${lv <= now ? " on" : ""}"><i></i>${lv}</span>`).join("");
-  const byLv = levels.map(lv => `<section class="lvgrp"><h3 class="lvh"><span>Level ${lv}</span>${lv === now ? `<em>you gain these now</em>` : ""}</h3>` +
-    feats.filter(f => f.lv === lv).map(f => `<article class="fe"><h4>${esc(f.name)}</h4>${formatText(f.text)}</article>`).join("") + `</section>`).join("");
+  const rest0 = intro ? (tag ? String(intro.text).split(/\n{2,}/).slice(1).join("\n\n") : intro.text) : "";
+  const rest = rest0.split("\n").filter(l => l.trim().toLowerCase() !== sc.name.toLowerCase() && !/^[A-Z]{2,6}$/.test(l.trim())).join("\n").replace(/^\n+/, "");
+  const rows = template(sc), now = d ? d.next : 0, chosen = d && d.subclass === sc.name;
+  const levels = rows.map(r => `<section class="lvgrp${r.missing ? " gap" : ""}"><h3 class="lvh"><span>Level ${r.lv}</span>${r.lv === now ? `<em>you gain these now</em>` : ""}</h3>` +
+    (r.missing ? `<p class="gapnote">Not in the game yet. Tell your DM, or take a feat.</p>`
+      : r.feats.map(f => `<article class="fe"><h4>${esc(f.name)}</h4>${formatText(f.text)}</article>`).join("")) + `</section>`).join("");
   return `<div class="scpage" style="${toneStyle(t)}" role="dialog" aria-modal="true" aria-label="${esc(sc.name)}" data-tex="${t.tex}">
     <div class="modal-body scscroll">
       <div class="scbar"><button class="iconbtn" data-a="closeModal" aria-label="Back to the list">${ICONS.back || "&larr;"}</button>
         <b class="scbt">${esc(sc.name)}</b>
         <span class="scnav"><button class="iconbtn" data-a="scStep" data-n="-1" aria-label="Previous subclass" ${i === 0 ? "disabled" : ""}>&lsaquo;</button><span class="sub2">${i + 1}/${subs.length}</span><button class="iconbtn" data-a="scStep" data-n="1" aria-label="Next subclass" ${i === subs.length - 1 ? "disabled" : ""}>&rsaquo;</button></span></div>
-      <header class="hero"><div class="wash" aria-hidden="true"></div>
-        ${seal(t, "big")}
-        <p class="kick">${esc(c.class)} subclass</p>
-        <h2>${esc(sc.name)}</h2>
-        ${tag ? `<p class="tagl">${esc(tag)}</p>` : ""}
-        <div class="rail" aria-label="Levels with features">${dots}</div>
-        <p class="sub2">${feats.length} feature${feats.length === 1 ? "" : "s"}${sc.source ? " &middot; " + esc(sc.source) : ""}</p>
-      </header>
+      <header class="schead">${seal(t)}
+        <div><p class="kick">${esc(c.class)} subclass</p><h2>${esc(sc.name)}</h2>${tag ? `<p class="tagl">${esc(tag)}</p>` : ""}</div>
+        ${info.rec ? `<span class="tag amber">Recommended</span>` : ""}</header>
       <div class="scbody">
+        ${info.needs.length ? `<div class="scstats" aria-label="Abilities used"><span class="lab">Uses</span>${chips(info.needs)}${info.needs.some(n => n.off) ? `<span class="tag">Not a ${esc(c.class)} stat</span>` : ""}</div>` : ""}
+        <div class="lvpstrip" aria-label="Feature levels">${strip(sc)}</div>
         ${rest.trim() ? `<div class="about">${formatText(rest)}</div>` : ""}
-        ${byLv}
-        ${(() => { const g = subclassGaps(sc); return g.length ? `<p class="sub2">Not in your rules file yet: level ${g.join(", ")} feature${g.length === 1 ? "" : "s"}. The DM can add ${g.length === 1 ? "it" : "them"} in the editor.</p>` : ""; })()}
+        ${levels}
         ${app.library.credits && /srd|creative commons|CC-BY/i.test(sc.source || "") ? `<p class="sub2">Contains SRD 5.2 content, CC-BY-4.0.</p>` : ""}
       </div>
     </div>
-    <div class="scdock"><div class="burst" aria-hidden="true"></div><span class="ring" aria-hidden="true"></span>
-      <button class="btn pri pick" data-a="scPick" data-name="${esc(sc.name)}">${chosen ? "Chosen &middot; tap to undo" : "Choose " + esc(sc.name)}</button></div>
+    <div class="scdock">
+      <button class="btn pri pick" data-a="scPick" data-name="${esc(sc.name)}">${chosen ? "Chosen" : "Choose " + esc(sc.name)}</button></div>
   </div>`;
 }
 
@@ -71,11 +83,12 @@ export function pitch(sc) {
   return "";
 }
 
-// One row of the level-up list: seal, name, one-line pitch.
+// One row of the level-up list: seal, name, one-line pitch, stat chips and the level strip.
 export function subRow(app, sc) {
-  const c = app.char, d = app.lvl, t = toneFor(sc, c.class);
+  const c = app.char, d = app.lvl, t = toneFor(sc, c.class), info = subInfo(app).get(sc.name);
   const on = d.subclass === sc.name, p = pitch(sc);
   return `<button class="scrow${on ? " on" : ""}" style="${toneStyle(t)}" data-a="scOpen" data-name="${esc(sc.name)}">
-    ${seal(t)}<span class="scrt"><b>${esc(sc.name)}</b><span class="sub2">${esc(p || (sc.source || ""))}</span></span>
-    ${on ? `<span class="tag amber">Chosen</span>` : ""}</button>`;
+    ${seal(t)}<span class="scrt"><span class="scname"><b>${esc(sc.name)}</b>${info.rec ? `<span class="tag amber">Recommended</span>` : ""}${on ? `<span class="tag">Chosen</span>` : ""}</span>
+      <span class="sub2 scpitch">${esc(p || (sc.source || ""))}</span>
+      <span class="scmeta">${chips(info.needs, false)}<span class="lvpstrip">${strip(sc)}</span></span></span></button>`;
 }

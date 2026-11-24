@@ -2,11 +2,35 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.64";
+export const VERSION = "0.1.65";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.65",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "Subclass picker rebuilt, missing subclass levels, update window.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "Subclass list shows the stats each one uses, its feature levels, and one pick that fits your scores.",
+          "Subclass page lists every level the class expects. Empty levels read Not in the game yet.",
+          "At a level with no subclass feature you can tell your DM or take a feat instead.",
+          "After an update, a window lists every change since your last version, rule changes included.",
+          "Settings, About has a switch for the update window. It is on by default."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "The subclass page is plain: no hero banner and no burst when you pick."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.64",
     date: "2026-11-24",
