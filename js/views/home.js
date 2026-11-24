@@ -80,7 +80,7 @@ export function storageBanner(app, { now = Date.now(), nav = navigator } = {}) {
   if (saveFailed()) return `<button class="hwarn" data-a="exportAll">Storage full. Export now</button>`;
   if (nav.webdriver || !listCharacters().some(c => !c.dead)) return "";
   const standalone = !!(nav.standalone || (typeof matchMedia === "function" && matchMedia("(display-mode: standalone)").matches));
-  if (safariAtRisk(nav, standalone)) return `<button class="hwarn" data-a="openSettings">Safari erases data. Install</button>`;
+  if (safariAtRisk(nav, standalone)) return `<button class="hwarn" data-a="openStorageInfo">Safari erases data. Details</button>`;
   const last = app.prefs && app.prefs.lastBackup;
   const days = app.prefs && app.prefs.backupDays != null ? parseInt(app.prefs.backupDays, 10) : BACKUP_DAYS;
   if (days === 0) return "";

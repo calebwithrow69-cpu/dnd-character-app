@@ -22,6 +22,8 @@ import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
 import { renderHome, renderRulesPage, lastCharacter } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
+import { trashAdd, trashTake, trashList } from "./trash.js";
+import { deviceInfo, assess } from "./storagerisk.js";
 import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits, cxFlagNeed, flagEl } from "./views/create.js";
 import { cxStop } from "./cxfx.js";
 import { loadoutPlan, loadoutsOf } from "./views/loadout.js";
@@ -197,8 +199,17 @@ async function init() {
   APP.kvReady = openKv([notes.KEY], localStorage, idbBackend(), { pick: notes.newer, onError: () => toast("Notes not saved") }).then(kv => {
     notesStore = kv; APP.kv = kv.status; if (!inNotes()) APP.nb = null;
   }).catch(() => { });
-  store.requestPersistence().then(p => { APP.persisted = !!p; }).catch(() => { });
+  if (storageAcked()) store.requestPersistence().then(p => { APP.persisted = !!p; }).catch(() => { });
   if (navigator.storage?.persisted) navigator.storage.persisted().then(p => { APP.persisted = p; }).catch(() => { });
+}
+
+// ---------------- storage explainer ----------------
+const LS_STORAGE_INTRO = "dnd-storage-intro-v1";
+function storageAcked() { try { return !!localStorage.getItem(LS_STORAGE_INTRO); } catch (e) { return false; } }
+function maybeStorageIntro() {
+  if (APP.screen !== "home" || APP.modal || APP._storagePending || storageAcked() || navigator.webdriver) return;
+  APP._storagePending = true;
+  setTimeout(() => { APP._storagePending = false; if (!APP.modal && APP.screen === "home" && !storageAcked()) openModal({ type: "storage", first: true }); }, 350);
 }
 
 // ---------------- render ----------------
@@ -285,6 +296,7 @@ function render() {
   const caret = fsel && isTextish(ae) ? [ae.selectionStart, ae.selectionEnd] : null;
   pendingRender = false;
   renderNow();
+  maybeStorageIntro();
   if (fsel) {
     const el = document.querySelector(fsel);
     if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); if (caret && el.setSelectionRange) try { el.setSelectionRange(caret[0], caret[1]); } catch (e) { } }
@@ -855,6 +867,7 @@ function playKeys(e) {
 function onInput(e) {
   const el = e.target, ds = el.dataset;
   if (el.id === "f-name" && APP.createDraft) { APP.createDraft.name = el.value; refreshWizardChrome(); return; }
+  if (el.id === "del-name") { const go = document.getElementById("del-go"); if (go) go.disabled = el.value.trim().toLowerCase() !== String(APP.char && APP.char.name || "Unnamed").trim().toLowerCase(); return; }
   if (el.id === "pm-q") { APP.playQ = el.value; render(); return; }
   if (el.id === "st-q") { APP.stQ = el.value; render(); return; }
   if (el.id === "sp-q") { APP.spQ = el.value; render(); return; }
@@ -1624,12 +1637,31 @@ const ACTIONS = {
     if (open) { closeModal(); saveAndRender(); } else { store.saveCharacter(c); closeModal(); render(); }
     toast(`${c.name} is back`);
   },
+  openStorageInfo() { openModal({ type: "storage" }); },
+  storageAck() {
+    try { localStorage.setItem(LS_STORAGE_INTRO, String(Date.now())); } catch (e) { }
+    closeModal();
+    store.requestPersistence().then(p => { APP.persisted = !!p; render(); }).catch(() => { });
+  },
+  openTrash() { openModal({ type: "trash" }); },
+  trashRestore(el) {
+    const c = trashTake(el.dataset.id);
+    if (!c) { render(); return; }
+    const have = store.getCharacter(c.id);
+    const back = store.normalize(have ? { ...c, id: store.newId() } : c, APP.library);
+    store.saveCharacter(back);
+    if (!trashList().length) closeModal(); else render();
+    toast(`${back.name} restored`); render();
+  },
   cancelDelete() { APP.modal = { type: "edit" }; render(); },
   deleteChar() {
+    const typed = ((document.getElementById("del-name") || {}).value || "").trim().toLowerCase();
+    if (typed !== String(APP.char.name || "Unnamed").trim().toLowerCase()) { toast("Name does not match"); return; }
     const gone = JSON.parse(JSON.stringify(APP.char)), name = gone.name;
+    trashAdd(gone);
     store.deleteCharacter(gone.id);
     APP.char = null; APP.modal = null; APP.screen = "roster"; render();
-    toast(`${name} is gone`, { action: "Undo", onAction: () => { store.saveCharacter(gone); render(); toast(`All that, for nothing? ${name} is back.`); } });
+    toast(`${name} deleted. Restore in 30 days`, { action: "Undo", onAction: () => { const c = trashTake(gone.id); if (c) store.saveCharacter(c); render(); toast(`${name} is back`); } });
   },
   async downloadPdf() {
     if (!APP.char) return;

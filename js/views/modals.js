@@ -25,6 +25,9 @@ import { renderBadges, renderLevelUp, renderDiscard } from "./notes.js";
 import { renderContentUpdate } from "./contentupdate.js";
 import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
+import { COPY, backupAge, storageReport } from "../storagerisk.js";
+import { trashList, daysLeft } from "../trash.js";
+import { listCharacters } from "../store.js";
 import { trainingFromChar, trainingSummary, isTrained } from "../creation.js";
 
 export function renderModal(app) {
@@ -94,6 +97,8 @@ export function renderModal(app) {
     }
 
     case "confirmDelete": return renderConfirmDelete(app);
+    case "storage": return renderStorage(app);
+    case "trash": return renderTrash(app);
     case "confirmStyle": {
       const to = app._style === "advanced" ? "advanced" : "classic";
       return modalShell(`Switch to the ${to} sheet?`, `<p>Characters are not changed.</p>`,
@@ -479,9 +484,37 @@ export function renderRollCard(app) {
 
 // ---- delete: one clear confirmation (the toast afterwards offers Undo)
 function renderConfirmDelete(app) {
-  const n = esc(app.char.name);
-  return modalShell(`Delete ${app.char.name}?`, `<p>Removes ${n} from this device. No undo without a backup.</p>`,
-    `<button class="btn" data-a="cancelDelete">Keep</button><button class="btn danger" data-a="deleteChar">Delete</button>`);
+  const n = esc(app.char.name), shown = esc(String(app.char.name || "Unnamed").slice(0, 40));
+  return modalShell(`Delete ${app.char.name}?`,
+    `<p>Removes ${n}. Restorable for 30 days.</p>
+     <button class="btn block" data-a="exportOne">Save a copy first</button>
+     <label class="field" style="display:block;margin-top:12px"><span class="sub2">Type ${shown} to confirm</span>
+       <input class="f" id="del-name" data-del-name autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Character name"></label>`,
+    `<button class="btn" data-a="cancelDelete">Keep</button><button class="btn danger" id="del-go" data-a="deleteChar" disabled>Delete</button>`);
+}
+
+function renderStorage(app) {
+  const r = storageReport(app), first = !!app.modal.first, has = listCharacters().length > 0;
+  const body = `<div class="stor">
+    <p class="stor-lede">${esc(COPY.lede)}</p>
+    <div class="stor-risk risk-${r.level}"><span class="tag risk-tag">${esc(r.label)}</span><b>${esc(r.headline)}</b><span class="sub2">${esc(r.line)}</span></div>
+    ${r.why.map(t => `<p>${esc(t)}</p>`).join("")}
+    <h3>${esc(COPY.steps)}</h3>
+    <ol class="stor-steps">${r.steps.map(t => `<li>${esc(t)}</li>`).join("")}</ol>
+    ${!r.info.standalone && !r.info.ios && !r.info.memory ? installCard(app, { inSettings: true }) : ""}
+    <h3>${esc(COPY.erase)}</h3>
+    <ul class="stor-erase">${r.erase.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+    <p class="stor-close">${esc(COPY.close)}</p>
+    <p class="sub2">Browser protection: ${r.persisted ? "On" : "Off"} \u00b7 Last backup: ${esc(backupAge(app.prefs.lastBackup))}</p>
+  </div>`;
+  const foot = (has ? `<button class="btn" data-a="exportAll">Back up now</button>` : "") + (first ? `<button class="btn pri" data-a="storageAck">I understand</button>` : `<button class="btn pri" data-a="closeModal">Done</button>`);
+  return modalShell(COPY.title, body, foot, "stormodal");
+}
+
+function renderTrash(app) {
+  const list = trashList(), now = Date.now();
+  const rows = list.map(e => { const c = e.char; return `<div class="rowline"><span class="nm" style="flex-direction:column;align-items:flex-start;gap:0"><span>${esc(c.name || "Unnamed")}</span><span class="sub2">${esc([`Level ${c.level || 1}`, c.species, c.class].filter(Boolean).join(" "))} \u00b7 ${daysLeft(e, now)} days left</span></span><button class="btn sm" data-a="trashRestore" data-id="${esc(c.id)}">Restore</button></div>`; }).join("");
+  return modalShell("Recently deleted", list.length ? `<div class="panel"><div class="panel-body flush">${rows}</div></div>` : `<p class="sub2">Nothing deleted.</p>`, `<button class="btn pri" data-a="closeModal">Done</button>`);
 }
 
 function renderCustomBg(app) {

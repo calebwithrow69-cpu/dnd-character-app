@@ -49,7 +49,7 @@ const check = async (name, fn, { retry = 0 } = {}) => {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) return;
   for (let attempt = 0; ; attempt++) {
     try { await fn(); results.push([true, name]); console.log("PASS", name + (attempt ? " (passed on retry: timing)" : "")); return; }
-    catch (e) { if (attempt < retry) continue; results.push([false, name]); console.log("FAIL", name, "-", process.env.FULL ? String(e.message || e) : String(e.message || e).split("\n")[0]); return; }
+    catch (e) { if (attempt < retry) continue; results.push([false, name]); console.log("FAIL", name, "-", process.env.FULL ? String(e.stack || e.message || e).split("\n").slice(0, 4).join(" | ") : String(e.message || e).split("\n")[0]); return; }
   }
 };
 const assert = (c, m) => { if (!c) throw new Error(m || "assertion failed"); };
@@ -264,6 +264,42 @@ await check("Small phone: no sideways scroll at 320px on the sheet and Settings"
   await p.context().close();
 });
 
+await check("Storage safety: explainer, typed delete, Recently deleted restore", async () => {
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    assert(await p.locator(".stormodal").count() === 0, "explainer must not auto-open under automation");
+    await clickA(p, "goRoster"); await clickA(p, "importGandork");
+    await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(200);
+    await p.evaluate(() => CR.ACTIONS.openStorageInfo()); await p.waitForSelector(".stormodal");
+    const t = await p.locator(".stormodal").innerText();
+    assert(/live on this device/i.test(t) && /No accounts|no accounts/.test(t) && /Last backup/.test(t) && /(High|Medium|Lower) risk/.test(t), "explainer text: " + t.slice(0, 120));
+    assert(await p.locator('.stormodal [data-a="exportAll"]').count() === 1, "Back up now missing with a character present");
+    const sx = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); assert(sx <= 2, "explainer scrolls sideways " + sx);
+    await p.waitForTimeout(600); const box = await p.locator(".stormodal").boundingBox(); assert(box.y >= 0 && box.y + box.height <= h + 2, "explainer taller than the screen");
+    await p.evaluate(() => { APP.modal = { type: "storage", first: true }; CR.render(); }); await p.waitForTimeout(150);
+    await p.locator('[data-a="storageAck"]').click(); await p.waitForTimeout(300);
+    assert(await p.evaluate(() => !!localStorage.getItem("dnd-storage-intro-v1")), "ack not stored"); assert(await p.locator(".stormodal").count() === 0, "explainer did not close");
+    // typed delete
+    await clickA(p, "goRoster"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForTimeout(500);
+    if (await p.locator(".stylefull").count()) await pickSheet(p, "classic");
+    await p.waitForSelector('[data-a="openEdit"]:visible'); await clickA(p, "openEdit"); await p.locator('[data-a="askDelete"]').click(); await p.waitForSelector("#del-name");
+    assert(await p.locator("#del-go").isDisabled(), "Delete must start disabled");
+    await p.evaluate(() => CR.ACTIONS.deleteChar()); await p.waitForTimeout(200);
+    assert(await p.evaluate(() => !!JSON.parse(localStorage.getItem("dnd-roster-v1") || "{}").gandork), "deleted without typing the name (action path)");
+    await p.fill("#del-name", "gand"); assert(await p.locator("#del-go").isDisabled(), "partial name enabled Delete");
+    await p.fill("#del-name", "  GANDORK the green "); assert(await p.locator("#del-go").isEnabled(), "full name (any case) should enable Delete");
+    await p.locator("#del-go").click(); await p.waitForTimeout(400);
+    assert(await p.evaluate(() => !JSON.parse(localStorage.getItem("dnd-roster-v1") || "{}").gandork), "character not removed");
+    assert(await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-trash-v1")).length === 1), "not in trash");
+    await p.reload(); await p.waitForSelector("#home-book"); await clickA(p, "goRoster");
+    await clickA(p, "openTrash"); await p.waitForSelector('[data-a="trashRestore"]'); assert(/days left/.test(await p.locator(".modal").innerText()), "no days left shown");
+    await p.locator('[data-a="trashRestore"]').click(); await p.waitForTimeout(500);
+    assert(await p.evaluate(() => !!JSON.parse(localStorage.getItem("dnd-roster-v1")).gandork), "restore failed");
+    assert(await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-trash-v1")).length === 0), "trash not emptied");
+    noErrs(p); await p.context().close();
+  }
+});
+
 await check("advanced sheet: every sheet tab opens, no sideways scroll (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   const n = await p.locator('[data-a="sheetTab"]').count(); assert(n >= 2, "tabs: " + n);
@@ -397,8 +433,11 @@ await check("Content update: stays pending until Done, with a Home banner; never
   const mk = async () => { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block" });
     await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); }); const page = await ctx.newPage(); page.errs = []; page.on("pageerror", e => page.errs.push(String(e)));
     await page.goto(URL_); await page.waitForSelector("#home-book"); return page; };
-  const p = await mk(); await p.waitForTimeout(500);
-  assert(await p.locator(".modal").count() === 0 && await p.locator('.hwarn[data-a="openUpdate"]').count() === 0, "a new device gets neither popup nor banner");
+  const p = await mk(); await p.waitForTimeout(700);
+  assert(!/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")) && await p.locator('.hwarn[data-a="openUpdate"]').count() === 0, "a new device gets neither popup nor banner");
+  assert(await p.locator(".stormodal").count() === 1, "a new device gets the storage explainer");
+  await p.evaluate(() => localStorage.setItem("dnd-storage-intro-v1", "1")); await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(700);
+  assert(await p.locator(".modal").count() === 0, "acknowledged: no popup on a new device");
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => localStorage.removeItem("dnd-update-seen"));
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
   assert(/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")), "an existing player gets the popup");
@@ -493,11 +532,11 @@ await check("Notes: write, save with the check, discard with a confirm, read, th
 });
 
 await check("Home banners: Safari without the install, then backup age", async () => {
-  const mk = async ua => { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block", userAgent: ua }); await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); });
+  const mk = async ua => { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block", userAgent: ua }); await ctx.addInitScript(() => { Object.defineProperty(navigator, "webdriver", { get: () => false }); try { localStorage.setItem("dnd-storage-intro-v1", "1"); } catch (e) { } });
     const page = await ctx.newPage(); page.errs = []; page.on("pageerror", e => page.errs.push(String(e))); await page.goto(URL_); await page.waitForSelector("#home-book"); return page; };
   const SAF = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
   const p = await mk(SAF); await p.waitForTimeout(300);
-  assert(await p.locator('.hwarn[data-a="openSettings"]').count() === 0, "no characters, no banner");
+  assert(await p.locator('.hwarn[data-a="openStorageInfo"]').count() === 0, "no characters, no banner");
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => localStorage.setItem("dnd-update-seen", APP.library.updates.slice(-1)[0].id)); await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(500);
   assert(/Safari erases data/.test(await p.locator(".hwarn").first().innerText()), "Safari banner with a character");
   await p.context().close();

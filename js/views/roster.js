@@ -1,5 +1,6 @@
 import { esc } from "../ui.js";
 import { listCharacters } from "../store.js";
+import { trashList } from "../trash.js";
 import { emblem, emblemFor } from "../emblems.js";
 import { glance, PLUS } from "./home.js";
 const BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
@@ -27,6 +28,7 @@ export function renderRoster(app) {
     <div class="rs-foot">
       ${fallen ? `<button class="btn" data-a="goGraveyard">Graveyard (${fallen})</button>` : ""}
       <button class="btn" data-a="importPrompt">Restore backup</button>
+      ${trashList().length ? `<button class="btn" data-a="openTrash">Recently deleted (${trashList().length})</button>` : ""}
       <button class="btn" data-a="rsOpen">Rulesets</button>
       <button class="btn" data-a="dmOpen">DM editor</button>
       ${seedAvailable ? `<button class="btn" data-a="importGandork">Add Gandork</button>` : ""}

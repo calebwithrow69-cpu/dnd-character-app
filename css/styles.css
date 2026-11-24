@@ -2533,3 +2533,16 @@ body.touring{overflow:hidden}
 .qrwrap{max-width:100%}
 .qrwrap canvas,.qrwrap img,.qrwrap svg{max-width:100%;height:auto}
 .qrwrap p,.qrwrap .sub2{overflow-wrap:anywhere}
+
+/* ===== STORAGE EXPLAINER ===== */
+.stormodal .modal-body{max-height:min(70vh,640px);overflow:auto}
+.stor h3{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;margin:16px 0 6px}
+.stor p{margin:0 0 8px;line-height:1.45}
+.stor-lede{font-size:1rem}
+.stor-risk{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-left-width:4px;border-radius:var(--radius-sm);padding:10px 12px;margin:12px 0;background:var(--panel2)}
+.stor-risk.risk-high{border-left-color:#C0392B}.stor-risk.risk-medium{border-left-color:#C98A1B}.stor-risk.risk-low{border-left-color:#3F8F4F}
+.risk-tag{width:max-content;font-weight:700}
+.risk-tag.risk-high{border-color:#C0392B;color:#C0392B}.risk-tag.risk-medium{border-color:#C98A1B;color:#C98A1B}.risk-tag.risk-low{border-color:#3F8F4F;color:#3F8F4F}
+.stor-steps,.stor-erase{margin:0 0 8px;padding-left:20px;line-height:1.45}
+.stor-steps li,.stor-erase li{margin-bottom:4px}
+.stor-close{font-weight:600;margin-top:12px}

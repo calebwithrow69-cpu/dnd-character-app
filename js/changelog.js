@@ -2,11 +2,34 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.62";
+export const VERSION = "0.1.63";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.63",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "Storage safety: first-open explainer, device risk, Recently deleted.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "First launch explains where characters are saved, what erases them, and what to do. It names your device and browser and rates the risk.",
+          "Settings, Data shows the same risk and reopens the explainer.",
+          "Deleting a character needs its name typed, and offers a copy first.",
+          "Deleted characters stay in Recently deleted for 30 days, with Restore."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "The browser's permanent-storage request waits until you have read the explainer."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.62",
     date: "2026-11-24",

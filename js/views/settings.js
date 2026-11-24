@@ -4,6 +4,7 @@ import { esc, modalShell } from "../ui.js";
 import { updatesOf } from "../contentupdate.js";
 import { installCard } from "../install.js";
 import { rewardEarned } from "../tour.js";
+import { storageReport } from "../storagerisk.js";
 import { VERSION, STAGE, TESTERS, CHANGELOG } from "../changelog.js";
 
 const HAS_VIBRATE = typeof navigator !== "undefined" && "vibrate" in navigator;
@@ -81,12 +82,16 @@ export function settingsBody(app) {
     sw("contrast", "High contrast", "Brighter text and stronger borders.", p.contrast === "high", { kw: "contrast" }) +
     sw("bigtap", "Bigger buttons", "Larger tap targets for thumbs.", !!p.bigtap, { kw: "tap target large" });
 
+  const sr = storageReport(app);
   const data =
     `<div class="setrow col" data-s="backup export save characters restore import">
       <div class="setinfo"><div class="setlabel">Backups</div><div class="sethint">Characters live only on this device. Last backup: ${esc(daysAgo(p.lastBackup))}.</div></div>
       <button class="btn block" data-a="exportAll">Export all</button>
       <button class="btn block" data-a="importPrompt">Restore backup</button>
-      <div class="sethint">${app.persisted ? "This browser has agreed to keep your data." : "Tip: installing the app to your home screen keeps your data safest."}</div>
+    </div>` +
+    `<div class="setrow col" data-s="storage risk device safe fragile persist lost erase explain">
+      <div class="setinfo"><div class="setlabel">Storage <span class="tag risk-tag risk-${esc(sr.level)}">${esc(sr.label)}</span></div><div class="sethint">${esc(sr.line)}. ${esc(sr.short)}</div></div>
+      <button class="btn block" data-a="openStorageInfo">Storage details</button>
     </div>` +
     choice("backupDays", "Backup reminder", "Banner on Home when a backup is overdue.", [["7", "7 days"], ["14", "14 days"], ["30", "30 days"], ["0", "Off"]], String(p.backupDays != null ? p.backupDays : 14), { kw: "backup banner warning" }) +
     `<div class="setrow col" data-s="settings export import copy transfer device">
