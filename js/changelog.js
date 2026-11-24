@@ -2,11 +2,44 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.61";
+export const VERSION = "0.1.62";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.62",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "App tours and one button standard.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "A damaged save no longer blanks the app. Bad entries are skipped or repaired when read.",
+          "Backup files with empty or malformed entries are refused with a message.",
+          "Typing a huge HP amount no longer breaks the layout.",
+          "Sheet no longer scrolls sideways on 320px phones.",
+          "If the browser blocks storage, the app opens and says nothing will be saved."
+        ]
+      },
+      {
+        title: "Added",
+        items: [
+          "Home tour and Sheet tour, 4 steps each. Skip any time, replay from Settings, About.",
+          "Finishing a tour unlocks the Silver accent colour."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Every button now has the same shape, label style and press. Actions are 44px, small actions 36px.",
+          "Small controls shrink on press, wide rows and cards dim slightly. Hover no longer lifts buttons.",
+          "Play Mode action buttons were 32px with larger text. They now match."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.61",
     date: "2026-11-24",

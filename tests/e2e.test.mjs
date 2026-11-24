@@ -156,6 +156,114 @@ await check("level up then lower: HP, feat and log go back; a hand-lowered chara
   noErrs(p); await p.context().close();
 });
 
+await check("Button law: sizes, label style, radius and a press on every kind of button", async () => {
+  const p = await open(390, 844, { touch: true });
+  const bad = [];
+  const scan = async tag => {
+    const rows = await p.evaluate(() => [...document.querySelectorAll("button, a.btn, [role=button]")].filter(b => b.offsetParent !== null && !b.disabled && b.getBoundingClientRect().width > 8).map(b => { const s = getComputedStyle(b), r = b.getBoundingClientRect(); return { cls: b.className.toString().replace(/\s+/g, " ").trim(), h: Math.round(r.height), fs: s.fontSize, rad: s.borderTopLeftRadius, ff: s.fontFamily, tt: s.textTransform, cur: s.cursor }; }));
+    for (const r of rows) {
+      const toks = r.cls.split(" ");
+      if (toks.includes("btn") && !toks.some(t => /^(shop-|rs-|dim)/.test(t))) {
+        if (!/Cinzel/.test(r.ff) || r.tt !== "uppercase") bad.push(tag + " btn label style: " + r.cls);
+        if (toks.includes("sm")) { if (r.h < 35) bad.push(tag + " btn sm height " + r.h + ": " + r.cls); if (r.fs !== "11.52px") bad.push(tag + " btn sm font " + r.fs + ": " + r.cls); }
+        else { if (r.h < 43) bad.push(tag + " btn height " + r.h + ": " + r.cls); if (r.fs !== "12.8px") bad.push(tag + " btn font " + r.fs + ": " + r.cls); }
+      }
+      if (r.cur !== "pointer" && !toks.some(t => /^(pip|tpip)$/.test(t))) bad.push(tag + " cursor " + r.cur + ": " + r.cls);
+    }
+  };
+  const press = async tag => {
+    const seen = new Set(), handles = await p.$$("button:not([disabled]), a.btn, [role=button]");
+    for (const h of handles) {
+      const cls = (await h.evaluate(b => b.className.toString().replace(/\s+/g, " ").trim().split(" ").filter(c => !/^(on|ok|used|fail|picked|locked|amber|active|sel|open)$/.test(c)).slice(0, 3).join(".") || "(none)")).trim();
+      if (seen.has(cls) || seen.size > 45) continue;
+      const vis = await h.evaluate(b => { const r = b.getBoundingClientRect(); if (!(b.offsetParent !== null && r.width > 8 && r.height > 8 && r.top >= 0 && r.bottom <= innerHeight)) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && b.contains(t); });
+      if (!vis) continue;
+      seen.add(cls);
+      const box = await h.boundingBox(); await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await p.mouse.down(); await p.waitForTimeout(160);
+      const tf = await h.evaluate(b => b.isConnected ? getComputedStyle(b).transform + "|" + getComputedStyle(b).filter : "redrawn").catch(() => "redrawn");
+      await p.mouse.move(2, 2); await p.mouse.up(); await p.waitForTimeout(60);
+      if (tf !== "redrawn" && /^none\|none$/.test(tf)) bad.push(tag + " no press on: " + cls);
+    }
+  };
+  await scan("home"); await press("home");
+  await clickA(p, "goRoster"); await clickA(p, "importGandork"); await scan("roster"); await press("roster");
+  await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openHp"], .stylefull');
+  if (await p.locator(".stylefull").count()) await pickSheet(p, "classic");
+  await p.waitForSelector('[data-a="openHp"]'); await p.waitForTimeout(400); await scan("sheet"); await press("sheet");
+  await goAdvanced(p); await p.waitForTimeout(400);
+  for (const sub of ["play", "spells", "gear", "rolls", "features", "stats"]) { await p.locator('.subtabs [data-a="charSub"][data-sub="' + sub + '"]').click(); await p.waitForTimeout(300); await scan(sub); await press(sub); }
+  await clickA(p, "openEdit"); await scan("edit"); await press("edit");
+  assert(bad.length === 0, bad.slice(0, 12).join(" || "));
+  noErrs(p); await p.context().close();
+});
+
+await check("Tours: home and sheet run 4 steps, skip works, finishing unlocks Silver", async () => {
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(300);
+    assert(await p.locator(".tourcard").count() === 0, "tour card must not show under automation");
+    const geom = () => p.evaluate(() => { const c = document.getElementById("tour-card")?.getBoundingClientRect(), hl = document.querySelector(".tour-hole")?.getBoundingClientRect(); return { card: c && { l: c.left, t: c.top, r: c.right, b: c.bottom }, hole: hl && { w: hl.width, h: hl.height }, vw: innerWidth, vh: innerHeight, sx: document.documentElement.scrollWidth > innerWidth }; });
+    await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "home" } })); await p.waitForSelector("#tour-card");
+    for (let i = 0; i < 4; i++) {
+      const g = await geom(); const label = await p.locator(".tour-prog em").innerText();
+      assert(label === (i + 1) + " of 4", "progress " + label);
+      assert(g.card.l >= 0 && g.card.r <= g.vw + 1 && g.card.t >= 0 && g.card.b <= g.vh + 1, "card off screen step " + (i + 1) + " " + JSON.stringify(g.card));
+      assert(g.hole.w > 20 && g.hole.h > 20, "no spotlight on step " + (i + 1));
+      assert(!g.sx, "sideways scroll during tour");
+      if (i === 1) { await p.locator('[data-a="tourBack"]').click(); assert((await p.locator(".tour-prog em").innerText()) === "1 of 4", "Back"); await p.locator('[data-a="tourNext"]').click(); }
+      await p.locator('[data-a="tourNext"]').click();
+    }
+    assert(await p.locator("#tour-card").count() === 0, "tour did not close");
+    const st = await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-tour-v1")));
+    assert(st.home === "done" && st.earned, "state " + JSON.stringify(st));
+    await p.evaluate(() => CR.ACTIONS.openSettings()); await p.waitForTimeout(300);
+    assert(await p.locator('[data-a="tourStart"]').count() === 2, "replay buttons");
+    assert(await p.locator('[data-k="accent"] [data-v="silver"], [data-pref="accent"][data-v="silver"], button:has-text("Silver")').count() > 0, "Silver option missing");
+    await p.evaluate(() => CR.ACTIONS.closeModal && CR.ACTIONS.closeModal());
+    // sheet tour, skip with Escape on step 2
+    await clickA(p, "homeContinue"); await p.waitForSelector(".status .vitals, .stylefull"); if (await p.locator(".stylefull").count()) await pickSheet(p, "classic");
+    await p.waitForSelector(".status .vitals"); await p.waitForTimeout(300);
+    await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "sheet" } })); await p.waitForSelector("#tour-card");
+    await p.locator('[data-a="tourNext"]').click(); await p.keyboard.press("Escape"); await p.waitForTimeout(100);
+    assert(await p.locator("#tour-card").count() === 0, "Escape did not skip");
+    const st2 = await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-tour-v1")));
+    assert(st2.sheet === "skipped", "skip state " + JSON.stringify(st2));
+    await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "sheet" } })); await p.waitForSelector("#tour-card");
+    for (let i = 0; i < 4; i++) { const g = await geom(); assert(g.card.t >= 0 && g.card.b <= g.vh + 1 && g.card.r <= g.vw + 1, "sheet card off screen " + i + JSON.stringify(g)); await p.locator('[data-a="tourNext"]').click(); }
+    noErrs(p); await p.context().close();
+  }
+});
+
+await check("Hostile storage: damaged saves, bad imports, full or blocked storage never blank the app", async () => {
+  const bads = ["null", "[]", '"x"', "{bad", '{"a":null}', '{"a":5}', '{"a":{}}', '{"a":{"id":"a","name":{"x":1},"level":"abc","hp":null,"class":5,"abilities":{"str":"ten","dex":1e9}}}'];
+  for (const val of bads) {
+    const p = await open(390, 844); await p.evaluate(v => localStorage.setItem("dnd-roster-v1", v), val); await p.reload(); await p.waitForSelector("#home-book", { timeout: 10000 });
+    await clickA(p, "goRoster"); const t = await p.evaluate(() => document.getElementById("app").innerText);
+    assert(t.length > 20 && !/\bNaN\b|\[object Object\]|undefined/.test(t), "roster " + val + " -> " + t.slice(0, 80));
+    noErrs(p); await p.context().close();
+  }
+  { const p = await open(390, 844); await p.evaluate(() => localStorage.setItem("dnd-prefs-v1", "null")); await p.reload(); await p.waitForSelector("#home-book", { timeout: 10000 }); noErrs(p); await p.context().close(); }
+  const { parseImport } = await import(pathToFileURL(join(root, "js/store.js")).href);
+  for (const t of ["[null,null]", "[1,2]", "[[]]", "{}", '{"characters":"no"}', "null"]) { let threw = false; try { parseImport(t); } catch (e) { threw = true; } assert(threw, "parseImport accepted " + t); }
+  { const p = await open(390, 844); await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForTimeout(600);
+    if (await p.locator(".stylefull").count()) await pickSheet(p, "classic");
+    await p.evaluate(() => { Storage.prototype.setItem = function () { throw new DOMException("full", "QuotaExceededError"); }; CR.ACTIONS.openHp(); document.getElementById("hp-amt").value = "5"; CR.ACTIONS.hpApply({ dataset: { mode: "damage" } }); });
+    await p.waitForTimeout(400); const toastTxt = await p.evaluate(() => document.getElementById("toast").innerText);
+    assert(/Couldn.t save/.test(toastTxt), "no warning when storage is full: " + toastTxt); await p.context().close(); }
+  { const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" }); const p = await ctx.newPage();
+    await p.addInitScript(() => { Object.defineProperty(window, "localStorage", { get() { throw new DOMException("denied", "SecurityError"); } }); });
+    await p.goto(URL_); await p.waitForSelector("#home-book", { timeout: 10000 }); const t = await p.evaluate(() => document.getElementById("app").innerText);
+    assert(/Storage is blocked/.test(t), "no banner when storage is blocked"); await ctx.close(); }
+});
+
+await check("Small phone: no sideways scroll at 320px on the sheet and Settings", async () => {
+  const p = await open(320, 568, { touch: true }); await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForTimeout(600);
+  if (await p.locator(".stylefull").count()) await pickSheet(p, "classic");
+  await p.waitForSelector('[data-a="openHp"]'); await p.waitForTimeout(300);
+  for (const tab of ["stats", "settings"]) { await p.evaluate(t => CR.ACTIONS.sheetTab({ dataset: { tab: t } }), tab); await p.waitForTimeout(400); const sx = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); assert(sx <= 2, tab + " scrolls sideways by " + sx); }
+  await p.context().close();
+});
+
 await check("advanced sheet: every sheet tab opens, no sideways scroll (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   const n = await p.locator('[data-a="sheetTab"]').count(); assert(n >= 2, "tabs: " + n);

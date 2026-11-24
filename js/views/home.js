@@ -1,7 +1,8 @@
 // Home: the last character (tap to open) and floating Characters / Rules / Settings buttons. Fits one screen. ASCII only.
+import { tourCard } from "../tour.js";
 import { esc, topbar } from "../ui.js";
 import { deriveCharacter } from "../rules.js";
-import { listCharacters, getCharacter, normalize } from "../store.js";
+import { listCharacters, getCharacter, normalize, saveFailed } from "../store.js";
 import { rulesTab } from "./glossary.js";
 import { cuPendingCount } from "./contentupdate.js";
 import { safariAtRisk } from "../kv.js";
@@ -27,8 +28,9 @@ export const PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 
 // Facts shown for a character on the home hero and the character cards.
 export function glance(app, rawOrId) {
+  let raw = null;
   try {
-    const raw = typeof rawOrId === "string" ? getCharacter(rawOrId) : rawOrId;
+    raw = typeof rawOrId === "string" ? getCharacter(rawOrId) : rawOrId;
     const c = normalize(raw, app.library), d = deriveCharacter(c);
     return { c, hp: c.hp ? c.hp.cur : 0, max: c.hp ? c.hp.max : 0, ac: d.ac, speed: d.speed != null ? d.speed : c.speed, prof: Math.ceil((c.level || 1) / 4) + 1 };
   } catch (e) { return { c: raw || {}, hp: 0, max: 0, ac: "-", speed: "-", prof: 2 }; }
@@ -53,6 +55,7 @@ export function renderHome(app) {
       ${storageBanner(app)}
       ${cuPendingCount(app) && !navigator.webdriver ? `<button class="hwarn" data-a="openUpdate">${cuPendingCount(app)} rule changes</button>` : ""}
       ${app.needsNewPassword ? `<button class="hwarn" data-a="enterNewPassword">New rules are waiting. Enter the new password.</button>` : ""}
+      ${tourCard("home")}
       ${hero}
       <p class="devnote" role="note">Under development. Expect issues.</p>
       <div class="float">
@@ -73,6 +76,8 @@ export function renderRulesPage(app) {
 // Data-loss warnings for players who have characters: Safari without the install, and no recent backup.
 const BACKUP_DAYS = 14;
 export function storageBanner(app, { now = Date.now(), nav = navigator } = {}) {
+  if (typeof window !== "undefined" && window.__memStore) return `<div class="hwarn" role="status">Storage is blocked. Nothing will be saved.</div>`;
+  if (saveFailed()) return `<button class="hwarn" data-a="exportAll">Storage full. Export now</button>`;
   if (nav.webdriver || !listCharacters().some(c => !c.dead)) return "";
   const standalone = !!(nav.standalone || (typeof matchMedia === "function" && matchMedia("(display-mode: standalone)").matches));
   if (safariAtRisk(nav, standalone)) return `<button class="hwarn" data-a="openSettings">Safari erases data. Install</button>`;

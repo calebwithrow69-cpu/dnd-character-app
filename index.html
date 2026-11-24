@@ -38,6 +38,11 @@
 <div id="term-pop" role="dialog" aria-live="polite"></div>
 <div id="vignette" aria-hidden="true"></div>
 <div id="hpfloat" aria-hidden="true"></div>
+<script>
+/* Storage blocked (strict privacy mode, embedded views): fall back to memory so the app still opens. Nothing is kept after closing. */
+(function(){function mem(){var m={};return{getItem:function(k){return Object.prototype.hasOwnProperty.call(m,k)?m[k]:null},setItem:function(k,v){m[k]=String(v)},removeItem:function(k){delete m[k]},clear:function(){m={}},key:function(i){return Object.keys(m)[i]||null},get length(){return Object.keys(m).length}}}
+["localStorage","sessionStorage"].forEach(function(n){try{window[n].getItem("t")}catch(e){try{Object.defineProperty(window,n,{value:mem(),configurable:true});window.__memStore=true}catch(e2){}}});})();
+</script>
 <script type="module" src="js/app.js"></script>
 <script>
 // Opened by double-clicking the file? Browsers block the app's code that way.

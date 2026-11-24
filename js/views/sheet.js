@@ -1,4 +1,5 @@
 import { readinessStrip, loadoutCards, wornRows } from "./loadout.js";
+import { tourCard } from "../tour.js";
 import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, glossaryEntry, infoRow, activeChips, hotbarToggle, kRow, kGroup, snipOf } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
@@ -112,6 +113,7 @@ export function renderSheet(app) {
         ${chips ? `<div class="chips">${chips}</div>` : ""}
         ${concBanner(app)}
       </section>`}
+      ${tab === "stats" ? tourCard("sheet") : ""}
       ${body}
     </main>
     <nav class="tabs" aria-label="Sheet sections"><div class="in" style="grid-template-columns:repeat(${tabs.length},1fr)">

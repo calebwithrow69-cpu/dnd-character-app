@@ -3,6 +3,7 @@
 import { esc, modalShell } from "../ui.js";
 import { updatesOf } from "../contentupdate.js";
 import { installCard } from "../install.js";
+import { rewardEarned } from "../tour.js";
 import { VERSION, STAGE, TESTERS, CHANGELOG } from "../changelog.js";
 
 const HAS_VIBRATE = typeof navigator !== "undefined" && "vibrate" in navigator;
@@ -44,7 +45,7 @@ export function settingsBody(app) {
 
   const appearance =
     choice("theme", "Theme", "Auto follows your device.", [["auto", "Auto"], ["dark", "Dark Tome"], ["light", "Parchment"]], theme, { kw: "dark light mode" }) +
-    choice("accent", "Accent colour", "Buttons, highlights and tabs.", [["oxblood", "Oxblood"], ["teal", "Teal"], ["violet", "Violet"], ["gold", "Gold"], ["blue", "Blue"], ["green", "Green"]], p.accent || "oxblood", { kw: "color colour highlight theme" }) +
+    choice("accent", "Accent colour", "Buttons, highlights and tabs.", [["oxblood", "Oxblood"], ["teal", "Teal"], ["violet", "Violet"], ["gold", "Gold"], ["blue", "Blue"], ["green", "Green"]].concat(rewardEarned() ? [["silver", "Silver"]] : []), p.accent || "oxblood", { kw: "color colour highlight theme" }) +
     choice("size", "Text size", "", [["small", "Small"], ["normal", "Normal"], ["large", "Large"], ["xl", "Extra large"]], size, { kw: "font zoom" }) +
     choice("font", "Text style", "Plain is easier to read for some people.", [["tome", "Tome serif"], ["plain", "Plain sans"]], p.font || "tome", { kw: "font dyslexia readable" }) +
     choice("corners", "Corners", "", [["sharp", "Sharp"], ["soft", "Soft"], ["round", "Round"]], p.corners || "soft", { kw: "radius shape panels" }) +
@@ -112,7 +113,13 @@ export function settingsBody(app) {
       <button class="btn block danger" data-a="clearOffline">Clear cache and reload</button>
     </div>`;
 
+  const tourRow =
+    `<div class="setrow col" data-s="tour guide help walkthrough replay silver reward">
+      <div class="setinfo"><div class="setlabel">Tours</div><div class="sethint">${rewardEarned() ? "Silver accent unlocked." : "Finish one to unlock the Silver accent."}</div></div>
+      <div class="btnrow"><button class="btn" data-a="tourStart" data-id="home">Home tour</button><button class="btn" data-a="tourStart" data-id="sheet">Sheet tour</button></div>
+    </div>`;
   const about =
+    tourRow +
     `<div class="setrow col" data-s="version changelog whats new about testers">
       <div class="setinfo"><div class="setlabel">The Sheet ${esc(VERSION)} <span class="tag amber">${esc(STAGE)}</span></div><div class="sethint">Tester build: ${esc(TESTERS)}.</div></div>
       <button class="btn block" data-a="openChangelog">What's new (changelog)</button>

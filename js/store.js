@@ -8,8 +8,18 @@ import { repairLevels } from "./levelfix.js";
 const LS_ROSTER = "dnd-roster-v1"; // { [id]: character }
 const LS_ACTIVE = "dnd-active-v1";
 
+// A damaged or hand-edited roster must never take the app down: keep only well-formed entries.
 function readRoster() {
-  try { return JSON.parse(localStorage.getItem(LS_ROSTER) || "{}"); } catch (e) { return {}; }
+  let r;
+  try { r = JSON.parse(localStorage.getItem(LS_ROSTER) || "{}"); } catch (e) { return {}; }
+  if (!r || typeof r !== "object" || Array.isArray(r)) return {};
+  const out = {};
+  Object.keys(r).forEach(k => {
+    const c = r[k];
+    if (k === "__proto__" || !c || typeof c !== "object" || Array.isArray(c)) return;
+    out[k] = typeof c.id === "string" && c.id ? c : { ...c, id: k };
+  });
+  return out;
 }
 let lastWriteFailed = false;
 function writeRoster(roster) {
@@ -20,7 +30,30 @@ export const saveFailed = () => lastWriteFailed;
 
 // Fills in fields older saves (or imports) may lack, so the sheet never
 // has to guard against undefined.
+// Wrong types in a save (hand edits, old builds, bad imports) are coerced here, once, so the sheet can trust the shape.
+const txt = (v, max = 200) => typeof v === "string" ? v.slice(0, max) : typeof v === "number" && isFinite(v) ? String(v) : "";
+const num = (v, d, lo, hi) => { v = Number(v); if (v === null || !isFinite(v)) v = d; return Math.min(hi, Math.max(lo, v)); };
+const plain = v => v && typeof v === "object" && !Array.isArray(v);
+function prep(c) {
+  if (!plain(c)) c = {};
+  const o = { ...c };
+  ["name", "species", "class", "subclass", "background", "alignment", "appearance", "backstory", "languages", "classFeatureNotes", "notes", "profsText", "size", "wielded"].forEach(k => { if (k in o) o[k] = txt(o[k], k === "backstory" || k === "notes" || k === "appearance" ? 20000 : 200); });
+  ["feats", "conditions", "saveProf", "skillProf", "skillExpertise", "inventory", "resources", "weapons", "masteries", "lineageGranted", "hotbar", "loadouts", "pins", "formulas", "levelLog", "custom", "active"].forEach(k => { if (k in o && !Array.isArray(o[k])) o[k] = []; });
+  ["inventory", "resources", "weapons"].forEach(k => { if (k in o) o[k] = o[k].filter(plain); });
+  if (o.inventory) o.inventory = o.inventory.map(it => ({ ...it, name: txt(it.name, 120) || "Item" }));
+  if (o.weapons) o.weapons = o.weapons.map(w => ({ ...w, name: txt(w.name, 120) || "Weapon" }));
+  if (o.feats) o.feats = o.feats.filter(f => typeof f === "string" || plain(f));
+  ["spellcasting", "choices", "coins", "equipment", "ac", "deathSaves", "hitDice", "hp", "abilities"].forEach(k => { if (k in o && !plain(o[k])) o[k] = {}; });
+  if (o.spellcasting) { const sc = { ...o.spellcasting }; sc.spells = (Array.isArray(sc.spells) ? sc.spells : []).filter(x => plain(x) && typeof x.name === "string"); if (!Array.isArray(sc.slotsUsed)) delete sc.slotsUsed; o.spellcasting = sc; }
+  if (o.abilities) { const a = {}; ["str", "dex", "con", "int", "wis", "cha"].forEach(k => { if (k in o.abilities) a[k] = num(o.abilities[k], 10, 1, 30); }); o.abilities = a; }
+  if (o.hp) { const h = { ...o.hp }; if ("max" in h) h.max = num(h.max, 1, 1, 9999); if ("cur" in h) h.cur = num(h.cur, 1, 0, 9999); if ("temp" in h) h.temp = num(h.temp, 0, 0, 9999); if ("adjust" in h) h.adjust = num(h.adjust, 0, -999, 999); o.hp = h; }
+  if (o.coins) { const k = {}; ["cp", "sp", "ep", "gp", "pp"].forEach(x => { if (x in o.coins) k[x] = num(o.coins[x], 0, 0, 1e9); }); o.coins = k; }
+  if (o.deathSaves) o.deathSaves = { success: num(o.deathSaves.success, 0, 0, 3), fail: num(o.deathSaves.fail, 0, 0, 3) };
+  return o;
+}
+
 export function normalize(c, library) {
+  c = prep(c);
   const cls = library?.classes?.find(x => x.name === c.class);
   const out = {
     schema: 2, id: c.id || newId(), name: c.name || "Unnamed",
@@ -136,8 +169,12 @@ export function parsePortraits(text) {
 // Accepts a backup file, a single exported character, or a bare array.
 export function parseImport(text) {
   const data = JSON.parse(text);
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.characters)) return data.characters;
-  if (data && data.name && data.abilities) return [data];
-  throw new Error("Not a Sheet backup.");
+  const ok = l => l.filter(c => c && typeof c === "object" && !Array.isArray(c) && typeof c.name === "string" && c.abilities && typeof c.abilities === "object");
+  let list = null;
+  if (Array.isArray(data)) list = ok(data);
+  else if (data && Array.isArray(data.characters)) list = ok(data.characters);
+  else if (data && data.name && data.abilities) list = ok([data]);
+  if (!list) throw new Error("Not a Sheet backup.");
+  if (!list.length) throw new Error("No characters in that file.");
+  return list;
 }

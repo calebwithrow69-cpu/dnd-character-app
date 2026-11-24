@@ -4,7 +4,7 @@ import { sanitizeDraft, pruneDraftToLibrary, finalAbilities, CHAPTERS } from "./
 import { toB64, fromB64 } from "./rulesets.js";
 import { ABILITIES, ABILITY_LABEL } from "./rules.js";
 
-const MAX_TEXT = 3 * 1024 * 1024;
+const MAX_TEXT = 24 * 1024 * 1024;
 
 export function templatePayload(d, name) {
   const draft = JSON.parse(JSON.stringify(d));

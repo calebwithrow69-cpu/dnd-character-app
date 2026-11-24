@@ -10,7 +10,7 @@ export const SECTION_KEYS = {
 };
 
 const CHOICES = {
-  theme: ["auto", "dark", "light"], accent: ["oxblood", "teal", "violet", "gold", "blue", "green"],
+  theme: ["auto", "dark", "light"], accent: ["oxblood", "teal", "violet", "gold", "blue", "green", "silver"],
   size: ["small", "normal", "large", "xl"], font: ["tome", "plain"], corners: ["sharp", "soft", "round"],
   density: ["compact", "normal", "roomy"], sfx: ["on", "off"], haptics: ["on", "off"], startTab: ["stats", "rules"],
   width: ["standard", "wide"], rollfx: ["full", "crits", "off"], motion: ["auto", "reduced"], contrast: ["normal", "high"],

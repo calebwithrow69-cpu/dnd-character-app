@@ -7,7 +7,7 @@
 const DB = "dnd-kv-v1", TABLE = "kv";
 
 export function idbBackend(name = DB) {
-  if (typeof indexedDB === "undefined") return null;
+  try { if (typeof indexedDB === "undefined" || !indexedDB) return null; } catch (e) { return null; }
   let dbp = null;
   const open = () => dbp || (dbp = new Promise((ok, no) => {
     try {

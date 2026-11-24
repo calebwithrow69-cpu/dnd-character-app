@@ -35,6 +35,7 @@ import {
 import { rollMods } from "./effects.js";
 import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
+import { startTour, tourGo, skipTour, tourMark } from "./tour.js";
 import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./views/start.js";
 import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
@@ -93,7 +94,7 @@ const mount = document.getElementById("app");
 const modalRoot = document.getElementById("modal-root");
 const rollRoot = document.getElementById("roll-root");
 
-function readPrefs() { try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch (e) { return {}; } }
+function readPrefs() { try { const p = JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); return p && typeof p === "object" && !Array.isArray(p) ? p : {}; } catch (e) { return {}; } }
 function readFlag(k) { try { return localStorage.getItem(k) === "1"; } catch (e) { return false; } }
 function savePrefs() { try { localStorage.setItem(LS_PREFS, JSON.stringify(APP.prefs)); } catch (e) { } }
 let wakeLock = null;
@@ -298,7 +299,7 @@ function lockDead() {
   if (["settings", "notes"].includes(APP.sheetTab)) { mount.querySelectorAll(".sheetview [data-a=openEdit]").forEach(el => el.setAttribute("inert", "")); return; }
   mount.querySelectorAll(".sheetview main.page > :not(.deadbar), .sheetview [data-a=openEdit], .sheetview nav").forEach(el => el.setAttribute("inert", ""));
 }
-const DEAD_OK = new Set(["reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause", "goNotes"]);
+const DEAD_OK = new Set(["tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause", "goNotes"]);
 const inNotes = () => APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes");
 // Sheet pages (Notes, Shop, Settings) open inside the sheet frame like Rules does.
 function openPage(tab) { closeModal(); APP.selItem = null; APP.sheetTab = tab; render(); window.scrollTo(0, 0); }
@@ -535,6 +536,7 @@ function applyHp(mode) {
   const input = document.getElementById("hp-amt");
   let amt = parseInt(input && input.value, 10);
   if (!amt || amt < 0) { toast("Type an amount first"); input && input.focus(); return; }
+  amt = Math.min(amt, 9999);
   const c = APP.char, hp = c.hp;
   if (mode === "damage" && APP.hpRes && APP.hpRes !== "normal") {
     const taken = hpDamageFor(amt);
@@ -718,6 +720,8 @@ function onClick(e) {
   const fn = ACTIONS[a];
   if (fn) fn(el, e);
 }
+
+document.addEventListener("tour-end", e => { if (e.detail.fresh) toast("Silver accent unlocked"); render(); });
 
 function onSubmit(e) {
   const form = e.target.closest("[data-form]");
@@ -1044,6 +1048,19 @@ const ACTIONS = {
     store.saveCharacter(store.normalize(APP.seedGandork, APP.library));
     toast("Added Gandork"); render();
   },
+  tourStart(el) {
+    const id = el.dataset.id;
+    if (id === "sheet" && !(APP.screen === "sheet" && APP.char)) { toast("Open a character first"); return; }
+    if (id === "home" && APP.screen !== "home") { ACTIONS.closeModal && ACTIONS.closeModal(); ACTIONS.goHome(); }
+    else if (APP.modal && ACTIONS.closeModal) ACTIONS.closeModal();
+    if (id === "sheet") { if (APP.sheetTab !== "stats") { APP.sheetTab = "stats"; render(); } }
+    setTimeout(() => startTour(id), 60);
+  },
+  tourNext() { tourGo(1); },
+  tourBack() { tourGo(-1); },
+  tourSkip() { skipTour(); },
+  tourLater(el) { tourMark(el.dataset.id, "skipped"); render(); },
+  tourNoop() {},
   goHome() { APP.screen = "home"; APP.char = null; render(); window.scrollTo(0, 0); },
   goRoster() { APP.startFrom = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
   async goNotes() {
