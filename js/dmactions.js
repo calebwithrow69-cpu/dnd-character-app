@@ -87,7 +87,8 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
       const r = row(); if (!r) return;
       const nm = (val("dm-rn") || "").trim(); if (nm) r.name = nm.slice(0, 60);
       r.ac = Math.max(0, Math.min(60, n("dm-ra", r.ac))); r.hp = Math.max(1, Math.min(99999, n("dm-rh", r.hp))); r.cur = Math.min(r.cur, r.hp);
-      r.note = (val("dm-rt") || "").trim().slice(0, 200); r.alias = (val("dm-ral") || "").trim().slice(0, 40); refreshRow(); toast("Saved");
+      r.note = (val("dm-rt") || "").trim().slice(0, 200); r.alias = (val("dm-ral") || "").trim().slice(0, 40);
+      { const iv = parseInt(val("dm-ri"), 10); r.init = Number.isFinite(iv) ? Math.max(-20, Math.min(60, iv)) : null; dm.sortRows(S().d.combat); } refreshRow(); toast("Saved");
     },
     dmRowRemove() { if (!ask("row")) return; const r = row(); if (r) dm.removeRow(S().d.combat, r.id); closeModal(); redraw(); },
 
@@ -147,6 +148,7 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
     dmMsgClear() { S().d.table.msg.on = false; redraw(); },
     dmRowHide() { const r = row(); if (!r) return; r.hid = !r.hid; refreshRow(); },
     dmRowHideId(el) { const cb = S().d.combat, r = cb && cb.rows.find(x => x.id === el.dataset.id); if (!r) return; r.hid = !r.hid; redraw(); },
+    dmCview(el) { S().ui.cview = el.dataset.v; render(); },
     dmAlly() { const r = row(); if (!r) return; r.ally = !r.ally; refreshRow(); },
 
     // ---- bestiary

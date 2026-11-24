@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.70";
+export const VERSION = "0.1.71";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.71",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "DM mode: the Combat tab is now the table board.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Combat shows the table layout as a working board: party, initiative, enemies, with real numbers.",
+          "Tap a portrait to edit HP, conditions and details. Hidden creatures stay on your board, tagged.",
+          "Board and List switch for the old row view. Initiative is editable in the creature details."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.70",
     date: "2026-11-24",

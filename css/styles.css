@@ -2819,3 +2819,18 @@ nav.tabs button .newdot{position:absolute;top:7px;left:calc(50% + 10px);width:7p
   .vstage:not(.prev) .vctl{left:0;right:0;bottom:0;transform:none;max-width:none;border-radius:0;padding:.5em .6em calc(.5em + env(safe-area-inset-bottom,0px))}
   .vstage:not(.prev) .vctl .btn{flex:1 1 auto}
 }
+
+/* DM mode Combat tab: the table layout as a working board. Tap a portrait to edit it. */
+.vstage.dmb{position:relative;inset:auto;z-index:0;height:clamp(24rem,calc(100svh - 24rem),46rem);border-radius:var(--radius);margin:10px 0;border:1px solid var(--line);font-size:calc(clamp(12px,1.15vw,18px))}
+.vstage.dmb .vboard{padding:.9em 1em 1em;gap:1em}
+.vstage.dmb .vside h2{margin-bottom:.5em}
+button.vcard{font:inherit;color:inherit;background:none;cursor:pointer;text-align:center;appearance:none}
+button.vcard:hover{background:var(--tile)}
+.vcard.hid{opacity:.6;border-style:dashed;border-color:var(--mute)}
+.vc.hidc{background:var(--mute);color:var(--bg3)}
+.dmvsw{margin:10px 0 0;max-width:260px}
+@media (max-width:820px),(max-aspect-ratio:1/1){
+  .vstage.dmb:not(.prev){height:auto;max-height:none;overflow:visible}
+  .vstage.dmb:not(.prev) .vboard{overflow:visible;padding-bottom:1em}
+}
+.dmmode > .vstage.dmb{max-width:1240px}

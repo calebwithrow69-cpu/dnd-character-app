@@ -213,7 +213,9 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     assert(/1 unreadable/.test(await p.locator(".dmmsg").innerText()), "bad line not counted: " + await p.locator(".dmmsg").innerText());
     await p.screenshot({ path: "/tmp/dm-party-" + w + ".png" });
     // combat
-    await clickA(p, "dmPartyToCombat"); assert(await p.locator(".dmrow").count() === 1, "party row");
+    await clickA(p, "dmPartyToCombat");
+    assert(await p.locator(".vstage.dmb .vcard").count() === 1, "board shows the party");
+    await clickA(p, "dmCview", '[data-v="list"]'); assert(await p.locator(".dmrow").count() === 1, "party row");
     await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qa").fill("15"); await p.locator("#dm-qc").fill("3"); await p.locator("#dm-qx").fill("50");
     await clickA(p, "dmAddQuick"); assert(await p.locator(".dmrow").count() === 4, "goblins");
     const inits = p.locator(".dminit"); for (let i = 0; i < 4; i++) { await inits.nth(i).fill(String(20 - i * 5)); await inits.nth(i).dispatchEvent("change"); await p.waitForTimeout(80); }
@@ -270,7 +272,7 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     if (w === 390) await p.screenshot({ path: "/tmp/dm-rewards-390.png" }); else await p.screenshot({ path: "/tmp/dm-rewards-1280.png" });
     await p.reload(); await p.waitForSelector("#home-book, .float"); await clickA(p, "goDmMode");
     assert(await p.locator(".dmcard").count() === 1, "party lost on reload");
-    await clickA(p, "dmTab", '[data-v="combat"]'); assert(await p.locator(".dmrow").count() === 8, "combat lost on reload");
+    await clickA(p, "dmTab", '[data-v="combat"]'); await clickA(p, "dmCview", '[data-v="list"]'); assert(await p.locator(".dmrow").count() === 8, "combat lost on reload");
     await clickA(p, "dmEndCombat"); assert(await p.locator(".dmrow").count() === 8, "end needs a second tap"); await clickA(p, "dmEndCombat");
     assert(await p.locator(".dmrow").count() === 0 && await p.locator('[data-a="dmNewCombat"]').count() === 1, "combat not ended");
     noErrs(p); await p.context().close();
@@ -283,9 +285,19 @@ await check("DM player view: both sides, initiative in the middle, stacks on a p
     await clickA(p, "goDmMode"); await clickA(p, "dmTab", '[data-v="combat"]'); await clickA(p, "dmNewCombat");
     await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qc").fill("3"); await clickA(p, "dmAddQuick");
     await p.locator("#dm-qn").fill("Knight"); await p.locator("#dm-qh").fill("30"); await p.locator("#dm-qc").fill("1"); await clickA(p, "dmAddQuick");
+    await clickA(p, "dmCview", '[data-v="list"]');
     await p.locator('.dmrow .dmname:has-text("Knight")').click(); await p.waitForSelector("#dm-amt"); await clickA(p, "dmAlly");
     await clickA(p, "dmCond", '[data-n="Prone"]'); await p.evaluate(() => CR.ACTIONS.closeModal()); await p.waitForTimeout(200);
     await clickA(p, "dmRollInit"); await clickA(p, "dmNext");
+    // the Combat tab board: same layout, real numbers, tap to edit
+    await clickA(p, "dmCview", '[data-v="board"]');
+    assert(await p.locator(".vstage.dmb .vcard").count() === 4 && await p.locator(".vstage.dmb .vside.friend .vcard").count() === 1, "board cards");
+    assert(/7\s*\/\s*7/.test(await p.locator(".vstage.dmb .vside.foe").innerText()), "board shows real enemy numbers");
+    assert(await hscroll(p) <= 0, "board sideways scroll");
+    await p.screenshot({ path: "/tmp/dm-board-" + w + ".png" });
+    await p.locator(".vstage.dmb .vside.foe .vcard").first().click(); await p.waitForSelector("#dm-amt"); await clickA(p, "dmRowHide");
+    assert(await p.locator(".vstage.dmb .vcard.hid").count() === 1 && /Hidden/.test(await p.locator(".vstage.dmb").innerText()), "hidden creature stays on the DM board");
+    await clickA(p, "dmRowHide"); await p.evaluate(() => CR.ACTIONS.closeModal()); await p.waitForTimeout(200);
     await clickA(p, "dmViewOpen"); await p.waitForSelector(".vstage .vboard");
     assert(await p.locator(".vside.friend .vcard").count() === 1 && await p.locator(".vside.foe .vcard").count() === 3, "sides");
     assert(await p.locator(".vo").count() === 4 && await p.locator(".vo.now").count() === 1, "order");
@@ -308,7 +320,7 @@ await check("DM player view: both sides, initiative in the middle, stacks on a p
       assert((await p2.locator(".vo.now .vn").innerText()) !== before, "second window did not follow");
       await p2.locator('[data-a="dmNext"]:visible').first().click(); await p2.waitForTimeout(600);
       await p.locator('[data-a="dmViewBack"]').click(); await p.waitForTimeout(400);
-      assert((await p.locator(".dmrow.on .dmname").innerText()).length > 0, "main window did not follow the view window");
+      assert(await p.locator(".vstage.dmb .vcard.turn").count() === 1, "main window did not follow the view window");
       await p2.close();
     }
     // Table tab: customise, hide, alias, push

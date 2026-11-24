@@ -3,7 +3,7 @@
 import { esc, topbar, modalShell, ICONS } from "../ui.js";
 import { XP_TABLE } from "../rules.js";
 import * as dm from "../dmmode.js";
-import { renderDmView } from "./dmview.js";
+import { renderDmView, renderDmBoard } from "./dmview.js";
 
 export const dmUiDefault = () => ({ tab: "party", msg: "", confirm: "", q: "", mcr: "all", mtype: "", src: "all", limit: 40 });
 const PEOPLE = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6M16 5a3.5 3.5 0 010 6.5M18 14c2 .6 3.3 2.4 3.6 6"/></svg>`;
@@ -107,7 +107,8 @@ function combatTab(app, s) {
   const cur = cb.rows[cb.turn];
   return `<div class="dmbar-top"><div><b>Round ${cb.round}</b><span class="sub2">${cb.started && cur ? esc(cur.name) + "'s turn" : cb.rows.length ? "Not started" : "No creatures"}</span></div>
       <div class="btnrow"><button class="btn" data-a="dmRollInit">Roll initiative</button><button class="btn pri" data-a="dmNext">${cb.started ? "Next turn" : "Start"}</button></div></div>
-    <div class="dmrows">${cb.rows.map((r, i) => rowHtml(r, cb.started && i === cb.turn)).join("")}</div>
+    <div class="seg dmvsw" role="group" aria-label="Combat view"><button data-a="dmCview" data-v="board" aria-pressed="${s.ui.cview !== "list"}">Board</button><button data-a="dmCview" data-v="list" aria-pressed="${s.ui.cview === "list"}">List</button></div>
+    ${s.ui.cview === "list" ? `<div class="dmrows">${cb.rows.map((r, i) => rowHtml(r, cb.started && i === cb.turn)).join("")}</div>` : renderDmBoard(app)}
     <div class="panel"><div class="panel-head"><h2>Table screen</h2></div><div class="panel-body"><div class="btnrow"><button class="btn" data-a="dmViewOpen">Open here</button><button class="btn" data-a="dmViewWindow">New window</button></div></div></div>
     ${addForm(s)}
     <div class="btnrow" style="margin-top:12px"><button class="btn danger" data-a="dmEndCombat">${sure("end", "End combat", "Tap again to end")}</button></div>`;
@@ -278,6 +279,7 @@ function rowModal(s, m) {
       <div class="grid3"><label class="field"><span class="lab">Name</span><input class="f" id="dm-rn" maxlength="60" value="${esc(r.name)}"></label>
         <label class="field"><span class="lab">AC</span><input class="f num" id="dm-ra" type="number" inputmode="numeric" value="${r.ac}"></label>
         <label class="field"><span class="lab">Max HP</span><input class="f num" id="dm-rh" type="number" inputmode="numeric" value="${r.hp}"></label></div>
+      <label class="field"><span class="lab">Initiative</span><input class="f num" id="dm-ri" type="number" inputmode="numeric" value="${r.init == null ? "" : r.init}" placeholder="--"></label>
       <label class="field"><span class="lab">Table name</span><input class="f" id="dm-ral" maxlength="40" value="${esc(r.alias)}" placeholder="${esc(r.name)}" autocomplete="off"></label>
       <label class="field"><span class="lab">Note</span><input class="f" id="dm-rt" maxlength="200" value="${esc(r.note)}"></label>
     </div>`, `<button class="btn danger" data-a="dmRowRemove">${sure("row", "Remove")}</button><button class="btn" data-a="dmRowSave">Save details</button><button class="btn pri" data-a="closeModal">Done</button>`);

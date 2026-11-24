@@ -17,7 +17,7 @@ function portrait(r, party, friend) {
   return `<span class="vmono" style="--h:${h % 360}" aria-hidden="true">${esc(Array.from(base(nm))[0] || "?").toUpperCase()}</span>`;
 }
 
-function card(r, st, party, friend, T) {
+function card(r, st, party, friend, T, dmx = false) {
   const state = dm.hpState(r), pct = Math.max(0, Math.min(100, Math.round(100 * r.cur / r.hp)));
   const tone = pct > 50 ? "ok" : pct > 25 ? "mid" : "low", mode = friend ? T.partyHp : T.foeHp, nums = mode === "numbers";
   const bar = mode !== "none", words = !friend && mode === "bloodied";
@@ -25,12 +25,13 @@ function card(r, st, party, friend, T) {
   const showAc = T.ac === "all" || (T.ac === "party" && friend);
   const label = `${shownName(r)}, ${nums ? `hit points ${r.cur} of ${r.hp}` : state === "bloodied" ? "bloodied" : state === "down" ? "down" : "in the fight"}`;
   const hp = nums ? `<b>${r.cur}</b>/${r.hp}${r.temp ? ` <em>+${r.temp}</em>` : ""}` : words && state === "bloodied" ? "Bloodied" : state === "down" ? "Down" : "&nbsp;";
-  return `<article class="vcard ${friend ? "friend" : "foe"} s-${state}${r.id === st.turnId ? " turn" : ""}" aria-label="${esc(label)}">
+  const open = dmx ? `<button type="button" class="vcard dmx ${friend ? "friend" : "foe"} s-${state}${r.id === st.turnId ? " turn" : ""}${r.hid ? " hid" : ""}" data-a="dmRowOpen" data-id="${esc(r.id)}" aria-label="${esc(label)}">` : `<article class="vcard ${friend ? "friend" : "foe"} s-${state}${r.id === st.turnId ? " turn" : ""}" aria-label="${esc(label)}">`;
+  return `${open}
     <div class="vpic">${portrait(r, party, friend)}${state === "down" ? `<b class="vtag">Down</b>` : state === "out" ? `<b class="vtag">${friend ? "Out" : "Defeated"}</b>` : ""}</div>
     <div class="vname">${esc(shownName(r))}${showAc ? `<span class="vac">AC ${r.ac}</span>` : ""}</div>
     ${bar ? `<div class="vbar ${tone}" role="img" aria-label="${esc(label)}"><i style="width:${pct}%"></i>${r.temp && nums ? `<u style="width:${Math.min(100, Math.round(100 * r.temp / r.hp))}%"></u>` : ""}</div>` : ""}
     ${bar || state === "down" ? `<div class="vhp">${hp}</div>` : ""}
-    ${conds ? `<div class="vconds">${conds}</div>` : ""}</article>`;
+    ${conds || (dmx && r.hid) ? `<div class="vconds">${conds}${dmx && r.hid ? `<span class="vc hidc">Hidden</span>` : ""}</div>` : ""}${dmx ? "</button>" : "</article>"}`;
 }
 
 // One to three creatures sit side by side, bigger groups wrap into rows.
@@ -56,16 +57,30 @@ export function renderDmView(app, opts = {}) {
   if (T.blank) return root(`<div class="vwait"></div>`);
   if (!st) return root(`<div class="vwait"><h1>No fight running</h1></div>`);
 
+  return root(inner(app, st, T, false));
+}
+
+// The part both screens share: header (table screen only) and the three-column board.
+function inner(app, st, T, dmx) {
+  const s = app.dmm, party = s.d.party;
   const turnRow = s.d.combat.rows[s.d.combat.turn], hereNow = st.started && turnRow && !turnRow.hid ? turnRow : null;
   const idx = st.order.findIndex(r => r.id === st.turnId), next = st.started && st.order.length > 1 ? st.order[(idx < 0 ? 0 : idx + 1) % st.order.length] : null;
   const rowsHtml = st.order.length ? st.order.map(r => `<li class="vo ${dm.isFriend(r) ? "friend" : "foe"}${r.id === st.turnId ? " now" : ""}">${T.initNums ? `<span class="vi">${r.init == null ? "--" : r.init}</span>` : ""}<span class="vn">${esc(shownName(r))}</span></li>`).join("")
     : `<li class="vo"><span class="vn">Nobody left</span></li>`;
   const side = (list, friend, title) => `<section class="vside ${friend ? "friend" : "foe"}" style="--cols:${cols(list.length)};--rows:${rowsOf(list.length)}" aria-label="${title}"><h2>${title}<span>${list.length}</span></h2>
-      <div class="vgrid">${list.map(r => card(r, st, party, friend, T)).join("") || `<p class="vnone">None</p>`}</div></section>`;
+      <div class="vgrid">${list.map(r => card(r, st, party, friend, T, dmx)).join("") || `<p class="vnone">None</p>`}</div></section>`;
   const parts = [T.show.party && "1fr", T.show.order && "minmax(14em,22%)", T.show.foes && "1fr"].filter(Boolean);
   const mid = T.show.order ? `<section class="vmid" aria-label="Initiative order"><h2>Initiative</h2><ol>${rowsHtml}</ol>${T.show.next && next ? `<div class="vnext">Next <b>${esc(shownName(next))}</b></div>` : ""}</section>` : "";
-  return root(`<header class="vtop"><div class="vround">${T.show.round ? `Round <b>${st.round}</b>` : ""}</div><div class="vnow">${T.show.now ? (hereNow ? esc(shownName(hereNow)) : st.started ? "" : "Not started") : ""}</div></header>
+  return (dmx ? "" : `<header class="vtop"><div class="vround">${T.show.round ? `Round <b>${st.round}</b>` : ""}</div><div class="vnow">${T.show.now ? (hereNow ? esc(shownName(hereNow)) : st.started ? "" : "Not started") : ""}</div></header>`) + `
     <div class="vboard" style="--tc:${parts.join(" ") || "1fr"}">
       ${T.show.party ? side(st.friends, true, "Party") : ""}${mid}${T.show.foes ? side(st.foes, false, "Enemies") : ""}
-    </div>`);
+    </div>`;
+}
+
+// The DM's own board for the Combat tab: the same layout with the real numbers, every creature (hidden ones tagged), tap a portrait to edit it.
+export function renderDmBoard(app) {
+  const s = app.dmm, st = dm.stageOf(s.d.combat, { hidden: true }); if (!st) return "";
+  const T = dm.cleanTable({ partyHp: "numbers", foeHp: "numbers", ac: "all", show: { next: true } }), real = r => ({ ...r, alias: "" });
+  st.friends = st.friends.map(real); st.foes = st.foes.map(real); st.order = st.order.map(real);
+  return `<div class="vstage dmb" data-theme="dark" data-accent="gold" data-size="m" data-text="m">${inner(app, st, T, true)}</div>`;
 }
