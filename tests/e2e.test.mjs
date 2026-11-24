@@ -207,7 +207,7 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     const card = dmm.decodeCard(code); assert(card && /^Gandork/.test(card.name), "card " + JSON.stringify(card));
     await p.evaluate(() => CR.ACTIONS.closeModal()); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(250);
     await clickA(p, "goDmMode");
-    assert(await p.locator("nav.tabs button:visible").count() === 5, "five tabs"); assert(await p.locator(".sheetview .quick > div").count() === 4, "status strip");
+    assert(await p.locator("nav.tabs button:visible").count() === 6, "six tabs"); assert(await p.locator(".sheetview .quick > div").count() === 4, "status strip");
     await p.locator("#dm-code").fill("junk\n" + code); await clickA(p, "dmImport");
     assert((await p.locator(".dmcard").count()) === 1, "card not shown: n=" + await p.locator(".dmcard").count() + " msg=" + await p.locator(".dmmsg").allInnerTexts() + " body=" + (await p.locator("main").innerText()).slice(0, 300)); assert(/Gandork/i.test(await p.locator(".dmcard").innerText()), "card text");
     assert(/1 unreadable/.test(await p.locator(".dmmsg").innerText()), "bad line not counted: " + await p.locator(".dmmsg").innerText());
@@ -292,7 +292,7 @@ await check("DM player view: both sides, initiative in the middle, stacks on a p
     assert(await p.locator(".vcard.turn").count() === 1, "turn marker");
     assert(/Prone/.test(await p.locator(".vside.friend").innerText()), "condition under portrait");
     assert(!/7\s*\/\s*7/.test(await p.locator(".vside.foe").innerText()), "enemy numbers hidden by default");
-    await p.locator('[data-a="dmViewNums"]').click(); await p.waitForTimeout(200);
+    await p.locator('[data-a="dmTblCycle"]').click(); await p.waitForTimeout(200); await p.locator('[data-a="dmTblCycle"]').click(); await p.waitForTimeout(200);
     assert(/7\s*\/\s*7/.test(await p.locator(".vside.foe").innerText()), "enemy numbers on request");
     const g = await p.evaluate(() => { const q = s => document.querySelector(s).getBoundingClientRect(), l = q(".vside.friend"), m = q(".vmid"), r = q(".vside.foe"); return { l: l.left, m: m.left, r: r.left, ml: m.top, ll: l.top, over: document.documentElement.scrollWidth - innerWidth }; });
     if (w > 700) assert(g.l < g.m && g.m < g.r && Math.abs(g.ml - g.ll) < 4, "columns " + JSON.stringify(g));
@@ -310,6 +310,28 @@ await check("DM player view: both sides, initiative in the middle, stacks on a p
       await p.locator('[data-a="dmViewBack"]').click(); await p.waitForTimeout(400);
       assert((await p.locator(".dmrow.on .dmname").innerText()).length > 0, "main window did not follow the view window");
       await p2.close();
+    }
+    // Table tab: customise, hide, alias, push
+    await p.evaluate(() => CR.ACTIONS.dmViewBack()); await p.waitForTimeout(300);
+    await clickA(p, "dmTab", '[data-v="table"]'); await p.waitForSelector(".vprevbox .vstage.prev");
+    assert(await p.locator(".vprevbox .vcard").count() === 4, "preview shows every creature");
+    await clickA(p, "dmTblSet", '[data-k="foeHp"][data-v="numbers"]'); assert(/7\s*\/\s*7/.test(await p.locator(".vprevbox .vside.foe").innerText()), "enemy numbers in preview");
+    await clickA(p, "dmTblSet", '[data-k="accent"][data-v="violet"]'); assert(await p.locator('.vprevbox .vstage[data-accent="violet"]').count() === 1, "accent");
+    await clickA(p, "dmTblSet", '[data-k="theme"][data-v="parchment"]'); assert(await p.locator('.vprevbox .vstage[data-theme="parchment"]').count() === 1, "theme");
+    await clickA(p, "dmTblTog", '[data-k="show.foes"]'); assert(await p.locator(".vprevbox .vside.foe").count() === 0, "enemies hidden from the screen");
+    await clickA(p, "dmTblTog", '[data-k="show.foes"]'); assert(await p.locator(".vprevbox .vside.foe").count() === 1, "enemies back");
+    await p.locator('[data-a="dmRowHideId"]').first().click(); await p.waitForTimeout(250);
+    assert(await p.locator(".vprevbox .vcard").count() === 3, "hidden creature leaves the preview");
+    await p.locator("#tb-mt").fill("Ambush"); await p.locator("#tb-mx").fill("Roll for initiative"); await clickA(p, "dmMsgPush");
+    assert(/ambush/i.test(await p.locator(".vprevbox .vmsg").innerText()), "message in preview");
+    await p.evaluate(() => scrollTo(0, 0)); if (w === 390) await p.screenshot({ path: "/tmp/dm-tabletab-390.png" });
+    if (w > 700) {
+      await p.screenshot({ path: "/tmp/dm-tabletab-1280.png" });
+      const p3 = await p.context().newPage(); await p3.setViewportSize({ width: 1280, height: 720 }); await p3.goto(p.url().split("#")[0] + "#dmview"); await p3.waitForSelector(".vstage .vboard");
+      assert(await p3.locator('.vstage[data-theme="parchment"]').count() === 1 && await p3.locator(".vmsg").count() === 1 && await p3.locator(".vcard").count() === 3, "second window follows the settings");
+      await p.locator('[data-a="dmMsgClear"]').click(); await p3.waitForTimeout(600); assert(await p3.locator(".vmsg").count() === 0, "message cleared on the screen");
+      await p.locator('[data-a="dmTblTog"][data-k="blank"]').first().click(); await p3.waitForTimeout(600); assert(await p3.locator(".vcard").count() === 0, "blank screen");
+      await p3.screenshot({ path: "/tmp/dm-table-blank.png" }); await p3.close();
     }
     noErrs(p); await p.context().close();
   }

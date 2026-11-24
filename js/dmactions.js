@@ -87,7 +87,7 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
       const r = row(); if (!r) return;
       const nm = (val("dm-rn") || "").trim(); if (nm) r.name = nm.slice(0, 60);
       r.ac = Math.max(0, Math.min(60, n("dm-ra", r.ac))); r.hp = Math.max(1, Math.min(99999, n("dm-rh", r.hp))); r.cur = Math.min(r.cur, r.hp);
-      r.note = (val("dm-rt") || "").trim().slice(0, 200); refreshRow(); toast("Saved");
+      r.note = (val("dm-rt") || "").trim().slice(0, 200); r.alias = (val("dm-ral") || "").trim().slice(0, 40); refreshRow(); toast("Saved");
     },
     dmRowRemove() { if (!ask("row")) return; const r = row(); if (r) dm.removeRow(S().d.combat, r.id); closeModal(); redraw(); },
 
@@ -135,6 +135,18 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
     dmViewFull() { const d = document; if (d.fullscreenElement) d.exitFullscreen().catch(() => { }); else if (d.documentElement.requestFullscreen) d.documentElement.requestFullscreen().catch(() => toast("Full screen blocked")); else toast("Full screen not available"); },
     dmViewWindow() { const w = window.open(location.href.split("#")[0] + "#dmview", "cr-table", "popup,width=1280,height=720"); if (!w) toast("Pop-up blocked"); },
     dmViewClose() { window.close(); if (!window.closed) { APP._dmViewWindow = false; APP.screen = "dmmode"; render(); } },
+    // table settings: nothing here is stored until the cleaner has checked it, so a bad value cannot reach the screen
+    dmTblSet(el) { const t = S().d.table, k = el.dataset.k; t[k] = el.dataset.v; S().d.table = dm.cleanTable(t); redraw(); },
+    dmTblTog(el) { const t = S().d.table, k = el.dataset.k; if (k.startsWith("show.")) t.show[k.slice(5)] = !t.show[k.slice(5)]; else t[k] = !t[k]; S().d.table = dm.cleanTable(t); redraw(); },
+    dmTblCycle(el) { const t = S().d.table, k = el.dataset.k, list = dm.TABLE_OPTS[k]; t[k] = list[(list.indexOf(t[k]) + 1) % list.length]; S().d.table = dm.cleanTable(t); redraw(); toast("Enemy HP: " + t[k]); },
+    dmMsgPush() {
+      const title = (val("tb-mt") || "").trim(), text = (val("tb-mx") || "").trim();
+      if (!title && !text) { toast("Message is empty"); return; }
+      S().d.table.msg = { on: true, title, text }; S().d.table = dm.cleanTable(S().d.table); redraw(); toast("Pushed to screen");
+    },
+    dmMsgClear() { S().d.table.msg.on = false; redraw(); },
+    dmRowHide() { const r = row(); if (!r) return; r.hid = !r.hid; refreshRow(); },
+    dmRowHideId(el) { const cb = S().d.combat, r = cb && cb.rows.find(x => x.id === el.dataset.id); if (!r) return; r.hid = !r.hid; redraw(); },
     dmAlly() { const r = row(); if (!r) return; r.ally = !r.ally; refreshRow(); },
 
     // ---- bestiary

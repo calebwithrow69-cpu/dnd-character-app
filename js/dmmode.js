@@ -126,7 +126,7 @@ export function makeRow(o) {
     init: o.init == null || o.init === "" ? null : num(o.init, -20, 60, 0), bonus: num(o.bonus, -10, 30, 0),
     hp, cur: num(o.cur, 0, hp, hp), temp: num(o.temp, 0, 9999, 0), ac: num(o.ac, 0, 60, 10),
     conds: (Array.isArray(o.conds) ? o.conds : []).map(x => ({ n: txt(x && x.n, 30), r: x && x.r != null ? num(x.r, 1, 99, 1) : null })).filter(x => x.n).slice(0, 12),
-    conc: !!o.conc, out: !!o.out, note: txt(o.note, 200), xp: num(o.xp, 0, 1e7, 0), mid: txt(o.mid, 60), ally: o.kind !== "pc" && !!o.ally
+    conc: !!o.conc, out: !!o.out, note: txt(o.note, 200), xp: num(o.xp, 0, 1e7, 0), mid: txt(o.mid, 60), ally: o.kind !== "pc" && !!o.ally, hid: !!o.hid, alias: txt(o.alias, 40)
   };
 }
 export const rowFromCard = card => makeRow({ kind: "pc", name: card.name, card: card.id, hp: card.hp, cur: card.cur, temp: card.temp, ac: card.ac, bonus: card.init, conc: !!card.conc, conds: card.conds.map(n => ({ n })), out: card.dead });
@@ -176,7 +176,24 @@ export function removeRow(cb, id) {
 export const CONDITIONS = ["Blinded", "Charmed", "Deafened", "Frightened", "Grappled", "Incapacitated", "Invisible", "Paralyzed", "Petrified", "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"];
 
 // ---------------------------------------------------------------- record + storage
-export function blank() { return { v: 1, party: {}, creatures: [], enc: { diff: "moderate", picks: [], skip: [], n: 4, lv: 1 }, rw: { gp: 0, xp: 0, skip: [] }, combat: null }; }
+// What the table screen shows. Every field is a choice from a fixed list or a flag, so a stored value can be cleaned by lookup.
+export const TABLE_OPTS = {
+  partyHp: ["numbers", "bar", "none"], foeHp: ["bloodied", "bar", "numbers", "none"], ac: ["off", "party", "all"], defeated: ["dim", "hide"],
+  size: ["s", "m", "l"], text: ["s", "m", "l", "xl"], theme: ["dark", "parchment"], accent: ["gold", "teal", "crimson", "violet"]
+};
+export const TABLE_DEFAULT = {
+  show: { party: true, foes: true, order: true, round: true, now: true, next: false }, partyHp: "numbers", foeHp: "bloodied", ac: "off", defeated: "dim",
+  conds: true, condRounds: true, conc: true, initNums: true, size: "m", text: "m", theme: "dark", accent: "gold", blank: false, msg: { on: false, title: "", text: "" }
+};
+export function cleanTable(o) {
+  const t = JSON.parse(JSON.stringify(TABLE_DEFAULT)); if (!o || typeof o !== "object") return t;
+  Object.keys(t.show).forEach(k => { if (o.show && typeof o.show[k] === "boolean") t.show[k] = o.show[k]; });
+  Object.keys(TABLE_OPTS).forEach(k => { if (TABLE_OPTS[k].includes(o[k])) t[k] = o[k]; });
+  ["conds", "condRounds", "conc", "initNums", "blank"].forEach(k => { if (typeof o[k] === "boolean") t[k] = o[k]; });
+  if (o.msg && typeof o.msg === "object") t.msg = { on: !!o.msg.on, title: txt(o.msg.title, 80), text: txt(o.msg.text, 600) };
+  return t;
+}
+export function blank() { return { v: 1, party: {}, creatures: [], enc: { diff: "moderate", picks: [], skip: [], n: 4, lv: 1 }, rw: { gp: 0, xp: 0, skip: [] }, table: cleanTable(), combat: null }; }
 export function clean(o) {
   const out = blank(); if (!o || typeof o !== "object") return out;
   if (o.party && typeof o.party === "object") Object.values(o.party).slice(0, 40).forEach(x => { const c = sanitizeCard(x); if (c) out.party[c.id] = c; });
@@ -193,6 +210,7 @@ export function clean(o) {
     out.rw.gp = num(o.rw.gp, 0, 1e9, 0); out.rw.xp = num(o.rw.xp, 0, 1e9, 0);
     out.rw.skip = (Array.isArray(o.rw.skip) ? o.rw.skip : []).map(x => txt(x, 24)).filter(Boolean).slice(0, 40);
   }
+  out.table = cleanTable(o.table);
   if (o.combat && typeof o.combat === "object" && Array.isArray(o.combat.rows)) {
     const rows = o.combat.rows.slice(0, 80).map(makeRow);
     out.combat = { id: txt(o.combat.id, 24) || uid(), round: num(o.combat.round, 1, 9999, 1), turn: num(o.combat.turn, 0, Math.max(0, rows.length - 1), 0), started: !!o.combat.started, rows };
@@ -267,12 +285,12 @@ export const isFriend = r => r.kind === "pc" || !!r.ally;
 // ok | bloodied (half or less) | down (0 HP, still in the fight) | out (removed from the fight)
 export const hpState = r => (r.out ? "out" : r.cur <= 0 ? "down" : r.cur * 2 <= r.hp ? "bloodied" : "ok");
 // Both sides in initiative order (those out of the fight last), and the turn order starting with whoever acts now.
-export function stageOf(cb) {
+export function stageOf(cb, { hidden = false } = {}) {
   if (!cb) return null;
-  const rows = cb.rows, byOut = (a, b) => (a.out ? 1 : 0) - (b.out ? 1 : 0);
+  const rows = cb.rows, byOut = (a, b) => (a.out ? 1 : 0) - (b.out ? 1 : 0), vis = r => hidden || !r.hid;
   const order = cb.started && rows.length ? [...rows.slice(cb.turn), ...rows.slice(0, cb.turn)] : rows.slice();
   return {
     round: cb.round, started: cb.started, turnId: cb.started && rows[cb.turn] ? rows[cb.turn].id : "",
-    friends: rows.filter(isFriend).sort(byOut), foes: rows.filter(r => !isFriend(r)).sort(byOut), order: order.filter(r => !r.out)
+    friends: rows.filter(r => isFriend(r) && vis(r)).sort(byOut), foes: rows.filter(r => !isFriend(r) && vis(r)).sort(byOut), order: order.filter(r => !r.out && vis(r))
   };
 }

@@ -163,6 +163,18 @@ t("table screen: sides, initiative order from the current turn, hp states", () =
   assert.equal(dm.makeRow({ kind: "pc", name: "X", hp: 5, ally: true }).ally, false, "heroes are never flagged ally");
   assert.equal(dm.clean(JSON.parse(JSON.stringify({ combat: cb }))).combat.rows.find(r => r.name === "Hound").ally, true, "ally survives a reload");
 });
+t("table settings: defaults, cleaning, hidden and alias", () => {
+  assert.deepEqual(dm.cleanTable(null), dm.TABLE_DEFAULT); assert.notEqual(dm.cleanTable(null), dm.TABLE_DEFAULT, "a fresh copy each time");
+  const c = dm.cleanTable({ foeHp: "numbers", theme: "neon", accent: "violet", text: "xl", show: { party: false, order: "yes", bogus: true }, conds: "no", msg: { on: 1, title: "x".repeat(200), text: "hi\u0007" } });
+  assert.equal(c.foeHp, "numbers"); assert.equal(c.theme, "dark", "unknown choice falls back"); assert.equal(c.accent, "violet"); assert.equal(c.text, "xl");
+  assert.equal(c.show.party, false); assert.equal(c.show.order, true, "non-boolean ignored"); assert.ok(!("bogus" in c.show)); assert.equal(c.conds, true);
+  assert.equal(c.msg.on, true); assert.equal(c.msg.title.length, 80); assert.ok(!/\u0007/.test(c.msg.text));
+  assert.equal(dm.clean({ table: { ac: "all" } }).table.ac, "all"); assert.deepEqual(dm.clean({}).table, dm.TABLE_DEFAULT);
+  const cb = dm.newCombat(); cb.rows.push(dm.makeRow({ kind: "mon", name: "Assassin", hp: 30, init: 10, hid: true, alias: "Stranger" }), dm.makeRow({ kind: "mon", name: "Imp", hp: 5, init: 8 }));
+  let st = dm.stageOf(cb); assert.deepEqual(st.foes.map(r => r.name), ["Imp"]); assert.deepEqual(st.order.map(r => r.name), ["Imp"]);
+  st = dm.stageOf(cb, { hidden: true }); assert.equal(st.foes.length, 2);
+  const back = dm.clean(JSON.parse(JSON.stringify({ combat: cb }))).combat.rows[0]; assert.equal(back.hid, true); assert.equal(back.alias, "Stranger");
+});
 const libUrl = new URL("../data/library.json", import.meta.url);
 if (existsSync(libUrl)) t("real SRD monsters import cleanly", () => {
   const L = JSON.parse(readFileSync(libUrl, "utf8")), M = L.monsters || [];

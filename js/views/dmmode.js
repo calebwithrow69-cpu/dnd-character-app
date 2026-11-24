@@ -1,12 +1,14 @@
 // DM mode. Same shell as the character sheet (tab rail on a laptop, bottom bar on a phone, a status strip under the header).
-// Five tabs: Party, Combat, Bestiary, Encounters, Rewards. ASCII only.
+// Six tabs: Party, Combat, Bestiary, Encounters, Rewards, Table. ASCII only.
 import { esc, topbar, modalShell, ICONS } from "../ui.js";
 import { XP_TABLE } from "../rules.js";
 import * as dm from "../dmmode.js";
+import { renderDmView } from "./dmview.js";
 
 export const dmUiDefault = () => ({ tab: "party", msg: "", confirm: "", q: "", mcr: "all", mtype: "", src: "all", limit: 40 });
 const PEOPLE = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6M16 5a3.5 3.5 0 010 6.5M18 14c2 .6 3.3 2.4 3.6 6"/></svg>`;
-export const DM_TABS = [["party", "Party", PEOPLE], ["combat", "Combat", ICONS.sword], ["bestiary", "Bestiary", ICONS.book], ["encounters", "Encounters", ICONS.flag], ["rewards", "Rewards", ICONS.coin]];
+const SCREEN = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>`;
+export const DM_TABS = [["party", "Party", PEOPLE], ["combat", "Combat", ICONS.sword], ["bestiary", "Bestiary", ICONS.book], ["encounters", "Encounters", ICONS.flag], ["rewards", "Rewards", ICONS.coin], ["table", "Table", SCREEN]];
 const AB_LABEL = { str: "Str", dex: "Dex", con: "Con", int: "Int", wis: "Wis", cha: "Cha" };
 const sgn = n => (n >= 0 ? "+" : "-") + Math.abs(n);
 const fmt = n => Number(n).toLocaleString("en-US");
@@ -43,7 +45,7 @@ function bestiary(app) {
 export function renderDmMode(app) {
   const s = app.dmm, ui = s.ui, d = s.d;
   if (!DM_TABS.some(t => t[0] === ui.tab)) ui.tab = "party";
-  const body = { party: partyTab, combat: combatTab, bestiary: bestiaryTab, encounters: encountersTab, rewards: rewardsTab }[ui.tab](app, s);
+  const body = { party: partyTab, combat: combatTab, bestiary: bestiaryTab, encounters: encountersTab, rewards: rewardsTab, table: tableTab }[ui.tab](app, s);
   const cards = Object.values(d.party), avg = cards.length ? Math.round(cards.reduce((a, c) => a + c.level, 0) / cards.length * 10) / 10 : null;
   const xp = dm.encounterXp(d);
   return `<div class="sheetview dmview">
@@ -115,7 +117,7 @@ function rowHtml(r, turn) {
   return `<div class="dmrow${turn ? " on" : ""}${r.out ? " out" : ""}${r.kind === "pc" ? " pc" : ""}"${turn ? ` aria-current="true"` : ""}>
     <input class="f num dminit" type="number" inputmode="numeric" data-dmf="init" data-id="${esc(r.id)}" value="${r.init == null ? "" : r.init}" placeholder="--" aria-label="Initiative, ${esc(r.name)}">
     <button class="dmmain" data-a="dmRowOpen" data-id="${esc(r.id)}">
-      <span class="dmname">${esc(r.name)}${r.conc ? `<i class="tag">Conc</i>` : ""}${r.out ? `<i class="tag">${r.kind === "pc" ? "Down" : "Out"}</i>` : r.cur === 0 ? `<i class="tag">Down</i>` : ""}</span>
+      <span class="dmname">${esc(r.name)}${r.hid ? `<i class="tag">Hidden</i>` : ""}${r.conc ? `<i class="tag">Conc</i>` : ""}${r.out ? `<i class="tag">${r.kind === "pc" ? "Down" : "Out"}</i>` : r.cur === 0 ? `<i class="tag">Down</i>` : ""}</span>
       <span class="dmsub">AC ${r.ac}${r.conds.map(c => ` · ${esc(c.n)}${c.r != null ? " " + c.r : ""}`).join("")}${r.note ? " · " + esc(r.note) : ""}</span>
       <span class="dmbar" role="img" aria-label="Hit points ${r.cur} of ${r.hp}"><i class="${pct > 50 ? "ok" : pct > 25 ? "mid" : "low"}" style="width:${pct}%"></i></span>
     </button>
@@ -207,6 +209,45 @@ function rewardsTab(app, s) {
     </div></div>`;
 }
 
+// ------------------------------------------------------------------ 6. table
+const seg = (k, v, opts) => `<div class="seg" role="group" aria-label="${k}">${opts.map(([val, l]) => `<button data-a="dmTblSet" data-k="${k}" data-v="${val}" aria-pressed="${v === val}">${l}</button>`).join("")}</div>`;
+const tog = (k, on, label) => `<div class="tbrow"><span>${label}</span><button class="chip chipbtn" data-a="dmTblTog" data-k="${k}" aria-pressed="${on}">${on ? "On" : "Off"}</button></div>`;
+const choice = (label, control) => `<div class="tbrow"><span>${label}</span>${control}</div>`;
+function tableTab(app, s) {
+  const T = s.d.table, cb = s.d.combat;
+  const rows = cb ? cb.rows : [];
+  const swatch = [["gold", "#e8b84f"], ["teal", "#4fc3b0"], ["crimson", "#d8493f"], ["violet", "#a58be8"]];
+  return `<div class="tblgrid"><div class="stack">
+      <div class="vprevbox" aria-label="Preview">${renderDmView(app, { preview: true })}</div>
+      <div class="panel"><div class="panel-head"><h2>Screen</h2></div><div class="panel-body"><div class="btnrow">
+        <button class="btn pri" data-a="dmViewOpen">Open here</button><button class="btn" data-a="dmViewWindow">New window</button>
+        <button class="btn${T.blank ? " pri" : ""}" data-a="dmTblTog" data-k="blank" aria-pressed="${T.blank}">Blank</button></div></div></div>
+      <div class="panel"><div class="panel-head"><h2>Push message</h2>${T.msg.on ? `<span class="chip dmchip">Showing</span>` : ""}</div><div class="panel-body stack">
+        <label class="field"><span class="lab">Title</span><input class="f" id="tb-mt" maxlength="80" value="${esc(T.msg.title)}" autocomplete="off"></label>
+        <label class="field"><span class="lab">Text</span><textarea class="f" id="tb-mx" rows="3" maxlength="600">${esc(T.msg.text)}</textarea></label>
+        <div class="btnrow"><button class="btn pri" data-a="dmMsgPush">Push to screen</button><button class="btn" data-a="dmMsgClear" ${T.msg.on ? "" : "disabled"}>Clear</button></div>
+      </div></div></div>
+    <div class="stack">
+      <div class="panel"><div class="panel-head"><h2>Show</h2></div><div class="panel-body">
+        ${tog("show.party", T.show.party, "Party")}${tog("show.foes", T.show.foes, "Enemies")}${tog("show.order", T.show.order, "Initiative")}${tog("initNums", T.initNums, "Initiative numbers")}
+        ${tog("show.round", T.show.round, "Round")}${tog("show.now", T.show.now, "Current creature")}${tog("show.next", T.show.next, "Next up")}</div></div>
+      <div class="panel"><div class="panel-head"><h2>Health</h2></div><div class="panel-body">
+        ${choice("Party", seg("partyHp", T.partyHp, [["numbers", "Numbers"], ["bar", "Bar"], ["none", "None"]]))}
+        ${choice("Enemies", seg("foeHp", T.foeHp, [["bloodied", "Bloodied"], ["bar", "Bar"], ["numbers", "Numbers"], ["none", "None"]]))}
+        ${choice("Armor class", seg("ac", T.ac, [["off", "Off"], ["party", "Party"], ["all", "All"]]))}
+        ${choice("Defeated", seg("defeated", T.defeated, [["dim", "Dim"], ["hide", "Hide"]]))}</div></div>
+      <div class="panel"><div class="panel-head"><h2>Conditions</h2></div><div class="panel-body">
+        ${tog("conds", T.conds, "Conditions")}${tog("condRounds", T.condRounds, "Rounds left")}${tog("conc", T.conc, "Concentration")}</div></div>
+      <div class="panel"><div class="panel-head"><h2>Look</h2></div><div class="panel-body">
+        ${choice("Theme", seg("theme", T.theme, [["dark", "Dark"], ["parchment", "Parchment"]]))}
+        ${choice("Accent", `<div class="tbsw" role="group" aria-label="Accent">${swatch.map(([k, c]) => `<button data-a="dmTblSet" data-k="accent" data-v="${k}" style="background:${c}" aria-label="${k}" aria-pressed="${T.accent === k}"></button>`).join("")}</div>`)}
+        ${choice("Text", seg("text", T.text, [["s", "S"], ["m", "M"], ["l", "L"], ["xl", "XL"]]))}
+        ${choice("Portraits", seg("size", T.size, [["s", "S"], ["m", "M"], ["l", "L"]]))}</div></div>
+      <div class="panel"><div class="panel-head"><h2>Creatures</h2></div><div class="panel-body">
+        ${rows.length ? rows.map(r => `<div class="tbrow"><span>${esc(r.name)}${r.alias ? ` <em class="sub2">as ${esc(r.alias)}</em>` : ""}</span><button class="chip chipbtn" data-a="dmRowHideId" data-id="${esc(r.id)}" aria-pressed="${!r.hid}" aria-label="${esc(r.name)} on table">${r.hid ? "Hidden" : "Shown"}</button></div>`).join("") : `<p class="sub2">No fight running.</p>`}</div></div>
+    </div></div>`;
+}
+
 // ------------------------------------------------------------------ modals
 export function renderDmModal(app) {
   const m = app.modal, s = app.dmm;
@@ -231,12 +272,13 @@ function rowModal(s, m) {
       <p class="lab" style="margin-top:6px">Conditions</p>
       <label class="field"><span class="lab">Rounds (blank until removed)</span><input class="f num" id="dm-rounds" type="number" inputmode="numeric" min="1" max="99"></label>
       <div class="dmchips">${dm.CONDITIONS.map(n => { const c = has(n); return `<button class="chip chipbtn" data-a="dmCond" data-n="${n}" aria-pressed="${!!c}">${n}${c && c.r != null ? " " + c.r : ""}</button>`; }).join("")}</div>
-      <div class="btnrow"><button class="btn${r.conc ? " pri" : ""}" data-a="dmConc" aria-pressed="${r.conc}">Concentrating</button><button class="btn${r.out ? " pri" : ""}" data-a="dmOut" aria-pressed="${r.out}">${r.kind === "pc" ? "Out of fight" : "Defeated"}</button>${r.kind === "pc" ? "" : `<button class="btn${r.ally ? " pri" : ""}" data-a="dmAlly" aria-pressed="${!!r.ally}">Ally</button>`}</div>
+      <div class="btnrow"><button class="btn${r.conc ? " pri" : ""}" data-a="dmConc" aria-pressed="${r.conc}">Concentrating</button><button class="btn${r.out ? " pri" : ""}" data-a="dmOut" aria-pressed="${r.out}">${r.kind === "pc" ? "Out of fight" : "Defeated"}</button>${r.kind === "pc" ? "" : `<button class="btn${r.ally ? " pri" : ""}" data-a="dmAlly" aria-pressed="${!!r.ally}">Ally</button>`}<button class="btn${r.hid ? " pri" : ""}" data-a="dmRowHide" aria-pressed="${!!r.hid}">Hide from table</button></div>
       ${r.mid ? `<button class="btn" data-a="dmMonOpen" data-id="m:${esc(r.mid)}">Stat block</button>` : ""}
       <p class="lab" style="margin-top:6px">Details</p>
       <div class="grid3"><label class="field"><span class="lab">Name</span><input class="f" id="dm-rn" maxlength="60" value="${esc(r.name)}"></label>
         <label class="field"><span class="lab">AC</span><input class="f num" id="dm-ra" type="number" inputmode="numeric" value="${r.ac}"></label>
         <label class="field"><span class="lab">Max HP</span><input class="f num" id="dm-rh" type="number" inputmode="numeric" value="${r.hp}"></label></div>
+      <label class="field"><span class="lab">Table name</span><input class="f" id="dm-ral" maxlength="40" value="${esc(r.alias)}" placeholder="${esc(r.name)}" autocomplete="off"></label>
       <label class="field"><span class="lab">Note</span><input class="f" id="dm-rt" maxlength="200" value="${esc(r.note)}"></label>
     </div>`, `<button class="btn danger" data-a="dmRowRemove">${sure("row", "Remove")}</button><button class="btn" data-a="dmRowSave">Save details</button><button class="btn pri" data-a="closeModal">Done</button>`);
 }

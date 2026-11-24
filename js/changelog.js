@@ -2,11 +2,30 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.69";
+export const VERSION = "0.1.70";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.70",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "DM mode: Table tab with display controls, a live preview and pushed messages.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "Table tab, the sixth DM tab, with a live preview of the screen.",
+          "Choose what shows: party, enemies, initiative, round, current and next creature, conditions, armor class.",
+          "Health display per side: numbers, bar, words or nothing. Defeated creatures dim or hide.",
+          "Look: dark or parchment theme, four accents, four text sizes, three portrait sizes.",
+          "Push a title and message to the screen, or blank it.",
+          "Per creature: hide from the table, or show under another name."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.69",
     date: "2026-11-24",
