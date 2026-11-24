@@ -105,4 +105,60 @@ t("record: survives junk, drops dangling picks, merges a restore without touchin
   dm.mergeImport(live, { party: { [old.id]: old }, creatures: [c, c] }); assert.equal(live.party[old.id].name, "Gandork2", "older card does not replace a newer one");
   assert.equal(live.creatures.length, 1); assert.ok(live.combat, "live combat kept");
 });
+
+const mons = [
+  { id: "rat", name: "Giant Rat", type: "beast", cr: "1/8", xp: 25, hp: 7, ac: 12, abil: [7, 15, 11, 2, 10, 4] },
+  { id: "ogre", name: "Ogre", type: "giant", cr: "2", xp: 450, hp: 59, ac: 11, abil: [19, 8, 16, 5, 7, 7] },
+  { id: "wolf", name: "Wolf", type: "beast", cr: "1/4", xp: 50, hp: 11, ac: 13, abil: [12, 15, 12, 3, 12, 6] },
+  { id: "lich", name: "Lich", type: "undead", cr: "21", xp: 33000, hp: 315, ac: 20, abil: [11, 16, 16, 21, 14, 16] }
+];
+t("monster to creature: id, XP, initiative from Dex, back-link", () => {
+  const c = dm.monsterCreature(mons[0]); assert.equal(c.id, "m:rat"); assert.equal(c.xp, 25); assert.equal(c.init, 2); assert.equal(c.mid, "rat"); assert.equal(c.cr, "1/8");
+  assert.equal(dm.monsterCreature(mons[1]).init, -1); assert.equal(dm.abilMod(10), 0); assert.equal(dm.abilMod(9), -1); assert.equal(dm.abilMod(20), 5);
+});
+t("bestiary search: name or type, CR bands, sorted by CR then name", () => {
+  assert.deepEqual(dm.searchMonsters(mons).map(m => m.id), ["rat", "wolf", "ogre", "lich"]);
+  assert.deepEqual(dm.searchMonsters(mons, { q: "BEAST" }).map(m => m.id), ["rat", "wolf"]);
+  assert.deepEqual(dm.searchMonsters(mons, { cr: "low" }).map(m => m.id), ["rat", "wolf"]);
+  assert.deepEqual(dm.searchMonsters(mons, { cr: "mid" }).map(m => m.id), ["ogre"]);
+  assert.deepEqual(dm.searchMonsters(mons, { cr: "top" }).map(m => m.id), ["lich"]);
+  assert.deepEqual(dm.searchMonsters(mons, { type: "giant", q: "og" }).map(m => m.id), ["ogre"]); assert.deepEqual(dm.searchMonsters(mons, { q: "zzz" }), []);
+  assert.deepEqual(dm.monsterTypes(mons), ["beast", "giant", "undead"]);
+});
+t("a library monster in the encounter needs no book entry and survives a reload", () => {
+  const d = dm.blank(); const c = dm.monsterCreature(mons[2]);
+  dm.addPick(d, c); dm.addPick(d, c); dm.addPick(d, dm.monsterCreature(mons[1]));
+  assert.deepEqual(d.enc.picks.map(p => p.qty), [2, 1]); assert.equal(dm.encounterXp(d), 100 + 450);
+  const back = dm.clean(JSON.parse(JSON.stringify(d))); assert.equal(back.enc.picks.length, 2); assert.equal(dm.encounterXp(back), 550);
+  assert.equal(dm.clean({ enc: { picks: [{ cid: "ghost", qty: 2 }] } }).enc.picks.length, 0, "no copy and no book entry: dropped");
+  dm.addEncounterToCombat(back); assert.deepEqual(back.combat.rows.map(r => r.name), ["Wolf 1", "Wolf 2", "Ogre"]); assert.equal(back.combat.rows[0].xp, 50); assert.equal(back.combat.rows[0].mid, "wolf");
+  const book = dm.sanitizeCreature({ id: "m:wolf", name: "Wolf", cr: "1/4", xp: 99, hp: 11, ac: 13 }); back.creatures.push(book); assert.equal(dm.encounterXp(back), 99 * 2 + 450, "a book edit wins over the copy");
+});
+t("rewards: defeated XP counts monsters only; even split keeps the remainder", () => {
+  const cb = dm.newCombat(); cb.rows = [dm.rowFromCreature(dm.monsterCreature(mons[2]), 1), dm.rowFromCreature(dm.monsterCreature(mons[1]), 0), mk("Hero", 10, 0, "pc")];
+  assert.equal(dm.defeatedXp(cb), 0); cb.rows[0].out = true; cb.rows[2].out = true; assert.equal(dm.defeatedXp(cb), 50); assert.equal(dm.defeatedCount(cb), 1);
+  assert.equal(dm.defeatedXp(null), 0);
+  assert.deepEqual(dm.splitEven(1000, 3), { each: 333, left: 1 }); assert.deepEqual(dm.splitEven(5, 0), { each: 5, left: 0 }); assert.deepEqual(dm.splitEven(-9, 2), { each: 0, left: 0 });
+});
+t("rewards: recipients and level thresholds", () => {
+  const d = dm.blank(); assert.deepEqual(dm.recipients(d), { cards: [], n: 4 });
+  const a = dm.makeCard({ ...char, id: "a", xp: 6400 }, der), b = dm.makeCard({ ...char, id: "b", name: "Bee", dead: true }, der), c2 = dm.makeCard({ ...char, id: "c", name: "Cee" }, der);
+  d.party = { a, b, c: c2 }; assert.deepEqual(dm.recipients(d).cards.map(x => x.id), ["a", "c"], "the dead share nothing"); d.rw.skip = ["c"]; assert.equal(dm.recipients(d).n, 1);
+  assert.equal(a.xp, 6400); const T = [0, 300, 900, 2700, 6500, 14000];
+  assert.equal(dm.levelFor(6400, T), 4); assert.equal(dm.levelFor(6500, T), 5); assert.equal(dm.levelFor(0, T), 1); assert.equal(dm.levelFor(99999, T), 6);
+  const back = dm.clean(JSON.parse(JSON.stringify({ ...d, rw: { gp: "250", xp: -5, skip: ["c", 7] } }))); assert.equal(back.rw.gp, 250); assert.equal(back.rw.xp, 0);
+});
+// With the unlocked rules file present, the real bestiary has to fit what this module expects.
+import { existsSync, readFileSync } from "node:fs";
+const libUrl = new URL("../data/library.json", import.meta.url);
+if (existsSync(libUrl)) t("real SRD monsters import cleanly", () => {
+  const L = JSON.parse(readFileSync(libUrl, "utf8")), M = L.monsters || [];
+  assert.ok(M.length >= 300, "monsters " + M.length);
+  const ids = new Set(M.map(m => m.id)); assert.equal(ids.size, M.length, "unique ids");
+  M.forEach(m => { assert.ok(m.name && m.hp > 0 && m.ac > 0 && m.abil.length === 6, m.name); assert.ok(dm.crXp(m.cr) !== null, "cr " + m.cr); assert.ok(dm.sanitizeCreature(dm.monsterCreature(m)), m.name); });
+  // Stat block XP wins over the CR table. Known differences: CR 0 creatures list 10 XP ("0 or 10"), and the 2024 Archmage prints 8,000 at CR 12.
+  const odd = M.filter(m => m.xp !== dm.crXp(m.cr) && !(m.cr === "0" && m.xp === 10) && m.id !== "archmage").map(m => m.name + " " + m.cr + " " + m.xp);
+  assert.deepEqual(odd, [], "XP matches the CR table apart from the known cases");
+  assert.equal(M.find(m => m.id === "goblin-warrior").xp, 50); assert.ok(dm.searchMonsters(M, { q: "dragon" }).length > 5);
+});
 console.log(`dmmode: ${n} checks passed`);

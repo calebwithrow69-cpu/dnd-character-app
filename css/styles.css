@@ -2639,9 +2639,6 @@ nav.tabs button .newdot{position:absolute;top:7px;left:calc(50% + 10px);width:7p
 
 /* ---- DM mode (0.1.67) ---- */
 .fbtn.wide{grid-column:1/-1;flex-direction:row;justify-content:center;gap:10px;padding:12px 4px}
-.dmmode .dmtabs{margin:10px 0 4px;display:flex}
-.dmmode .dmtabs button{flex:1;position:relative}
-.dmmode .dot{position:absolute;top:8px;right:10px;width:7px;height:7px;border-radius:50%;background:var(--amber)}
 .dmmsg{margin:8px 0 0;color:var(--muted)}
 .dmsum{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 2px;font-size:.88rem;color:var(--muted)}
 .dmsum b{color:var(--ink)}
@@ -2698,3 +2695,27 @@ nav.tabs button .newdot{position:absolute;top:7px;left:calc(50% + 10px);width:7p
 .dmcname > span{text-align:left}
 .dmmode .dmbar-top,.dmmode .dmrows,.dmmode > .panel,.dmmode > .btnrow{max-width:900px;margin-inline:auto}
 .chipbtn[aria-pressed="false"]{opacity:.55}
+
+/* DM mode, stage 2: sheet shell, bestiary, stat block, rewards */
+.dmview nav.tabs button{position:relative}
+.dmview nav.tabs .newdot{position:absolute;top:8px;left:calc(50% + 10px)}
+.dmmode .status{margin-top:12px}
+.dmmode .dmmsg{margin:8px 0;color:var(--muted)}
+.dmmode > *{max-width:900px;margin-inline:auto}
+.dmmode .dmcards{grid-template-columns:1fr}
+.dmmode > .btn.block{display:block;max-width:900px;margin:10px auto}
+.dmmode .dmmrow .btn{flex:0 0 auto}
+.dmup{color:var(--green);border-color:var(--green)}
+.rowline .dmqty{margin:0 4px}
+.sbk{display:flex;flex-direction:column;gap:6px}
+.sbtop{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sbtop div{padding:6px 10px;border:1px solid var(--line-soft);border-radius:var(--radius-sm);display:flex;flex-direction:column}
+.sbtop .wide{grid-column:1/-1}
+.sbtop span,.sbabil span{font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sbtop i,.sbabil i{font-style:normal;font-size:.8rem;color:var(--muted)}
+.sbabil{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center}
+.sbabil div{display:flex;flex-direction:column;padding:6px 0;border:1px solid var(--line-soft);border-radius:var(--radius-sm)}
+.sbl,.sbe{margin:0;line-height:1.45}
+.sbe{margin-top:4px}
+.sbh{margin:12px 0 2px;padding-bottom:3px;border-bottom:1px solid var(--line);font:600 .8rem var(--display);letter-spacing:.14em;text-transform:uppercase}
+@media (max-width:420px){.sbabil{grid-template-columns:repeat(3,1fr)}}

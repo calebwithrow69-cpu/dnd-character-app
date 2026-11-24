@@ -207,14 +207,14 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     const card = dmm.decodeCard(code); assert(card && /^Gandork/.test(card.name), "card " + JSON.stringify(card));
     await p.evaluate(() => CR.ACTIONS.closeModal()); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(250);
     await clickA(p, "goDmMode");
-    assert(await p.locator(".dmtabs button").count() === 3, "tabs");
+    assert(await p.locator("nav.tabs button:visible").count() === 5, "five tabs"); assert(await p.locator(".sheetview .quick > div").count() === 4, "status strip");
     await p.locator("#dm-code").fill("junk\n" + code); await clickA(p, "dmImport");
     assert((await p.locator(".dmcard").count()) === 1, "card not shown: n=" + await p.locator(".dmcard").count() + " msg=" + await p.locator(".dmmsg").allInnerTexts() + " body=" + (await p.locator("main").innerText()).slice(0, 300)); assert(/Gandork/i.test(await p.locator(".dmcard").innerText()), "card text");
     assert(/1 unreadable/.test(await p.locator(".dmmsg").innerText()), "bad line not counted: " + await p.locator(".dmmsg").innerText());
     await p.screenshot({ path: "/tmp/dm-party-" + w + ".png" });
     // combat
     await clickA(p, "dmPartyToCombat"); assert(await p.locator(".dmrow").count() === 1, "party row");
-    await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qa").fill("15"); await p.locator("#dm-qc").fill("3");
+    await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qa").fill("15"); await p.locator("#dm-qc").fill("3"); await p.locator("#dm-qx").fill("50");
     await clickA(p, "dmAddQuick"); assert(await p.locator(".dmrow").count() === 4, "goblins");
     const inits = p.locator(".dminit"); for (let i = 0; i < 4; i++) { await inits.nth(i).fill(String(20 - i * 5)); await inits.nth(i).dispatchEvent("change"); await p.waitForTimeout(80); }
     await clickA(p, "dmNext"); assert(await p.locator(".dmrow.on").count() === 1, "no turn marker");
@@ -227,27 +227,51 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     await p.evaluate(() => CR.ACTIONS.closeModal()); await p.waitForTimeout(200);
     assert(await p.locator(".dmrow.out").count() === 1, "defeated goblin not dimmed");
     assert(/Prone/.test(await p.locator(".dmrow.out").innerText()), "condition missing");
-    // creature book and budget
-    await clickA(p, "dmTab", '[data-v="prep"]'); await clickA(p, "dmCreatureNew");
+    // bestiary: own creature, SRD search, stat block
+    const lib = JSON.parse(readFileSync(join(tmp, "data/library.enc.json"), "utf8")), gob = lib.monsters.find(m => /^Goblin/.test(m.name) && m.cr === "1/4") || lib.monsters.find(m => m.cr === "1/4");
+    await clickA(p, "dmTab", '[data-v="bestiary"]'); await clickA(p, "dmCreatureNew");
     await p.locator("#dc-n").fill("Goblin"); await p.locator("#dc-cr").selectOption("1/4"); await p.waitForTimeout(150);
     assert((await p.locator("#dc-xp").inputValue()) === "50", "CR did not fill XP");
     await p.locator("#dc-hp").fill("7"); await p.locator("#dc-ac").fill("15"); await clickA(p, "dmCreatureSave");
-    await clickA(p, "dmPickAdd"); await clickA(p, "dmPickQty", '[data-v="1"]'); await clickA(p, "dmPickQty", '[data-v="1"]');
+    await clickA(p, "dmSrc", '[data-v="mine"]'); assert(await p.locator(".dmmrow").count() === 1, "mine filter");
+    await p.locator('.dmmrow [data-a="dmPickAddId"]').first().click(); await p.waitForTimeout(250);
+    await clickA(p, "dmSrc", '[data-v="all"]');
+    await p.locator("#dm-q").fill(gob.name.slice(0, 6)); await p.waitForTimeout(300);
+    assert(await p.locator(".dmmrow").count() >= 1, "search found nothing");
+    await p.locator("#dm-q").fill(gob.name); await p.waitForTimeout(300);
+    await p.locator(`.dmmrow:has-text("${gob.name}") [data-a="dmMonOpen"]`).first().click(); await p.waitForSelector(".sbk");
+    { const t = await p.locator(".sbk").innerText(); assert(t.includes(String(gob.ac)) && /Actions/i.test(t), "stat block incomplete: " + t.slice(0, 200)); }
+    if (w === 390) await p.screenshot({ path: "/tmp/dm-statblock-390.png" });
+    await clickA(p, "dmMonEnc"); await p.evaluate(() => CR.ACTIONS.closeModal()); await p.waitForTimeout(200);
+    await p.locator("#dm-q").fill("zzzzqq"); await p.waitForTimeout(250); assert(await p.locator(".dmmrow").count() === 0, "no-match list");
+    await p.locator("#dm-q").fill(""); await p.waitForTimeout(250);
+    if (w === 390) await p.screenshot({ path: "/tmp/dm-bestiary-390.png" });
+    // encounters: budget
+    await clickA(p, "dmTab", '[data-v="encounters"]');
+    assert(await p.locator(".dmqty").count() === 2, "picks " + await p.locator(".dmqty").count());
+    await p.locator('[data-a="dmPickQty"][data-v="1"]').first().click(); await p.waitForTimeout(200); await p.locator('[data-a="dmPickQty"][data-v="1"]').first().click(); await p.waitForTimeout(200);
     const lv = card.level, low = dmm.partyBudget([lv], "low"), mod = dmm.partyBudget([lv], "moderate");
     const tbl = await p.locator(".dmbtable").innerText();
     assert(tbl.replace(/,/g, "").includes(String(low)) && tbl.replace(/,/g, "").includes(String(mod)), "budget table " + tbl + " expected " + low + "/" + mod);
-    assert(/150/.test(tbl), "spent XP: " + tbl);
-    const rated = (await p.locator(".dmrate").innerText()).trim(); assert(rated === dmm.rate([lv], 150).label, "rating " + rated);
+    const spent = 150 + gob.xp; assert(tbl.replace(/,/g, "").includes(String(spent)), "spent XP: " + tbl + " expected " + spent);
+    const rated = (await p.locator(".dmrate").innerText()).trim(); assert(rated === dmm.rate([lv], spent).label, "rating " + rated);
     assert(await hscroll(p) <= 0, "sideways scroll " + await hscroll(p));
     if (w === 390) await p.screenshot({ path: "/tmp/dm-prep-390.png" });
     // encounter into combat, then reload keeps everything
-    await clickA(p, "dmEncToCombat"); assert(await p.locator(".dmrow").count() === 7, "encounter rows " + await p.locator(".dmrow").count());
+    await clickA(p, "dmEncToCombat"); assert(await p.locator(".dmrow").count() === 4 + 3 + 1, "encounter rows " + await p.locator(".dmrow").count());
     { const nm = await p.locator(".dmname").allInnerTexts(); const clean = nm.map(x => x.replace(/\s*(OUT|DOWN|CONC)\s*$/i, "").trim()); assert(new Set(clean).size === clean.length, "duplicate names " + clean.join(", ")); }
     if (w === 390) await p.screenshot({ path: "/tmp/dm-combat-390.png" }); else await p.screenshot({ path: "/tmp/dm-combat-1280.png" });
+    // rewards: defeated goblin XP plus bonus, split across the party
+    await clickA(p, "dmTab", '[data-v="rewards"]');
+    await p.locator('[data-dmf="rwxp"]').fill("100"); await p.locator('[data-dmf="rwxp"]').press("Tab"); await p.waitForTimeout(250);
+    await p.locator('[data-dmf="rwgp"]').fill("30"); await p.locator('[data-dmf="rwgp"]').press("Tab"); await p.waitForTimeout(250);
+    { const t = (await p.locator("main").innerText()).replace(/,/g, ""); assert(/Combat XP\s*50/i.test(t) && /Total XP\s*150/i.test(t), "reward totals: " + t.slice(0, 300)); assert(/150 XP/.test(t) && /30 gp/.test(t), "per character: " + t.slice(0, 400)); }
+    assert(await hscroll(p) <= 0, "rewards sideways scroll");
+    if (w === 390) await p.screenshot({ path: "/tmp/dm-rewards-390.png" }); else await p.screenshot({ path: "/tmp/dm-rewards-1280.png" });
     await p.reload(); await p.waitForSelector("#home-book, .float"); await clickA(p, "goDmMode");
     assert(await p.locator(".dmcard").count() === 1, "party lost on reload");
-    await clickA(p, "dmTab", '[data-v="combat"]'); assert(await p.locator(".dmrow").count() === 7, "combat lost on reload");
-    await clickA(p, "dmEndCombat"); assert(await p.locator(".dmrow").count() === 7, "end needs a second tap"); await clickA(p, "dmEndCombat");
+    await clickA(p, "dmTab", '[data-v="combat"]'); assert(await p.locator(".dmrow").count() === 8, "combat lost on reload");
+    await clickA(p, "dmEndCombat"); assert(await p.locator(".dmrow").count() === 8, "end needs a second tap"); await clickA(p, "dmEndCombat");
     assert(await p.locator(".dmrow").count() === 0 && await p.locator('[data-a="dmNewCombat"]').count() === 1, "combat not ended");
     noErrs(p); await p.context().close();
   }

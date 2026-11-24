@@ -1,6 +1,6 @@
 // DM mode actions. Built with the app's helpers so app.js only merges them in. ASCII only.
 import * as dm from "./dmmode.js";
-import { dmUiDefault, setConfirm } from "./views/dmmode.js";
+import { dmUiDefault, setConfirm, monsterIndex, rewardPlan } from "./views/dmmode.js";
 import { deriveCharacter } from "./rules.js";
 import { dateStamp } from "./ui.js";
 
@@ -14,6 +14,12 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
   const combat = () => { const s = S(); if (!s.d.combat) s.d.combat = dm.newCombat(); return s.d.combat; };
   const row = () => { const cb = S().d.combat, id = APP.modal && APP.modal.id; return cb && cb.rows.find(r => r.id === id); };
   const refreshRow = () => { persist(); render(); };
+  // A creature by id: "m:<id>" is a library monster, anything else is in the book.
+  const creatureFor = id => {
+    id = String(id || "");
+    if (id.startsWith("m:")) { const m = monsterIndex(APP).get(id.slice(2)); return m ? dm.monsterCreature(m) : null; }
+    return S().d.creatures.find(x => x.id === id) || null;
+  };
 
   function importText(text) {
     const { cards, bad } = dm.readCards(text);
@@ -21,6 +27,12 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
     S().ui.msg = cards.length ? `Imported ${cards.length} ${cards.length === 1 ? "character" : "characters"}${bad ? `, ${bad} unreadable` : ""}` : bad ? "No readable code" : "Nothing to import";
     redraw();
   }
+
+  function addPickById(id) {
+    const c = creatureFor(id); if (!c) return;
+    dm.addPick(S().d, c); persist(); render(); toast(c.name + " added");
+  }
+  function monId() { const m = APP.modal; return m && m.type === "dmMon" ? m.id : ""; }
 
   return {
     goDmMode() { APP.dmm = { d: dm.load(), ui: dmUiDefault() }; APP.screen = "dmmode"; render(); window.scrollTo(0, 0); },
@@ -52,7 +64,7 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
     dmAddQuick() {
       const name = (val("dm-qn") || "").trim(), hp = n("dm-qh", 0);
       if (!name || hp < 1) { toast("Name and HP needed"); return; }
-      const cb = combat(); dm.addCreatures(cb, { name, hp, ac: n("dm-qa", 10), init: n("dm-qi", 0) }, Math.max(1, Math.min(20, n("dm-qc", 1))));
+      const cb = combat(); dm.addCreatures(cb, { name, hp, ac: n("dm-qa", 10), init: n("dm-qi", 0), xp: n("dm-qx", 0) }, Math.max(1, Math.min(20, n("dm-qc", 1))));
       dm.sortRows(cb); redraw();
     },
     dmDamage() {
@@ -84,13 +96,18 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
       if (f === "init") { const cb = s.d.combat, r = cb && cb.rows.find(x => x.id === el.dataset.id); if (!r) return; const v = parseInt(el.value, 10); r.init = Number.isFinite(v) ? Math.max(-20, Math.min(60, v)) : null; dm.sortRows(cb); redraw(); }
       else if (f === "encn") { s.d.enc.n = Math.max(1, Math.min(12, parseInt(el.value, 10) || 1)); redraw(); }
       else if (f === "enclv") { s.d.enc.lv = Math.max(1, Math.min(20, parseInt(el.value, 10) || 1)); redraw(); }
+      else if (f === "mcr") { s.ui.mcr = el.value; s.ui.limit = 40; render(); }
+      else if (f === "mtype") { s.ui.mtype = el.value; s.ui.limit = 40; render(); }
+      else if (f === "rwxp") { s.d.rw.xp = Math.max(0, Math.min(1e7, parseInt(el.value, 10) || 0)); redraw(); }
+      else if (f === "rwgp") { s.d.rw.gp = Math.max(0, Math.min(1e9, parseInt(el.value, 10) || 0)); redraw(); }
       else if (f === "cr") { const xp = document.getElementById("dc-xp"); if (xp && el.value) xp.value = dm.crXp(el.value); }
     },
 
     // ---- prep
     dmEncDiff(el) { S().d.enc.diff = el.dataset.v; redraw(); },
     dmEncSkip(el) { const k = S().d.enc.skip, i = k.indexOf(el.dataset.id); if (i >= 0) k.splice(i, 1); else k.push(el.dataset.id); redraw(); },
-    dmPickAdd(el) { const p = S().d.enc.picks, x = p.find(q => q.cid === el.dataset.id); if (x) x.qty = Math.min(99, x.qty + 1); else p.push({ cid: el.dataset.id, qty: 1 }); redraw(); },
+    dmPickAdd(el) { addPickById(el.dataset.id); },
+    dmPickAddId(el) { addPickById(el.dataset.id); },
     dmPickQty(el) { const p = S().d.enc.picks, x = p.find(q => q.cid === el.dataset.id); if (!x) return; x.qty += Number(el.dataset.v); if (x.qty < 1) p.splice(p.indexOf(x), 1); x.qty = Math.min(99, x.qty); redraw(); },
     dmEncClear() { S().d.enc.picks = []; redraw(); },
     dmEncToCombat() { const s = S(); dm.addEncounterToCombat(s.d); dm.sortRows(s.d.combat); s.ui.tab = "combat"; redraw(); },
@@ -107,6 +124,35 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
       if (!ask("cr:" + el.dataset.id)) return; const s = S(), id = el.dataset.id;
       s.d.creatures = s.d.creatures.filter(x => x.id !== id); s.d.enc.picks = s.d.enc.picks.filter(p => p.cid !== id);
       closeModal(); redraw();
+    },
+
+    // ---- bestiary
+    dmSrc(el) { const u = S().ui; u.src = el.dataset.v; u.limit = 40; render(); },
+    dmMore() { S().ui.limit += 40; render(); },
+    dmMonOpen(el) {
+      if (APP.modal && ["dmRow", "dmCreature"].includes(APP.modal.type)) { APP._under = APP.modal; APP._underScroll = document.querySelector(".modal-body")?.scrollTop || 0; }
+      openModal({ type: "dmMon", id: el.dataset.id });
+    },
+    dmMonEnc() { addPickById(monId()); },
+    dmMonCombat() {
+      const c = creatureFor(monId()); if (!c) return;
+      const cb = combat(); dm.addCreatures(cb, c, 1); dm.sortRows(cb);
+      APP._under = null; closeModal(); redraw(); toast(c.name + " added to combat");
+    },
+    dmMonCopy() {
+      const c = creatureFor(monId()); if (!c) return;
+      const list = S().d.creatures;
+      if (list.some(x => x.mid && x.mid === c.mid)) { toast("Already in your book"); return; }
+      const copy = dm.sanitizeCreature({ ...c, id: undefined }); list.push(copy); persist(); render(); toast("Copied to book");
+    },
+
+    // ---- rewards
+    dmRwSkip(el) { const k = S().d.rw.skip, i = k.indexOf(el.dataset.id); if (i >= 0) k.splice(i, 1); else k.push(el.dataset.id); redraw(); },
+    async dmRwCopy() {
+      const p = rewardPlan(S().d);
+      const lines = [`Reward: ${p.xp.each} XP and ${p.gp.each} gp each (${p.n} ${p.n === 1 ? "character" : "characters"})`];
+      p.people.forEach(({ c, up }) => lines.push(`${c.name}: level ${c.level}${up > c.level ? ` -> ${up}` : ""}`));
+      try { await navigator.clipboard.writeText(lines.join("\n")); toast("Summary copied"); } catch (e) { toast("Could not copy"); }
     },
 
     // ---- player side: send a snapshot of this character to the DM

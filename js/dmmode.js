@@ -57,7 +57,7 @@ export function makeCard(c, d, now = Date.now()) {
     saves: d.saves, dc: d.spellInfo ? d.spellInfo.dc : null,
     langs: String(c.languages || ""), conds: (c.conditions || []).map(x => (typeof x === "string" ? x : x && x.name)).filter(Boolean),
     exh: c.exhaustion, conc: c.concentration && (c.concentration.name || c.concentration.spell || (typeof c.concentration === "string" ? c.concentration : "")) || "",
-    dead: !!c.dead, at: now
+    xp: c.xp, dead: !!c.dead, at: now
   });
 }
 export function sanitizeCard(o) {
@@ -71,7 +71,7 @@ export function sanitizeCard(o) {
     pp: num(o.pp, 0, 60, 10), pi: num(o.pi, 0, 60, 10), pinv: num(o.pinv, 0, 60, 10), saves,
     dc: o.dc == null ? null : num(o.dc, 0, 40, 0),
     langs: txt(o.langs, 200), conds: (Array.isArray(o.conds) ? o.conds : []).map(x => txt(x, 30)).filter(Boolean).slice(0, 20),
-    exh: num(o.exh, 0, 6, 0), conc: txt(o.conc, 60), dead: !!o.dead, at: num(o.at, 0, 8.64e15, Date.now())
+    exh: num(o.exh, 0, 6, 0), conc: txt(o.conc, 60), xp: num(o.xp, 0, 1e7, 0), dead: !!o.dead, at: num(o.at, 0, 8.64e15, Date.now())
   };
 }
 export const encodeCard = card => CODE_PREFIX + toB64(JSON.stringify(card));
@@ -101,8 +101,20 @@ export function sanitizeCreature(o) {
   const name = txt(o.name, 60); if (!name) return null;
   const cr = CRS.includes(String(o.cr)) ? String(o.cr) : "";
   const xp = o.xp === "" || o.xp == null ? (cr ? crXp(cr) : 0) : num(o.xp, 0, 1e6, 0);
-  return { id: txt(o.id, 24) || uid(), name, cr, xp, hp: num(o.hp, 1, 99999, 1), ac: num(o.ac, 0, 60, 10), init: num(o.init, -10, 30, 0), note: txt(o.note, 300) };
+  return { id: txt(o.id, 40) || uid(), name, cr, xp, hp: num(o.hp, 1, 99999, 1), ac: num(o.ac, 0, 60, 10), init: num(o.init, -10, 30, 0), note: txt(o.note, 300), mid: txt(o.mid, 60) };
 }
+// ---- bestiary (library.monsters, SRD 5.2) in the creature shape
+export const abilMod = v => Math.floor((Number(v) - 10) / 2);
+export const monsterCreature = m => sanitizeCreature({ id: "m:" + m.id, name: m.name, cr: m.cr, xp: m.xp, hp: m.hp, ac: m.ac, init: abilMod(m.abil[1]), mid: m.id });
+const crNum = cr => (cr === "1/8" ? 0.125 : cr === "1/4" ? 0.25 : cr === "1/2" ? 0.5 : Number(cr) || 0);
+export const CR_BANDS = [["all", "Any CR", 0, 99], ["low", "Up to 1", 0, 1], ["mid", "2 to 4", 2, 4], ["high", "5 to 10", 5, 10], ["epic", "11 to 16", 11, 16], ["top", "17 and up", 17, 99]];
+// Filter and sort monsters (or creature-book entries). `q` matches name or type, `cr` is a CR_BANDS key, `type` an exact type.
+export function searchMonsters(list, { q = "", cr = "all", type = "" } = {}) {
+  const band = CR_BANDS.find(b => b[0] === cr) || CR_BANDS[0], k = String(q).trim().toLowerCase();
+  return list.filter(m => { const n = crNum(m.cr); return n >= band[2] && n <= band[3] && (!type || m.type === type) && (!k || m.name.toLowerCase().includes(k) || String(m.type || "").toLowerCase().includes(k)); })
+    .sort((a, b) => crNum(a.cr) - crNum(b.cr) || a.name.localeCompare(b.name));
+}
+export const monsterTypes = list => [...new Set(list.map(m => m.type).filter(Boolean))].sort();
 
 // ---------------------------------------------------------------- combat
 export function newCombat() { return { id: uid(), round: 1, turn: 0, started: false, rows: [] }; }
@@ -114,11 +126,11 @@ export function makeRow(o) {
     init: o.init == null || o.init === "" ? null : num(o.init, -20, 60, 0), bonus: num(o.bonus, -10, 30, 0),
     hp, cur: num(o.cur, 0, hp, hp), temp: num(o.temp, 0, 9999, 0), ac: num(o.ac, 0, 60, 10),
     conds: (Array.isArray(o.conds) ? o.conds : []).map(x => ({ n: txt(x && x.n, 30), r: x && x.r != null ? num(x.r, 1, 99, 1) : null })).filter(x => x.n).slice(0, 12),
-    conc: !!o.conc, out: !!o.out, note: txt(o.note, 200)
+    conc: !!o.conc, out: !!o.out, note: txt(o.note, 200), xp: num(o.xp, 0, 1e7, 0), mid: txt(o.mid, 60)
   };
 }
 export const rowFromCard = card => makeRow({ kind: "pc", name: card.name, card: card.id, hp: card.hp, cur: card.cur, temp: card.temp, ac: card.ac, bonus: card.init, conc: !!card.conc, conds: card.conds.map(n => ({ n })), out: card.dead });
-export const rowFromCreature = (cr, n) => makeRow({ kind: "mon", name: n ? `${cr.name} ${n}` : cr.name, hp: cr.hp, ac: cr.ac, bonus: cr.init });
+export const rowFromCreature = (cr, n) => makeRow({ kind: "mon", name: n ? `${cr.name} ${n}` : cr.name, hp: cr.hp, ac: cr.ac, bonus: cr.init, xp: cr.xp, mid: cr.mid });
 
 // Initiative order: highest first, then the higher bonus, then the order they were added.
 export function sortRows(cb) {
@@ -164,16 +176,22 @@ export function removeRow(cb, id) {
 export const CONDITIONS = ["Blinded", "Charmed", "Deafened", "Frightened", "Grappled", "Incapacitated", "Invisible", "Paralyzed", "Petrified", "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious"];
 
 // ---------------------------------------------------------------- record + storage
-export function blank() { return { v: 1, party: {}, creatures: [], enc: { diff: "moderate", picks: [], skip: [], n: 4, lv: 1 }, combat: null }; }
+export function blank() { return { v: 1, party: {}, creatures: [], enc: { diff: "moderate", picks: [], skip: [], n: 4, lv: 1 }, rw: { gp: 0, xp: 0, skip: [] }, combat: null }; }
 export function clean(o) {
   const out = blank(); if (!o || typeof o !== "object") return out;
   if (o.party && typeof o.party === "object") Object.values(o.party).slice(0, 40).forEach(x => { const c = sanitizeCard(x); if (c) out.party[c.id] = c; });
   if (Array.isArray(o.creatures)) out.creatures = o.creatures.slice(0, 300).map(sanitizeCreature).filter(Boolean);
   if (o.enc && typeof o.enc === "object") {
     out.enc.diff = DIFFS.some(x => x[0] === o.enc.diff) ? o.enc.diff : "moderate";
-    out.enc.picks = (Array.isArray(o.enc.picks) ? o.enc.picks : []).map(p => ({ cid: txt(p && p.cid, 24), qty: num(p && p.qty, 1, 99, 1) })).filter(p => p.cid && out.creatures.some(c => c.id === p.cid)).slice(0, 60);
+    // A pick keeps its own copy of the creature (`c`), so a library monster needs no entry in the book.
+    out.enc.picks = (Array.isArray(o.enc.picks) ? o.enc.picks : []).map(p => ({ cid: txt(p && p.cid, 60), qty: num(p && p.qty, 1, 99, 1), c: sanitizeCreature(p && p.c) }))
+      .filter(p => p.cid && (p.c || out.creatures.some(c => c.id === p.cid))).slice(0, 60);
     out.enc.n = num(o.enc.n, 1, 12, 4); out.enc.lv = num(o.enc.lv, 1, 20, 1);
     out.enc.skip = (Array.isArray(o.enc.skip) ? o.enc.skip : []).map(x => txt(x, 24)).filter(Boolean).slice(0, 40);
+  }
+  if (o.rw && typeof o.rw === "object") {
+    out.rw.gp = num(o.rw.gp, 0, 1e9, 0); out.rw.xp = num(o.rw.xp, 0, 1e9, 0);
+    out.rw.skip = (Array.isArray(o.rw.skip) ? o.rw.skip : []).map(x => txt(x, 24)).filter(Boolean).slice(0, 40);
   }
   if (o.combat && typeof o.combat === "object" && Array.isArray(o.combat.rows)) {
     const rows = o.combat.rows.slice(0, 80).map(makeRow);
@@ -193,8 +211,16 @@ export function mergeImport(d, o) {
 }
 
 // ---------------------------------------------------------------- encounter
+// The creature a pick stands for: the book entry (so edits show), else the copy the pick carries.
+export const pickCreature = (d, p) => d.creatures.find(x => x.id === p.cid) || p.c || null;
 export function encounterXp(d) {
-  return d.enc.picks.reduce((s, p) => { const c = d.creatures.find(x => x.id === p.cid); return s + (c ? c.xp * p.qty : 0); }, 0);
+  return d.enc.picks.reduce((s, p) => { const c = pickCreature(d, p); return s + (c ? c.xp * p.qty : 0); }, 0);
+}
+// Add one of a creature to the encounter (or one more of the same).
+export function addPick(d, cr) {
+  const p = d.enc.picks.find(x => x.cid === cr.id);
+  if (p) p.qty = Math.min(99, p.qty + 1); else d.enc.picks.push({ cid: cr.id, qty: 1, c: cr });
+  return d;
 }
 // Levels that set the budget: the imported party minus anyone left out; with no party at all, n characters of level lv.
 export function encounterLevels(d) {
@@ -215,6 +241,21 @@ export function addCreatures(cb, cr, count) {
 // Put the picked creatures into the fight.
 export function addEncounterToCombat(d) {
   if (!d.combat) d.combat = newCombat();
-  d.enc.picks.forEach(p => { const c = d.creatures.find(x => x.id === p.cid); if (c) addCreatures(d.combat, c, p.qty); });
+  d.enc.picks.forEach(p => { const c = pickCreature(d, p); if (c) addCreatures(d.combat, c, p.qty); });
   return d;
 }
+
+// ---------------------------------------------------------------- rewards
+// XP of the creatures marked defeated in the running fight (heroes never count).
+export const defeatedXp = cb => (cb ? cb.rows.filter(r => r.kind === "mon" && r.out).reduce((s, r) => s + r.xp, 0) : 0);
+export const defeatedCount = cb => (cb ? cb.rows.filter(r => r.kind === "mon" && r.out).length : 0);
+// An even split; whatever does not divide stays with the DM.
+export function splitEven(total, n) { n = Math.max(1, n | 0); total = Math.max(0, total | 0); return { each: Math.floor(total / n), left: total % n }; }
+// Who shares a reward: the imported party minus anyone left out; with no party, n unnamed characters.
+export function recipients(d) {
+  const all = Object.values(d.party);
+  if (!all.length) return { cards: [], n: d.enc.n };
+  const cards = all.filter(c => !c.dead && !d.rw.skip.includes(c.id)); return { cards, n: cards.length };
+}
+// Level a character would reach with this much XP (thresholds passed in so this module stays free of rules.js).
+export function levelFor(xp, table) { let lv = 1; table.forEach((t, i) => { if (xp >= t) lv = i + 1; }); return lv; }

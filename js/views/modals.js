@@ -438,7 +438,7 @@ export function renderModal(app) {
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
-    case "dmRow": case "dmCreature": case "dmSend":
+    case "dmRow": case "dmCreature": case "dmSend": case "dmMon":
       return renderDmModal(app);
 
     case "settings":

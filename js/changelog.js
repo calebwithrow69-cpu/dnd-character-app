@@ -2,11 +2,33 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.67";
+export const VERSION = "0.1.68";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.68",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "DM mode, stage 2: five tabs, the SRD bestiary, rewards.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "DM mode uses the sheet layout: a tab rail on a laptop, a bottom bar on a phone, a status strip on top.",
+          "Five tabs: Party, Combat, Bestiary, Encounters, Rewards.",
+          "Bestiary with 341 SRD 5.2 creatures: search, challenge and type filters, full stat blocks.",
+          "Add any creature to an encounter or to combat. Copy one into your own book.",
+          "Rewards: XP from defeated creatures plus bonus XP and gold, split across the party, with level-up flags."
+        ]
+      },
+      {
+        title: "Fixed",
+        items: ["A screen redraw started by a field losing focus no longer errors."]
+      }
+    ]
+  },
   {
     v: "0.1.67",
     date: "2026-11-24",

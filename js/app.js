@@ -311,7 +311,14 @@ function glRefresh(o) {
   const root = document.getElementById("gl"); if (root) root.dataset.sel = APP.gl && APP.gl.sel ? "1" : "0";
 }
 
+let rendering = false;
 function render() {
+  // Removing a focused input fires its blur/change handlers; a render started from there waits its turn.
+  if (rendering) { queueRender(); return; }
+  rendering = true;
+  try { renderOnce(); } finally { rendering = false; }
+}
+function renderOnce() {
   persistLevelUp();
   const ae = document.activeElement, fsel = focusSelector(ae);
   const caret = fsel && isTextish(ae) ? [ae.selectionStart, ae.selectionEnd] : null;
@@ -895,6 +902,7 @@ function onInput(e) {
   const el = e.target, ds = el.dataset;
   if (el.id === "f-name" && APP.createDraft) { APP.createDraft.name = el.value; refreshWizardChrome(); return; }
   if (el.id === "del-name") { const go = document.getElementById("del-go"); if (go) go.disabled = el.value.trim().toLowerCase() !== String(APP.char && APP.char.name || "Unnamed").trim().toLowerCase(); return; }
+  if (el.id === "dm-q" && APP.dmm) { APP.dmm.ui.q = el.value; APP.dmm.ui.limit = 40; render(); return; }
   if (el.id === "pm-q") { APP.playQ = el.value; render(); return; }
   if (el.id === "st-q") { APP.stQ = el.value; render(); return; }
   if (el.id === "sp-q") { APP.spQ = el.value; render(); return; }
