@@ -44,7 +44,7 @@ import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
 import { boxById } from "./lootbox.js";
 import { showLoot, rollLoot, boxCount } from "./views/lootbox.js";
-import { startTour, tourGo, skipTour, tourMark, tourUnseen, tourActive } from "./tour.js";
+import { startTour, tourGo, skipTour, tourMark, tourUnseen, tourActive, tourHooks } from "./tour.js";
 import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./views/start.js";
 import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
@@ -772,6 +772,13 @@ function onClick(e) {
   if (fn) fn(el, e);
 }
 
+// DM tour steps name where to be ("dm:<tab>" or "dm:screen"); the mover redraws before the tour looks for its target.
+tourHooks.go = spec => {
+  if (!APP.dmm || APP.screen !== "dmmode" || !/^dm:/.test(spec)) return;
+  const w = spec.slice(3), u = APP.dmm.ui;
+  if (w === "screen") { u.tab = "combat"; u.cview = "screen"; } else { u.tab = w; if (w === "combat" && u.cview === "screen") u.cview = "board"; }
+  render();
+};
 document.addEventListener("tour-end", e => { if (e.detail.fresh) toast("Silver accent unlocked"); render(); });
 
 function onSubmit(e) {
@@ -1105,6 +1112,12 @@ const ACTIONS = {
   },
   tourStart(el) {
     const id = el.dataset.id;
+    if (id === "dm") {
+      if (APP.screen !== "dmmode" || !APP.dmm) { toast("Open DM mode first"); return; }
+      if (APP.modal && ACTIONS.closeModal) ACTIONS.closeModal();
+      setTimeout(() => startTour(id), 60);
+      return;
+    }
     if (id === "sheet" && !(APP.screen === "sheet" && APP.char)) { toast("Open a character first"); return; }
     if (id === "home" && APP.screen !== "home") { ACTIONS.closeModal && ACTIONS.closeModal(); ACTIONS.goHome(); }
     else if (APP.modal && ACTIONS.closeModal) ACTIONS.closeModal();

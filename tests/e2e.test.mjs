@@ -207,7 +207,7 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     const card = dmm.decodeCard(code); assert(card && /^Gandork/.test(card.name), "card " + JSON.stringify(card));
     await p.evaluate(() => CR.ACTIONS.closeModal()); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(250);
     await clickA(p, "goDmMode");
-    assert(await p.locator("nav.tabs button:visible").count() === 6, "six tabs"); assert(await p.locator(".sheetview .quick > div").count() === 4, "status strip");
+    assert(await p.locator("nav.tabs button:visible").count() === 5, "five tabs"); assert(await p.locator(".sheetview .quick > div").count() === 4, "status strip");
     await p.locator("#dm-code").fill("junk\n" + code); await clickA(p, "dmImport");
     assert((await p.locator(".dmcard").count()) === 1, "card not shown: n=" + await p.locator(".dmcard").count() + " msg=" + await p.locator(".dmmsg").allInnerTexts() + " body=" + (await p.locator("main").innerText()).slice(0, 300)); assert(/Gandork/i.test(await p.locator(".dmcard").innerText()), "card text");
     assert(/1 unreadable/.test(await p.locator(".dmmsg").innerText()), "bad line not counted: " + await p.locator(".dmmsg").innerText());
@@ -216,6 +216,7 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     await clickA(p, "dmPartyToCombat");
     assert(await p.locator(".vstage.dmb .vcard").count() === 1, "board shows the party");
     await clickA(p, "dmCview", '[data-v="list"]'); assert(await p.locator(".dmrow").count() === 1, "party row");
+    assert(await p.locator("#dm-qn").count() === 0, "add form closed until asked"); await clickA(p, "dmAddToggle");
     await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qa").fill("15"); await p.locator("#dm-qc").fill("3"); await p.locator("#dm-qx").fill("50");
     await clickA(p, "dmAddQuick"); assert(await p.locator(".dmrow").count() === 4, "goblins");
     const inits = p.locator(".dminit"); for (let i = 0; i < 4; i++) { await inits.nth(i).fill(String(20 - i * 5)); await inits.nth(i).dispatchEvent("change"); await p.waitForTimeout(80); }
@@ -279,10 +280,33 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
   }
 });
 
+await check("DM tour: every step finds its target, tabs follow", async () => {
+  for (const [w, h] of [[1280, 720], [390, 844]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await clickA(p, "goDmMode");
+    assert(await p.locator('[data-a="tourStart"][data-id="dm"]').count() === 1, "tutorial button");
+    await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "dm" } })); await p.waitForSelector("#tour-card");
+    const n = parseInt((await p.locator(".tour-prog em").innerText()).split(" of ")[1]);
+    assert(n >= 7, "steps " + n);
+    const seen = [];
+    for (let i = 0; i < n; i++) {
+      await p.waitForTimeout(150);
+      const g = await p.evaluate(() => { const hl = document.querySelector(".tour-hole"), c = document.getElementById("tour-card").getBoundingClientRect(); return { none: hl.classList.contains("none"), t: document.querySelector(".tour-card h2").innerText, tab: document.querySelector('nav.tabs [aria-current="page"]')?.dataset.v, screen: !!document.querySelector(".tblgrid"), sx: document.documentElement.scrollWidth > innerWidth, wide: [...document.querySelectorAll("body *")].filter(e => e.getBoundingClientRect().right > innerWidth + 1 && e.offsetParent).slice(0, 5).map(e => e.tagName + "." + e.className + ":" + Math.round(e.getBoundingClientRect().right)), c: c.right <= innerWidth + 1 && c.left >= -1 }; });
+      assert(!g.none, "no target at step " + (i + 1) + ": " + g.t); assert(!g.sx && g.c, "layout at step " + (i + 1) + " w=" + w + " " + JSON.stringify(g));
+      seen.push(g.tab + (g.screen ? "+screen" : ""));
+      await p.locator('[data-a="tourNext"]').click();
+    }
+    assert(await p.locator("#tour-card").count() === 0, "tour did not close");
+    assert(seen.includes("party") && seen.includes("combat+screen") && seen.includes("bestiary") && seen.includes("encounters") && seen.includes("rewards"), "tabs followed: " + seen);
+    noErrs(p); await p.context().close();
+  }
+});
+
 await check("DM player view: both sides, initiative in the middle, stacks on a phone, second window follows", async () => {
   for (const [w, h] of [[1280, 720], [390, 844]]) {
     const p = await open(w, h, { touch: w < 700 });
     await clickA(p, "goDmMode"); await clickA(p, "dmTab", '[data-v="combat"]'); await clickA(p, "dmNewCombat");
+    await clickA(p, "dmAddToggle");
     await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qc").fill("3"); await clickA(p, "dmAddQuick");
     await p.locator("#dm-qn").fill("Knight"); await p.locator("#dm-qh").fill("30"); await p.locator("#dm-qc").fill("1"); await clickA(p, "dmAddQuick");
     await clickA(p, "dmCview", '[data-v="list"]');
@@ -298,7 +322,7 @@ await check("DM player view: both sides, initiative in the middle, stacks on a p
     await p.locator(".vstage.dmb .vside.foe .vcard").first().click(); await p.waitForSelector("#dm-amt"); await clickA(p, "dmRowHide");
     assert(await p.locator(".vstage.dmb .vcard.hid").count() === 1 && /Hidden/.test(await p.locator(".vstage.dmb").innerText()), "hidden creature stays on the DM board");
     await clickA(p, "dmRowHide"); await p.evaluate(() => CR.ACTIONS.closeModal()); await p.waitForTimeout(200);
-    await clickA(p, "dmViewOpen"); await p.waitForSelector(".vstage .vboard");
+    await clickA(p, "dmCview", '[data-v="screen"]'); await clickA(p, "dmViewOpen"); await p.waitForSelector(".vstage .vboard");
     assert(await p.locator(".vside.friend .vcard").count() === 1 && await p.locator(".vside.foe .vcard").count() === 3, "sides");
     assert(await p.locator(".vo").count() === 4 && await p.locator(".vo.now").count() === 1, "order");
     assert(await p.locator(".vcard.turn").count() === 1, "turn marker");
@@ -319,13 +343,13 @@ await check("DM player view: both sides, initiative in the middle, stacks on a p
       await p.locator('[data-a="dmNext"]:visible').first().click(); await p2.waitForTimeout(600);
       assert((await p2.locator(".vo.now .vn").innerText()) !== before, "second window did not follow");
       await p2.locator('[data-a="dmNext"]:visible').first().click(); await p2.waitForTimeout(600);
-      await p.locator('[data-a="dmViewBack"]').click(); await p.waitForTimeout(400);
+      await p.locator('[data-a="dmViewBack"]').click(); await p.waitForTimeout(400); await clickA(p, "dmCview", '[data-v="board"]');
       assert(await p.locator(".vstage.dmb .vcard.turn").count() === 1, "main window did not follow the view window");
       await p2.close();
     }
     // Table tab: customise, hide, alias, push
     await p.evaluate(() => CR.ACTIONS.dmViewBack()); await p.waitForTimeout(300);
-    await clickA(p, "dmTab", '[data-v="table"]'); await p.waitForSelector(".vprevbox .vstage.prev");
+    assert(await p.locator('nav.tabs [data-v="table"]').count() === 0, "no Table tab"); await clickA(p, "dmTab", '[data-v="combat"]'); await clickA(p, "dmCview", '[data-v="screen"]'); await p.waitForSelector(".vprevbox .vstage.prev");
     assert(await p.locator(".vprevbox .vcard").count() === 4, "preview shows every creature");
     await clickA(p, "dmTblSet", '[data-k="foeHp"][data-v="numbers"]'); assert(/7\s*\/\s*7/.test(await p.locator(".vprevbox .vside.foe").innerText()), "enemy numbers in preview");
     await clickA(p, "dmTblSet", '[data-k="accent"][data-v="violet"]'); assert(await p.locator('.vprevbox .vstage[data-accent="violet"]').count() === 1, "accent");

@@ -2,11 +2,31 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.71";
+export const VERSION = "0.1.72";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.72",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "DM mode: five tabs, one Combat tab, and a tutorial.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "The Table tab is part of Combat. Combat has a Board, List and Screen switch.",
+          "Screen holds the preview, push message and what the TV shows. Conditions settings joined Show.",
+          "Add creatures opens on demand. The header keeps Roll initiative and Next turn."
+        ]
+      },
+      {
+        title: "New",
+        items: ["DM tour: the info button in the DM header walks through every tab and the table screen."]
+      }
+    ]
+  },
   {
     v: "0.1.71",
     date: "2026-11-24",

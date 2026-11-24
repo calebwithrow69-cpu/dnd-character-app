@@ -7,7 +7,7 @@
 // - Rules data (data/*.json): network first when online, cache when not.
 //   Those update live without a version bump.
 // - Google Fonts: cached the first time they load, so offline keeps the look.
-const CACHE_VERSION = "v140";
+const CACHE_VERSION = "v141";
 const SHELL = "shell-" + CACHE_VERSION;
 const FONTS = "fonts-v1";
 

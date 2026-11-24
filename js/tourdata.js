@@ -11,6 +11,19 @@ export const TOURS = {
       { sel: '[data-a="openSettings"]', title: "Settings and backups", body: "Characters are stored in this browser only. Export a backup from Data and backups, and install the app so the browser keeps it." }
     ]
   },
+  dm: {
+    name: "DM tour",
+    steps: [
+      { go: "dm:party", sel: 'nav.tabs [data-v="party"]', title: "Party", body: "Players send a code from Edit character. Each card is a snapshot with its age. Start combat from here with everyone added." },
+      { go: "dm:combat", sel: '.dmvsw', title: "Board, List, Screen", body: "Board is the table layout with real numbers. Tap a portrait to change HP or conditions. List shows initiative inputs. Screen is for the TV." },
+      { go: "dm:combat", sel: '[data-a="dmNext"], [data-a="dmNewCombat"]', title: "Run the turns", body: "Roll initiative, then Next turn. Conditions with rounds tick down at the end of their creature's turn." },
+      { go: "dm:screen", sel: '[data-a="dmViewWindow"]', title: "Table screen", body: "Open it in a new window and put that window on the TV. Both windows follow each other, so either one can press Next turn." },
+      { go: "dm:screen", sel: '.tblgrid > .stack:last-child', title: "What the TV shows", body: "Hide enemy numbers, show AC, pick a theme and text size. Push a message or blank the screen between scenes." },
+      { go: "dm:bestiary", sel: 'nav.tabs [data-v="bestiary"]', title: "Bestiary", body: "SRD monsters and your own creatures, with full stat blocks. Add any of them to an encounter." },
+      { go: "dm:encounters", sel: 'nav.tabs [data-v="encounters"]', title: "Encounters", body: "Build a fight and see its XP against the party's budget: low, moderate or high. Add to combat when ready." },
+      { go: "dm:rewards", sel: 'nav.tabs [data-v="rewards"]', title: "Rewards", body: "Defeated XP plus anything you add, split across the party. It shows who levels up." }
+    ]
+  },
   sheet: {
     name: "Sheet tour",
     steps: [

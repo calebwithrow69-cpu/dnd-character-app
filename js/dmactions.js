@@ -149,6 +149,7 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
     dmRowHide() { const r = row(); if (!r) return; r.hid = !r.hid; refreshRow(); },
     dmRowHideId(el) { const cb = S().d.combat, r = cb && cb.rows.find(x => x.id === el.dataset.id); if (!r) return; r.hid = !r.hid; redraw(); },
     dmCview(el) { S().ui.cview = el.dataset.v; render(); },
+    dmAddToggle() { const u = S().ui; u.add = !u.add; render(); },
     dmAlly() { const r = row(); if (!r) return; r.ally = !r.ally; refreshRow(); },
 
     // ---- bestiary

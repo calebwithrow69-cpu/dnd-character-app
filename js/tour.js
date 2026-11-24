@@ -18,6 +18,8 @@ export function tourCard(id) {
 }
 
 let run = null; // { id, i }
+// A step can name a place to be in first (st.go); the app supplies the mover.
+export const tourHooks = { go: null };
 const root = () => document.getElementById("tour-root") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "tour-root" }));
 const target = sel => [...document.querySelectorAll(sel)].find(el => { const r = el.getBoundingClientRect(); return el.offsetParent !== null && r.width > 4 && r.height > 4; }) || null;
 
@@ -56,6 +58,7 @@ function clear() { const r = document.getElementById("tour-root"); if (r) r.inne
 export function show() {
   if (!run) return;
   const t = TOURS[run.id], st = t.steps[run.i], n = t.steps.length;
+  if (st.go && tourHooks.go) tourHooks.go(st.go);
   const el = st.sel ? target(st.sel) : null;
   if (el) el.scrollIntoView({ block: "center", inline: "nearest" });
   const r = el ? el.getBoundingClientRect() : null, pad = 6, k = zoomOf();
