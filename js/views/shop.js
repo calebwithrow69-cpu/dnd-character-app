@@ -14,7 +14,7 @@ export function fmtWallet(coins) {
   const parts = ["pp", "gp", "ep", "sp", "cp"].filter(k => +coins?.[k]).map(k => `${coins[k]} ${k}`);
   return parts.length ? parts.join(", ") : "no money";
 }
-function shopRows(app) {
+export function shopRows(app) {
   const L = app.library, C = app.campaign, c = app.char, t = trainingFromChar(c), dec = shopDecorator(L, C);
   return shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing"))
     .filter(r => app.shopTrained === false || isTrained(app, t, r)).map(dec);
@@ -31,7 +31,7 @@ export function renderShopResults(app) {
   } });
 }
 
-function shopDetail(app, r) {
+export function shopDetail(app, r) {
   const L = app.library, C = app.campaign;
   if (r.cat === "Armor") {
     if (r.name === "Shield") return `<p>+2 to AC while you hold it in your off hand.</p>`;
@@ -48,6 +48,9 @@ function shopDetail(app, r) {
   return formatText(it?.text || "");
 }
 
+export function lootTab(app, active = false) {
+  return app.prefs && app.prefs.experimental ? `<button data-a="shopCat" data-cat="loot" aria-pressed="${active}">${ICONS.star}<span>Loot boxes</span></button>` : "";
+}
 export function renderShopPage(app) {
   const c = app.char, cat = app.shopCat || "All", trained = app.shopTrained !== false;
   const discount = (c.feats || []).some(f => /^Crafter\b/.test(f));
@@ -57,7 +60,7 @@ export function renderShopPage(app) {
       <div class="shop-ctl">
         <div class="shop-find">${searchBox("shop", app.shopQuery, "Search the shop")}
           <button class="shop-toggle" data-a="shopTrained" data-v="${trained ? 0 : 1}" aria-pressed="${trained}">${ICONS.check}<span>Trained</span></button></div>
-        ${shelfTabs("shopCat", shelfCounts(shopRows(app)), cat)}
+        ${shelfTabs("shopCat", shelfCounts(shopRows(app)), cat, [], lootTab(app))}
         ${trained ? `<p class="sub2 shop-train">Trained: ${esc(trainingSummary(trainingFromChar(c)))}</p>` : ""}
         <p class="sub2 shop-note">Prices: DM rules file, else Player's Handbook</p>
       </div></div>

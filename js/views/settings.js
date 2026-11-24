@@ -123,6 +123,7 @@ export function settingsBody(app) {
       <div class="setinfo"><div class="setlabel">Tours</div><div class="sethint">${rewardEarned() ? "Silver accent unlocked." : "Finish one to unlock the Silver accent."}</div></div>
       <div class="btnrow"><button class="btn" data-a="tourStart" data-id="home">Home tour</button><button class="btn" data-a="tourStart" data-id="sheet">Sheet tour</button></div>
     </div>`;
+  const experimental = sw("experimental", "Loot boxes", "Adds a Loot boxes shelf to the Shop", !!p.experimental, { kw: "experimental beta gamble random" });
   const about =
     tourRow +
     `<div class="setrow col" data-s="version changelog whats new about testers">
@@ -141,6 +142,7 @@ export function settingsBody(app) {
     ${section("play", "Play", play, op("play"), true)}
     ${section("access", "Accessibility", access, op("access"), true)}
     ${section("data", "Data and backups", data, op("data"), true)}
+    ${section("experimental", "Experimental features", experimental, op("experimental"), true)}
     ${section("about", "About and what's new", about, op("about"))}
     ${section("danger", "Reset and repair", danger, op("danger"))}
   </div>`;

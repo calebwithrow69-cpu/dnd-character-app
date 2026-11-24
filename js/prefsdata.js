@@ -6,7 +6,8 @@ export const SECTION_KEYS = {
   sheet: ["startTab", "width", "showxp", "showquick"],
   play: ["wake", "vignette", "rollfx", "cxfx", "keys", "turns", "concprompt"],
   access: ["motion", "contrast", "bigtap"],
-  data: ["backupDays"]
+  data: ["backupDays"],
+  experimental: ["experimental"]
 };
 
 const CHOICES = {
@@ -16,7 +17,7 @@ const CHOICES = {
   width: ["standard", "wide"], rollfx: ["full", "crits", "off"], motion: ["auto", "reduced"], contrast: ["normal", "high"],
   backupDays: ["0", "7", "14", "30"], sheetStyle: ["classic", "advanced"]
 };
-const BOOLS = ["wake", "vignette", "cxfx", "keys", "turns", "concprompt", "bigtap", "showxp", "showquick"];
+const BOOLS = ["wake", "vignette", "cxfx", "keys", "turns", "concprompt", "bigtap", "showxp", "showquick", "experimental"];
 
 export const SETTINGS_KEYS = [...Object.values(SECTION_KEYS).flat(), "sheetStyle"];
 

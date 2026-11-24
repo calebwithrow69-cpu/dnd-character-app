@@ -82,6 +82,21 @@ const SOUNDS = {
   rland: c => { tone(c, { f: 150, f2: 60, d: 0.16, type: "sine", v: 0.16 }); noise(c, { d: 0.06, v: 0.05, f: 900 }); },
   rchip: c => { tone(c, { f: 520 + Math.random() * 200, d: 0.05, type: "triangle", v: 0.04 }); },
   rdone: c => { tone(c, { f: 440, d: 0.08, v: 0.05 }); tone(c, { f: 660, t: 0.07, d: 0.12, v: 0.05 }); },
+  // loot box reveals, quiet to loud
+  lootcommon: c => { tone(c, { f: 392, d: 0.18, v: 0.05, type: "triangle" }); },
+  lootuncommon: c => { tone(c, { f: 440, d: 0.14, v: 0.05, type: "triangle" }); tone(c, { f: 587, t: 0.09, d: 0.2, v: 0.05, type: "triangle" }); },
+  lootrare: c => { [523, 659, 784].forEach((f, i) => tone(c, { f, t: i * 0.09, d: 0.3, v: 0.06, type: "triangle" })); },
+  lootepic: c => {
+    [392, 494, 587, 784, 988].forEach((f, i) => tone(c, { f, t: i * 0.08, d: 0.5, v: 0.07, type: "triangle" }));
+    tone(c, { f: 98, f2: 55, d: 0.6, type: "sine", v: 0.16 }); noise(c, { t: 0.3, d: 0.2, v: 0.04, f: 5000 });
+  },
+  lootlegendary: c => {
+    tone(c, { f: 65, f2: 40, d: 1.4, type: "sine", v: 0.24 }); noise(c, { d: 0.35, v: 0.12, f: 1800 });
+    [262, 330, 392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(c, { f, t: 0.15 + i * 0.1, d: 0.9, v: 0.07, type: "triangle" }));
+    [523, 659, 784, 1047].forEach(f => tone(c, { f, t: 1.05, d: 1.6, v: 0.05, type: "sawtooth" }));
+    [2093, 2637, 3136].forEach((f, i) => tone(c, { f, t: 1.2 + i * 0.12, d: 1.2, v: 0.025 }));
+    noise(c, { t: 1.05, d: 0.5, v: 0.06, f: 7000 });
+  },
   nat20: c => {
     [523, 659, 784, 1047, 1319].forEach((f, i) => tone(c, { f, t: i * 0.09, d: 0.5, v: 0.07, type: "triangle" }));
     tone(c, { f: 130, f2: 60, d: 0.9, type: "sine", v: 0.2 }); noise(c, { d: 0.18, v: 0.05, f: 6000 });

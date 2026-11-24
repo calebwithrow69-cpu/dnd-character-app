@@ -37,7 +37,9 @@ import {
 import { rollMods } from "./effects.js";
 import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
-import { startTour, tourGo, skipTour, tourMark } from "./tour.js";
+import { boxById } from "./lootbox.js";
+import { showLoot, rollLoot, boxCount } from "./views/lootbox.js";
+import { startTour, tourGo, skipTour, tourMark, tourUnseen, tourActive } from "./tour.js";
 import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./views/start.js";
 import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
@@ -212,6 +214,17 @@ function maybeStorageIntro() {
   setTimeout(() => { APP._storagePending = false; if (!APP.modal && APP.screen === "home" && !storageAcked()) openModal({ type: "storage", first: true }); }, 350);
 }
 
+// The sheet tour is offered once, the first time a character opens on this device.
+function maybeSheetTour() {
+  if (APP.screen !== "sheet" || !APP.char || APP.char.dead || APP.modal || APP.sheetTab !== "stats" || APP._tourPending) return;
+  if (navigator.webdriver || !storageAcked() || !tourUnseen("sheet") || tourActive() || !document.querySelector(".status .vitals, .sheetbar")) return;
+  APP._tourPending = true;
+  setTimeout(() => {
+    APP._tourPending = false;
+    if (APP.screen === "sheet" && APP.sheetTab === "stats" && !APP.modal && !tourActive() && tourUnseen("sheet")) startTour("sheet");
+  }, 900);
+}
+
 // ---------------- render ----------------
 const FOCUS_KEYS = ["itemField", "weaponField", "edit", "editAbility", "ac", "coin", "field", "itemNotes", "nb", "modal", "query", "draft", "draftAbility"];
 function focusSelector(el) {
@@ -297,6 +310,7 @@ function render() {
   pendingRender = false;
   renderNow();
   maybeStorageIntro();
+  maybeSheetTour();
   if (fsel) {
     const el = document.querySelector(fsel);
     if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); if (caret && el.setSelectionRange) try { el.setSelectionRange(caret[0], caret[1]); } catch (e) { } }
@@ -466,6 +480,7 @@ const PREF_TOGGLES = {
   keys: { get: p => p.keys !== false, set: (p, v) => { p.keys = v; } },
   cxfx: { get: p => p.cxfx !== false, set: (p, v) => { p.cxfx = v; } },
   concprompt: { get: p => !!p.concprompt, set: (p, v) => { p.concprompt = v; if (!v) APP.concPrompt = null; } },
+  experimental: { get: p => !!p.experimental, set: (p, v) => { p.experimental = v; if (!v && APP.shopCat === "loot") APP.shopCat = "All"; } },
   gwm: { get: () => !!APP.gwm, set: (p, v) => { APP.gwm = v; } }
 };
 
@@ -1317,7 +1332,7 @@ const ACTIONS = {
       if (v) sfx("confirm");
     }
     if (el.dataset.k === "haptics" && v) { try { navigator.vibrate(30); } catch (e) { } }
-    if (["vignette", "contrast", "bigtap", "turns", "concprompt", "gwm", "showxp", "showquick"].includes(el.dataset.k)) render();
+    if (["vignette", "contrast", "bigtap", "turns", "concprompt", "gwm", "showxp", "showquick", "experimental"].includes(el.dataset.k)) render();
   },
   setPrefV(el) {
     // Changing an already-chosen sheet style asks first; the very first pick applies at once.
@@ -1964,6 +1979,40 @@ const ACTIONS = {
     else c.inventory.push(makeItem(name, { weapons: allWeapons(L, C), items: allItems(L, C) }, store.newId));
     saveAndRender();
     toast(`Bought ${name} for ${fmtPrice(cost / 100)}`, { action: "Undo", onAction: () => { c.coins = before.coins; c.inventory = before.inv; saveAndRender(); } });
+  },
+  buyBox(el) {
+    const c = APP.char, box = boxById(el.dataset.box);
+    if (!box) return;
+    const paid = pay(c.coins, box.gp * 100);
+    if (!paid) { toast("Not enough money"); return; }
+    const before = { coins: { ...c.coins }, inv: c.inventory.map(i => ({ ...i })) };
+    c.coins = paid;
+    const same = c.inventory.find(i => i.name === box.name);
+    if (same) same.qty += 1; else c.inventory.push({ id: store.newId(), name: box.name, qty: 1, notes: "" });
+    saveAndRender();
+    toast(`Bought ${box.name}`, { action: "Undo", onAction: () => { c.coins = before.coins; c.inventory = before.inv; saveAndRender(); } });
+  },
+  askOpenBox(el) {
+    const box = boxById(el.dataset.box);
+    if (!box || !APP.char || !APP.prefs.experimental || boxCount(APP.char, box) < 1) return;
+    openModal({ type: "lootConfirm", box: box.id });
+  },
+  confirmOpenBox() {
+    const box = boxById(APP.modal && APP.modal.box);
+    closeModal();
+    const c = APP.char;
+    const it = box && c && c.inventory.find(i => i.name === box.name && i.qty > 0);
+    if (!it) return;
+    const res = rollLoot(APP, box);
+    it.qty -= 1;
+    if (it.qty <= 0) c.inventory = c.inventory.filter(i => i !== it);
+    if (res.item) {
+      const same = c.inventory.find(i => i.name === res.item.name && !i.notes && !slotOf(c, i.id));
+      if (same && !res.item.magic) same.qty += 1;
+      else c.inventory.push(makeItem(res.item.name, { weapons: allWeapons(APP.library, APP.campaign), items: allItems(APP.library, APP.campaign) }, store.newId));
+    }
+    saveAndRender();
+    showLoot(APP, box, res, boxCount(c, box));
   },
   openPicker(el) { APP.pickerQuery = ""; APP.pickerLevel = null; openModal({ type: "picker", picker: el.dataset.picker }); },
   pickFrom(el) { addPicked(el.dataset.picker, el.dataset.name, false); },

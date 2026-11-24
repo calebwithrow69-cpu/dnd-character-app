@@ -1,4 +1,6 @@
 import { esc, modalShell, searchBox, ICONS, hotbarToggle } from "../ui.js";
+import { boxById, boxByName } from "../lootbox.js";
+import { oddsList } from "./lootbox.js";
 import {
   ABILITIES, ABILITY_LABEL, CONDITIONS, abilityMod, fmtMod, deriveCharacter, hpAverageGain, slotRows
 } from "../rules.js";
@@ -201,11 +203,19 @@ export function renderModal(app) {
         it.attune ? row("ctxAttune", { id: it.id }, it.attuned ? "◇ End attunement" : "◆ Attune") : "",
         row("addHotbar", { kind: it.weapon ? "attack" : "item", id: it.id, close: "1" }, "➕ Add to hotbar"),
         `<div class="menu-row qtyrow"><span>Quantity</span><span class="stepper"><button data-a="qtyStep" data-id="${it.id}" data-n="-1" aria-label="One fewer">−</button><b>${it.qty}</b><button data-a="qtyStep" data-id="${it.id}" data-n="1" aria-label="One more">+</button></span></div>`,
+        boxByName(it.name) && app.prefs.experimental ? row("askOpenBox", { box: boxByName(it.name).id }, "Open") : "",
         row("openItemEdit", { id: it.id }, "✎ Edit details"),
         row("removeItem", { id: it.id }, "🗑 Drop", "danger")
       ].filter(Boolean).join("");
       return modalShell(it.name, `${ref?.text ? `<p class="sub2" style="margin-bottom:10px">${esc((ref.text.split("\n")[0] || "").slice(0, 120))}</p>` : ""}<div class="menu-list">${items}</div>`,
         `<button class="btn" data-a="closeModal">Close</button>`);
+    }
+
+    case "lootConfirm": {
+      const b = boxById(m.box);
+      if (!b) return "";
+      return modalShell("Open " + b.name, `<p>One ${esc(b.name)} is used up.</p>${oddsList(b)}`,
+        `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmOpenBox">Open</button>`);
     }
 
     case "hotbarAdd": {

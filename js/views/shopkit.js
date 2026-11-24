@@ -56,8 +56,8 @@ export function purseCard({ label, big, id = "", tag = "", cells = [], bar = nul
     ${bar != null ? `<div class="purse-bar" role="img" aria-label="Spent ${Math.round(bar)}%"><i style="width:${Math.max(0, Math.min(100, bar))}%"></i></div>` : ""}</div>`;
 }
 
-export function shelfTabs(action, counts, active, skip = []) {
-  return `<div class="shelf" role="group" aria-label="Shelf">${SHELVES.filter(s => !skip.includes(s.k)).map(s =>
+export function shelfTabs(action, counts, active, skip = [], extra = "") {
+  return `<div class="shelf" role="group" aria-label="Shelf">${extra}${SHELVES.filter(s => !skip.includes(s.k)).map(s =>
     `<button data-a="${action}" data-cat="${s.k}" aria-pressed="${active === s.k}">${s.icon ? ICONS[s.icon] : ""}<span>${esc(s.label)}</span><em>${counts[s.k] || 0}</em></button>`).join("")}</div>`;
 }
 

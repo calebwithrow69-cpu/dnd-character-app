@@ -15,7 +15,7 @@ export const TOURS = {
     name: "Sheet tour",
     steps: [
       { sel: ".status .vitals", title: "Level, HP, AC", body: "The seal is level and XP. The vial is hit points. The shield is armor class. Each one opens its own controls." },
-      { sel: "nav.tabs", title: "Sections", body: "Character is the sheet itself. Notes, Rules, Shop and Settings sit beside it." },
+      { sel: 'nav.tabs [data-tab="rules"]', title: "Rules", body: "Every class, spell, item and condition, searchable offline. Notes and Shop sit beside it." },
       { sel: '[data-a="openEdit"]', title: "Edit character", body: "Level up or lower, add feats, change scores, mark a character as dead." },
       { sel: 'nav.tabs [data-tab="settings"]', title: "Settings", body: "Sheet style, sounds, rule sets and backups. Backups matter: there is no account behind this app." }
     ]

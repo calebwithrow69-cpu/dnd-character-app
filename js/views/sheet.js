@@ -1,5 +1,6 @@
 import { readinessStrip, loadoutCards, wornRows } from "./loadout.js";
 import { tourCard } from "../tour.js";
+import { tabIsNew, markTabSeen } from "../tabsseen.js";
 import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, glossaryEntry, infoRow, activeChips, hotbarToggle, kRow, kGroup, snipOf } from "../ui.js";
 import {
   ABILITIES, ABILITY_LABEL, ABILITY_SHORT, deriveCharacter, fmtMod, weaponNumbers, CASTER_TYPE, parseList
@@ -16,6 +17,7 @@ import { shieldSvg, armorTier } from "../shield.js";
 import { unitWeight, carried, fmtLb } from "../weights.js";
 import { rulesTab, renderRulesResults } from "./glossary.js";
 import { renderShopPage } from "./shop.js";
+import { renderLootPage } from "./lootbox.js";
 import { settingsBody } from "./settings.js";
 import { notesBody } from "./notes.js";
 export { renderRulesResults };
@@ -55,6 +57,8 @@ export function renderSheet(app) {
   if (!tabs.some(t => t[0] === app.sheetTab)) app.sheetTab = "stats";
   if (app.sheetTab === "notes" && !(app.nb && app.nb.data)) app.sheetTab = "stats";
   const tab = app.sheetTab;
+  const dots = new Set(tabs.map(t => t[0]).filter(id => id !== tab && tabIsNew(id)));
+  markTabSeen(tab);
   if (tab === "stats" && (app.styleAsk === c.id || (app.prefs.sheetStyle !== "classic" && app.prefs.sheetStyle !== "advanced"))) return stylePicker(app);
 
   const pct = Math.max(0, Math.min(100, (c.hp.cur / Math.max(1, c.hp.max)) * 100));
@@ -79,7 +83,7 @@ export function renderSheet(app) {
   let body;
   const styled = app.prefs.sheetStyle === "advanced" || app.prefs.sheetStyle === "classic";
   if (tab === "stats") body = app.prefs.sheetStyle === "advanced" ? characterBody(app, c, d) : classicBody(app, c, d);
-  else if (tab === "shop") body = renderShopPage(app);
+  else if (tab === "shop") body = app.shopCat === "loot" && app.prefs && app.prefs.experimental ? renderLootPage(app) : renderShopPage(app);
   else if (tab === "settings") body = `<div class="setpage">${settingsBody(app)}</div>`;
   else if (tab === "notes") body = notesBody(app);
   else body = rulesTab(app);
@@ -117,7 +121,7 @@ export function renderSheet(app) {
       ${body}
     </main>
     <nav class="tabs" aria-label="Sheet sections"><div class="in" style="grid-template-columns:repeat(${tabs.length},1fr)">
-      ${tabs.map(([id, label, icon, act]) => `<button data-a="${act || "sheetTab"}"${act ? "" : ` data-tab="${id}"`} ${tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}
+      ${tabs.map(([id, label, icon, act]) => `<button data-a="${act || "sheetTab"}"${act ? "" : ` data-tab="${id}"`} ${tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span>${dots.has(id) ? '<i class="newdot" aria-hidden="true"></i>' : ""}</button>`).join("")}
     </div></nav></div>`;
 }
 

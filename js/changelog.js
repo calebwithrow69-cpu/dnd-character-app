@@ -2,11 +2,29 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.63";
+export const VERSION = "0.1.64";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.64",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "Experimental loot boxes, sheet tour on first open, dots on unvisited tabs.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+      "Settings > Experimental features (off by default). With Loot boxes on, the Shop gets a Loot boxes shelf.",
+      "Three boxes at 40, 50 and 65 gp. Exact odds are shown before you buy. Boxes wait in your bag until you open them.",
+      "Opening asks first, then a reel spins through shop items and lands with a sound and effect that grows with rarity.",
+      "Rarity is rolled top down: Legendary first, then Epic, Rare, Uncommon. Common is what is left.",
+      "The sheet tour now starts the first time a character opens, with a Rules step. Notes, Rules and Shop show a dot until opened."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.63",
     date: "2026-11-24",

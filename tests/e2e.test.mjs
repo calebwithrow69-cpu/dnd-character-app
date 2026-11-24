@@ -1295,6 +1295,83 @@ await check("creation shop: buy trained gear with the gold, see it on the new ch
   noErrs(p); await p.context().close();
 });
 
+await check("Loot boxes: off by default, buy, confirm, reel, fanfare, inspect", async () => {
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await openSample(p);
+    await p.evaluate(() => { APP.char.coins = { cp: 0, sp: 0, ep: 0, gp: 500, pp: 0 }; CR.ACTIONS.openShop(); });
+    await p.waitForSelector(".shop-page");
+    assert(await p.locator('[data-cat="loot"]').count() === 0, "Loot boxes shelf visible while the setting is off");
+    assert(await p.evaluate(() => !APP.prefs.experimental), "experimental must default to off");
+    await p.evaluate(() => CR.ACTIONS.sheetTab({ dataset: { tab: "settings" } })); await p.waitForSelector('.switch[data-k="experimental"]', { state: "attached" });
+    assert(await p.locator('.switch[data-k="experimental"]').getAttribute("aria-checked") === "false", "switch starts on");
+    await p.evaluate(() => { document.querySelector('details[data-sec="experimental"]').open = true; }); await p.waitForTimeout(100);
+    await p.locator('.switch[data-k="experimental"]').click(); await p.waitForTimeout(300);
+    assert(await p.evaluate(() => APP.prefs.experimental === true), "switch did not turn the setting on");
+    await p.evaluate(() => CR.ACTIONS.openShop()); await p.waitForSelector('[data-cat="loot"]');
+    await p.locator('[data-cat="loot"]:visible').first().click(); await p.waitForSelector(".lb-card");
+    assert(await p.locator(".lb-card").count() === 3, "three boxes expected");
+    const txt = await p.locator(".lb-main").innerText();
+    assert(/Legendary/.test(txt) && /Common/.test(txt) && /\d+(\.\d+)?%/.test(txt), "odds must be shown before buying");
+    assert(await hscroll(p) <= 2, "loot page scrolls sideways");
+    await p.screenshot({ path: `/tmp/loot-shop-${w}.png` });
+    // buy
+    await p.locator('[data-a="buyBox"][data-box="chest"]').click(); await p.waitForTimeout(300);
+    let st = await p.evaluate(() => ({ gp: APP.char.coins.gp, n: (APP.char.inventory.find(i => i.name === "Iron-Bound Chest") || {}).qty }));
+    assert(st.n === 1 && st.gp === 450, "buy: " + JSON.stringify(st));
+    // confirm gate: nothing is spent until Open is confirmed
+    await p.locator('[data-a="askOpenBox"][data-box="chest"]').click(); await p.waitForSelector('[data-a="confirmOpenBox"]');
+    assert(await p.evaluate(() => APP.char.inventory.some(i => i.name === "Iron-Bound Chest")), "box used before confirming");
+    await p.locator('.modal [data-a="closeModal"]:visible').first().click(); await p.waitForTimeout(300);
+    assert(await p.locator("#loot-root").count() === 0, "cancel opened the box");
+    const sum = () => p.evaluate(() => APP.char.inventory.reduce((a, i) => a + i.qty, 0));
+    const before = await sum();
+    await p.locator('[data-a="askOpenBox"][data-box="chest"]').click(); await p.waitForSelector('[data-a="confirmOpenBox"]');
+    await p.locator('[data-a="confirmOpenBox"]').click(); await p.waitForSelector("#loot-root");
+    assert(!(await p.evaluate(() => APP.char.inventory.some(i => i.name === "Iron-Bound Chest"))), "box not used up");
+    { const inv = await p.evaluate(() => APP.char.inventory.map(i => i.name + "x" + i.qty)); const won = await p.locator(".lr-name").innerText().catch(() => "?") + " POOLS " + await p.evaluate(async () => { const m = await import("/js/views/lootbox.js"); const P = m.lootPools(APP); return JSON.stringify(Object.fromEntries(Object.entries(P).map(([k, v]) => [k, v.length]))) + " " + JSON.stringify(Object.values(P).flat().slice(0, 1)); }); assert(await sum() === before, "bag count: before " + before + " after " + await sum() + " won " + won + " inv " + inv.join(",")); }
+    await p.waitForSelector("#loot-root.landed", { timeout: 9000 });
+    const name = await p.locator(".lr-name").innerText();
+    assert(await p.evaluate(n => APP.char.inventory.some(i => i.name === n), name), "won item not in the bag: " + name);
+    await p.screenshot({ path: `/tmp/loot-reveal-${w}.png` });
+    await p.locator('[data-loot="inspect"]').click(); assert(await p.locator(".lr-detail").isVisible(), "Inspect shows nothing");
+    await p.locator('[data-loot="done"]').click(); assert(await p.locator("#loot-root").count() === 0, "Done left the overlay");
+    // a guaranteed legendary: big reveal, particle layer, skip works
+    await p.evaluate(() => { APP.char.coins.gp = 500; CR.ACTIONS.buyBox({ dataset: { box: "coffer" } }); });
+    await p.evaluate(() => { window.__r = Math.random; Math.random = () => 0; CR.ACTIONS.askOpenBox({ dataset: { box: "coffer" } }); });
+    await p.waitForSelector('[data-a="confirmOpenBox"]'); await p.locator('[data-a="confirmOpenBox"]').click(); await p.waitForSelector("#loot-root");
+    await p.locator('[data-loot="skip"]').click(); await p.waitForSelector("#loot-root.landed.r-legendary"); await p.waitForTimeout(700);
+    await p.evaluate(() => { Math.random = window.__r; });
+    assert(await p.locator(".loot-fx").count() === 1, "no fx layer");
+    await p.screenshot({ path: `/tmp/loot-legendary-${w}.png` });
+    await p.keyboard.press("Escape"); await p.waitForTimeout(200); assert(await p.locator("#loot-root").count() === 0, "Escape did not close");
+    // setting off hides the shelf again
+    await p.evaluate(() => CR.ACTIONS.sheetTab({ dataset: { tab: "settings" } })); await p.waitForSelector('.switch[data-k="experimental"]', { state: "attached" });
+    await p.evaluate(() => { document.querySelector('details[data-sec="experimental"]').open = true; }); await p.locator('.switch[data-k="experimental"]').click(); await p.waitForTimeout(300);
+    await p.evaluate(() => CR.ACTIONS.openShop()); await p.waitForSelector(".shop-page");
+    assert(await p.locator('[data-cat="loot"]').count() === 0, "shelf still there after turning the setting off");
+    noErrs(p); await p.context().close();
+  }
+});
+await check("Tabs: unvisited sections carry a dot until opened; sheet tour offers itself once", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, serviceWorkers: "block" });
+  await ctx.addInitScript(() => { try { Object.defineProperty(navigator, "webdriver", { get: () => false }); localStorage.setItem("dnd-storage-intro-v1", "1"); } catch (e) { } });
+  const p = await ctx.newPage(); p.errs = []; p.on("pageerror", e => p.errs.push(String(e)));
+  await p.goto(URL_); await p.waitForSelector("#home-book");
+  await openSample(p);
+  await p.waitForSelector("#tour-root .tour, #tour-root [data-a='tourNext']", { timeout: 6000 });
+  assert(/Level|HP|AC/i.test(await p.locator("#tour-root").innerText()), "sheet tour did not start on first open");
+  assert(await p.locator("nav.tabs .newdot").count() >= 3, "expected dots on Notes, Rules and Shop");
+  await p.locator('[data-a="tourSkip"]').first().click(); await p.waitForTimeout(300);
+  await p.locator('nav.tabs [data-tab="rules"]').click(); await p.waitForTimeout(400);
+  assert(await p.locator('nav.tabs [data-tab="rules"] .newdot').count() === 0, "dot stayed after visiting Rules");
+  await p.reload(); await p.waitForSelector("#home-book"); await clickA(p, "goRoster"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForTimeout(2200);
+  assert(await p.locator("#tour-root [data-a='tourNext']").count() === 0, "tour offered a second time");
+  assert(await p.locator('nav.tabs [data-tab="rules"] .newdot').count() === 0, "Rules dot came back");
+  assert(await p.locator('nav.tabs [data-tab="shop"] .newdot').count() === 1, "Shop dot lost");
+  assert(p.errs.length === 0, p.errs.join(" || ")); await ctx.close();
+});
+
 await browser.close(); server.close(); rmSync(tmp, { recursive: true, force: true });
 const failed = results.filter(r => !r[0]);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
