@@ -1,3 +1,4 @@
+import { renderDmModal } from "./dmmode.js";
 import { esc, modalShell, searchBox, ICONS, hotbarToggle } from "../ui.js";
 import { boxById, boxByName } from "../lootbox.js";
 import { renderWhatsNew } from "./whatsnew.js";
@@ -429,12 +430,16 @@ export function renderModal(app) {
           <div class="panel" style="margin-top:10px"><div class="panel-body stack">
             <button class="btn block" data-a="downloadPdf">Download character sheet (PDF)</button>
             <button class="btn block" data-a="exportOne">Export character</button>
+            <button class="btn block" data-a="dmSendOpen">Send to DM</button>
             ${c.dead ? "" : `<button class="btn block" data-a="markDeadAsk">Mark as dead</button>`}
             <button class="btn danger block" data-a="askDelete">Delete character</button>
           </div></div>
         </div>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
+
+    case "dmRow": case "dmCreature": case "dmSend":
+      return renderDmModal(app);
 
     case "settings":
       return renderSettingsModal(app);

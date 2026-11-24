@@ -197,6 +197,62 @@ await check("Button law: sizes, label style, radius and a press on every kind of
   noErrs(p); await p.context().close();
 });
 
+await check("DM mode: send card, import, run combat, creature book, encounter budget, persists", async () => {
+  const dmm = await import(pathToFileURL(join(root, "js/dmmode.js")).href);
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await openSample(p);
+    await clickA(p, "openEdit"); await clickA(p, "dmSendOpen");
+    const code = await p.locator("#dm-send").inputValue(); assert(/^CRP1\./.test(code), "no code " + code.slice(0, 20));
+    const card = dmm.decodeCard(code); assert(card && /^Gandork/.test(card.name), "card " + JSON.stringify(card));
+    await p.evaluate(() => CR.ACTIONS.closeModal()); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(250);
+    await clickA(p, "goDmMode");
+    assert(await p.locator(".dmtabs button").count() === 3, "tabs");
+    await p.locator("#dm-code").fill("junk\n" + code); await clickA(p, "dmImport");
+    assert((await p.locator(".dmcard").count()) === 1, "card not shown: n=" + await p.locator(".dmcard").count() + " msg=" + await p.locator(".dmmsg").allInnerTexts() + " body=" + (await p.locator("main").innerText()).slice(0, 300)); assert(/Gandork/i.test(await p.locator(".dmcard").innerText()), "card text");
+    assert(/1 unreadable/.test(await p.locator(".dmmsg").innerText()), "bad line not counted: " + await p.locator(".dmmsg").innerText());
+    await p.screenshot({ path: "/tmp/dm-party-" + w + ".png" });
+    // combat
+    await clickA(p, "dmPartyToCombat"); assert(await p.locator(".dmrow").count() === 1, "party row");
+    await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qa").fill("15"); await p.locator("#dm-qc").fill("3");
+    await clickA(p, "dmAddQuick"); assert(await p.locator(".dmrow").count() === 4, "goblins");
+    const inits = p.locator(".dminit"); for (let i = 0; i < 4; i++) { await inits.nth(i).fill(String(20 - i * 5)); await inits.nth(i).dispatchEvent("change"); await p.waitForTimeout(80); }
+    await clickA(p, "dmNext"); assert(await p.locator(".dmrow.on").count() === 1, "no turn marker");
+    const first = await p.locator(".dmrow.on .dmname").innerText();
+    await clickA(p, "dmNext"); assert((await p.locator(".dmrow.on .dmname").innerText()) !== first, "turn did not move");
+    await p.locator('.dmrow .dmname:has-text("Goblin 1")').click(); await p.waitForSelector("#dm-amt");
+    await p.locator("#dm-amt").fill("5"); await clickA(p, "dmDamage");
+    assert(/2\s*\/\s*7/.test(await p.locator(".dmhpbig").innerText()), "damage: " + await p.locator(".dmhpbig").innerText());
+    await p.locator("#dm-amt").fill("9"); await clickA(p, "dmDamage"); await clickA(p, "dmCond", '[data-n="Prone"]');
+    await p.evaluate(() => CR.ACTIONS.closeModal()); await p.waitForTimeout(200);
+    assert(await p.locator(".dmrow.out").count() === 1, "defeated goblin not dimmed");
+    assert(/Prone/.test(await p.locator(".dmrow.out").innerText()), "condition missing");
+    // creature book and budget
+    await clickA(p, "dmTab", '[data-v="prep"]'); await clickA(p, "dmCreatureNew");
+    await p.locator("#dc-n").fill("Goblin"); await p.locator("#dc-cr").selectOption("1/4"); await p.waitForTimeout(150);
+    assert((await p.locator("#dc-xp").inputValue()) === "50", "CR did not fill XP");
+    await p.locator("#dc-hp").fill("7"); await p.locator("#dc-ac").fill("15"); await clickA(p, "dmCreatureSave");
+    await clickA(p, "dmPickAdd"); await clickA(p, "dmPickQty", '[data-v="1"]'); await clickA(p, "dmPickQty", '[data-v="1"]');
+    const lv = card.level, low = dmm.partyBudget([lv], "low"), mod = dmm.partyBudget([lv], "moderate");
+    const tbl = await p.locator(".dmbtable").innerText();
+    assert(tbl.replace(/,/g, "").includes(String(low)) && tbl.replace(/,/g, "").includes(String(mod)), "budget table " + tbl + " expected " + low + "/" + mod);
+    assert(/150/.test(tbl), "spent XP: " + tbl);
+    const rated = (await p.locator(".dmrate").innerText()).trim(); assert(rated === dmm.rate([lv], 150).label, "rating " + rated);
+    assert(await hscroll(p) <= 0, "sideways scroll " + await hscroll(p));
+    if (w === 390) await p.screenshot({ path: "/tmp/dm-prep-390.png" });
+    // encounter into combat, then reload keeps everything
+    await clickA(p, "dmEncToCombat"); assert(await p.locator(".dmrow").count() === 7, "encounter rows " + await p.locator(".dmrow").count());
+    { const nm = await p.locator(".dmname").allInnerTexts(); const clean = nm.map(x => x.replace(/\s*(OUT|DOWN|CONC)\s*$/i, "").trim()); assert(new Set(clean).size === clean.length, "duplicate names " + clean.join(", ")); }
+    if (w === 390) await p.screenshot({ path: "/tmp/dm-combat-390.png" }); else await p.screenshot({ path: "/tmp/dm-combat-1280.png" });
+    await p.reload(); await p.waitForSelector("#home-book, .float"); await clickA(p, "goDmMode");
+    assert(await p.locator(".dmcard").count() === 1, "party lost on reload");
+    await clickA(p, "dmTab", '[data-v="combat"]'); assert(await p.locator(".dmrow").count() === 7, "combat lost on reload");
+    await clickA(p, "dmEndCombat"); assert(await p.locator(".dmrow").count() === 7, "end needs a second tap"); await clickA(p, "dmEndCombat");
+    assert(await p.locator(".dmrow").count() === 0 && await p.locator('[data-a="dmNewCombat"]').count() === 1, "combat not ended");
+    noErrs(p); await p.context().close();
+  }
+});
+
 await check("Tours: highlight sits on its target at every text size", async () => {
   for (const size of ["small", "normal", "large", "xl"]) for (const [w, h] of [[390, 844], [1280, 800]]) {
     const p = await open(w, h, { touch: w < 700 });
@@ -1450,7 +1506,7 @@ await check("Update window: catch-up since the last version, rules inside, off s
   await p.reload(); await p.waitForSelector(".wnmodal", { timeout: 8000 });
   const n = await p.locator(".wn-entry").count(); assert(n >= 4, "expected every version since 0.1.60, got " + n);
   assert(await p.locator(".wn-entry[open]").count() === 1, "only the newest entry should be open");
-  assert(/0\.1\.65/.test(await p.locator(".wn-entry").first().innerText()), "newest first");
+  { const { VERSION } = await import(pathToFileURL(join(root, "js/changelog.js")).href); assert((await p.locator(".wn-entry").first().innerText()).includes(VERSION), "newest first: expected " + VERSION); }
   await p.screenshot({ path: "/tmp/wn-390.png" });
   await p.locator('[data-a="wnDone"]').click(); await p.waitForTimeout(300);
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(800);

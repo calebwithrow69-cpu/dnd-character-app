@@ -15,6 +15,9 @@ import { splashPlan } from "./whatsnew.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
 import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
+import { renderDmMode } from "./views/dmmode.js";
+import { dmModeActions } from "./dmactions.js";
+import * as dmData from "./dmmode.js";
 import { renderRulesets, rsActions, rsUiDefault } from "./views/rulesets.js";
 import { applyPatch, loadPatch } from "./dm.js";
 import { exportSettings, cleanSettings, resetKeys } from "./prefsdata.js";
@@ -345,6 +348,7 @@ function renderNow() {
   else if (APP.screen === "roster") mount.innerHTML = renderRoster(APP);
   else if (APP.screen === "graveyard") mount.innerHTML = renderGraveyard(APP);
   else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
+  else if (APP.screen === "dmmode" && APP.dmm) mount.innerHTML = renderDmMode(APP);
   else if (APP.screen === "rulesets" && APP.rs) mount.innerHTML = renderRulesets(APP);
   else if (APP.screen === "notes" && APP.nb && APP.nb.data) mount.innerHTML = renderNotes(APP);
   else if (APP.screen === "start") mount.innerHTML = startMenu(APP);
@@ -662,6 +666,7 @@ function exportChars(ids, label) {
   const safe = (label || "characters").replace(/[^\w-]+/g, "-").slice(0, 40);
   const payload = store.backupPayload(ids);
   if (!ids) { const d = notes.load(notesStore); if (d.notes.length) payload.notes = notes.exportData(d); }
+  if (!ids) { const d = dmData.load(); if (Object.keys(d.party).length || d.creatures.length) payload.dm = { party: d.party, creatures: d.creatures }; }
   shareOrDownload(`character-runner-${safe}-${stamp}.json`, JSON.stringify(payload, null, 1));
 }
 function importPrompt() {
@@ -675,6 +680,7 @@ function importPrompt() {
       try { chars = store.parseImport(text); } catch (err) { if (!/"notes"/.test(text)) throw err; }
       chars.forEach(c => store.saveCharacter(store.normalize(c, APP.library)));
       try { const j = JSON.parse(text); if (j && j.notes) { const d = notes.load(notesStore); notes.mergeImport(d, j.notes); notes.save(d, notesStore); APP.nb = null; } } catch (err) { /* notes are optional */ }
+      try { const j = JSON.parse(text); if (j && j.dm) { const d = dmData.load(); dmData.mergeImport(d, j.dm); dmData.save(d); } } catch (err) { /* DM data is optional */ }
       const pics = await importPortraits(store.parsePortraits(text));
       toast(`Restored ${chars.length} character${chars.length === 1 ? "" : "s"}${pics ? ` and ${pics} portrait${pics === 1 ? "" : "s"}` : ""}`);
       APP.modal = null; APP.screen = "roster"; APP.char = null; store.setActiveId(null);
@@ -960,6 +966,8 @@ function onChange(e) {
       err => toast(err.message || "Couldn't use that image"));
     return;
   }
+  if (ds.dmcFile != null && el.files && el.files[0]) { ACTIONS.dmImportFile(el.files[0]); el.value = ""; return; }
+  if (ds.dmf != null) { ACTIONS.dmField(el); return; }
   if (ds.dmFile != null && el.files && el.files[0]) { ACTIONS.dmImportFile(el.files[0]); el.value = ""; return; }
   if (ds.loadFile != null && el.files && el.files[0]) { el.files[0].text().then(t => loadText(t), () => { APP.load.error = "Could not open that file."; render(); }); el.value = ""; return; }
   if (ds.dmPick != null) { const inp = el.parentElement && el.parentElement.querySelector("input"); if (inp && el.value) { inp.value = el.value; } el.value = ""; return; }
@@ -2585,6 +2593,7 @@ function bindDrag() {
   });
 }
 
+Object.assign(ACTIONS, dmModeActions({ APP, render, toast, openModal, closeModal, shareOrDownload }));
 Object.assign(ACTIONS, rsActions(APP, { render, toast, setRules: () => { setRules(); rebuildGlossary(); } }));
 Object.assign(ACTIONS, dmActions(APP, { render, toast, setRules: () => { setRules(); rebuildGlossary(); } }));
 init();

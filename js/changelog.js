@@ -2,11 +2,29 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.66";
+export const VERSION = "0.1.67";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.67",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "DM mode, stage 1: party board, combat tracker, encounter budget.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "DM button on Home opens Party, Combat and Prep.",
+          "Players send a code from Edit character. The DM imports it to see AC, HP, passives, saves and conditions.",
+          "Combat tracker: initiative order, HP with temporary hit points, conditions with round counters, concentration DC.",
+          "Creature book and an encounter budget from the 2024 Dungeon Master's Guide XP table.",
+          "Full backups include the party and creature book."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.66",
     date: "2026-11-24",

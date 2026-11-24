@@ -3,7 +3,7 @@
 //   node tools/copy-lint.mjs --all      prints every string checked
 // The rules and the definition are in docs/ (see CLAUDE.md "UI copy"). Book text lives in the rules file, not here.
 import fs from "node:fs";
-const files = ["js/app.js", "js/ui.js", "js/combat.js", ...fs.readdirSync("js/views").map(f => "js/views/" + f)];
+const files = ["js/app.js", "js/ui.js", "js/combat.js", "js/dmactions.js", ...fs.readdirSync("js/views").map(f => "js/views/" + f)];
 
 export const RULES = [
   ["tutorial", /\b(tap|click|press|swipe|hit) (a|an|the|any|on|your|to|one|it|here|below|above)\b|\b(see|check|read) (below|above|the table)\b/i, "tells the user how to use the screen"],
