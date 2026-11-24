@@ -2,11 +2,20 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.65";
+export const VERSION = "0.1.66";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.66",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "Tour highlight fix.",
+    groups: [
+      { title: "Fixed", items: ["Tour highlight sat off its target when Size was not Normal."] }
+    ]
+  },
   {
     v: "0.1.65",
     date: "2026-11-24",

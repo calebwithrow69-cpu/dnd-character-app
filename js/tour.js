@@ -58,8 +58,9 @@ export function show() {
   const t = TOURS[run.id], st = t.steps[run.i], n = t.steps.length;
   const el = st.sel ? target(st.sel) : null;
   if (el) el.scrollIntoView({ block: "center", inline: "nearest" });
-  const r = el ? el.getBoundingClientRect() : null, pad = 6;
-  const hole = r ? `<div class="tour-hole" style="left:${Math.round(r.left - pad)}px;top:${Math.round(r.top - pad)}px;width:${Math.round(r.width + pad * 2)}px;height:${Math.round(r.height + pad * 2)}px"></div>` : `<div class="tour-hole none"></div>`;
+  const r = el ? el.getBoundingClientRect() : null, pad = 6, k = zoomOf();
+  // Rects are screen pixels; the tour layer sits inside body, which Settings > Size may zoom. Divide that out.
+  const hole = r ? `<div class="tour-hole" style="left:${Math.round((r.left - pad) / k)}px;top:${Math.round((r.top - pad) / k)}px;width:${Math.round((r.width + pad * 2) / k)}px;height:${Math.round((r.height + pad * 2) / k)}px"></div>` : `<div class="tour-hole none"></div>`;
   const dots = Array.from({ length: n }, (_, k) => `<i class="${k === run.i ? "on" : k < run.i ? "past" : ""}"></i>`).join("");
   root().innerHTML = `<div class="tour-veil" data-a="tourNoop"></div>${hole}
     <div class="tour-card" role="dialog" aria-modal="true" aria-label="${t.name}, step ${run.i + 1} of ${n}" id="tour-card">
@@ -75,17 +76,19 @@ export function show() {
   place(r);
   const nx = document.getElementById("tour-next"); if (nx) nx.focus({ preventScroll: true });
 }
+// Page zoom applied to the tour layer (1 unless Settings > Size zooms body).
+function zoomOf() { const e = root(); const k = e && e.offsetWidth ? e.getBoundingClientRect().width / e.offsetWidth : 1; return k > 0.2 && k < 5 ? k : 1; }
 function place(r) {
   const c = document.getElementById("tour-card"); if (!c) return;
-  const vw = innerWidth, vh = innerHeight, w = Math.min(380, vw - 24);
-  c.style.width = w + "px";
-  const h = c.offsetHeight;
+  const k = zoomOf(), vw = innerWidth, vh = innerHeight, w = Math.min(380, vw - 24);
+  c.style.width = Math.round(w / k) + "px";
+  const h = c.offsetHeight * k;
   let top, left = Math.max(12, Math.min(vw - w - 12, r ? r.left + r.width / 2 - w / 2 : (vw - w) / 2));
   if (!r) top = (vh - h) / 2;
   else if (r.bottom + 16 + h <= vh - 8) top = r.bottom + 16;
   else if (r.top - 16 - h >= 8) top = r.top - 16 - h;
   else top = Math.max(8, vh - h - 12);
-  c.style.top = Math.round(top) + "px"; c.style.left = Math.round(left) + "px";
+  c.style.top = Math.round(top / k) + "px"; c.style.left = Math.round(left / k) + "px";
 }
 if (typeof window !== "undefined") {
   window.addEventListener("resize", () => { if (run) show(); });

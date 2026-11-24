@@ -197,6 +197,32 @@ await check("Button law: sizes, label style, radius and a press on every kind of
   noErrs(p); await p.context().close();
 });
 
+await check("Tours: highlight sits on its target at every text size", async () => {
+  for (const size of ["small", "normal", "large", "xl"]) for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(300);
+    await p.evaluate(s => { if (s === "normal") document.documentElement.removeAttribute("data-size"); else document.documentElement.setAttribute("data-size", s); }, size);
+    await p.waitForTimeout(150);
+    await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "home" } })); await p.waitForSelector("#tour-card");
+    for (let i = 0; i < 4; i++) {
+      const g = await p.evaluate(() => {
+        const hole = document.querySelector(".tour-hole").getBoundingClientRect(), card = document.getElementById("tour-card").getBoundingClientRect();
+        const sels = ["#home-book", '[data-a="goRoster"]', ".float", '[data-a="openSettings"]'];
+        const lab = document.querySelector(".tour-prog em").innerText, k = parseInt(lab) - 1;
+        const el = [...document.querySelectorAll(sels[k])].find(e => e.offsetParent !== null && e.getBoundingClientRect().width > 4), r = el.getBoundingClientRect();
+        return { dx: (hole.left + hole.width / 2) - (r.left + r.width / 2), dy: (hole.top + hole.height / 2) - (r.top + r.height / 2), dw: hole.width - r.width, dh: hole.height - r.height,
+          cardIn: card.left >= -1 && card.right <= innerWidth + 1 && card.top >= -1 && card.bottom <= innerHeight + 1 };
+      });
+      const tag = `${size} ${w}px step ${i + 1}: ${JSON.stringify(g)}`;
+      assert(Math.abs(g.dx) <= 2 && Math.abs(g.dy) <= 2, "highlight off target " + tag);
+      assert(Math.abs(g.dw - 12) <= 3 && Math.abs(g.dh - 12) <= 3, "highlight wrong size " + tag);
+      assert(g.cardIn, "card off screen " + tag);
+      await p.locator('[data-a="tourNext"]').click();
+    }
+    await p.context().close();
+  }
+});
+
 await check("Tours: home and sheet run 4 steps, skip works, finishing unlocks Silver", async () => {
   for (const [w, h] of [[390, 844], [1280, 800]]) {
     const p = await open(w, h, { touch: w < 700 });
