@@ -150,6 +150,19 @@ t("rewards: recipients and level thresholds", () => {
 });
 // With the unlocked rules file present, the real bestiary has to fit what this module expects.
 import { existsSync, readFileSync } from "node:fs";
+t("table screen: sides, initiative order from the current turn, hp states", () => {
+  const cb = dm.newCombat();
+  cb.rows.push(dm.makeRow({ kind: "pc", name: "Ann", hp: 20, init: 18 }), dm.makeRow({ kind: "mon", name: "Orc", hp: 15, init: 14 }), dm.makeRow({ kind: "mon", name: "Hound", hp: 10, init: 12, ally: true }), dm.makeRow({ kind: "mon", name: "Imp", hp: 8, init: 5 }));
+  assert.equal(dm.stageOf(null), null);
+  let st = dm.stageOf(cb); assert.deepEqual(st.friends.map(r => r.name), ["Ann", "Hound"]); assert.deepEqual(st.foes.map(r => r.name), ["Orc", "Imp"]);
+  assert.equal(st.turnId, ""); assert.deepEqual(st.order.map(r => r.name), ["Ann", "Orc", "Hound", "Imp"]);
+  dm.nextTurn(cb); dm.nextTurn(cb); st = dm.stageOf(cb);
+  assert.deepEqual(st.order.map(r => r.name), ["Orc", "Hound", "Imp", "Ann"]); assert.equal(st.turnId, cb.rows[1].id);
+  const orc = cb.rows[1]; orc.cur = 7; assert.equal(dm.hpState(orc), "bloodied"); orc.cur = 8; assert.equal(dm.hpState(orc), "ok"); orc.cur = 0; assert.equal(dm.hpState(orc), "down"); orc.out = true; assert.equal(dm.hpState(orc), "out");
+  st = dm.stageOf(cb); assert.ok(!st.order.some(r => r.name === "Orc"), "out creatures leave the order"); assert.equal(st.foes.at(-1).name, "Orc", "out creatures sort last");
+  assert.equal(dm.makeRow({ kind: "pc", name: "X", hp: 5, ally: true }).ally, false, "heroes are never flagged ally");
+  assert.equal(dm.clean(JSON.parse(JSON.stringify({ combat: cb }))).combat.rows.find(r => r.name === "Hound").ally, true, "ally survives a reload");
+});
 const libUrl = new URL("../data/library.json", import.meta.url);
 if (existsSync(libUrl)) t("real SRD monsters import cleanly", () => {
   const L = JSON.parse(readFileSync(libUrl, "utf8")), M = L.monsters || [];

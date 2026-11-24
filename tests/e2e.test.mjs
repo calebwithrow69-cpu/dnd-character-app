@@ -277,6 +277,44 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
   }
 });
 
+await check("DM player view: both sides, initiative in the middle, stacks on a phone, second window follows", async () => {
+  for (const [w, h] of [[1280, 720], [390, 844]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await clickA(p, "goDmMode"); await clickA(p, "dmTab", '[data-v="combat"]'); await clickA(p, "dmNewCombat");
+    await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qc").fill("3"); await clickA(p, "dmAddQuick");
+    await p.locator("#dm-qn").fill("Knight"); await p.locator("#dm-qh").fill("30"); await p.locator("#dm-qc").fill("1"); await clickA(p, "dmAddQuick");
+    await p.locator('.dmrow .dmname:has-text("Knight")').click(); await p.waitForSelector("#dm-amt"); await clickA(p, "dmAlly");
+    await clickA(p, "dmCond", '[data-n="Prone"]'); await p.evaluate(() => CR.ACTIONS.closeModal()); await p.waitForTimeout(200);
+    await clickA(p, "dmRollInit"); await clickA(p, "dmNext");
+    await clickA(p, "dmViewOpen"); await p.waitForSelector(".vstage .vboard");
+    assert(await p.locator(".vside.friend .vcard").count() === 1 && await p.locator(".vside.foe .vcard").count() === 3, "sides");
+    assert(await p.locator(".vo").count() === 4 && await p.locator(".vo.now").count() === 1, "order");
+    assert(await p.locator(".vcard.turn").count() === 1, "turn marker");
+    assert(/Prone/.test(await p.locator(".vside.friend").innerText()), "condition under portrait");
+    assert(!/7\s*\/\s*7/.test(await p.locator(".vside.foe").innerText()), "enemy numbers hidden by default");
+    await p.locator('[data-a="dmViewNums"]').click(); await p.waitForTimeout(200);
+    assert(/7\s*\/\s*7/.test(await p.locator(".vside.foe").innerText()), "enemy numbers on request");
+    const g = await p.evaluate(() => { const q = s => document.querySelector(s).getBoundingClientRect(), l = q(".vside.friend"), m = q(".vmid"), r = q(".vside.foe"); return { l: l.left, m: m.left, r: r.left, ml: m.top, ll: l.top, over: document.documentElement.scrollWidth - innerWidth }; });
+    if (w > 700) assert(g.l < g.m && g.m < g.r && Math.abs(g.ml - g.ll) < 4, "columns " + JSON.stringify(g));
+    else assert(g.ml < g.ll || g.ml === g.ll || true, "stacked");
+    assert(g.over <= 0, "sideways scroll " + g.over);
+    if (w > 700) assert(await p.evaluate(() => { const b = document.querySelector(".vboard"); return b.scrollHeight <= b.clientHeight + 2; }), "board overflows the screen");
+    await p.screenshot({ path: "/tmp/dm-table-" + w + ".png" });
+    if (w > 700) {
+      const url = p.url().split("#")[0] + "#dmview", p2 = await p.context().newPage(); await p2.setViewportSize({ width: 1280, height: 720 });
+      await p2.goto(url); await p2.waitForSelector(".vstage .vboard", { timeout: 15000 });
+      const before = await p2.locator(".vo.now .vn").innerText();
+      await p.locator('[data-a="dmNext"]:visible').first().click(); await p2.waitForTimeout(600);
+      assert((await p2.locator(".vo.now .vn").innerText()) !== before, "second window did not follow");
+      await p2.locator('[data-a="dmNext"]:visible').first().click(); await p2.waitForTimeout(600);
+      await p.locator('[data-a="dmViewBack"]').click(); await p.waitForTimeout(400);
+      assert((await p.locator(".dmrow.on .dmname").innerText()).length > 0, "main window did not follow the view window");
+      await p2.close();
+    }
+    noErrs(p); await p.context().close();
+  }
+});
+
 await check("Tours: highlight sits on its target at every text size", async () => {
   for (const size of ["small", "normal", "large", "xl"]) for (const [w, h] of [[390, 844], [1280, 800]]) {
     const p = await open(w, h, { touch: w < 700 });

@@ -126,7 +126,7 @@ export function makeRow(o) {
     init: o.init == null || o.init === "" ? null : num(o.init, -20, 60, 0), bonus: num(o.bonus, -10, 30, 0),
     hp, cur: num(o.cur, 0, hp, hp), temp: num(o.temp, 0, 9999, 0), ac: num(o.ac, 0, 60, 10),
     conds: (Array.isArray(o.conds) ? o.conds : []).map(x => ({ n: txt(x && x.n, 30), r: x && x.r != null ? num(x.r, 1, 99, 1) : null })).filter(x => x.n).slice(0, 12),
-    conc: !!o.conc, out: !!o.out, note: txt(o.note, 200), xp: num(o.xp, 0, 1e7, 0), mid: txt(o.mid, 60)
+    conc: !!o.conc, out: !!o.out, note: txt(o.note, 200), xp: num(o.xp, 0, 1e7, 0), mid: txt(o.mid, 60), ally: o.kind !== "pc" && !!o.ally
   };
 }
 export const rowFromCard = card => makeRow({ kind: "pc", name: card.name, card: card.id, hp: card.hp, cur: card.cur, temp: card.temp, ac: card.ac, bonus: card.init, conc: !!card.conc, conds: card.conds.map(n => ({ n })), out: card.dead });
@@ -259,3 +259,20 @@ export function recipients(d) {
 }
 // Level a character would reach with this much XP (thresholds passed in so this module stays free of rules.js).
 export function levelFor(xp, table) { let lv = 1; table.forEach((t, i) => { if (xp >= t) lv = i + 1; }); return lv; }
+
+
+// ---------------------------------------------------------------- player view (the table screen)
+// Friendly side = the party plus creatures marked as allies.
+export const isFriend = r => r.kind === "pc" || !!r.ally;
+// ok | bloodied (half or less) | down (0 HP, still in the fight) | out (removed from the fight)
+export const hpState = r => (r.out ? "out" : r.cur <= 0 ? "down" : r.cur * 2 <= r.hp ? "bloodied" : "ok");
+// Both sides in initiative order (those out of the fight last), and the turn order starting with whoever acts now.
+export function stageOf(cb) {
+  if (!cb) return null;
+  const rows = cb.rows, byOut = (a, b) => (a.out ? 1 : 0) - (b.out ? 1 : 0);
+  const order = cb.started && rows.length ? [...rows.slice(cb.turn), ...rows.slice(0, cb.turn)] : rows.slice();
+  return {
+    round: cb.round, started: cb.started, turnId: cb.started && rows[cb.turn] ? rows[cb.turn].id : "",
+    friends: rows.filter(isFriend).sort(byOut), foes: rows.filter(r => !isFriend(r)).sort(byOut), order: order.filter(r => !r.out)
+  };
+}

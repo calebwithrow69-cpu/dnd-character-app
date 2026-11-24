@@ -106,6 +106,7 @@ function combatTab(app, s) {
   return `<div class="dmbar-top"><div><b>Round ${cb.round}</b><span class="sub2">${cb.started && cur ? esc(cur.name) + "'s turn" : cb.rows.length ? "Not started" : "No creatures"}</span></div>
       <div class="btnrow"><button class="btn" data-a="dmRollInit">Roll initiative</button><button class="btn pri" data-a="dmNext">${cb.started ? "Next turn" : "Start"}</button></div></div>
     <div class="dmrows">${cb.rows.map((r, i) => rowHtml(r, cb.started && i === cb.turn)).join("")}</div>
+    <div class="panel"><div class="panel-head"><h2>Table screen</h2></div><div class="panel-body"><div class="btnrow"><button class="btn" data-a="dmViewOpen">Open here</button><button class="btn" data-a="dmViewWindow">New window</button></div></div></div>
     ${addForm(s)}
     <div class="btnrow" style="margin-top:12px"><button class="btn danger" data-a="dmEndCombat">${sure("end", "End combat", "Tap again to end")}</button></div>`;
 }
@@ -230,7 +231,7 @@ function rowModal(s, m) {
       <p class="lab" style="margin-top:6px">Conditions</p>
       <label class="field"><span class="lab">Rounds (blank until removed)</span><input class="f num" id="dm-rounds" type="number" inputmode="numeric" min="1" max="99"></label>
       <div class="dmchips">${dm.CONDITIONS.map(n => { const c = has(n); return `<button class="chip chipbtn" data-a="dmCond" data-n="${n}" aria-pressed="${!!c}">${n}${c && c.r != null ? " " + c.r : ""}</button>`; }).join("")}</div>
-      <div class="btnrow"><button class="btn${r.conc ? " pri" : ""}" data-a="dmConc" aria-pressed="${r.conc}">Concentrating</button><button class="btn${r.out ? " pri" : ""}" data-a="dmOut" aria-pressed="${r.out}">${r.kind === "pc" ? "Out of fight" : "Defeated"}</button></div>
+      <div class="btnrow"><button class="btn${r.conc ? " pri" : ""}" data-a="dmConc" aria-pressed="${r.conc}">Concentrating</button><button class="btn${r.out ? " pri" : ""}" data-a="dmOut" aria-pressed="${r.out}">${r.kind === "pc" ? "Out of fight" : "Defeated"}</button>${r.kind === "pc" ? "" : `<button class="btn${r.ally ? " pri" : ""}" data-a="dmAlly" aria-pressed="${!!r.ally}">Ally</button>`}</div>
       ${r.mid ? `<button class="btn" data-a="dmMonOpen" data-id="m:${esc(r.mid)}">Stat block</button>` : ""}
       <p class="lab" style="margin-top:6px">Details</p>
       <div class="grid3"><label class="field"><span class="lab">Name</span><input class="f" id="dm-rn" maxlength="60" value="${esc(r.name)}"></label>

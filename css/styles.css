@@ -2719,3 +2719,69 @@ nav.tabs button .newdot{position:absolute;top:7px;left:calc(50% + 10px);width:7p
 .sbe{margin-top:4px}
 .sbh{margin:12px 0 2px;padding-bottom:3px;border-bottom:1px solid var(--line);font:600 .8rem var(--display);letter-spacing:.14em;text-transform:uppercase}
 @media (max-width:420px){.sbabil{grid-template-columns:repeat(3,1fr)}}
+
+/* DM mode player view: the table screen. Dark stage, portraits at the sides, initiative in the middle. */
+.vstage{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;background:radial-gradient(120% 90% at 50% 0,#241c2a 0,#120f17 60%,#0b090e 100%);color:#f3ede2;font-size:clamp(13px,1.5vw,32px);overflow:hidden;user-select:none}
+.vstage h1,.vstage h2{font-family:var(--display);letter-spacing:.2em;text-transform:uppercase;margin:0}
+.vtop{display:flex;align-items:baseline;justify-content:space-between;gap:1em;padding:.7em 1.4em 0}
+.vround{font:600 .9em var(--display);letter-spacing:.2em;text-transform:uppercase;color:#cdbfa6}
+.vround b{font-size:1.5em;color:#f3ede2;margin-left:.2em}
+.vnow{font:600 1.5em var(--display);color:#e8b84f;text-align:right;min-height:1.2em}
+.vboard{flex:1;min-height:0;display:grid;grid-template-columns:1fr minmax(14em,22%) 1fr;gap:1.4em;padding:.6em 1.4em 5.2em}
+.vside{min-width:0;min-height:0;display:flex;flex-direction:column}
+.vside h2,.vmid h2{font-size:.8em;color:#9d9484;margin-bottom:.7em;display:flex;gap:.7em;align-items:center}
+.vside h2 span{color:#f3ede2;font-family:inherit;letter-spacing:0}
+.vside.friend h2{color:#7fc4b4}.vside.foe h2{color:#d98279}
+.vgrid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:.9em;overflow:auto;scrollbar-width:none}
+.vgrid::-webkit-scrollbar{display:none}
+.vnone{color:#7c7467;margin:0}
+.vcard{container-type:inline-size;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:.3em;padding:.5em .4em .6em;border-radius:.7em;border:2px solid transparent;transition:border-color .2s,background .2s;min-width:0}
+.vcard.turn{border-color:#e8b84f;background:#ffffff0d;box-shadow:0 0 1.4em #e8b84f33}
+.vpic{position:relative;aspect-ratio:3/4;flex:1 1 0;min-height:3em;align-self:center;max-width:100%;max-height:calc(100cqw * 4 / 3);border-radius:.6em;overflow:hidden;background:#1d1824;box-shadow:0 .4em 1.2em #0009}
+.vside.friend .vpic{outline:2px solid #5fb0a066}.vside.foe .vpic{outline:2px solid #c4574d66}
+.vpic img{width:100%;height:100%;object-fit:cover;display:block}
+.vmono{display:flex;width:100%;height:100%;align-items:center;justify-content:center;font:700 3.2em var(--display);color:hsl(var(--h) 35% 82%);background:linear-gradient(160deg,hsl(var(--h) 38% 26%),hsl(var(--h) 40% 12%))}
+.vtag{position:absolute;inset:auto 0 0 0;padding:.25em;text-align:center;font:600 .7em var(--display);letter-spacing:.2em;text-transform:uppercase;background:#000b;color:#f3ede2}
+.vname{font:600 1.05em var(--display);text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vbar{position:relative;width:100%;height:.8em;border-radius:.4em;background:#ffffff1a;overflow:hidden}
+.vbar i{position:absolute;inset:0 auto 0 0;border-radius:.4em;background:#58a05a;transition:width .3s}
+.vbar.mid i{background:#d6a23c}.vbar.low i{background:#c9463d}
+.vbar u{position:absolute;inset:0 auto 0 0;background:#6fa8e0aa;mix-blend-mode:screen}
+.vhp{font-size:.95em;color:#cdbfa6;font-variant-numeric:tabular-nums;min-height:1.2em}
+.vhp b{color:#f3ede2;font-size:1.15em}.vhp em{font-style:normal;color:#8fbbe8}
+.vconds{display:flex;flex-wrap:wrap;gap:.3em;justify-content:center}
+.vc{padding:.1em .6em;border-radius:1em;background:#8b2f2a;color:#fbe8e4;font-size:.78em;letter-spacing:.04em}
+.vcard.s-down,.vcard.s-out{opacity:.55}.vcard.s-down .vpic,.vcard.s-out .vpic{filter:grayscale(1)}
+.vcard.s-bloodied .vhp{color:#e8a35b}
+.vmid{min-width:0;min-height:0;display:flex;flex-direction:column}
+.vmid h2{justify-content:center}
+.vmid ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.4em;overflow:auto;scrollbar-width:none;flex:1;min-height:0}
+.vo{display:flex;align-items:center;gap:.7em;padding:.5em .8em;border-radius:.5em;background:#ffffff0a;border-left:.4em solid #6a6358;font-size:1em}
+.vo.friend{border-left-color:#5fb0a0}.vo.foe{border-left-color:#c4574d}
+.vo .vi{min-width:1.8em;text-align:right;color:#9d9484;font-variant-numeric:tabular-nums}
+.vo .vn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vo.now{background:#e8b84f;color:#1a1410;font-size:1.3em;font-weight:700;border-left-color:#1a1410}
+.vo.now .vi{color:#4a3a1a}
+.vctl{position:absolute;left:50%;bottom:1em;transform:translateX(-50%);display:flex;gap:.5em;flex-wrap:wrap;justify-content:center;padding:.5em;border-radius:1em;background:#000a;backdrop-filter:blur(6px);max-width:96vw;font-size:14px;z-index:2}
+.vctl[hidden]{display:none}
+.vstage.empty{align-items:center;justify-content:center}
+.vwait h1{font-size:2.4em;color:#9d9484}
+/* narrow screens and portrait: the order becomes a strip on top, both sides stack as compact rows */
+@media (max-width:820px),(max-aspect-ratio:1/1){
+  .vstage{font-size:14px;overflow:auto}
+  .vboard{display:flex;flex-direction:column;gap:.8em;padding:.4em .8em 6em;overflow:auto;flex:1}
+  .vmid{order:-1;flex:none}.vmid h2{display:none}
+  .vmid ol{flex-direction:row;overflow-x:auto;gap:.4em;padding-bottom:.2em}
+  .vo{flex:none;border-left-width:0;border-bottom:.3em solid #6a6358;padding:.4em .7em}
+  .vo.friend{border-bottom-color:#5fb0a0}.vo.foe{border-bottom-color:#c4574d}
+  .vo.now{font-size:1.1em;border-bottom-color:#1a1410}
+  .vside{flex:none}
+  .vgrid{grid-template-columns:1fr;grid-template-rows:none;gap:.4em;overflow:visible}
+  .vcard{display:grid;grid-template-columns:3.4em 1fr;grid-template-areas:"pic name" "pic bar" "pic hp" "pic conds";column-gap:.8em;row-gap:.15em;align-items:center;justify-items:start;padding:.4em .5em}
+  .vpic{grid-area:pic;flex:none;height:4.5em;width:3.4em;max-width:none;max-height:none;min-height:0}
+  .vmono{font-size:1.6em}
+  .vname{grid-area:name;text-align:left}.vbar{grid-area:bar}.vhp{grid-area:hp;min-height:0}.vconds{grid-area:conds;justify-content:flex-start}
+  .vtag{font-size:.5em;letter-spacing:.1em}
+  .vctl{left:0;right:0;bottom:0;transform:none;max-width:none;border-radius:0;padding:.5em .6em calc(.5em + env(safe-area-inset-bottom,0px))}
+  .vctl .btn{flex:1 1 auto}
+}

@@ -1,5 +1,6 @@
 // DM mode actions. Built with the app's helpers so app.js only merges them in. ASCII only.
 import * as dm from "./dmmode.js";
+import { loadPortraits } from "./portraits.js";
 import { dmUiDefault, setConfirm, monsterIndex, rewardPlan } from "./views/dmmode.js";
 import { deriveCharacter } from "./rules.js";
 import { dateStamp } from "./ui.js";
@@ -125,6 +126,16 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
       s.d.creatures = s.d.creatures.filter(x => x.id !== id); s.d.enc.picks = s.d.enc.picks.filter(p => p.cid !== id);
       closeModal(); redraw();
     },
+
+    // ---- table screen (player view)
+    dmViewOpen() { loadPortraits().then(() => { if (APP.screen === "dmview") render(); }); APP.screen = "dmview"; render(); window.scrollTo(0, 0); },
+    dmViewBack() { APP.screen = "dmmode"; if (document.fullscreenElement) document.exitFullscreen().catch(() => { }); render(); },
+    dmViewCtl() { const u = S().ui; u.vctl = u.vctl === false; render(); },
+    dmViewNums() { const u = S().ui; u.vnums = !u.vnums; render(); },
+    dmViewFull() { const d = document; if (d.fullscreenElement) d.exitFullscreen().catch(() => { }); else if (d.documentElement.requestFullscreen) d.documentElement.requestFullscreen().catch(() => toast("Full screen blocked")); else toast("Full screen not available"); },
+    dmViewWindow() { const w = window.open(location.href.split("#")[0] + "#dmview", "cr-table", "popup,width=1280,height=720"); if (!w) toast("Pop-up blocked"); },
+    dmViewClose() { window.close(); if (!window.closed) { APP._dmViewWindow = false; APP.screen = "dmmode"; render(); } },
+    dmAlly() { const r = row(); if (!r) return; r.ally = !r.ally; refreshRow(); },
 
     // ---- bestiary
     dmSrc(el) { const u = S().ui; u.src = el.dataset.v; u.limit = 40; render(); },

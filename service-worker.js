@@ -7,7 +7,7 @@
 // - Rules data (data/*.json): network first when online, cache when not.
 //   Those update live without a version bump.
 // - Google Fonts: cached the first time they load, so offline keeps the look.
-const CACHE_VERSION = "v137";
+const CACHE_VERSION = "v138";
 const SHELL = "shell-" + CACHE_VERSION;
 const FONTS = "fonts-v1";
 
@@ -17,7 +17,7 @@ const SHELL_FILES = [
   "js/views/roster.js", "js/views/create.js", "js/views/cxshop.js", "js/views/shopkit.js", "js/views/shop.js", "js/views/stats.js", "js/levelfix.js", "js/tour.js", "js/storagerisk.js", "js/trash.js", "js/lootbox.js", "js/tabsseen.js", "js/views/lootbox.js", "js/subclassinfo.js",
   "js/dmmode.js",
   "js/dmactions.js",
-  "js/views/dmmode.js", "js/whatsnew.js", "js/views/whatsnew.js", "js/tourdata.js", "js/featfit.js", "js/views/sheet.js", "js/views/modals.js", "js/views/levelup.js", "js/views/settings.js", "js/views/species.js", "js/views/codex.js", "js/views/dm.js", "js/views/loadout.js", "js/views/stylepick.js", "js/views/graveyard.js", "js/views/classicgear.js", "js/effects.js", "js/attackctx.js",
+  "js/views/dmmode.js", "js/views/dmview.js", "js/whatsnew.js", "js/views/whatsnew.js", "js/tourdata.js", "js/featfit.js", "js/views/sheet.js", "js/views/modals.js", "js/views/levelup.js", "js/views/settings.js", "js/views/species.js", "js/views/codex.js", "js/views/dm.js", "js/views/loadout.js", "js/views/stylepick.js", "js/views/graveyard.js", "js/views/classicgear.js", "js/effects.js", "js/attackctx.js",
   "data/library.enc.json", "data/campaign.json", "data/seed-gandork.json", "data/terms.json",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png"
 ];

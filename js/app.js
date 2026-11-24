@@ -15,7 +15,8 @@ import { splashPlan } from "./whatsnew.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
 import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
-import { renderDmMode } from "./views/dmmode.js";
+import { renderDmMode, dmUiDefault } from "./views/dmmode.js";
+import { renderDmView } from "./views/dmview.js";
 import { dmModeActions } from "./dmactions.js";
 import * as dmData from "./dmmode.js";
 import { renderRulesets, rsActions, rsUiDefault } from "./views/rulesets.js";
@@ -149,7 +150,7 @@ async function init() {
   window.__boot && window.__boot(70, "Reading the rules");
 
     APP.rawLibrary = library; APP.rawCampaign = campaign; setRules();
-    loadPortraits().then(() => { if (APP.screen === "create") spRefresh(); });
+    loadPortraits().then(() => { if (APP.screen === "create") spRefresh(); else if (APP.screen === "dmview") render(); });
     if (pendingLock) { APP.lockErr = pendingLock; APP.needsNewPassword = true; }
     window.__boot && window.__boot(82, "Building the glossary");
     await rebuildGlossary();
@@ -181,6 +182,8 @@ async function init() {
       try { APP.createDraft = pruneDraftToLibrary(dr, APP); pruneCart(APP, APP.createDraft); APP.createDraft.chapter = Math.min(APP.createDraft.chapter, reachIndex(APP, APP.createDraft)); APP.screen = "create"; history.pushState({ cx: 1 }, ""); } catch (e) { APP.createDraft = null; APP.screen = "home"; clearDraft(); }
     } }
 
+  // A second window opened from DM mode shows the table screen and follows the DM's window through storage.
+  if (location.hash === "#dmview" && APP.screen === "home") { APP.dmm = { d: dmData.load(), ui: dmUiDefault() }; APP.screen = "dmview"; APP._dmViewWindow = true; }
   if (APP.screen !== "create") restoreLevelUp();
   APP._lvlChecked = true;
   if (!APP._eventsBound) { bindEvents(); bindDrag(); bindTerms(); bindContext(); APP._eventsBound = true; }
@@ -196,6 +199,7 @@ async function init() {
   if (!APP._listening) {
     APP._listening = true;
     window.addEventListener("online", () => APP.recheck());
+    window.addEventListener("storage", e => { if (e.key === dmData.KEY && APP.dmm && (APP.screen === "dmview" || APP.screen === "dmmode")) { APP.dmm.d = dmData.load(); if (APP.screen === "dmview") render(); else queueRender(); } });
     window.addEventListener("cr-install-change", () => render());
     document.addEventListener("visibilitychange", () => { if (!document.hidden) { APP.recheck(); syncWake(); } else save(); });
     document.addEventListener("toggle", e => { const t = e.target; if (t && t.matches && t.matches("details.setsec")) { if (t.open) APP.setOpen.add(t.dataset.sec); else APP.setOpen.delete(t.dataset.sec); } }, true);
@@ -356,6 +360,7 @@ function renderNow() {
   else if (APP.screen === "graveyard") mount.innerHTML = renderGraveyard(APP);
   else if (APP.screen === "dm" && APP.dm) mount.innerHTML = renderDm(APP);
   else if (APP.screen === "dmmode" && APP.dmm) mount.innerHTML = renderDmMode(APP);
+  else if (APP.screen === "dmview" && APP.dmm) mount.innerHTML = renderDmView(APP);
   else if (APP.screen === "rulesets" && APP.rs) mount.innerHTML = renderRulesets(APP);
   else if (APP.screen === "notes" && APP.nb && APP.nb.data) mount.innerHTML = renderNotes(APP);
   else if (APP.screen === "start") mount.innerHTML = startMenu(APP);

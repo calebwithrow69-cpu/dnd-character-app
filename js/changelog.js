@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.68";
+export const VERSION = "0.1.69";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.69",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "DM mode: table screen for a TV, a second window, or a phone.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "Table screen: party on the left, enemies on the right, initiative order in the middle.",
+          "Portraits with hit point bars and active conditions. Enemy bars hide the numbers; Enemy HP shows them.",
+          "Opens here, or in a new window that follows the DM window. On a phone it stacks with the order as a strip.",
+          "Allies: mark a creature as Ally in Combat to put it on the party side."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.68",
     date: "2026-11-24",
