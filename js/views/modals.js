@@ -272,6 +272,13 @@ export function renderModal(app) {
         `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="confirmUseGo">Use ${esc(e.name)}</button>`);
     }
 
+    case "delevel": {
+      const hasUndo = (c.levelLog || []).some(e => e.level === c.level && e.undo);
+      return modalShell(`Remove level ${c.level}?`,
+        `<p>Undoes its HP, feats, ability increases and choices.</p>${hasUndo ? "" : `<p class="sub2">HP uses the average die.</p>`}`,
+        `<button class="btn" data-a="closeModal">Cancel</button><button class="btn danger" data-a="confirmDelevel">Remove level</button>`);
+    }
+
     case "died": {
       const who = esc(c.name);
       if (!c.dead) return modalShell(`Mark ${c.name} as dead?`,
@@ -371,7 +378,7 @@ export function renderModal(app) {
         `<div class="stack">
           <div class="field"><label>Name</label><input class="f" data-edit="name" value="${esc(c.name)}"></div>
           <div class="grid2">
-            <div class="field"><label>Level</label><input class="f num" type="number" inputmode="numeric" min="1" max="20" data-edit="level" value="${c.level}"></div>
+            <div class="field"><label>Level ${c.level}</label><div class="btnrow" style="margin:0">${c.level > 1 ? `<button class="btn sm" style="white-space:nowrap" data-a="askDelevel">Lower</button>` : ""}${c.level < 20 ? `<button class="btn sm" style="white-space:nowrap" data-a="startLevelUp">Level up</button>` : ""}</div></div>
             <div class="field"><label>Max HP</label><input class="f num" type="number" inputmode="numeric" min="1" data-edit="maxhp" value="${c.hp.max}"></div>
           </div>
           ${subs.length ? `<div class="field"><label>Subclass</label><select class="f" data-edit="subclass"><option value="">None yet</option>${opt(subs.map(s => s.name), c.subclass)}</select></div>` : ""}
@@ -388,6 +395,9 @@ export function renderModal(app) {
             <input type="number" inputmode="numeric" min="1" max="30" data-edit-ability="${a}" value="${c.abilities[a]}" aria-label="${ABILITY_LABEL[a]}"></label>`).join("")}</div>
           <p class="lab" style="margin-top:6px">Saving throw proficiencies</p>
           <div class="grid3">${ABILITIES.map(a => `<label class="rowline" style="border:0;cursor:pointer;justify-content:flex-start"><input type="checkbox" data-a="toggleSaveProf" data-ab="${a}" ${c.saveProf.includes(a) ? "checked" : ""}> ${ABILITY_LABEL[a].slice(0, 3)}</label>`).join("")}</div>
+          <p class="lab" style="margin-top:6px">Feats</p>
+          <div class="rowline" style="border:0"><span class="nm">${c.feats.length} on the sheet</span><button class="btn sm" data-a="openPicker" data-picker="feats">Add feat</button></div>
+          <p class="sub2">Adds the name only. Level up applies ability increases and choices.</p>
           <p class="lab" style="margin-top:6px">Custom bonuses</p>
           ${(c.custom || []).map(x => `<div class="rowline"><span class="nm">${esc(x.label || "Custom")} <span class="sub2">${esc((FX_TARGETS.find(t => t[0] === x.t) || [0, x.t])[1])}</span></span><b>${x.v > 0 ? "+" : ""}${x.v}</b><button class="iconbtn" data-a="customRemove" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.label || "bonus")}">${ICONS.close}</button></div>`).join("")}
           <div class="grid3" style="grid-template-columns:1.4fr .7fr 1fr;gap:8px;align-items:end">

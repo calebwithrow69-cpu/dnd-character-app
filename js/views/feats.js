@@ -22,7 +22,7 @@ const ICON = {
 const svg = (d, s, w = 1.6, col = "currentColor") => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const chev = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
-export const featUiDefault = () => ({ sort: "az", type: "All", open: null, tOpen: new Set() });
+export const featUiDefault = () => ({ sort: "rec", type: "All", open: null, tOpen: new Set() });
 const uiOf = app => app.featUi || (app.featUi = featUiDefault());
 
 // Icon is the app's own pick from the feat's name and type, never from book text.
@@ -78,7 +78,8 @@ export function renderFeatControls(app, items) {
   return `<div class="sp-controls" style="margin-top:12px">
     <label class="sp-sel"><span>Sort by</span>
       <select class="f" data-a="featSort" aria-label="Sort feats">
-        <option value="az" ${u.sort === "az" ? "selected" : ""}>A to Z</option>
+        ${items.some(i => i.rec) ? `<option value="rec" ${u.sort === "rec" ? "selected" : ""}>Recommended</option>` : ""}
+        <option value="az" ${u.sort === "az" || (u.sort === "rec" && !items.some(i => i.rec)) ? "selected" : ""}>A to Z</option>
         ${showType ? `<option value="type" ${u.sort === "type" ? "selected" : ""}>Type</option>` : ""}
         ${sources.size > 1 ? `<option value="source" ${u.sort === "source" ? "selected" : ""}>Source</option>` : ""}
         <option value="open" ${u.sort === "open" ? "selected" : ""}>Available first</option>
@@ -96,7 +97,8 @@ function visible(app, items) {
   const q = (app.lvl && app.lvl.query || "").trim().toLowerCase();
   const list = items.filter(i => (u.type === "All" || typeLabel(i.f) === u.type) && (!q || i.f.name.toLowerCase().includes(q)));
   const by = (a, b) => a.f.name.localeCompare(b.f.name);
-  list.sort((a, b) => u.sort === "type" ? typeLabel(a.f).localeCompare(typeLabel(b.f)) || by(a, b)
+  const rk = i => (i.rec ? i.rec.score : -1);
+  list.sort((a, b) => u.sort === "rec" ? (rk(b) - rk(a)) || by(a, b) : u.sort === "type" ? typeLabel(a.f).localeCompare(typeLabel(b.f)) || by(a, b)
     : u.sort === "source" ? (a.f.source || "").localeCompare(b.f.source || "") || by(a, b)
     : u.sort === "open" ? (b.ok - a.ok) || by(a, b) : by(a, b));
   return list;
@@ -105,10 +107,10 @@ function visible(app, items) {
 export function renderFeatGrid(app, items, selected) {
   const list = visible(app, items);
   if (!list.length) return `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`;
-  return `<p class="sub2 sp-count">${list.length} shown</p><div class="k-list">${list.map(({ f, ok, why }) => {
+  return `<p class="sub2 sp-count">${list.length} shown</p><div class="k-list">${list.map(({ f, ok, why, rec }) => {
     const on = selected === f.name;
     return kRow({ icon: svg(featIcon(f), 18), tone: on ? "amber" : "feat", off: !ok, title: f.name, cap: typeLabel(f),
-      sub: ok ? prereqLabel(f) : (why || prereqLabel(f)), snip: snipOf(parseFeat(f).intro || f.text), status: on ? "Chosen" : "",
+      sub: ok ? (rec && rec.top ? rec.why || prereqLabel(f) : prereqLabel(f)) : (why || prereqLabel(f)), snip: snipOf(parseFeat(f).intro || f.text), status: on ? "Chosen" : rec && rec.top ? "Recommended" : "",
       mainAttrs: `data-a="featOpen" data-name="${esc(f.name)}" aria-label="${esc(f.name)}${ok ? "" : ", not available yet"}"`, cls: on ? "on" : "" });
   }).join("")}</div>`;
 }

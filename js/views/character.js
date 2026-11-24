@@ -54,7 +54,6 @@ function featuresTab(app, c, d) {
       ${rowOf({ name: c.background, sub: "Background", kind: "background", dn: c.background }, "blue")}</div>
     ${kGroup("Feats", c.feats.length, { tone: "feat" })}<div class="k-list">
       ${c.feats.map((f, i) => rowOf({ name: f, sub: "Feat", kind: "feat", i }, "feat")).join("")}</div>
-    <div class="btnrow" style="margin-top:10px"><button class="btn" data-a="openPicker" data-picker="feats">Add a feat</button></div>
     ${c.classFeatureNotes ? `<div class="panel" style="margin-top:14px"><div class="panel-head"><h2>Class notes</h2></div><div class="panel-body"><textarea class="f" data-field="classFeatureNotes" aria-label="Class notes">${esc(c.classFeatureNotes)}</textarea></div></div>` : ""}`;
 }
 

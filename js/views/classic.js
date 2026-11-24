@@ -120,7 +120,7 @@ export function classicBody(app, c, d) {
       ${row(`${c.species} traits`, "Species", "species", `data-name="${esc(c.species)}"`)}
       ${row(c.background, "Background", "background", `data-name="${esc(c.background)}"`)}
     </div></div>
-    <div class="panel"><div class="panel-head"><h2>Feats</h2><button class="btn sm" data-a="openPicker" data-picker="feats">Add</button></div><div class="panel-body flush">
+    <div class="panel"><div class="panel-head"><h2>Feats</h2></div><div class="panel-body flush">
       ${c.feats.length ? c.feats.map((f, i) => row(f, "Feat", "feat", `data-name="${esc(f)}" data-i="${i}"`)).join("") : `<p class="muted small" style="padding:12px 0">No feats yet.</p>`}
     </div></div>
     </div></div>`,

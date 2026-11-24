@@ -136,6 +136,26 @@ await check("Stats and Rolls: radar, check rolls, pin persists, dice tray rolls"
   noErrs(p); await p.context().close();
 });
 
+await check("level up then lower: HP, feat and log go back; a hand-lowered character is repaired on open", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p);
+  const snap = () => p.evaluate(() => ({ lvl: APP.char.level, base: APP.char.hp.base, feats: APP.char.feats.slice(), log: APP.char.levelLog.length }));
+  const start = await snap();
+  await p.evaluate(() => { APP.char.xp = 48000; CR.ACTIONS.startLevelUp(); }); await p.waitForTimeout(500);
+  for (let i = 0; i < 8; i++) { if (await p.locator('[data-a="lvlNext"]:visible').count() === 0) break; if (await p.locator('[data-a="lvlNext"]:visible').first().isDisabled()) break; await p.locator('[data-a="lvlNext"]:visible').first().click(); await p.waitForTimeout(250); }
+  assert(await p.locator("#lvl-results .k-row").count() > 0, "feat step not reached");
+  assert(/Recommended/.test(await p.locator("#lvl-results").innerText()), "no recommended feats");
+  await p.evaluate(() => CR.ACTIONS.lvlFeat({ dataset: { name: "Alert" } })); await p.evaluate(() => document.querySelector('[data-a="featCloseBackdrop"]')?.click());
+  for (let i = 0; i < 8; i++) { if (await p.locator('[data-a="lvlConfirm"]:visible').count()) break; const nx = p.locator('[data-a="lvlNext"]:visible'); if (!(await nx.count()) || await nx.first().isDisabled()) break; await nx.first().click(); await p.waitForTimeout(250); }
+  await p.locator('[data-a="lvlConfirm"]:visible').first().click(); await p.waitForTimeout(500);
+  const up = await snap(); assert(up.lvl === start.lvl + 1 && up.feats.includes("Alert") && up.base > start.base && up.log === 1, "level-up did not apply " + JSON.stringify(up));
+  await clickA(p, "openEdit"); await clickA(p, "askDelevel"); await clickA(p, "confirmDelevel");
+  const down = await snap(); assert(down.lvl === start.lvl && down.base === start.base && !down.feats.includes("Alert") && down.log === 0, "lowering did not undo it " + JSON.stringify(down));
+  await p.evaluate(() => { const c = APP.char; c.levelLog.push({ level: c.level + 1, summary: "Feat: Alert", at: "2026-11-01" }); c.feats.push("Alert"); c.hp.base += 6; CR.ACTIONS.openChar({ dataset: { id: c.id } }); });
+  await p.waitForTimeout(500);
+  const fixed = await snap(); assert(fixed.base < start.base + 6 && !fixed.feats.includes("Alert") && fixed.log === 0, "repair did not run " + JSON.stringify(fixed));
+  noErrs(p); await p.context().close();
+});
+
 await check("advanced sheet: every sheet tab opens, no sideways scroll (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p); await goAdvanced(p);
   const n = await p.locator('[data-a="sheetTab"]').count(); assert(n >= 2, "tabs: " + n);

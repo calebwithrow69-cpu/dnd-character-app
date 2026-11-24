@@ -8,6 +8,7 @@ import { turnBlock, isSustained } from "./combat.js";
 import { attacksPerAction } from "./attackctx.js";
 import { playRollStage, startRoll, rollStageOpen } from "./rollstage.js";
 import { playShow, healingFormula, SOURCES, wieldedId, playEntries } from "./play.js";
+import { captureLevel, diffLevel, deLevel } from "./levelfix.js";
 import { ridersFor, rerollsFor, ensureLuck, shortRestRefill } from "./riders.js";
 import { VERSION } from "./changelog.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
@@ -962,7 +963,6 @@ function onChange(e) {
   if (ds.edit) {
     const v = el.value;
     if (ds.edit === "name") c.name = v.trim() || c.name;
-    else if (ds.edit === "level") { c.level = Math.max(1, Math.min(20, parseInt(v, 10) || c.level)); c.hitDice.total = c.level; c.hitDice.spent = Math.min(c.hitDice.spent, c.level); }
     else if (ds.edit === "maxhp") { const want = Math.max(1, parseInt(v, 10) || c.hp.max); c.hp.adjust = (c.hp.adjust || 0) + (want - c.hp.max); syncHp(c); c.hp.cur = Math.min(c.hp.cur, c.hp.max); }
     else if (ds.edit === "speed" || ds.edit === "initBonus") c[ds.edit] = parseInt(v, 10) || 0;
     else c[ds.edit] = v;
@@ -1151,6 +1151,7 @@ const ACTIONS = {
     const gained = syncLineageSpells(APP.char, APP.library, APP.campaign);
     const subGained = syncSubclassSpells(APP.char, APP.library);
     ensureLuck(APP.char); // class, subclass, feat and species trackers
+    if (APP.char.levelFix && APP.char.levelFix.length) { syncHp(APP.char); APP.char.hp.cur = Math.min(APP.char.hp.cur, APP.char.hp.max); const n = APP.char.levelFix.length; APP.char.levelFix = []; setTimeout(() => toast(`Level history fixed (${n})`), 300); }
     save();
     if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
     else if (subGained.length) setTimeout(() => toast(`Added your subclass spells: ${subGained.join(", ")}`), 300);
@@ -1697,6 +1698,13 @@ const ACTIONS = {
   lvlMode(el) { APP.char.levelMode = el.dataset.v; save(); render(); },
   addXp() { const v = Math.floor(Number(document.getElementById("xp-add")?.value)); if (!(v > 0)) { toast("Type how much XP to add"); return; } APP.char.xp = (APP.char.xp || 0) + v; save(); render(); toast(`+${v} XP`); },
   setXp() { const v = Math.floor(Number(document.getElementById("xp-set")?.value)); if (!(v >= 0)) return; APP.char.xp = v; save(); render(); },
+  askDelevel() { if ((APP.char.level || 1) > 1) openModal({ type: "delevel" }); },
+  confirmDelevel() {
+    const c = APP.char, from = c.level;
+    if (!deLevel(c)) { closeModal(); return; }
+    syncHp(c); c.hp.cur = Math.min(c.hp.cur, c.hp.max); c.hp.cur = Math.max(c.hp.cur, 1);
+    ensureLuck(c); closeModal(); saveAndRender(); toast(`Level ${from} removed`);
+  },
   startLevelUp() { closeModal(); if ((APP.char.level || 1) >= 20) { toast("Already level 20"); return; } ACTIONS.openLevelUp(); },
   openLevelUp() { APP.lvl = newLevelDraft(APP.char); APP.screen = "levelup"; APP.roll = null; render(); window.scrollTo(0, 0); },
   startFirstChoices() { APP.lvl = newLevelDraft(APP.char, { fromCreation: true }); APP.screen = "levelup"; render(); window.scrollTo(0, 0); },
@@ -2374,6 +2382,7 @@ function applyLevelUp() {
   const before = { level: c.level, con: c.abilities.con };
   const log = [];
   syncHp(c); // make sure the dice total exists before anything is added to it
+  const snap = captureLevel(c);
   const hpBefore = c.hp.max;
   if (ids.has("asi")) {
     if (d.feat && d.feat !== ASI_FEAT) {
@@ -2414,7 +2423,7 @@ function applyLevelUp() {
   ensureLuck(c);
   const subSp = syncSubclassSpells(c, APP.library);
   if (subSp.length) log.push(`Subclass spells: ${subSp.join(", ")}`);
-  c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; ") });
+  c.levelLog.push({ level: d.next, at: new Date().toISOString().slice(0, 10), summary: log.join("; "), undo: diffLevel(snap, c) });
   save();
   APP.lvl = null; APP.screen = "sheet"; APP.sheetTab = "stats";
   if (APP.shopAfterChoices) { APP.shopAfterChoices = false; if (APP.styleAsk) APP._shopLater = true; else { APP.charSub = "gear"; APP.shopQuery = ""; APP.shopCat = "All"; APP.shopTrained = true; APP.sheetTab = "shop"; } }

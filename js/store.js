@@ -1,5 +1,6 @@
 import { allPortraits } from "./portraits.js";
 import { parseProfs } from "./rules.js";
+import { repairLevels } from "./levelfix.js";
 
 // Character roster: lives in this device's localStorage only.
 // Backups are plain JSON files the player saves wherever they like.
@@ -78,7 +79,8 @@ export function normalize(c, library) {
   // Rolls tab: pinned checks ("init", "abil:str", "save:con", "skill:stealth") and saved dice formulas
   out.pins = (Array.isArray(c.pins) ? c.pins : ["init"]).filter((k, i, a) => typeof k === "string" && /^(init|(abil|save):[a-z]{3}|skill:[a-z-]+)$/.test(k) && a.indexOf(k) === i).slice(0, 12);
   out.formulas = (Array.isArray(c.formulas) ? c.formulas : []).filter((f, i, a) => typeof f === "string" && /^[0-9dD+\-\s]{2,30}$/.test(f) && a.indexOf(f) === i).slice(0, 12);
-  out.levelLog = c.levelLog || [];
+  out.levelLog = Array.isArray(c.levelLog) ? c.levelLog.filter(e => e && Number(e.level) > 0) : [];
+  { const fixed = repairLevels(out); out.levelFix = fixed.length ? fixed : (Array.isArray(c.levelFix) ? c.levelFix : []); }
   out.dead =c.dead && typeof c.dead === "object" ? { cause: String(c.dead.cause || "").slice(0, 300), at: String(c.dead.at || "").slice(0, 10) } : null;
   out.hpRoll = c.hpRoll && c.hpRoll.level ? { level: Number(c.hpRoll.level), v: Number(c.hpRoll.v) } : undefined;
   out.custom = (Array.isArray(c.custom) ? c.custom : []).filter(x => x && x.id && x.t).map(x => ({ id: x.id, t: x.t, v: Number(x.v) || 0, label: x.label || "Custom" }));

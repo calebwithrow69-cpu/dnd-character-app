@@ -2,11 +2,34 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.60";
+export const VERSION = "0.1.61";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.61",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "Level-down fix, recommended feats, Add feat in Edit.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "Lowering a level used to change only the number. It now undoes that level's HP, feats, ability increases and choices.",
+          "Characters already lowered by hand are repaired when opened. HP uses the logged change, or the average die."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Level in Edit character is Lower and Level up buttons, not a typed number.",
+          "Add feat moved to Edit character, with a note that it adds the name only.",
+          "The level-up feat list sorts Recommended first: picks for your class, and feats that raise your main ability."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.60",
     date: "2026-11-23",

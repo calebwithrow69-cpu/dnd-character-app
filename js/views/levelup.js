@@ -7,6 +7,7 @@ import { ABILITIES, ABILITY_LABEL, SKILLS, abilityMod, fmtMod, hpAverageGain, sl
 import { findByName, findFeat, enabledFeats, allWeapons, subclassesFor } from "../data.js";
 import { levelUpPlan, featEligible, optionPrereq, spellsFor, stepValidFor, expertiseOptions } from "../progression.js";
 import { lineageSpells, LANGUAGES } from "../choices.js";
+import { recommendFeats } from "../featfit.js";
 import { renderFeatControls, renderFeatGrid, renderFeatSheet } from "./feats.js";
 import { featAbilityIncrease, previewFeat, ASI_FEAT } from "../featfx.js";
 
@@ -68,8 +69,10 @@ const masteryDetail = w => `<p class="sub2" style="margin-bottom:8px">${esc([w.c
 
 function asiFeatItems(app) {
   const c = app.char, d = app.lvl;
-  return enabledFeats(app.library, app.campaign).filter(f => /^General|^Epic|^Origin/i.test(f.type || "") && (!c.feats.includes(f.name) || /Repeatable/i.test(f.text || "")))
+  const base = enabledFeats(app.library, app.campaign).filter(f => /^General|^Epic|^Origin/i.test(f.type || "") && (!c.feats.includes(f.name) || /Repeatable/i.test(f.text || "")))
     .map(f => { const e = featEligible(f, { ...c }, d.next); return { f, ok: e.ok, why: e.why || "" }; });
+  const rec = recommendFeats(c, base);
+  return base.map(i => ({ ...i, rec: rec.get(i.f.name) || null }));
 }
 function styleFeatItems(app) {
   const c = app.char;
