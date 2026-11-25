@@ -2,11 +2,35 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.73";
+export const VERSION = "0.1.74";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.74",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "Classic sheet 2.0: conditions on the sheet, a Tools tab and a dice button.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "Conditions sit above the health bar on both sheets, with a Condition button and a short effect label on each chip.",
+          "Conditions change your own rolls: disadvantage or advantage on attacks, checks and Dex saves, speed 0, and exhaustion lowering speed. Auto-fail Str and Dex saves show on the roll card.",
+          "Tools tab replaces Notes on the Classic sheet: dice roller, calculator, conditions, hit points, initiative, rests, inspiration, level up, notes, rules and sheet PDF.",
+          "A dice button floats on the Classic sheet and opens the dice roller."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Classic Sheet page reads like the paper sheet: identity row, then inspiration, size, hit dice and death saves boxes.",
+          "Proficiencies and languages moved to the Features tab."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.73",
     date: "2026-11-24",

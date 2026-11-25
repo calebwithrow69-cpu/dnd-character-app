@@ -40,6 +40,8 @@ import {
   pickSpecies as mPickSpecies, pickClass as mPickClass, pickBackground as mPickBackground
 } from "./creation.js";
 import { rollMods } from "./effects.js";
+import { autoFailBy } from "./conditions.js";
+import { calcPress } from "./views/tools.js";
 import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
 import { boxById } from "./lootbox.js";
@@ -477,14 +479,14 @@ function rollSpec(spec, hooks = {}) {
     onRoll: hooks.onRoll
   });
 }
-function d20Test(title, mod, targets = []) {
+function d20Test(title, mod, targets = [], extra = "") {
   const c = APP.char, d = deriveCharacter(c);
   const exh = c.exhaustion * 2;
   const adv = [], dis = [];
   targets.forEach(t => { const m = rollMods(c, t); adv.push(...m.adv); dis.push(...m.dis); });
   const mode = adv.length && !dis.length ? "adv" : dis.length && !adv.length ? "dis" : null;
   const fx = mode ? `${(mode === "adv" ? adv : dis).join(", ")}: ${mode === "adv" ? "advantage" : "disadvantage"}` : "";
-  rollSpec({ title, d20: { mod: mod - exh, label: "Result", adv: mode }, riders: ridersFor(APP, c, d, { kind: "check" }), notes: [exh ? `includes \u2212${exh} exhaustion` : "", fx].filter(Boolean).join(" \u00b7 ") });
+  rollSpec({ title, d20: { mod: mod - exh, label: "Result", adv: mode }, riders: ridersFor(APP, c, d, { kind: "check" }), notes: [exh ? `includes \u2212${exh} exhaustion` : "", fx, extra].filter(Boolean).join(" \u00b7 ") });
 }
 
 // ---------------- settings toggles ----------------
@@ -1901,6 +1903,8 @@ const ACTIONS = {
   lvlConfirm() { applyLevelUp(); },
 
   // conditions & concentration
+  toolOpen(el) { openModal({ type: "tool", id: el.dataset.id }); },
+  calcKey(el) { APP.calc = calcPress(APP.calc || {}, el.dataset.k); render(); },
   openConditions() { openModal({ type: "conditions" }); },
   toggleCondition(el) {
     const list = APP.char.conditions, n = el.dataset.name, i = list.indexOf(n);
@@ -1953,7 +1957,7 @@ const ACTIONS = {
     saveAndRender();
   },
   rollSkill(el) { const s = deriveCharacter(APP.char).skills.find(x => x.id === el.dataset.id); d20Test(`${s.label} check`, s.bonus, ["skill." + s.id, "skill.all", ...(s.ability ? ["check." + s.ability] : [])]); },
-  rollSave(el) { const a = el.dataset.ab; d20Test(`${ABILITY_LABEL[a]} save`, deriveCharacter(APP.char).saves[a], ["save." + a, "save.all"]); },
+  rollSave(el) { const a = el.dataset.ab, af = autoFailBy(APP.char, a); d20Test(`${ABILITY_LABEL[a]} save`, deriveCharacter(APP.char).saves[a], ["save." + a, "save.all"], af.length ? `${af.join(", ")}: this save fails automatically` : ""); },
   rollAbility(el) { const a = el.dataset.ab; d20Test(`${ABILITY_LABEL[a]} check`, deriveCharacter(APP.char).mods[a], ["check." + a]); },
   rollInit() { d20Test("Initiative", deriveCharacter(APP.char).initiative, ["init"]); },
   // a boon that rolls dice when used (Stone's Endurance, Storm's Thunder...)
@@ -1962,7 +1966,7 @@ const ACTIONS = {
     if (d.res !== "" && d.res != null) { const r = c.resources[+d.res]; if (r) { if (r.max - r.used <= 0) { toast("No uses left"); return; } r.used += 1; save(); } }
     rollSpec({ title: d.title, dmg: { dice: d.dice, mod: +d.mod || 0, type: d.type || "", label: d.label || "Roll" }, notes: d.note || "" });
   },
-  rollSpellAttack() { d20Test("Spell attack", deriveCharacter(APP.char).spellInfo.attackBonus); },
+  rollSpellAttack() { d20Test("Spell attack", deriveCharacter(APP.char).spellInfo.attackBonus, ["atk"]); },
 
   // spells
   toggleSlot(el) {

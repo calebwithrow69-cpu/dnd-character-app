@@ -6,6 +6,7 @@
 // Book-derived effects live in the locked rules file (an `effects` list on the entry);
 // homebrew effects sit inline in campaign.json; players add their own as custom bonuses.
 
+import { conditionEffects } from "./conditions.js";
 let SRC = () => null;
 // fn returns { feats, classes, subclasses, species, effectsV } or null while rules are locked.
 export function setEffectsSource(fn) { SRC = fn; }
@@ -171,6 +172,7 @@ export function collectEffects(c) {
   const s = SRC(), out = [];
   const add = (label, list) => (list || []).forEach(e => { if (e && e.t && (e.lv || 0) <= (c.level || 1)) out.push({ ...e, src: e.name || label }); });
   (c.custom || []).forEach(e => { if (e && e.t) out.push({ t: e.t, v: Number(e.v) || 0, src: e.label || "Custom", custom: true, id: e.id }); });
+  conditionEffects(c).forEach(e => out.push(e));
   if (!s) return out;
   (c.feats || []).forEach(f => { const b = baseName(f), e = s.feats.find(x => x.name === f) || s.feats.find(x => x.name === b); if (e) add(b, e.effects); });
   const cls = s.classes.find(x => x.name === c.class);

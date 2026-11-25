@@ -1,6 +1,7 @@
 // The classic character sheet: one page laid out like the printed 2024 sheet
 // (header, vitals, six ability blocks with their saves and skills, weapons,
 // class features, species traits, feats, training). Everything is tappable.
+import { toolGrid } from "./tools.js";
 import { esc, ICONS, searchBox } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, fmtMod, deriveCharacter, PROF_GROUPS } from "../rules.js";
 import { findByName } from "../data.js";
@@ -71,7 +72,7 @@ export function classicBody(app, c, d) {
   const pips = (n, kind, cls2) => Array.from({ length: 3 }, (_, i) => `<button class="pip ${cls2} ${i < n ? "" : "used"}" data-a="deathSave" data-kind="${kind}" data-i="${i}" aria-label="${kind} ${i + 1}"><i></i></button>`).join("");
   const val = (label, v, attrs = "") => `<${attrs ? "button" : "div"} class="cval" ${attrs}><b>${v}</b><span>${label}</span></${attrs ? "button" : "div"}>`;
 
-  const subs = [["sheet", "Sheet"], ["features", "Features"], si ? ["spells", "Spells"] : null, ["gear", "Gear"], ["notes", "Notes"]].filter(Boolean);
+  const subs = [["sheet", "Sheet"], ["features", "Features"], si ? ["spells", "Spells"] : null, ["gear", "Gear"], ["tools", "Tools"]].filter(Boolean);
   const sub = subs.some(x => x[0] === app.classicSub) ? app.classicSub : "sheet";
   const profsBox = `<div class="panel"><div class="panel-head"><h2>Equipment training and proficiencies</h2></div><div class="panel-body stack">
       ${profsChecks(c)}
@@ -79,22 +80,18 @@ export function classicBody(app, c, d) {
       <div class="field"><label>Languages</label><input class="f" data-field="languages" value="${esc(c.languages)}"></div>
     </div></div>`;
   const pages = {
-    sheet: `    <div class="cl-top">
-    <div class="panel"><div class="panel-head"><h2>Character</h2></div><div class="panel-body">
-      <div class="idgrid"><div><span>Class</span><b>${esc(c.class)}</b></div><div><span>Subclass</span><b>${esc(c.subclass || "None yet")}</b></div>
+    sheet: `    <div class="panel paperid"><div class="panel-body">
+      <div class="idgrid wide4"><div><span>Class</span><b>${esc(c.class)}</b></div><div><span>Subclass</span><b>${esc(c.subclass || "None yet")}</b></div>
         <div><span>Species</span><b>${esc(c.species)}</b></div><div><span>Background</span><b>${esc(c.background)}</b></div></div></div></div>
-    <div class="panel"><div class="panel-head"><h2>Hit dice and death saves</h2></div><div class="panel-body stack">
-      <div class="rowline" style="border:0"><span class="nm">Hit dice <span class="sub2">d${hd.die}</span></span><b>${hd.total - hd.spent} / ${hd.total}</b></div>
-      <div class="btnrow"><button class="btn" data-a="openShortRest">Short rest</button><button class="btn" data-a="openLongRest">Long rest</button></div>
-      <div class="rowline"><span class="nm">Death save successes</span><span class="pips">${pips(c.deathSaves.success, "success", "ok")}</span></div>
-      <div class="rowline"><span class="nm">Death save failures</span><span class="pips">${pips(c.deathSaves.fail, "fail", "fail")}</span></div>
-      ${c.hp.cur <= 0 ? `<button class="btn pri block" data-a="rollDeathSave" ${c.deathSaves.fail >= 3 || c.deathSaves.success >= 3 ? "disabled" : ""}>Roll death save</button>` : ""}
-    </div></div>
-    </div>
 
-    <div class="cvals">
-      ${val("Heroic Inspiration: " + (c.inspiration ? "have it" : "none"), c.inspiration ? "✓" : "–", `data-a="toggleInsp" aria-pressed="${!!c.inspiration}"`)}
-      ${val("Size", esc(c.size || "Medium"))}
+    <div class="paperrow">
+      <button class="pbox" data-a="toggleInsp" aria-pressed="${!!c.inspiration}"><b>${c.inspiration ? "\u2713" : "\u2013"}</b><span>Heroic Inspiration</span></button>
+      <div class="pbox"><b>${esc(c.size || "Medium")}</b><span>Size</span></div>
+      <div class="pbox hd"><b>${hd.total - hd.spent}<i> / ${hd.total}</i></b><span>Hit dice d${hd.die}</span>
+        <div class="btnrow"><button class="btn sm" data-a="openShortRest">Short rest</button><button class="btn sm" data-a="openLongRest">Long rest</button></div></div>
+      <div class="pbox ds"><span class="dsr"><em>Successes</em><span class="pips">${pips(c.deathSaves.success, "success", "ok")}</span></span>
+        <span class="dsr"><em>Failures</em><span class="pips">${pips(c.deathSaves.fail, "fail", "fail")}</span></span>
+        ${c.hp.cur <= 0 ? `<button class="btn sm pri" data-a="rollDeathSave" ${c.deathSaves.fail >= 3 || c.deathSaves.success >= 3 ? "disabled" : ""}>Roll death save</button>` : ""}<span>Death saves</span></div>
     </div>
 
     <div class="cl-cols">
@@ -120,25 +117,21 @@ export function classicBody(app, c, d) {
       ${row(`${c.species} traits`, "Species", "species", `data-name="${esc(c.species)}"`)}
       ${row(c.background, "Background", "background", `data-name="${esc(c.background)}"`)}
     </div></div>
+    ${profsBox}
     <div class="panel"><div class="panel-head"><h2>Feats</h2></div><div class="panel-body flush">
       ${c.feats.length ? c.feats.map((f, i) => row(f, "Feat", "feat", `data-name="${esc(f)}" data-i="${i}"`)).join("") : `<p class="muted small" style="padding:12px 0">No feats yet.</p>`}
     </div></div>
     </div></div>`,
     spells: () => (si ? spellsTab(app, c, d) : ""),
     gear: () => classicGear(app, c, d),
-    notes: `<div class="cl-cols3 cl-two"><div>${profsBox}</div><div>
-    <div class="panel"><div class="panel-body"><div class="btnrow">
-      <button class="btn" data-a="downloadPdf">Download character sheet (PDF)</button></div>
-      <button class="btn block" style="margin-top:12px" data-a="goNotes">${ICONS.notes}<span>Open notes</span></button></div></div>
-      </div>
-    </div></div>`
+    tools: () => toolGrid(app, c)
   };
 
   return `<div class="classic">
     <div class="subtabs seg" role="group" aria-label="Sheet sections" style="--n:${subs.length}">
       ${subs.map(([id, label]) => `<button data-a="classicSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}</div>
-    ${searchBox("sheet", app.sheetQuery, "Search your sheet: skills, features, spells, items...")}
-    <div id="results-sheet">${renderSheetSearch(app)}</div>
+    ${sub === "tools" ? "" : `${searchBox("sheet", app.sheetQuery, "Search your sheet: skills, features, spells, items...")}
+    <div id="results-sheet">${renderSheetSearch(app)}</div>`}
     ${!c.subclass && c.level >= 3 && subclassesFor(app.library, c.class).length ? `<div class="panel"><div class="panel-body"><div class="rowline" style="border:0"><span class="nm" style="color:var(--amber)">No subclass chosen yet</span><button class="btn sm" data-a="openEdit">Choose</button></div></div></div>` : ""}
     ${needsFirstChoices(app, c) ? `<div class="panel"><div class="panel-body"><div class="rowline" style="border:0"><span class="nm" style="color:var(--amber)">Level 1 choices not made yet</span><button class="btn sm pri" data-a="startFirstChoices">Choose</button></div></div></div>` : ""}
     ${typeof pages[sub] === "function" ? pages[sub]() : pages[sub]}

@@ -1380,8 +1380,8 @@ await check("style chooser: shows first, picking applies at once, switching late
   await pickSheet(p, "classic"); await p.waitForTimeout(350);
   assert(await p.locator(".classic").count() === 1, "classic sheet missing");
   assert(await p.locator('[data-a="sheetTab"]').count() === 4, "sheet tabs should be Character, Rules, Shop, Settings (Notes is its own action)");
-  assert(await p.locator('.profchk').count() === 0, "profs belong on the Notes sub-tab");
-  await p.locator('[data-a="classicSub"][data-sub="notes"]').click(); await p.waitForTimeout(250);
+  assert(await p.locator('.profchk').count() === 0, "profs belong on the Features sub-tab");
+  await p.locator('[data-a="classicSub"][data-sub="features"]').click(); await p.waitForTimeout(250);
   assert(await p.locator('.profchk input').count() === 6, "expected 6 training check boxes");
   assert(await p.locator('.profchk input:disabled').count() === 6, "training boxes must be read-only");
   assert(await p.locator('.profchk.on').count() >= 2, "a druid should have some training checked");
@@ -1673,6 +1673,35 @@ await check("Home: 12 characters and 12 campaigns, modes, search, back label", a
     assert(await p.locator('.sheetbar .btn:has-text("Main menu"):visible').count() === 1, "sheet back label");
     await p.locator('.sheetbar .btn:has-text("Main menu"):visible').click(); await p.waitForSelector("#home-book");
     noErrs(p); await p.context().close();
+  }
+});
+
+await check("Classic 2.0: conditions above the HP bar change speed, Tools grid, calculator, dice button", async () => {
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 }); await openSample(p);
+    const top = sel => p.locator(sel + ":visible").first().evaluate(e => e.getBoundingClientRect().top);
+    assert(await p.locator(".condbar").count() === 1, "condition bar");
+    assert((await top(".condbar")) < (await top(".vitals .hpwrap")), "conditions sit above the health bar");
+    await clickA(p, "openConditions"); await p.locator('[data-a="toggleCondition"][data-name="Restrained"]').first().click(); await p.waitForTimeout(250);
+    assert(await p.locator(".condfx").count() === 1, "effects listed in the conditions modal");
+    await clickA(p, "closeModal");
+    assert(await p.locator('.condbar .chip.cond:has-text("Restrained")').count() === 1, "chip shows");
+    const speedNow = () => p.locator('[data-a="openBreakdown"] b:visible').first().innerText().then(Number);
+    const spd = await speedNow();
+    assert(spd === 0, "Restrained sets speed to 0, got " + spd);
+    await p.locator('.condbar [data-a="removeCondition"]').first().click(); await p.waitForTimeout(250);
+    assert(await speedNow() > 0, "speed returns when removed");
+    assert(await p.locator(".fabdice:visible").count() === 1, "floating dice button");
+    await p.locator(".fabdice").click(); await p.waitForTimeout(300);
+    assert(await p.locator(".modal .st-die, .modal [data-a=\"trayAdd\"]").count() >= 6, "dice tray opens"); await clickA(p, "closeModal");
+    await p.locator('[data-a="classicSub"][data-sub="tools"]').click(); await p.waitForTimeout(250);
+    assert(await p.locator(".toolbtn").count() === 12, "twelve tools");
+    assert(await p.locator('[data-a="classicSub"][data-sub="notes"]').count() === 0, "no Notes sub-tab");
+    await p.locator('[data-a="toolOpen"][data-id="calc"]').click(); await p.waitForTimeout(250);
+    for (const k of ["2", "+", "3", "\u00d7", "4", "="]) await p.locator(`.calc-b[data-k="${k}"]`).click();
+    assert((await p.locator(".calc-d span").innerText()) === "14", "calculator math"); await clickA(p, "closeModal");
+    assert(!(await hscroll(p) > 0), "sideways scroll " + w);
+    assert(p.errs.length === 0, p.errs.join(" || ")); await p.context().close();
   }
 });
 

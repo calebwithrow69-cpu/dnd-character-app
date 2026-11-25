@@ -194,7 +194,7 @@ export function deriveCharacter(char) {
   } : null;
 
   const speedFx = fx("speed"), initFx = fx("init");
-  const speed = (Number(char.speed) || 30) + fxSum(speedFx);
+  const speed = Math.max(0, (Number(char.speed) || 30) + fxSum(speedFx));
   const initiative = mods.dex + Number(char.initBonus || 0) + fxSum(initFx);
   return {
     level, prof, mods, saves, skills, ac: acTotal, acInfo, spellInfo, speed, speedFx, initFx,

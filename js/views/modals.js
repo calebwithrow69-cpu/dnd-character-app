@@ -1,4 +1,6 @@
 import { renderDmModal } from "./dmmode.js";
+import { renderToolModal, condEffectsBlock } from "./tools.js";
+import { condLine, condNotes } from "../conditions.js";
 import { esc, modalShell, searchBox, ICONS, hotbarToggle } from "../ui.js";
 import { boxById, boxByName } from "../lootbox.js";
 import { renderWhatsNew } from "./whatsnew.js";
@@ -39,6 +41,7 @@ export function renderModal(app) {
   if (!m) return "";
   const c = app.char;
   switch (m.type) {
+    case "tool": return renderToolModal(app, c, deriveCharacter(c));
     case "detail": {
       const d = detailFor(app, m.kind, m.name, m.i, m.from);
       const foot = [
@@ -351,10 +354,11 @@ export function renderModal(app) {
         `
         <div class="condgrid">${CONDITIONS.map(x => {
           const on = c.conditions.includes(x), key = "condition:" + x;
-          return infoRow({ key, action: "toggleCondition", data: { name: x }, title: x, sub: firstLine(x), pressed: on, open: app.info.has(key),
+          return infoRow({ key, action: "toggleCondition", data: { name: x }, title: x, sub: condLine(x) || firstLine(x), pressed: on, open: app.info.has(key),
             detail: app.info.has(key) ? formatText(glossaryEntry(x)?.text || "") : "",
             badge: `${conditionIcon(x)}` });
         }).join("")}</div>
+        ${condEffectsBlock(c)}
         <div class="rowline" style="margin-top:12px"><span class="nm">${conditionIcon("Exhaustion")} <button class="term" data-term="condition:Exhaustion">Exhaustion</button></span>
           <span class="stepper"><button data-a="exhStep" data-n="-1" aria-label="Less exhaustion">−</button><b>${c.exhaustion}</b><button data-a="exhStep" data-n="1" aria-label="More exhaustion">+</button></span></div>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);

@@ -10,6 +10,8 @@ import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, weaponsOf, attacksO
 import { optionGroup, optionNames, levelUpPlan } from "../progression.js";
 import { characterBody, concBanner } from "./character.js";
 import { classicBody } from "./classic.js";
+import { dieIco } from "./tools.js";
+import { condLine, condTag } from "../conditions.js";
 import { stylePicker } from "./stylepick.js";
 import { xpForLevel } from "../rules.js";
 import { grantsOf } from "../effects.js";
@@ -71,10 +73,9 @@ export function renderSheet(app) {
     activeChips(c, true),
     ...grantsOf(c, "resist").map(g => `<span class="chip"><span class="chip-main" title="${esc(g.src || "")}">Resist ${esc(g.name)}</span></span>`),
     c.concentration ? `<span class="chip conc"><button class="chip-main" data-term="spell:${esc(c.concentration)}"><span class="sub2" style="color:inherit">Concentrating</span> ${esc(c.concentration)}</button><button class="chip-x" data-a="endConc" aria-label="End concentration">${ICONS.close}</button></span>` : "",
-    ...c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}">${conditionIcon(x)}${esc(x)}</button><button class="chip-x" data-a="removeCondition" data-name="${esc(x)}" aria-label="Remove ${esc(x)}">${ICONS.close}</button></span>`),
-    c.exhaustion > 0 ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}Exhaustion ${c.exhaustion} <span class="sub2" style="color:inherit">−${c.exhaustion * 2} to d20s</span></button></span>` : "",
     dying ? `<span class="chip cond"><button class="chip-main" data-term="Death Saving Throw">${conditionIcon("Unconscious")}${c.deathSaves.fail >= 3 ? "Dead" : c.deathSaves.success >= 3 ? "Stable at 0 HP" : "Dying"}</button></span>` : ""
-  ].join("") + (app.prefs.sheetStyle === "advanced" ? `<button class="chip addcond" data-a="openConditions" aria-label="Add condition">${ICONS.plus || "+"}<span>Condition</span></button>` : "");
+  ].join("");
+  const condBar = `<div class="condbar" aria-label="Conditions">${c.conditions.map(x => `<span class="chip cond"><button class="chip-main" data-term="condition:${esc(x)}" title="${esc(condLine(x))}">${conditionIcon(x)}<span>${esc(x)}</span>${condTag(x) ? `<small>${esc(condTag(x))}</small>` : ""}</button><button class="chip-x" data-a="removeCondition" data-name="${esc(x)}" aria-label="Remove ${esc(x)}">${ICONS.close}</button></span>`).join("")}${c.exhaustion > 0 ? `<span class="chip cond"><button class="chip-main" data-term="condition:Exhaustion">${conditionIcon("Exhaustion")}<span>Exhaustion ${c.exhaustion}</span><small>-${c.exhaustion * 2} d20, -${c.exhaustion * 5} ft</small></button><button class="chip-x" data-a="exhStep" data-n="-1" aria-label="Lower exhaustion">${ICONS.minus}</button></span>` : ""}<button class="chip addcond" data-a="openConditions" aria-label="Add condition">${ICONS.plus}<span>Condition</span></button></div>`;
 
   const xpPct = c.level >= 20 ? 100 : Math.max(0, Math.min(100, Math.round(((c.xp || 0) - xpForLevel(c.level)) / Math.max(1, xpForLevel(c.level + 1) - xpForLevel(c.level)) * 100)));
   const xpReady = c.level < 20 && (c.xp || 0) >= xpForLevel(c.level + 1);
@@ -95,6 +96,7 @@ export function renderSheet(app) {
     <main class="wrap page ${wide ? "wide" : ""}">
       ${tab === "rules" ? "" : c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
       ${page || tab === "rules" ? "" : `<section class="status" aria-label="Status">
+        ${condBar}
         <div class="vitals">
           <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points">
             <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle cx="50" cy="50" r="45" class="ring-fg" pathLength="100" stroke-dasharray="${xpPct} 100"/></svg>
@@ -119,6 +121,7 @@ export function renderSheet(app) {
       </section>`}
       ${tab === "stats" ? tourCard("sheet") : ""}
       ${body}
+      ${tab === "stats" && app.prefs.sheetStyle !== "advanced" ? `<button class="fabdice press" data-a="toolOpen" data-id="dice" aria-label="Dice roller">${dieIco}</button>` : ""}
     </main>
     <nav class="tabs" aria-label="Sheet sections"><div class="in" style="grid-template-columns:repeat(${tabs.length},1fr)">
       ${tabs.map(([id, label, icon, act]) => `<button data-a="${act || "sheetTab"}"${act ? "" : ` data-tab="${id}"`} ${tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span>${dots.has(id) ? '<i class="newdot" aria-hidden="true"></i>' : ""}</button>`).join("")}
