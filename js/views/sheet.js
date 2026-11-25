@@ -1,5 +1,7 @@
 import { readinessStrip, loadoutCards, wornRows } from "./loadout.js";
 import { tourCard } from "../tour.js";
+import { here as navHere, top as navTop, label as navLabel, sheetPath } from "../nav.js";
+import { portraitFor } from "../portraits.js";
 import { tabIsNew, markTabSeen } from "../tabsseen.js";
 import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, glossaryEntry, infoRow, activeChips, hotbarToggle, kRow, kGroup, snipOf } from "../ui.js";
 import {
@@ -40,20 +42,30 @@ export function sheetTabs(app) {
 
 // Sheet header. Phone: one slim row (name + level line). Laptop: a banner with the name, the full
 // class line, a live read-out of the numbers you check most, and labelled buttons.
-function sheetBar(c, d, meta) {
+function sheetBar(app, c, d, meta) {
   const sub = [c.species, c.class + (c.subclass ? " (" + c.subclass + ")" : "")].filter(Boolean).join(" \u00b7 ");
   const pill = (v, l) => `<span class="sb-pill"><b>${v}</b><i>${l}</i></span>`;
+  const loc = navHere(app), path = sheetPath(c.name, loc), title = path[path.length - 1];
+  const trail = path.length > 1 ? path.slice(0, -1).join(" \u203a ") : "";
+  const prev = navLabel(navTop(app.nav || { stack: [] }));
+  const img = portraitFor(c.species);
+  let h = 0; for (const ch of c.name) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  const face = img ? `<img src="${esc(img)}" alt="">` : `<span style="--h:${h}">${esc(Array.from(c.name)[0] || "?").toUpperCase()}</span>`;
+  const portrait = `<button class="navchar" data-a="toCharacter" ${loc && loc.tab === "stats" ? 'aria-current="page"' : ""} aria-label="${esc(c.name)}, character sheet">${face}</button>`;
+  const back = `<button class="iconbtn" data-a="navBack" aria-label="Back to ${esc(prev)}">${ICONS.back}</button>`;
   return `<header class="topbar sheetbar"><div class="wrap row sb-phone">
-      <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Main menu</span></button>
-      <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">${esc(meta)}</div></div>
+      ${back}
+      <div class="grow"><h1>${esc(title)}</h1><div class="sub">${esc(trail || meta)}</div></div>
       <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.help}</button>
-      <button class="iconbtn" data-a="openEdit" aria-label="Edit character">${ICONS.edit}</button></div>
+      <button class="iconbtn" data-a="openEdit" aria-label="Edit character">${ICONS.edit}</button>
+      ${portrait}</div>
     <div class="wrap row sb-wide">
-      <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Main menu</span></button>
-      <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">Level ${c.level} \u00b7 ${esc(sub)}</div></div>
+      <button class="btn sm" data-a="navBack">${ICONS.back}<span>${esc(prev)}</span></button>
+      <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">${esc(trail ? path.join(" \u203a ") : `Level ${c.level} \u00b7 ${sub}`)}</div></div>
       <div class="sb-pills">${pill(c.hp.cur + "/" + c.hp.max, "HP")}${pill(d.ac, "AC")}${pill(d.speed, "Speed")}${pill(fmtMod(d.initiative), "Init")}${pill(fmtMod(d.prof), "Prof")}</div>
       <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.help}</button>
-      <button class="btn sm" data-a="openEdit">${ICONS.edit}<span>Edit</span></button></div></header>`;
+      <button class="iconbtn" data-a="openEdit" aria-label="Edit character">${ICONS.edit}</button>
+      ${portrait}</div></header>`;
 }
 
 export function renderSheet(app) {
@@ -96,7 +108,7 @@ export function renderSheet(app) {
   const wide = tab === "rules" || tab === "shop" || tab === "notes" || (tab === "stats" && app.prefs.sheetStyle === "advanced" && ["gear", "stats", "rolls"].includes(app.charSub));
 
   return `<div class="sheetview" data-sheet="${app.prefs.sheetStyle === "advanced" ? "advanced" : "classic"}">
-    ${sheetBar(c, d, meta)}
+    ${sheetBar(app, c, d, meta)}
     <main class="wrap page ${wide ? "wide" : ""}">
       ${tab === "rules" ? "" : c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
       ${page || tab === "rules" ? "" : `<section class="status" aria-label="Status">

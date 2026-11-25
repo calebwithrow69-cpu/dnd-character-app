@@ -399,7 +399,7 @@ await check("Tours: highlight sits on its target at every text size", async () =
   }
 });
 
-await check("Tours: home runs 6 steps and sheet 6, skip works, finishing unlocks Silver", async () => {
+await check("Tours: home runs 6 steps and sheet 7, skip works, finishing unlocks Silver", async () => {
   for (const [w, h] of [[390, 844], [1280, 800]]) {
     const p = await open(w, h, { touch: w < 700 });
     await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(300);
@@ -431,7 +431,7 @@ await check("Tours: home runs 6 steps and sheet 6, skip works, finishing unlocks
     const st2 = await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-tour-v1")));
     assert(st2.sheet === "skipped", "skip state " + JSON.stringify(st2));
     await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "sheet" } })); await p.waitForSelector("#tour-card");
-    for (let i = 0; i < 6; i++) { const g = await geom(); assert(g.card.t >= 0 && g.card.b <= g.vh + 1 && g.card.r <= g.vw + 1, "sheet card off screen " + i + JSON.stringify(g)); await p.locator('[data-a="tourNext"]').click(); }
+    for (let i = 0; i < 7; i++) { const g = await geom(); assert(g.card.t >= 0 && g.card.b <= g.vh + 1 && g.card.r <= g.vw + 1, "sheet card off screen " + i + JSON.stringify(g)); await p.locator('[data-a="tourNext"]').click(); }
     noErrs(p); await p.context().close();
   }
 });
@@ -874,7 +874,7 @@ await check("random character builds and lands on a sheet", async () => {
 
 await check("a new character always asks which sheet to use, even after a style was chosen (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
-  await clickA(p, "backToRoster"); await clickA(p, "goRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await clickA(p, "randomAll"); await p.waitForTimeout(1500);
+  await p.evaluate(() => CR.ACTIONS.backToRoster()); await clickA(p, "goRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await clickA(p, "randomAll"); await p.waitForTimeout(1500);
   for (let i = 0; i < 12 && !(await p.locator(".stylefull").count()); i++) {
     const nxt = p.locator('[data-a="nextStep"], [data-a="finishCreate"]'); if (!(await nxt.count())) break;
     await nxt.first().click(); await p.waitForTimeout(500);
@@ -1052,7 +1052,7 @@ await check("Graveyard: mark dead (black and white), tombstone, open sheet, revi
   await p.locator("#f-cause").fill("Eaten by a mimic"); await clickA(p, "confirmDead"); await p.waitForTimeout(400);
   assert(await p.locator(".deadbar").count() === 1, "no death banner on the sheet");
   assert(await p.evaluate(() => document.documentElement.classList.contains("dead")), "page is not black and white");
-  await clickA(p, "backToRoster"); await clickA(p, "goRoster"); await p.waitForTimeout(300);
+  await p.evaluate(() => CR.ACTIONS.backToRoster()); await clickA(p, "goRoster"); await p.waitForTimeout(300);
   assert(await p.locator('.rosteritem[data-id="gandork"]').count() === 0, "dead character still in the list");
   assert(!(await p.evaluate(() => document.documentElement.classList.contains("dead"))), "roster should be in colour");
   await clickA(p, "goGraveyard");
@@ -1064,7 +1064,7 @@ await check("Graveyard: mark dead (black and white), tombstone, open sheet, revi
   await clickA(p, "reviveAsk"); await clickA(p, "reviveGo"); await p.waitForTimeout(400);
   assert(await p.locator(".deadbar").count() === 0, "banner after revive");
   assert(!(await p.evaluate(() => document.documentElement.classList.contains("dead"))), "still black and white");
-  await clickA(p, "backToRoster"); await clickA(p, "goRoster");
+  await p.evaluate(() => CR.ACTIONS.backToRoster()); await clickA(p, "goRoster");
   assert(await p.locator('.rosteritem[data-id="gandork"]').count() === 1, "revived character is not back in the list");
   noErrs(p); await p.context().close();
 });
@@ -1348,7 +1348,7 @@ await check("new character: start menu, random with locks, template save and loa
   await p.locator("[data-load-name]").fill("Loaded Hero"); await clickA(p, "loadEdit"); await p.waitForTimeout(300);
   assert(await p.evaluate(() => APP.screen === "create" && APP.createDraft.name === "Loaded Hero"), "edit did not open the builder with the template");
   // create straight from a template
-  await clickA(p, "backToRoster").catch(() => {});
+  await clickA(p, "navBack").catch(() => {});
   await p.evaluate(() => { APP.screen = "roster"; window.CR.render(); });
   await clickA(p, "newChar"); await clickA(p, "startLoad"); await p.locator("#load-code").fill(code); await clickA(p, "loadCode"); await p.waitForTimeout(300);
   await p.locator("[data-load-name]").fill("Template Tessa"); await clickA(p, "loadCreate"); await p.waitForTimeout(800);
@@ -1670,8 +1670,8 @@ await check("Home: 12 characters and 12 campaigns, modes, search, back label", a
     await p.locator('.topbar .btn:has-text("Main menu")').click(); await p.waitForSelector("#home-book");
     assert(await p.locator("#home-grid .hcard.camp").count() === 13, "13th campaign");
     await clickA(p, "homeMode", '[data-v="player"]'); await p.locator("#home-grid .hcard:not(.new)").first().click(); await p.waitForTimeout(400); await pickSheet(p, "classic"); const dbg = await p.evaluate(() => ({ s: APP.screen, m: APP.modal && APP.modal.type, e: document.getElementById("app").innerText.slice(0, 120) })).catch(() => null); await p.waitForSelector(".sheetbar", { timeout: 5000 }).catch(e => { throw new Error("no sheetbar " + JSON.stringify(dbg)); });
-    assert(await p.locator('.sheetbar .btn:has-text("Main menu"):visible').count() === 1, "sheet back label");
-    await p.locator('.sheetbar .btn:has-text("Main menu"):visible').click(); await p.waitForSelector("#home-book");
+    assert(await p.locator('.sheetbar [data-a="navBack"][aria-label="Back to Main menu"]').count() >= 1, "sheet back label");
+    await p.locator('.sheetbar [data-a="navBack"]:visible').first().click(); await p.waitForSelector("#home-book");
     noErrs(p); await p.context().close();
   }
 });
@@ -1717,6 +1717,30 @@ await check("Classic 2.0: conditions above the HP bar change speed, Tools grid, 
   }
 });
 
+await check("Navigation: Back returns to the previous page, the header shows the path, the portrait jumps to the character", async () => {
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await clickA(p, "goRoster"); await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openHp"], .stylefull');
+    if (await p.locator(".stylefull").count()) await pickSheet(p, "classic"); await p.waitForSelector('[data-a="openHp"]');
+    const title = () => p.locator(".sheetbar .sb-phone h1:visible, .sheetbar .sb-wide h1:visible").first().innerText();
+    const sub = () => p.locator(".sheetbar .sb-phone .sub:visible, .sheetbar .sb-wide .sub:visible").first().innerText();
+    assert(await p.locator(".navchar:visible").count() === 1, "portrait button");
+    await p.locator('[data-a="classicSub"][data-sub="gear"]').click(); await p.waitForTimeout(250);
+    await p.locator(".shopban").click(); await p.waitForSelector(".shop-page");
+    if (w < 700) { assert(/Shop/i.test(await title()), "title is the page"); assert(/Gandork.*Gear/.test(await sub()), "path above it: " + await sub()); }
+    else assert(/Gandork.*Gear.*Shop/.test(await sub()), "wide path: " + await sub());
+    await clickA(p, "navBack"); await p.waitForTimeout(300);
+    assert(await p.evaluate(() => APP.sheetTab === "stats" && APP.classicSub === "gear"), "Back from the Shop lands on Gear");
+    await p.evaluate(() => CR.ACTIONS.openPage ? 0 : 0); await p.locator('nav.tabs [data-tab="rules"]:visible').click(); await p.waitForTimeout(300);
+    await p.locator('nav.tabs [data-tab="settings"]:visible').click(); await p.waitForTimeout(300);
+    await clickA(p, "navBack"); await p.waitForTimeout(250); assert(await p.evaluate(() => APP.sheetTab) === "rules", "Back from Settings lands on Rules");
+    await clickA(p, "toCharacter"); await p.waitForTimeout(250); assert(await p.evaluate(() => APP.sheetTab) === "stats", "portrait jumps to the character");
+    await clickA(p, "navBack"); await p.waitForTimeout(300);
+    assert(await p.evaluate(() => APP.screen) === "roster", "Back at the character opens where it was opened from (Characters)");
+    noErrs(p); await p.context().close();
+  }
+});
+
 await check("Help: ? button on every screen, first-run popup, full reset needs a password", async () => {
   const p = await open(390, 844, { touch: true });
   const vis = async where => assert(await p.locator('[data-a="helpOpen"]:visible').count() === 1, "? button missing on " + where);
@@ -1726,7 +1750,7 @@ await check("Help: ? button on every screen, first-run popup, full reset needs a
   await clickA(p, "helpOpen"); assert(await p.locator('.modal [data-a="tourStart"]').count() === 3, "help list on a screen without a tour"); await clickA(p, "closeModal");
   await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openHp"], .stylefull');
   if (await p.locator(".stylefull").count()) await pickSheet(p, "classic"); await p.waitForSelector('[data-a="openHp"]'); await vis("sheet");
-  await clickA(p, "helpOpen"); await p.waitForSelector("#tour-card"); assert(/1 of 6/.test(await p.locator(".tour-prog em").innerText()), "sheet tour from ?"); await p.evaluate(() => CR.ACTIONS.tourSkip());
+  await clickA(p, "helpOpen"); await p.waitForSelector("#tour-card"); assert(/1 of 7/.test(await p.locator(".tour-prog em").innerText()), "sheet tour from ?"); await p.evaluate(() => CR.ACTIONS.tourSkip());
   await p.evaluate(() => { CR.ACTIONS.backToRoster(); CR.ACTIONS.goDmMode(); }); await p.waitForSelector(".dmmode"); await vis("dm");
   await clickA(p, "helpOpen"); await p.waitForSelector("#tour-card"); await p.evaluate(() => CR.ACTIONS.tourSkip());
   await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(200);

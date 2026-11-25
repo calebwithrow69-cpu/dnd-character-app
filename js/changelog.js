@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.77";
+export const VERSION = "0.1.78";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.78",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "Back goes to the page you came from, and the header says where you are.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Back on the sheet returns to the previous page: Gear after the Shop, Character after Notes, Main menu from the character.",
+          "The header shows the page title with its path above it, for example Gandork the Green > Gear.",
+          "Edit is a pencil icon. A portrait button next to it jumps straight back to your character from any page."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.77",
     date: "2026-11-24",

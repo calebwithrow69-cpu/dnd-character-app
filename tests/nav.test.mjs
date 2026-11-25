@@ -1,0 +1,24 @@
+import { here, step, blank, top, label, sheetPath, keyOf } from "../js/nav.js";
+let n = 0; const ok = (c, m) => { if (!c) { console.error("FAIL", m); process.exit(1); } n++; };
+const L = (screen, tab = "", id = "", sub = "") => ({ screen, tab, id, sub });
+let nav = blank();
+const go = (l, back = false) => { nav = step(nav, l, back); };
+go(L("home")); go(L("sheet", "stats", "a", "sheet"));
+ok(nav.stack.length === 1 && keyOf(top(nav)) === keyOf(L("home")), "character pushes home");
+go(L("sheet", "stats", "a", "gear")); ok(nav.stack.length === 1 && nav.last.sub === "gear", "sub tab change is not a move, but is remembered");
+go(L("sheet", "shop", "a")); ok(label(top(nav)) === "Gear", "back from Shop names Gear, got " + label(top(nav)));
+go(L("sheet", "notes", "a")); ok(label(top(nav)) === "Shop" && nav.stack.length === 3, "notes after shop");
+go(L("sheet", "stats", "a", "gear")); ok(label(top(nav)) === "Main menu" && nav.stack.length === 1, "returning to Character drops the pages above it");
+go(L("sheet", "settings", "a")); const t = top(nav); nav = { stack: nav.stack.slice(0, -1), last: nav.last };
+go(L("sheet", "stats", "a", "gear"), true); ok(nav.stack.length === 1 && nav.last.tab === "stats", "back keeps the stack as popped");
+go(L("home")); ok(nav.stack.length === 0, "home clears the stack");
+go(L("roster")); go(L("sheet", "stats", "b", "sheet")); ok(label(top(nav)) === "Characters", "opened from the roster, back says Characters");
+ok(here({ screen: "create", prefs: {} }) === null, "flows are not tracked");
+ok(here({ screen: "sheet", sheetTab: "stats", classicSub: "gear", char: { id: "a" }, prefs: {} }).sub === "gear", "classic sub");
+ok(here({ screen: "sheet", sheetTab: "stats", charSub: "rolls", char: { id: "a" }, prefs: { sheetStyle: "advanced" } }).sub === "rolls", "advanced sub");
+ok(sheetPath("G", L("sheet", "shop")).join(">") === "G>Gear>Shop", "shop path");
+ok(sheetPath("G", L("sheet", "stats", "a", "sheet")).join(">") === "G", "main path is just the name");
+ok(sheetPath("G", L("sheet", "stats", "a", "spells")).join(">") === "G>Spells", "sub path");
+for (let i = 0; i < 30; i++) { go(L("sheet", i % 2 ? "notes" : "settings", "b")); go(L("sheet", "rules", "b")); }
+ok(nav.stack.length <= 20, "stack is capped");
+console.log("nav: " + n + " checks passed");

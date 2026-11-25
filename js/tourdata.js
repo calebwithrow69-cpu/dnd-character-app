@@ -34,6 +34,7 @@ export const TOURS = {
       { sel: 'nav.tabs [data-tab="rules"]', title: "Rules", body: "Every class, spell, item and condition, searchable offline. Notes sits beside it." },
       { sel: ".hubbtn", title: "Tools hub", body: "Dice, conditions, calculator, rest and initiative. Tap, then pick one. The Shop is on the Gear tab." },
       { sel: '[data-a="openEdit"]', title: "Edit character", body: "Level up or lower, add feats, change scores, mark a character as dead." },
+      { sel: ".navchar", title: "Back to character", body: "The portrait jumps straight to your character from any page. The arrow goes back one page." },
       { sel: '[data-a="helpOpen"]', title: "Help", body: "The ? replays this tour. Every screen has one in its header." },
       { sel: 'nav.tabs [data-tab="settings"]', title: "Settings", body: "Sheet style, sounds, rule sets and backups. Backups matter: there is no account behind this app." }
     ]

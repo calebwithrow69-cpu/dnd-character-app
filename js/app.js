@@ -12,6 +12,7 @@ import { captureLevel, diffLevel, deLevel } from "./levelfix.js";
 import { ridersFor, rerollsFor, ensureLuck, shortRestRefill } from "./riders.js";
 import { VERSION, CHANGELOG } from "./changelog.js";
 import { splashPlan } from "./whatsnew.js";
+import { here as navHere, step as navStep, blank as navBlank, top as navTop } from "./nav.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
 import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
@@ -339,6 +340,7 @@ function render() {
   try { renderOnce(); } finally { rendering = false; }
 }
 function renderOnce() {
+  APP.nav = navStep(APP.nav || navBlank(), navHere(APP), APP._navBack); APP._navBack = false;
   persistLevelUp();
   const ae = document.activeElement, fsel = focusSelector(ae);
   const caret = fsel && isTextish(ae) ? [ae.selectionStart, ae.selectionEnd] : null;
@@ -361,7 +363,7 @@ function lockDead() {
   if (["settings", "notes"].includes(APP.sheetTab)) { mount.querySelectorAll(".sheetview [data-a=openEdit]").forEach(el => el.setAttribute("inert", "")); return; }
   mount.querySelectorAll(".sheetview main.page > :not(.deadbar), .sheetview [data-a=openEdit], .sheetview nav").forEach(el => el.setAttribute("inert", ""));
 }
-const DEAD_OK = new Set(["helpOpen", "tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause", "goNotes"]);
+const DEAD_OK = new Set(["helpOpen", "tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "navBack", "toCharacter", "goRoster", "editCause", "goNotes"]);
 const inNotes = () => APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes");
 // Sheet pages (Notes, Shop, Settings) open inside the sheet frame like Rules does.
 function openPage(tab) { closeModal(); APP.selItem = null; APP.hubOpen = false; APP.sheetTab = tab; render(); window.scrollTo(0, 0); }
@@ -1704,6 +1706,19 @@ const ACTIONS = {
   },
 
   // sheet nav
+  // Back: the previous place in the history (Main menu when there is none). The portrait jumps to the character.
+  navBack() {
+    const t = navTop(APP.nav || navBlank());
+    APP.hubOpen = false; closeModal();
+    if (!t || t.screen === "home" || (t.screen === "sheet" && !(APP.char && APP.char.id === t.id))) { ACTIONS.backToRoster(); return; }
+    APP.nav = { stack: APP.nav.stack.slice(0, -1), last: APP.nav.last }; APP._navBack = true;
+    if (t.screen === "sheet") {
+      APP.sheetTab = t.tab; APP.selItem = null;
+      if (t.tab === "stats" && t.sub) { if (APP.prefs.sheetStyle === "advanced") APP.charSub = t.sub; else APP.classicSub = t.sub; }
+    } else { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = t.screen; }
+    render(); window.scrollTo(0, 0);
+  },
+  toCharacter() { if (!APP.char) return; APP.hubOpen = false; closeModal(); APP.selItem = null; APP.sheetTab = "stats"; render(); window.scrollTo(0, 0); },
   backToRoster() { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = "home"; render(); window.scrollTo(0, 0); },
   sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; APP.hubOpen = false; render(); window.scrollTo(0, 0); },
   glCat(el) { const g = glState(APP); Object.assign(g, { cat: el.dataset.cat, picked: true, sel: null, f: {}, sort: "", desc: false, limit: 150 }); glRefresh({ tabs: 1, filters: 1, list: 1, pane: 1 }); },
