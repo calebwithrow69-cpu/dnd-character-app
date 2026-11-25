@@ -220,7 +220,7 @@ function cfgFor(app, d, kind) {
         return { label: vd.label, trait: vd.trait, cur: selectedVariant(app, d, s, vd), options: sortedVariants(vd).map(o => ({ v: o.v, label: o.v, detail: o.detail || "" })), on: d.species === s.name };
       },
       traitsTitle: "Traits and abilities",
-      chips: o => d.class && speciesFit(d.class, o.name) ? [{ label: "Best fit", full: "Best fit for " + d.class, tone: "good" }] : [],
+      chips: o => d.class && speciesFit(d.class, o.name) ? [{ label: "Recommended", full: "Recommended for " + d.class, tone: "good" }] : [],
       fitWord: { good: "Suggested", ok: "", bad: "" }, noFitBlock: true,
       synergyScore: d.class ? o => (speciesFit(d.class, o.name) ? 1 : 0) : undefined,
       synergyGood: o => speciesFit(d.class, o.name),
@@ -594,7 +594,7 @@ export function renderCreate(app) {
         <section class="cx-stage" aria-label="${esc(ch.title)}">
           <div class="steprow" aria-hidden="true">${CHAPTERS.map((_, i) => `<div class="step ${i <= d.chapter ? "done" : ""}"></div>`).join("")}</div>
           ${tools ? `<div class="wiztools">${tools}</div>` : ""}
-          <div class="panel"><div class="panel-body">${ch.help ? `<p class="cx-help">${esc(ch.help)}${LIST_KINDS.includes(id) ? " Select a row to view it, then Choose." : ""}</p>` : ""}${content}</div></div>
+          <div class="panel"><div class="panel-body">${content}</div></div>
         </section>
         <aside class="cx-sheet" aria-label="Your character so far">${sheetInner(app, d, reach)}</aside>
       </div>

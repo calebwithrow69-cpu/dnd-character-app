@@ -2,11 +2,31 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.78";
+export const VERSION = "0.1.79";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.79",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Creation lists fit a 360px phone.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Sort and filter menus wrap instead of cutting off their labels on small phones.",
+          "Choose stays visible above the bottom bar while a class, species or background is open.",
+          "Creation screens lost their intro sentence.",
+          "Home hides the second New character tile and Manage until a character exists.",
+          "Best fit is now Recommended.",
+          "After a pick opens follow-up choices, the first one scrolls into view.",
+          "First-run help appears right after the storage notice, not half a second later."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.78",
     date: "2026-11-24",

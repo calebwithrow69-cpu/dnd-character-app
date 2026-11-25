@@ -42,7 +42,7 @@ export function renderControls(app, cfg) {
         <option value="az" ${u.sort === "az" ? "selected" : ""}>A to Z</option>
         ${cfg.sources ? `<option value="source" ${u.sort === "source" ? "selected" : ""}>Source</option>` : ""}
         <option value="fav" ${u.sort === "fav" ? "selected" : ""}>Favorites first</option>
-        ${cfg.synergyScore ? `<option value="rec" ${u.sort === "rec" ? "selected" : ""}>Best fit</option>` : ""}
+        ${cfg.synergyScore ? `<option value="rec" ${u.sort === "rec" ? "selected" : ""}>Recommended</option>` : ""}
       </select></label>
     <label class="sp-sel"><span>${esc(cfg.filterLabel)}</span>
       <select class="f" data-a="cxFilter" data-kind="${cfg.kind}" aria-label="Filter ${cfg.noun}">
@@ -83,7 +83,7 @@ function traitRow(app, o, t, kind, bundle, defs, vhtml) {
       <span class="grow"><b>${esc(t.name)}</b><small>${esc(t.level > 1 ? "Level " + t.level + (act && t.usage !== "Always on" ? " \u00b7 " + t.usage : "") : t.usage)}</small></span>
       ${tag}<span class="flag ${act ? "act" : "pas"}">${act ? "Ability" : "Trait"}</span>
     </div>
-    <div class="about">${formatText(t.body)}</div>${vhtml ? `<div class="sp-inline">${vhtml}</div>` : ""}${has ? `<div class="sp-inline">${bundle.on ? defs.map(d => bundle.render(d)).join("") : `<p class="sub2">You make this choice here after you choose ${esc(o.name)} below.</p>`}</div>` : ""}
+    <div class="about">${formatText(t.body)}</div>${vhtml ? `<div class="sp-inline">${vhtml}</div>` : ""}${has ? `<div class="sp-inline">${bundle.on ? defs.map(d => bundle.render(d)).join("") : `<p class="sub2">Choose ${esc(o.name)} first</p>`}</div>` : ""}
   </div>`;
 }
 function plainRow(app, o, kind, key, title, text) {
@@ -118,7 +118,7 @@ function detail(app, cfg, o) {
       ${now.map(row).join("")}
       ${later.length ? `<div class="sp-trait ${lopen ? "open" : ""}"><button class="sp-tbtn" data-a="cxTrait" data-key="${esc(lk)}" aria-expanded="${lopen}"><span class="grow"><b>Later levels</b><small>${later.length} more features, levels ${later[0].level} to ${later[later.length - 1].level}</small></span><span class="chev">${I.chev}</span></button>${lopen ? `<div class="sp-later">${later.map(row).join("")}</div>` : ""}</div>` : ""}
     </div>`}
-    ${mt.rest.length && !hidden ? (on ? `<div class="sp-choices"><div class="sp-sechead"><h3>Other choices</h3></div>${mt.rest.map(d => bundle.render(d)).join("")}</div>` : `<p class="sub2 sp-note">After you choose ${esc(o.name)} you also pick: ${esc(mt.rest.map(d => d.label).join(", "))}.</p>`) : ""}
+    ${mt.rest.length && !hidden ? (on ? `<div class="sp-choices"><div class="sp-sechead"><h3>Other choices</h3></div>${mt.rest.map(d => bundle.render(d)).join("")}</div>` : `<p class="sub2 sp-note">Then pick: ${esc(mt.rest.map(d => d.label).join(", "))}</p>`) : ""}
     ${cfg.note ? `<p class="sub2 sp-note">${cfg.note(o)}</p>` : ""}
     <div class="chooserow"><button class="btn pri block" data-a="cxChoose" data-kind="${cfg.kind}" data-name="${esc(o.name)}" ${on ? "disabled" : ""}>${on ? "Chosen" : "Choose " + esc(o.name)}</button></div>
   </div>`;
@@ -133,7 +133,7 @@ export function renderCodexList(app, cfg) {
   if (!items.length) return `<p class="muted small" style="padding:12px 0">No matches.</p>`;
   const src = s => s || "No source";
   const by = (a, b) => a.name.localeCompare(b.name);
-  const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : u.sort === "rec" && cfg.synergyScore ? (cfg.synergyGood(o) ? "Best fit" : "Other") : o.name[0].toUpperCase();
+  const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : u.sort === "rec" && cfg.synergyScore ? (cfg.synergyGood(o) ? "Recommended" : "Other") : o.name[0].toUpperCase();
   items = items.sort((a, b) => {
     if (u.sort === "source") return src(a.source).localeCompare(src(b.source)) || by(a, b);
     if (u.sort === "fav") return (fav.includes(b.name) - fav.includes(a.name)) || by(a, b);

@@ -242,9 +242,13 @@ function maybeAutoTour() {
     if (APP.modal || tourActive() || APP.screen !== sc) return;
     if (id === "intro") { if (!helpSeen()) openModal({ type: "helpIntro" }); }
     else if (tourUnseen(id)) startTour(id);
-  }, id === "intro" ? 500 : 900);
+  }, id === "intro" ? 60 : 900);
 }
 // The ? button lives in each screen's header (topbar, sheet bar, Home, Characters). No floating copy.
+function syncBarHeight() {
+  const b = document.querySelector(".stickybar");
+  document.documentElement.style.setProperty("--sbar-h", b ? b.offsetHeight + "px" : "0px");
+}
 function syncHelpBtn() {
   const old = document.getElementById("help-btn");
   if (old) old.remove();
@@ -349,6 +353,7 @@ function renderOnce() {
   maybeStorageIntro();
   maybeAutoTour();
   syncHelpBtn();
+  syncBarHeight();
   if (fsel) {
     const el = document.querySelector(fsel);
     if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); if (caret && el.setSelectionRange) try { el.setSelectionRange(caret[0], caret[1]); } catch (e) { } }
@@ -1611,6 +1616,11 @@ const ACTIONS = {
     });
     d.classSkills = d.classSkills.filter(sk => !takenSkills(APP, d).includes(sk));
     render();
+    // a pick can open follow-up choices below it: bring the first unanswered one into view
+    if (next != null) requestAnimationFrame(() => {
+      const f = [...document.querySelectorAll('[data-a="pick"]')].find(b => b.dataset.id.startsWith(id + ">") && b.getAttribute("aria-pressed") !== "true");
+      if (f) f.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
   },
   bonusMode(el) { APP.createDraft.bonusMode = el.dataset.mode; render(); },
   standardArray() { applyStandardArray(APP.createDraft, APP); APP._cxSwap = null; render(); toast("Standard array placed"); },

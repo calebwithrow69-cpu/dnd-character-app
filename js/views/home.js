@@ -61,7 +61,7 @@ export function homeGrid(app) {
       <span class="hc-ic" style="--eh:${e.hue}">${emblem("class", c.class)}</span><span class="hc-b"><b>${esc(c.name || "Unnamed")}</b><small>${esc([`Lv ${c.level || 1}`, c.class].filter(Boolean).join(" "))}</small>
       <span class="cbar"><i class="${pct < 30 ? "low" : ""}" style="width:${pct}%"></i></span></span></button>`;
   }).join("");
-  return cards + (q ? "" : `<button class="hcard new press" data-a="newCharHome">${PLUS}<span>New character</span></button>`);
+  return cards + (q || !cards ? "" : `<button class="hcard new press" data-a="newCharHome">${PLUS}<span>New character</span></button>`);
 }
 
 export function renderHome(app) {
@@ -94,7 +94,7 @@ export function renderHome(app) {
       <div class="seg hmode" role="group" aria-label="Mode"><button data-a="homeMode" data-v="player" aria-pressed="${mode === "player"}">Player</button><button data-a="homeMode" data-v="dm" aria-pressed="${mode === "dm"}">DM</button></div>
       ${hero}
       <section class="hsec" aria-label="${mode === "dm" ? "Campaigns" : "Characters"}">
-        <div class="hsec-h"><h2>${mode === "dm" ? "Campaigns" : "Characters"}<em>${count}</em></h2>${mode === "player" ? `<button class="btn sm ghost" data-a="goRoster">Manage</button>` : ""}</div>
+        <div class="hsec-h"><h2>${mode === "dm" ? "Campaigns" : "Characters"}<em>${count}</em></h2>${mode === "player" && n > 0 ? `<button class="btn sm ghost" data-a="goRoster">Manage</button>` : ""}</div>
         ${count >= GRID_SEARCH_MIN ? `<input class="f hsearch" id="home-q" data-query="homeq" type="search" placeholder="${mode === "dm" ? "Search campaigns" : "Search characters"}" value="${esc(app.homeQ || "")}" autocomplete="off">` : ""}
         <div class="hgrid" id="home-grid">${homeGrid(app)}</div>
       </section>
