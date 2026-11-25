@@ -1967,6 +1967,8 @@ body.cx-on .btn.incomplete{opacity:.6}
 /* Sheet header buttons stay legible in both themes (the accent label colour was winning over the card label colour) */
 .sheetbar .iconbtn,.sheetbar .btn,.sheetbar .btn:not(.pri):not(.danger):not(.ghost){color:var(--card-ink);background:#ffffff18;border-color:#ffffff33}
 .sheetbar .iconbtn:hover,.sheetbar .btn:hover{background:#ffffff2a;border-color:#ffffff55}
+.modal-head .iconbtn{color:var(--card-ink);background:#ffffff18;border-color:#ffffff33}
+.modal-head .iconbtn:hover{background:#ffffff2a;border-color:#ffffff55}
 .sp-warn{display:flex;align-items:flex-start;gap:8px;align-self:stretch;text-align:left;margin-top:6px;padding:8px 10px;border:1px solid var(--edge);border-radius:var(--radius-sm);font-size:.82rem;color:var(--ink)}
 .sp-warn i{flex:none;width:18px;height:18px;border-radius:50%;background:var(--amber);color:var(--amber-ink);font:700 .75rem/18px var(--mono);font-style:normal;text-align:center}
 

@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.83";
+export const VERSION = "0.1.84";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.84",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Close buttons visible in the light theme. First-run notices close.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "The X on pop-ups was invisible in the light theme.",
+          "The install and storage notices closed with X, then reopened at once. They now stay closed until the next launch.",
+          "Full backup file names list the character names, for example character-runner-Gandork-the-Green-Tark-2026-11-25.json."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.83",
     date: "2026-11-25",

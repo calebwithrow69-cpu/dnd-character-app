@@ -227,11 +227,12 @@ function needsInstallIntro() {
   return !installAcked() && !i.standalone && !window.__memStore;
 }
 function maybeStorageIntro() {
-  if (APP.screen !== "home" || APP.modal || APP._storagePending || storageAcked() || navigator.webdriver) return;
+  if (APP.screen !== "home" || APP.modal || APP._storagePending || APP._introShown || storageAcked() || navigator.webdriver) return;
   APP._storagePending = true;
   setTimeout(() => {
     APP._storagePending = false;
     if (APP.modal || APP.screen !== "home" || storageAcked()) return;
+    APP._introShown = true; // closing with X ends it for this launch; it comes back next launch until acknowledged
     openModal(needsInstallIntro() ? { type: "install" } : { type: "storage", first: true });
   }, 350);
 }
@@ -707,6 +708,20 @@ async function shareOrDownload(filename, text) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   toast("Backup saved to your downloads");
+}
+// File-name label for a full backup: character names that fit in 40 characters, then "+N" for the rest.
+function backupLabel(chars) {
+  const names = chars.map(c => String(c.name || "").replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "")).filter(Boolean);
+  if (!names.length) return "backup";
+  let out = "", used = 0;
+  for (const n of names) {
+    const next = out ? out + "-" + n : n;
+    if (next.length > 40) break;
+    out = next; used++;
+  }
+  if (!used) { out = names[0].slice(0, 40); used = 1; }
+  const more = names.length - used;
+  return more > 0 ? (out ? out + "-" : "") + "+" + more : out;
 }
 function exportChars(ids, label) {
   const stamp = dateStamp();
@@ -1321,7 +1336,7 @@ const ACTIONS = {
   dismissInstall() { APP.installDismissed = true; try { localStorage.setItem(LS_INSTALL, "1"); } catch (e) { } render(); },
   openSettings() { if (APP.char && APP.screen === "sheet") openPage("settings"); else openModal({ type: "settings" }); },
   importPrompt() { importPrompt(); },
-  exportAll() { exportChars(null, "backup"); APP.prefs.lastBackup = Date.now(); savePrefs(); },
+  exportAll() { exportChars(null, backupLabel(store.listCharacters())); APP.prefs.lastBackup = Date.now(); savePrefs(); },
   setTheme(el) { APP.prefs.theme = el.dataset.v; savePrefs(); applyPrefs(); render(); },
   setSize(el) { APP.prefs.size = el.dataset.v; savePrefs(); applyPrefs(); render(); },
   openBreakdown() { openModal({ type: "breakdown" }); },
