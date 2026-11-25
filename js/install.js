@@ -64,11 +64,7 @@ export function downloadShortcut() {
 }
 
 // The card. compact = roster (dismissable); otherwise the Settings version.
-export function installCard(app, { inSettings = false } = {}) {
-  const i = installInfo();
-  if (i.standalone) return inSettings ? `<p class="small">Installed. Open it from its icon any time — it works with no internet.</p>` : "";
-  if (!inSettings && app.installDismissed) return "";
-  const after = `<p class="small muted" style="margin-top:8px">Then it's one tap to open, and it works with no internet. Your characters stay on this device only.</p>`;
+export function installBody(i = installInfo()) {
   let body;
   if (i.inApp) {
     body = `<p>You opened this inside another app (like Facebook or Messenger), which can't install it.</p>
@@ -92,6 +88,15 @@ export function installCard(app, { inSettings = false } = {}) {
       <div class="btnrow"><button class="btn pri" data-a="downloadShortcut">Download desktop shortcut</button></div>
       <p class="small muted" style="margin-top:6px">Move the downloaded file to your Desktop. It opens in your normal browser.</p>`;
   }
+  return body;
+}
+
+export function installCard(app, { inSettings = false } = {}) {
+  const i = installInfo();
+  if (i.standalone) return inSettings ? `<p class="small">Installed. Open it from its icon any time — it works with no internet.</p>` : "";
+  if (!inSettings && app.installDismissed) return "";
+  const after = `<p class="small muted" style="margin-top:8px">Then it's one tap to open, and it works with no internet. Your characters stay on this device only.</p>`;
+  const body = installBody(i);
   const phone = `<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><h3 style="font-size:.95rem;margin:0 0 8px">Open on your phone</h3>${phoneLaunch(app)}</div>`;
   if (inSettings) return body + after + phone;
   return `<div class="callout installcard"><h3>Make it one tap to open</h3>${body}${after}${phone}

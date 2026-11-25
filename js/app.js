@@ -27,7 +27,7 @@ import { toast, platform, dateStamp, setGlossary, glossaryEntry, formatText, esc
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
 import { renderHome, renderRulesPage, lastCharacter, homeGrid } from "./views/home.js";
-import { promptInstall, downloadShortcut, appUrl } from "./install.js";
+import { promptInstall, downloadShortcut, appUrl, installInfo } from "./install.js";
 import { trashAdd, trashTake, trashList } from "./trash.js";
 import { deviceInfo, assess } from "./storagerisk.js";
 import { renderCreate, renderWizardResults, listItems, chapterId, reachIndex, prepareChoiceContext, cxAfterRender, cxRefreshSheet, openChoiceTraits, cxFlagNeed, flagEl } from "./views/create.js";
@@ -219,10 +219,21 @@ async function init() {
 // ---------------- storage explainer ----------------
 const LS_STORAGE_INTRO = "dnd-storage-intro-v1";
 function storageAcked() { try { return !!localStorage.getItem(LS_STORAGE_INTRO); } catch (e) { return false; } }
+const LS_INSTALL_INTRO = "dnd-install-intro-v1";
+function installAcked() { try { return !!localStorage.getItem(LS_INSTALL_INTRO); } catch (e) { return true; } }
+// First visit: install steps for this device, then the storage notice. Skipped when already installed.
+function needsInstallIntro() {
+  const i = installInfo();
+  return !installAcked() && !i.standalone && !window.__memStore;
+}
 function maybeStorageIntro() {
   if (APP.screen !== "home" || APP.modal || APP._storagePending || storageAcked() || navigator.webdriver) return;
   APP._storagePending = true;
-  setTimeout(() => { APP._storagePending = false; if (!APP.modal && APP.screen === "home" && !storageAcked()) openModal({ type: "storage", first: true }); }, 350);
+  setTimeout(() => {
+    APP._storagePending = false;
+    if (APP.modal || APP.screen !== "home" || storageAcked()) return;
+    openModal(needsInstallIntro() ? { type: "install" } : { type: "storage", first: true });
+  }, 350);
 }
 
 // First-run help: a note about the ? button, then each tour starts by itself the first time its screen opens.
@@ -1298,6 +1309,7 @@ const ACTIONS = {
     const ok = await promptInstall();
     if (ok === null) toast("Use your browser's menu to install");
     else if (ok) toast("Installed");
+    if (APP.modal && APP.modal.type === "install") ACTIONS.installAck();
     render();
   },
   downloadShortcut() { const n = downloadShortcut(); toast(`Saved "${n}" — move it to your Desktop`); },
@@ -1764,6 +1776,11 @@ const ACTIONS = {
     toast(`${c.name} is back`);
   },
   openStorageInfo() { openModal({ type: "storage" }); },
+  installAck() {
+    try { localStorage.setItem(LS_INSTALL_INTRO, String(Date.now())); } catch (e) { }
+    closeModal();
+    if (!storageAcked()) openModal({ type: "storage", first: true });
+  },
   storageAck() {
     try { localStorage.setItem(LS_STORAGE_INTRO, String(Date.now())); } catch (e) { }
     closeModal();

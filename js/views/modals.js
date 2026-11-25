@@ -13,7 +13,7 @@ import { SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, slotsOf, fitsOk, wearKind
 import { formatText, infoRow, conditionIcon, glossaryEntry } from "../ui.js";
 import { detailFor, renderSpellResults, renderGearResults, acBody } from "./sheet.js";
 import { getCredits } from "../dice.js";
-import { installCard } from "../install.js";
+import { installCard, installBody, installInfo } from "../install.js";
 import { renderSettingsModal, renderChangelogModal } from "./settings.js";
 import { xpForLevel } from "../rules.js";
 import { ABILITIES as ABS, ABILITY_LABEL as ABL, SKILLS as SKS } from "../rules.js";
@@ -111,6 +111,7 @@ export function renderModal(app) {
     }
 
     case "confirmDelete": return renderConfirmDelete(app);
+    case "install": return renderInstallIntro(app);
     case "storage": return renderStorage(app);
     case "trash": return renderTrash(app);
     case "confirmStyle": {
@@ -519,6 +520,13 @@ function renderConfirmDelete(app) {
      <label class="field" style="display:block;margin-top:12px"><span class="sub2">Type ${shown} to confirm</span>
        <input class="f" id="del-name" data-del-name autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Character name"></label>`,
     `<button class="btn" data-a="cancelDelete">Keep</button><button class="btn danger" id="del-go" data-a="deleteChar" disabled>Delete</button>`);
+}
+
+function renderInstallIntro(app) {
+  const i = installInfo();
+  const line = [i.device, i.browser].filter(x => x && x !== "this device" && x !== "your browser").join(" \u00b7 ");
+  const body = `<div class="stor">${line ? `<p class="sub2">${esc(line)}</p>` : ""}<div class="installcard">${installBody(i)}</div></div>`;
+  return modalShell("Install The Sheet", body, `<button class="btn pri" data-a="installAck">${i.canPrompt && !i.inApp ? "Not now" : "Done"}</button>`, "stormodal");
 }
 
 function renderStorage(app) {

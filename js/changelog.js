@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.81";
+export const VERSION = "0.1.82";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.82",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Install steps on first visit.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "First visit shows how to install on your device: iPhone, Android, or computer.",
+          "Install button where the browser allows it."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.81",
     date: "2026-11-25",
