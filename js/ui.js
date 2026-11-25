@@ -208,6 +208,7 @@ export const ICONS = {
   search: svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'),
   check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
   close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+  help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.4 9.3a2.7 2.7 0 015.2.9c0 1.8-2.6 2.3-2.6 4M12 17.2h.01"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
   sword: svg('<path d="M14.5 4L20 4l0 5.5L9 20.5 6 20l-.5-3z"/><path d="M5 15l-2 2 3 3 2-2"/>'),
   bolt: svg('<path d="M13 2L4 14h6l-1 8 9-12h-6z" class="fill"/>'),

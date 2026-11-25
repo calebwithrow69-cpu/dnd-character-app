@@ -41,6 +41,12 @@ export function renderModal(app) {
   if (!m) return "";
   const c = app.char;
   switch (m.type) {
+    case "helpIntro": return modalShell("Need help?", `<div class="helpintro"><span class="hi-q">${ICONS.help}</span><p>Look for the ? symbol if you are ever lost or confused.</p></div>`, `<button class="btn" data-a="helpIntroSkip">Skip tour</button><button class="btn pri" data-a="helpIntroGo">Start tour</button>`);
+    case "help": return modalShell("Help", `<div class="stack"><button class="btn block" data-a="tourStart" data-id="home">Home tour</button><button class="btn block" data-a="tourStart" data-id="sheet">Sheet tour</button><button class="btn block" data-a="tourStart" data-id="dm">DM tour</button></div>`, `<button class="btn" data-a="closeModal">Done</button>`);
+    case "resetApp": return modalShell("Reset app", `<div class="stack"><p class="sub2">Erases every character, note and setting on this device.</p>
+      <div class="field"><label for="f-reset">Group password</label><input class="f" id="f-reset" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" ${app.resetBusy ? "disabled" : ""}></div>
+      ${app.resetError ? `<p class="small" style="color:var(--red)">${esc(app.resetError)}</p>` : ""}</div>`,
+      `<button class="btn" data-a="closeModal">Cancel</button><button class="btn danger" data-a="resetAppGo" ${app.resetBusy ? "disabled" : ""}>${app.resetBusy ? "Checking" : "Erase everything"}</button>`);
     case "tool": return renderToolModal(app, c, deriveCharacter(c));
     case "detail": {
       const d = detailFor(app, m.kind, m.name, m.i, m.from);

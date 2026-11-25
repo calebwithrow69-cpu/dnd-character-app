@@ -284,7 +284,7 @@ await check("DM tour: every step finds its target, tabs follow", async () => {
   for (const [w, h] of [[1280, 720], [390, 844]]) {
     const p = await open(w, h, { touch: w < 700 });
     await p.evaluate(() => CR.ACTIONS.goDmMode()); await p.waitForSelector(".dmmode");
-    assert(await p.locator('[data-a="tourStart"][data-id="dm"]').count() === 1, "tutorial button");
+    assert(await p.locator('#help-btn:visible').count() === 1, "help button on the DM screen");
     await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "dm" } })); await p.waitForSelector("#tour-card");
     const n = parseInt((await p.locator(".tour-prog em").innerText()).split(" of ")[1]);
     assert(n >= 7, "steps " + n);
@@ -419,7 +419,7 @@ await check("Tours: home runs 6 steps and sheet 4, skip works, finishing unlocks
     const st = await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-tour-v1")));
     assert(st.home === "done" && st.earned, "state " + JSON.stringify(st));
     await p.evaluate(() => CR.ACTIONS.openSettings()); await p.waitForTimeout(300);
-    assert(await p.locator('[data-a="tourStart"]').count() === 2, "replay buttons");
+    assert(await p.locator('[data-a="tourStart"]').count() === 3, "replay buttons");
     assert(await p.locator('[data-k="accent"] [data-v="silver"], [data-pref="accent"][data-v="silver"], button:has-text("Silver")').count() > 0, "Silver option missing");
     await p.evaluate(() => CR.ACTIONS.closeModal && CR.ACTIONS.closeModal());
     // sheet tour, skip with Escape on step 2
@@ -639,7 +639,8 @@ await check("Content update: stays pending until Done, with a Home banner; never
   assert(!/Content update/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")) && await p.locator('.hwarn[data-a="openUpdate"]').count() === 0, "a new device gets neither popup nor banner");
   assert(await p.locator(".stormodal").count() === 1, "a new device gets the storage explainer");
   await p.evaluate(() => localStorage.setItem("dnd-storage-intro-v1", "1")); await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(700);
-  assert(await p.locator(".modal").count() === 0, "acknowledged: no popup on a new device");
+  assert(await p.locator(".modal").count() === 0 || /need help/i.test(await p.locator(".modal-head h2").innerText()), "acknowledged: only the first-run help note on a new device: " + await p.locator(".modal").first().innerText());
+  if (await p.locator('[data-a="helpIntroSkip"]').count()) await clickA(p, "helpIntroSkip");
   await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => localStorage.removeItem("dnd-update-seen"));
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(600);
   assert(/What.s new/i.test(await p.locator(".modal-head h2").innerText().catch(() => "")) && await p.locator(".wn-rules").count() === 1, "an existing player gets the update window with the rule changes");
@@ -1703,6 +1704,40 @@ await check("Classic 2.0: conditions above the HP bar change speed, Tools grid, 
     assert(!(await hscroll(p) > 0), "sideways scroll " + w);
     assert(p.errs.length === 0, p.errs.join(" || ")); await p.context().close();
   }
+});
+
+await check("Help: ? button on every screen, first-run popup, full reset needs a password", async () => {
+  const p = await open(390, 844, { touch: true });
+  const vis = async where => assert(await p.locator("#help-btn:visible").count() === 1, "? button missing on " + where);
+  await vis("home");
+  assert((await p.locator("#help-btn").getAttribute("aria-label")) === "Help", "label");
+  await clickA(p, "goRoster"); await vis("roster");
+  await clickA(p, "helpOpen"); assert(await p.locator('.modal [data-a="tourStart"]').count() === 3, "help list on a screen without a tour"); await clickA(p, "closeModal");
+  await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openHp"], .stylefull');
+  if (await p.locator(".stylefull").count()) await pickSheet(p, "classic"); await p.waitForSelector('[data-a="openHp"]'); await vis("sheet");
+  await clickA(p, "helpOpen"); await p.waitForSelector("#tour-card"); assert(/1 of 4/.test(await p.locator(".tour-prog em").innerText()), "sheet tour from ?"); await p.evaluate(() => CR.ACTIONS.tourSkip());
+  await p.evaluate(() => { CR.ACTIONS.backToRoster(); CR.ACTIONS.goDmMode(); }); await p.waitForSelector(".dmmode"); await vis("dm");
+  await clickA(p, "helpOpen"); await p.waitForSelector("#tour-card"); await p.evaluate(() => CR.ACTIONS.tourSkip());
+  await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(200);
+  await p.evaluate(() => CR.ACTIONS.openSettings && CR.ACTIONS.openSettings()); await p.waitForTimeout(300);
+  await p.locator('summary:has-text("Reset and repair")').click(); await p.waitForTimeout(200);
+  await p.locator('[data-a="resetAppOpen"]').click(); await p.waitForSelector("#f-reset");
+  await p.locator('[data-a="resetAppGo"]').click(); await p.waitForTimeout(200);
+  assert(/Enter the password/.test(await p.locator(".modal").innerText()), "empty password refused");
+  await p.evaluate(() => CR.ACTIONS.closeModal()); await p.evaluate(() => { CR.ACTIONS.helpIntroSkip && 0; APP.modal = { type: "helpIntro" }; CR.render(); });
+  assert(/\?/.test(await p.locator(".helpintro p").innerText()) && /Look for the \? symbol/.test(await p.locator(".helpintro p").innerText()), "first-run note names the ? symbol");
+  await p.locator('[data-a="helpIntroGo"]').click(); await p.waitForSelector("#tour-card"); assert(/1 of 6/.test(await p.locator(".tour-prog em").innerText()), "home tour starts from the popup"); await p.evaluate(() => CR.ACTIONS.tourSkip());
+  assert(p.errs.length === 0, p.errs.join(" || ")); await p.context().close();
+});
+
+await check("Help: reset app erases characters and settings", async () => {
+  const p = await open(390, 844, { touch: true }); await openSample(p);
+  await p.evaluate(() => { CR.ACTIONS.backToRoster(); CR.ACTIONS.resetAppOpen(); });
+  await p.waitForSelector("#f-reset"); await p.locator("#f-reset").fill("anything");
+  await Promise.all([p.waitForNavigation({ timeout: 20000 }).catch(() => { }), p.locator('[data-a="resetAppGo"]').click()]);
+  await p.waitForSelector("#home-book", { timeout: 15000 }); await p.waitForTimeout(500);
+  const left = await p.evaluate(() => ({ roster: Object.keys(JSON.parse(localStorage.getItem("dnd-roster-v1") || "{}")).length, keys: Object.keys(localStorage).filter(k => !/^dnd-(roster|prefs|active)/.test(k)).length }));
+  assert(left.roster === 0, "characters erased " + JSON.stringify(left)); await p.context().close();
 });
 
 await browser.close(); server.close(); rmSync(tmp, { recursive: true, force: true });

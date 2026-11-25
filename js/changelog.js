@@ -2,11 +2,34 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.74";
+export const VERSION = "0.1.75";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.75",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "Help button on every screen, tours that start themselves, and a full reset.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "A ? button on every screen replays the tour for that screen, or lists the tours.",
+          "First launch shows a note about the ? button, then the Home tour starts. The sheet and DM tours start the first time those screens open.",
+          "Settings > Reset and repair > Reset app erases everything on the device after the group password."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "The DM tutorial icon is gone from the DM header; the ? button replaces it.",
+          "The heavy damage sound is a third quieter."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.74",
     date: "2026-11-24",

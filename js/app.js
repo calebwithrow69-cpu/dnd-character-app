@@ -1,4 +1,4 @@
-import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword, normalizeSubclass, setSubclassAllow } from "./data.js";
+import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword, verifyPassword, normalizeSubclass, setSubclassAllow } from "./data.js";
 import * as store from "./store.js";
 import { feedback, sfx, setSfxEnabled, setHaptics, setVolume, preloadSamples } from "./sfx.js";
 import { mountHp, unmountHp, applyHp as hpFx } from "./hpbar.js";
@@ -224,15 +224,32 @@ function maybeStorageIntro() {
   setTimeout(() => { APP._storagePending = false; if (!APP.modal && APP.screen === "home" && !storageAcked()) openModal({ type: "storage", first: true }); }, 350);
 }
 
-// The sheet tour is offered once, the first time a character opens on this device.
-function maybeSheetTour() {
-  if (APP.screen !== "sheet" || !APP.char || APP.char.dead || APP.modal || APP.sheetTab !== "stats" || APP._tourPending) return;
-  if (navigator.webdriver || !storageAcked() || !tourUnseen("sheet") || tourActive() || !document.querySelector(".status .vitals, .sheetbar")) return;
+// First-run help: a note about the ? button, then each tour starts by itself the first time its screen opens.
+const LS_HELP_INTRO = "dnd-help-intro-v1";
+const helpSeen = () => { try { return !!localStorage.getItem(LS_HELP_INTRO); } catch (e) { return true; } };
+function maybeAutoTour() {
+  if (navigator.webdriver || APP._tourPending || APP.modal || tourActive() || !storageAcked()) return;
+  const sc = APP.screen;
+  let id = null;
+  if (sc === "home") id = !helpSeen() ? "intro" : tourUnseen("home") ? "home" : null;
+  else if (sc === "dmmode" && APP.dmm && tourUnseen("dm")) id = "dm";
+  else if (sc === "sheet" && APP.char && !APP.char.dead && APP.sheetTab === "stats" && tourUnseen("sheet") && document.querySelector(".status .vitals, .sheetbar")) id = "sheet";
+  if (!id) return;
   APP._tourPending = true;
   setTimeout(() => {
     APP._tourPending = false;
-    if (APP.screen === "sheet" && APP.sheetTab === "stats" && !APP.modal && !tourActive() && tourUnseen("sheet")) startTour("sheet");
-  }, 900);
+    if (APP.modal || tourActive() || APP.screen !== sc) return;
+    if (id === "intro") { if (!helpSeen()) openModal({ type: "helpIntro" }); }
+    else if (tourUnseen(id)) startTour(id);
+  }, id === "intro" ? 500 : 900);
+}
+// One ? button on every screen. It replays the tour for the screen you are on.
+function syncHelpBtn() {
+  let b = document.getElementById("help-btn");
+  if (!b) { b = document.createElement("button"); b.id = "help-btn"; b.type = "button"; b.dataset.a = "helpOpen"; b.setAttribute("aria-label", "Help"); b.innerHTML = ICONS.help; document.body.appendChild(b); }
+  const hide = !APP.screen || APP.screen === "locked" || APP.screen === "dmview" || tourActive();
+  b.hidden = hide;
+  b.classList.toggle("nav", APP.screen === "sheet" || APP.screen === "dmmode");
 }
 
 // ---------------- render ----------------
@@ -331,7 +348,8 @@ function renderOnce() {
   pendingRender = false;
   renderNow();
   maybeStorageIntro();
-  maybeSheetTour();
+  maybeAutoTour();
+  syncHelpBtn();
   if (fsel) {
     const el = document.querySelector(fsel);
     if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); if (caret && el.setSelectionRange) try { el.setSelectionRange(caret[0], caret[1]); } catch (e) { } }
@@ -346,7 +364,7 @@ function lockDead() {
   if (["settings", "notes"].includes(APP.sheetTab)) { mount.querySelectorAll(".sheetview [data-a=openEdit]").forEach(el => el.setAttribute("inert", "")); return; }
   mount.querySelectorAll(".sheetview main.page > :not(.deadbar), .sheetview [data-a=openEdit], .sheetview nav").forEach(el => el.setAttribute("inert", ""));
 }
-const DEAD_OK = new Set(["tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause", "goNotes"]);
+const DEAD_OK = new Set(["helpOpen", "tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause", "goNotes"]);
 const inNotes = () => APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes");
 // Sheet pages (Notes, Shop, Settings) open inside the sheet frame like Rules does.
 function openPage(tab) { closeModal(); APP.selItem = null; APP.sheetTab = tab; render(); window.scrollTo(0, 0); }
@@ -1112,6 +1130,27 @@ const ACTIONS = {
     if (!APP.seedGandork) return;
     store.saveCharacter(store.normalize(APP.seedGandork, APP.library));
     toast("Added Gandork"); render();
+  },
+  helpOpen() {
+    const sc = APP.screen;
+    if (sc === "home") ACTIONS.tourStart({ dataset: { id: "home" } });
+    else if (sc === "sheet" && APP.char) ACTIONS.tourStart({ dataset: { id: "sheet" } });
+    else if (sc === "dmmode") ACTIONS.tourStart({ dataset: { id: "dm" } });
+    else openModal({ type: "help" });
+  },
+  helpIntroGo() { try { localStorage.setItem(LS_HELP_INTRO, String(Date.now())); } catch (e) { } closeModal(); setTimeout(() => startTour("home"), 80); },
+  helpIntroSkip() { try { localStorage.setItem(LS_HELP_INTRO, String(Date.now())); } catch (e) { } tourMark("home", "skipped"); closeModal(); },
+  resetAppOpen() { APP.resetError = ""; APP.resetBusy = false; openModal({ type: "resetApp" }); setTimeout(() => { const f = document.getElementById("f-reset"); if (f) f.focus(); }, 60); },
+  async resetAppGo() {
+    const pw = (document.getElementById("f-reset") || {}).value || "";
+    if (!pw.trim() || APP.resetBusy) { APP.resetError = "Enter the password"; render(); return; }
+    APP.resetBusy = true; APP.resetError = ""; render();
+    const ok = await verifyPassword(pw);
+    if (ok !== true) { APP.resetBusy = false; APP.resetError = ok === false ? "Wrong password" : "Can't check offline"; render(); return; }
+    try { Object.keys(localStorage).forEach(k => localStorage.removeItem(k)); sessionStorage.clear(); } catch (e) { /* ignore */ }
+    try { const dbs = indexedDB.databases ? await indexedDB.databases() : [{ name: "dnd-kv" }, { name: "dnd-portraits" }]; await Promise.all(dbs.map(d => new Promise(r => { const q = indexedDB.deleteDatabase(d.name); q.onsuccess = q.onerror = q.onblocked = () => r(); }))); } catch (e) { /* ignore */ }
+    try { if (navigator.serviceWorker) await Promise.all((await navigator.serviceWorker.getRegistrations()).map(r => r.unregister())); if (window.caches) await Promise.all((await caches.keys()).map(k => caches.delete(k))); } catch (e) { /* ignore */ }
+    location.replace(location.pathname);
   },
   tourStart(el) {
     const id = el.dataset.id;

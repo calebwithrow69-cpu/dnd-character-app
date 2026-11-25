@@ -10,12 +10,8 @@ function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (
 export function tourUnseen(id) { return !!TOURS[id] && !tourState()[id]; }
 export function tourMark(id, status) { const s = tourState(); s[id] = status; save(s); }
 export function rewardEarned() { return !!tourState().earned; }
-export function tourCard(id) {
-  if (!tourUnseen(id) || (typeof navigator !== "undefined" && navigator.webdriver)) return "";
-  const t = TOURS[id], n = t.steps.length;
-  return `<div class="tourcard" role="region" aria-label="${t.name}"><div class="tc-t"><b>${t.name}</b><span>${n} steps</span></div>
-    <div class="tc-b"><button class="btn sm pri" data-a="tourStart" data-id="${id}">Start</button><button class="btn sm" data-a="tourLater" data-id="${id}">Skip</button></div></div>`;
-}
+// Tours start themselves the first time (app.js maybeAutoTour); the ? button replays them. Kept so older views still import it.
+export function tourCard() { return ""; }
 
 let run = null; // { id, i }
 // A step can name a place to be in first (st.go); the app supplies the mover.

@@ -116,12 +116,16 @@ export function settingsBody(app) {
     `<div class="setrow col" data-s="clear cache offline fix troubleshoot reload">
       <div class="setinfo"><div class="setlabel">Fix a broken install</div><div class="sethint">Characters stay. Password again.</div></div>
       <button class="btn block danger" data-a="clearOffline">Clear cache and reload</button>
+    </div>` +
+    `<div class="setrow col" data-s="reset app erase wipe fresh start delete everything">
+      <div class="setinfo"><div class="setlabel">Reset app</div><div class="sethint">Erases everything on this device. Needs the group password.</div></div>
+      <button class="btn block danger" data-a="resetAppOpen">Reset app</button>
     </div>`;
 
   const tourRow =
     `<div class="setrow col" data-s="tour guide help walkthrough replay silver reward">
       <div class="setinfo"><div class="setlabel">Tours</div><div class="sethint">${rewardEarned() ? "Silver accent unlocked." : "Finish one to unlock the Silver accent."}</div></div>
-      <div class="btnrow"><button class="btn" data-a="tourStart" data-id="home">Home tour</button><button class="btn" data-a="tourStart" data-id="sheet">Sheet tour</button></div>
+      <div class="btnrow"><button class="btn" data-a="tourStart" data-id="home">Home tour</button><button class="btn" data-a="tourStart" data-id="sheet">Sheet tour</button><button class="btn" data-a="tourStart" data-id="dm">DM tour</button></div>
     </div>`;
   const experimental = sw("experimental", "Loot boxes", "Adds a Loot boxes shelf to the Shop", !!p.experimental, { kw: "experimental beta gamble random" });
   const about =

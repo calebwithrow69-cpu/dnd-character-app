@@ -2930,3 +2930,13 @@ button.vcard:hover{background:var(--tile)}
 .pbox.hd{grid-column:1/-1}
 @media (min-width:900px){.pbox.hd{grid-column:auto}}
 .pbox.hd .btnrow{justify-content:center}
+/* Help button on every screen */
+#help-btn{position:fixed;left:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--amber);border:1.5px solid var(--amber);box-shadow:0 4px 14px rgba(0,0,0,.28)}
+#help-btn[hidden]{display:none}
+#help-btn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#help-btn.nav{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+@media (min-width:1100px){#help-btn.nav{bottom:24px;left:36px}}
+.helpintro{display:flex;align-items:center;gap:14px}
+.helpintro p{margin:0;font-size:1.05rem}
+.hi-q{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--amber);color:var(--amber)}
+.hi-q svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

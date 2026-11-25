@@ -59,6 +59,16 @@ export async function unlockWithPassword(lockedErr, password) {
   return data;
 }
 
+// Checks a typed password against the locked rules file without changing anything. true | false | null (file unreachable).
+// An unlocked (development) copy has no password, so any text passes.
+export async function verifyPassword(pw) {
+  let text = await cachedText(PATH.library);
+  if (!text) { try { text = await fetchText(PATH.library); } catch (e) { return null; } }
+  let file; try { file = JSON.parse(text); } catch (e) { return null; }
+  if (!isLockedFile(file)) return true;
+  try { await decryptWithPassword(file, String(pw || "").trim()); return true; } catch (e) { return false; }
+}
+
 // Returns {library, campaign}: cache first (instant, offline-safe), else
 // network. Throws LockedError when the password is needed, or a network
 // error when there's no cache and no connection.

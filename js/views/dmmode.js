@@ -50,7 +50,7 @@ export function renderDmMode(app) {
   const cards = Object.values(d.party), avg = cards.length ? Math.round(cards.reduce((a, c) => a + c.level, 0) / cards.length * 10) / 10 : null;
   const xp = dm.encounterXp(d);
   return `<div class="sheetview dmview">
-    ${topbar(dm.readIndex().list.find(x => x.id === dm.activeId()).name, "Dungeon Master", { back: "goHome", backLabel: "Main menu", actions: [{ a: "dmCampOpen", label: "Campaigns", icon: "book" }, { a: "tourStart", label: "Tutorial", icon: "info", id: "dm" }] })}
+    ${topbar(dm.readIndex().list.find(x => x.id === dm.activeId()).name, "Dungeon Master", { back: "goHome", backLabel: "Main menu", actions: [{ a: "dmCampOpen", label: "Campaigns", icon: "book" }] })}
     <main class="wrap page wide dmmode">
       <section class="status" aria-label="Table"><div class="quick">
         <div><b>${cards.length || "--"}</b><span>Characters</span></div>
