@@ -243,13 +243,10 @@ function maybeAutoTour() {
     else if (tourUnseen(id)) startTour(id);
   }, id === "intro" ? 500 : 900);
 }
-// One ? button on every screen. It replays the tour for the screen you are on.
+// The ? button lives in each screen's header (topbar, sheet bar, Home, Characters). No floating copy.
 function syncHelpBtn() {
-  let b = document.getElementById("help-btn");
-  if (!b) { b = document.createElement("button"); b.id = "help-btn"; b.type = "button"; b.dataset.a = "helpOpen"; b.setAttribute("aria-label", "Help"); b.innerHTML = ICONS.help; document.body.appendChild(b); }
-  const hide = !APP.screen || APP.screen === "locked" || APP.screen === "dmview" || tourActive();
-  b.hidden = hide;
-  b.classList.toggle("nav", APP.screen === "sheet" || APP.screen === "dmmode");
+  const old = document.getElementById("help-btn");
+  if (old) old.remove();
 }
 
 // ---------------- render ----------------
@@ -367,7 +364,7 @@ function lockDead() {
 const DEAD_OK = new Set(["helpOpen", "tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "goRoster", "editCause", "goNotes"]);
 const inNotes = () => APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes");
 // Sheet pages (Notes, Shop, Settings) open inside the sheet frame like Rules does.
-function openPage(tab) { closeModal(); APP.selItem = null; APP.sheetTab = tab; render(); window.scrollTo(0, 0); }
+function openPage(tab) { closeModal(); APP.selItem = null; APP.hubOpen = false; APP.sheetTab = tab; render(); window.scrollTo(0, 0); }
 function renderNow() {
   if (window.__boot) window.__boot(100);
   const mb = modalRoot.querySelector(".modal-body"), rs = document.querySelector(".results");
@@ -758,7 +755,7 @@ function bindEvents() {
   document.addEventListener("submit", onSubmit);
   document.addEventListener("keydown", playKeys);
   document.addEventListener("scroll", e => { const t = e.target; if (t && t.classList && t.classList.contains("scscroll")) t.classList.toggle("past", t.scrollTop > 150); }, true);
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && APP.mobileSheetOpen) { APP.mobileSheetOpen = false; render(); } else if (e.key === "Escape" && APP.progressOpen) { APP.progressOpen = false; render(); } else if (e.key === "Escape" && APP.featUi && APP.featUi.open) { APP.featUi.open = null; render(); } else if (e.key === "Escape" && APP.modal) closeModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && APP.mobileSheetOpen) { APP.mobileSheetOpen = false; render(); } else if (e.key === "Escape" && APP.progressOpen) { APP.progressOpen = false; render(); } else if (e.key === "Escape" && APP.featUi && APP.featUi.open) { APP.featUi.open = null; render(); } else if (e.key === "Escape" && APP.hubOpen) { APP.hubOpen = false; render(); } else if (e.key === "Escape" && APP.modal) closeModal(); });
   window.addEventListener("popstate", () => {
     if (APP._ignorePop) { APP._ignorePop = false; return; }
     if (APP.modal) { APP.modal = null; render(); return; }
@@ -1708,7 +1705,7 @@ const ACTIONS = {
 
   // sheet nav
   backToRoster() { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = "home"; render(); window.scrollTo(0, 0); },
-  sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; render(); window.scrollTo(0, 0); },
+  sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; APP.hubOpen = false; render(); window.scrollTo(0, 0); },
   glCat(el) { const g = glState(APP); Object.assign(g, { cat: el.dataset.cat, picked: true, sel: null, f: {}, sort: "", desc: false, limit: 150 }); glRefresh({ tabs: 1, filters: 1, list: 1, pane: 1 }); },
   glFilter(el) { const g = glState(APP); g.f[el.dataset.id] = el.value; g.limit = 150; glRefresh({ filters: 1, list: 1 }); },
   glClear() { glState(APP).f = {}; glState(APP).limit = 150; glRefresh({ filters: 1, list: 1 }); },
@@ -1942,6 +1939,16 @@ const ACTIONS = {
   lvlConfirm() { applyLevelUp(); },
 
   // conditions & concentration
+  hubToggle() { APP.hubOpen = !APP.hubOpen; render(); },
+  hubClose() { if (APP.hubOpen) { APP.hubOpen = false; render(); } },
+  hubGo(el) {
+    const id = el.dataset.id; APP.hubOpen = false;
+    if (id === "dice" || id === "calc") ACTIONS.toolOpen({ dataset: { id } });
+    else if (id === "cond") ACTIONS.openConditions();
+    else if (id === "init") { render(); ACTIONS.rollInit(); }
+    else if (id === "rest") openModal({ type: "restPick" });
+    else render();
+  },
   toolOpen(el) { openModal({ type: "tool", id: el.dataset.id }); },
   calcKey(el) { APP.calc = calcPress(APP.calc || {}, el.dataset.k); render(); },
   openConditions() { openModal({ type: "conditions" }); },

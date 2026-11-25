@@ -6,7 +6,7 @@ import { findByName, allItems, allWeapons } from "../data.js";
 import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, attunedCount, itemCategory } from "../gear.js";
 import { unitWeight, fmtLb } from "../weights.js";
 import { fmtMod, weaponNumbers } from "../rules.js";
-import { coinsPanel, weightBar, sortedInventory, SORTS, CAT_GLYPH, acBody } from "./sheet.js";
+import { shopBanner, coinsPanel, weightBar, sortedInventory, SORTS, CAT_GLYPH, acBody } from "./sheet.js";
 
 const slotLabel = k => (SLOTS.find(s => s.key === k) || { label: k }).label;
 const where = (c, id) => slotsOf(c, id).map(slotLabel).join(" + ");
@@ -32,7 +32,7 @@ function listPanel(app, c) {
   }).join("");
   return `<div class="panel cg-list"><div class="panel-head"><h2>Items <span class="sub2">${c.inventory.length}</span></h2>
     <span class="btnrow"><select class="f sortsel" data-a="bagSort" aria-label="Sort items">${SORTS.map(([v, l]) => `<option value="${v}" ${(app.bagSort || "type") === v ? "selected" : ""}>Sort: ${l}</option>`).join("")}</select>
-      <button class="btn sm" data-a="openShop">Shop</button><button class="btn sm" data-a="openPicker" data-picker="items">Add</button></span></div>
+      <button class="btn sm" data-a="openPicker" data-picker="items">Add</button></span></div>
     <div class="panel-body">${items.length ? `<div class="bag-list cg-rows"><div class="bl-head" aria-hidden="true"><span></span><span>Item</span><span class="q">Qty</span><span class="w">Weight</span></div>${rows}</div>${weightBar(c)}` : `<p class="muted small" style="padding:12px 0">You are not carrying anything yet.</p>`}</div></div>`;
 }
 
@@ -62,6 +62,7 @@ function detailPanel(app, c) {
 
 export function classicGear(app, c, d) {
   return `<div class="cgear">
+    ${shopBanner(c)}
     ${equippedStrip(app, c, d)}
     <div class="cg-cols">${listPanel(app, c)}${detailPanel(app, c)}</div>
     ${coinsPanel(c)}

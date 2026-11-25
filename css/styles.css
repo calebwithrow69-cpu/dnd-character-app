@@ -2894,9 +2894,6 @@ button.vcard:hover{background:var(--tile)}
 .tb-b{position:absolute;right:-6px;top:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--amber);color:var(--amber-ink);font-style:normal;font-size:.68rem;font-weight:700;display:grid;place-items:center}
 .tb-l{font-family:var(--display);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;text-align:center}
 @media (min-width:700px){.toolgrid{grid-template-columns:repeat(4,minmax(0,1fr));max-width:760px}}
-.fabdice{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:var(--amber);color:var(--amber-ink);border:0;box-shadow:0 6px 18px rgba(0,0,0,.35)}
-.fabdice svg{width:28px;height:28px}
-@media (min-width:1100px){.fabdice{bottom:24px;right:24px}}
 .calc{display:flex;flex-direction:column;gap:10px}
 .calc-d{display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--bg);min-height:72px;overflow:hidden}
 .calc-d span{font-size:1.5rem;font-family:var(--display);word-break:break-all;text-align:right}
@@ -2931,12 +2928,42 @@ button.vcard:hover{background:var(--tile)}
 @media (min-width:900px){.pbox.hd{grid-column:auto}}
 .pbox.hd .btnrow{justify-content:center}
 /* Help button on every screen */
-#help-btn{position:fixed;left:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--amber);border:1.5px solid var(--amber);box-shadow:0 4px 14px rgba(0,0,0,.28)}
-#help-btn[hidden]{display:none}
-#help-btn svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#help-btn.nav{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
-@media (min-width:1100px){#help-btn.nav{bottom:24px;left:36px}}
 .helpintro{display:flex;align-items:center;gap:14px}
 .helpintro p{margin:0;font-size:1.05rem}
 .hi-q{flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--amber);color:var(--amber)}
 .hi-q svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- Sheet bar hub: round Tools button that fans out five quick tools; ? lives in the headers ---- */
+.hh-r{display:flex;gap:8px}
+.hubcell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:58px}
+nav.tabs .hubbtn,.sheetview[data-sheet] nav.tabs .hubbtn{position:relative;z-index:2;width:52px;height:52px;min-height:0;padding:0;margin-top:-26px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 28%,#fff5,transparent 55%),var(--amber);color:var(--amber-ink);border:3px solid var(--card-lo);box-shadow:0 6px 16px rgba(0,0,0,.4),0 0 0 1.5px var(--amber);transition:transform .22s cubic-bezier(.3,.9,.3,1.3)}
+nav.tabs .hubbtn svg{width:26px;height:26px;transition:transform .25s}
+nav.tabs .hubbtn.open svg{transform:rotate(45deg)}
+.hublbl{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:.62rem;font-weight:700;color:var(--card-label);margin-top:2px}
+.hubanchor{position:relative;width:52px;height:52px}
+.hubscrim{position:fixed;inset:0;z-index:-1;background:rgba(8,6,10,.55);animation:hubFade .18s ease both}
+.hubfan{position:absolute;left:26px;top:26px;width:0;height:0;z-index:3}
+nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{position:absolute;left:0;top:0;width:auto;min-height:0;padding:0;gap:3px;display:flex;flex-direction:column;align-items:center;background:none;border:0;color:var(--ink);transform:translate(calc(-50% + var(--x)),calc(-23px + var(--y)));animation:hubPop .22s cubic-bezier(.3,.9,.3,1.3) both;animation-delay:var(--d)}
+.hubopt .ho-ic{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--card-hi);color:var(--card-ink);border:1.5px solid var(--amber);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.hubopt .ho-ic svg{width:24px;height:24px}
+.hubopt .ho-l{font-family:var(--body,inherit);text-transform:none;font-size:.7rem;font-weight:700;letter-spacing:0;white-space:nowrap;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.still .hubopt,.still .hubscrim{animation:none!important}
+@keyframes hubPop{from{opacity:0;transform:translate(-50%,-23px) scale(.4)}}
+@keyframes hubFade{from{opacity:0}}
+@media (min-width:1100px){
+  .sheetview[data-sheet] nav.tabs .hubcell{min-height:72px;width:100%}
+  nav.tabs .hubbtn,.sheetview[data-sheet] nav.tabs .hubbtn{margin-top:0;min-height:0;width:52px;border-radius:50%}
+  .hublbl{display:none}
+  .hubanchor{margin-top:8px}
+  nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{min-height:0;width:auto;transform:translate(calc(-50% + var(--wx)),calc(-23px + var(--wy)))}
+  @keyframes hubPop{from{opacity:0;transform:translate(-50%,-23px) scale(.4)}}
+  .hubcell{align-items:center;justify-content:center}
+}
+/* Shop banner on the Gear tabs */
+.shopban{display:flex;align-items:center;gap:14px;width:100%;margin:0 0 12px;padding:12px 16px;min-height:60px;border-radius:var(--radius-sm,12px);border:1.5px solid var(--amber);background:linear-gradient(135deg,color-mix(in srgb,var(--amber) 32%,var(--panel)),var(--panel));color:var(--ink);text-align:left}
+.shopban .sb-ic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--amber);color:var(--amber-ink);flex:none}
+.shopban .sb-ic svg{width:24px;height:24px}
+.shopban .sb-t{flex:1;display:flex;flex-direction:column;line-height:1.2}
+.shopban .sb-t b{font-family:var(--display);text-transform:uppercase;letter-spacing:.1em;font-size:.95rem}
+.shopban .sb-t i{font-style:normal;font-size:.8rem;color:var(--muted)}
+.shopban .sb-go{font-size:1.6rem;color:var(--amber);line-height:1}

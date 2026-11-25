@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.75";
+export const VERSION = "0.1.76";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.76",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "A round Tools button replaces the floating buttons, and the Shop moves to Gear.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "A round Tools button sits in the middle of the sheet bar. It fans out Dice, Conditions, Calculator, Rest and Initiative.",
+          "The ? button moved into each screen header, next to Edit character on the sheet.",
+          "The Shop is a wide button at the top of the Gear tab. It is no longer a tab.",
+          "The floating dice button is gone."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.75",
     date: "2026-11-24",

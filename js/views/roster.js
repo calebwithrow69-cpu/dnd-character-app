@@ -1,4 +1,4 @@
-import { esc } from "../ui.js";
+import { esc, ICONS } from "../ui.js";
 import { listCharacters } from "../store.js";
 import { trashList } from "../trash.js";
 import { emblem, emblemFor } from "../emblems.js";
@@ -22,7 +22,7 @@ export function renderRoster(app) {
   }).join("");
   const add = `<button class="ccard new press" data-a="newChar">${PLUS}NEW CHARACTER</button>`;
   return `<main class="rs" aria-label="Characters">
-    <header class="hh"><button class="ibtn2" data-a="goHome" aria-label="Back">${BACK}</button><h1 class="hh-t">CHARACTERS</h1><button class="ibtn2" data-a="newChar" aria-label="New character">${PLUS}</button></header>
+    <header class="hh"><button class="ibtn2" data-a="goHome" aria-label="Back">${BACK}</button><h1 class="hh-t">CHARACTERS</h1><span class="hh-r"><button class="ibtn2" data-a="helpOpen" aria-label="Help">${ICONS.help}</button><button class="ibtn2" data-a="newChar" aria-label="New character">${PLUS}</button></span></header>
     ${app.needsNewPassword ? `<div class="rs-note"><button class="hwarn" data-a="enterNewPassword">New rules are waiting. Enter the new password.</button></div>` : ""}
     <div class="deck">${cards}${add}</div>
     <div class="rs-foot">

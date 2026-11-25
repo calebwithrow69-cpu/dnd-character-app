@@ -15,10 +15,25 @@ const P = {
   level: '<path d="M12 20V5M6 11l6-6 6 6"/>',
   notes: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
   rules: '<path d="M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M8 4v13"/>',
+  shop: '<path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v11H4zM9 20v-6h6v6"/>',
   pdf: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>'
 };
 const ico = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[k]}</svg>`;
 export const dieIco = ico("dice");
+export const toolIco = ico;
+
+// The round hub on the sheet bar fans these out. [id, label, icon]
+export const HUB = [["dice", "Dice", "dice"], ["cond", "Conditions", "cond"], ["calc", "Calculator", "calc"], ["rest", "Rest", "short"], ["init", "Initiative", "init"]];
+// Phone: an arc above the hub. Wide: a column to the right of the rail. Pixel offsets from the hub centre.
+const HUB_XY = [[-122, -78], [-74, -144], [0, -166], [74, -144], [122, -78]];
+const HUB_WXY = [[74, -132], [116, -66], [132, 0], [116, 66], [74, 132]];
+const HUB_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2.1 2.1M15.9 15.9L18 18M18 6l-2.1 2.1M8.1 15.9L6 18"/></svg>';
+export function hubCell(app) {
+  const open = !!app.hubOpen;
+  const fan = open ? `<div class="hubfan" role="menu" aria-label="Quick tools">${HUB.map(([id, label, icon], i) =>
+    `<button class="hubopt" role="menuitem" data-a="hubGo" data-id="${id}" style="--x:${HUB_XY[i][0]}px;--y:${HUB_XY[i][1]}px;--wx:${HUB_WXY[i][0]}px;--wy:${HUB_WXY[i][1]}px;--d:${i * 30}ms"><span class="ho-ic">${ico(icon)}</span><span class="ho-l">${esc(label)}</span></button>`).join("")}</div>` : "";
+  return `<div class="hubcell">${open ? `<div class="hubscrim" data-a="hubClose"></div>` : ""}<div class="hubanchor">${fan}<button class="hubbtn ${open ? "open" : ""}" data-a="hubToggle" aria-haspopup="menu" aria-expanded="${open}" aria-label="Quick tools">${HUB_ICON}</button></div><span class="hublbl">Tools</span></div>`;
+}
 
 // [id, label, icon, how]: how = {modal} opens a tool, {a, ...attrs} runs an action.
 export const TOOLS = [
@@ -33,6 +48,7 @@ export const TOOLS = [
   ["level", "Level up", "level", { a: "openLevelMenu" }],
   ["notes", "Notes", "notes", { a: "goNotes" }],
   ["rules", "Rules", "rules", { a: "sheetTab", attrs: 'data-tab="rules"' }],
+  ["shop", "Shop", "shop", { a: "openShop" }],
   ["pdf", "Sheet PDF", "pdf", { a: "downloadPdf" }]
 ];
 

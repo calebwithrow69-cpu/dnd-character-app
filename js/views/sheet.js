@@ -10,7 +10,7 @@ import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, weaponsOf, attacksO
 import { optionGroup, optionNames, levelUpPlan } from "../progression.js";
 import { characterBody, concBanner } from "./character.js";
 import { classicBody } from "./classic.js";
-import { dieIco } from "./tools.js";
+import { hubCell, toolIco } from "./tools.js";
 import { condLine, condTag } from "../conditions.js";
 import { stylePicker } from "./stylepick.js";
 import { xpForLevel } from "../rules.js";
@@ -26,12 +26,14 @@ export { renderRulesResults };
 
 const levelLabel = l => (Number(l) === 0 ? "Cantrip" : `Level ${l}`);
 
+// Pages the sheet can show. Shop is a page but has no tab: it opens from the Gear tab.
+const PAGES = ["stats", "notes", "rules", "shop", "settings"];
 export function sheetTabs(app) {
   return [
     ["stats", "Character", ICONS.stats],
     ["notes", "Notes", ICONS.notes, "goNotes"],
+    ["hub", "Tools", ""],
     ["rules", "Rules", ICONS.book],
-    ["shop", "Shop", ICONS.coin],
     ["settings", "Settings", ICONS.settings]
   ];
 }
@@ -44,11 +46,13 @@ function sheetBar(c, d, meta) {
   return `<header class="topbar sheetbar"><div class="wrap row sb-phone">
       <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Main menu</span></button>
       <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">${esc(meta)}</div></div>
+      <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.help}</button>
       <button class="iconbtn" data-a="openEdit" aria-label="Edit character">${ICONS.edit}</button></div>
     <div class="wrap row sb-wide">
       <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Main menu</span></button>
       <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">Level ${c.level} \u00b7 ${esc(sub)}</div></div>
       <div class="sb-pills">${pill(c.hp.cur + "/" + c.hp.max, "HP")}${pill(d.ac, "AC")}${pill(d.speed, "Speed")}${pill(fmtMod(d.initiative), "Init")}${pill(fmtMod(d.prof), "Prof")}</div>
+      <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.help}</button>
       <button class="btn sm" data-a="openEdit">${ICONS.edit}<span>Edit</span></button></div></header>`;
 }
 
@@ -56,10 +60,10 @@ export function renderSheet(app) {
   const c = app.char;
   const d = deriveCharacter(c);
   const tabs = sheetTabs(app);
-  if (!tabs.some(t => t[0] === app.sheetTab)) app.sheetTab = "stats";
+  if (!PAGES.includes(app.sheetTab)) app.sheetTab = "stats";
   if (app.sheetTab === "notes" && !(app.nb && app.nb.data)) app.sheetTab = "stats";
   const tab = app.sheetTab;
-  const dots = new Set(tabs.map(t => t[0]).filter(id => id !== tab && tabIsNew(id)));
+  const dots = new Set(tabs.map(t => t[0]).filter(id => id !== "hub" && id !== tab && tabIsNew(id)));
   markTabSeen(tab);
   if (tab === "stats" && (app.styleAsk === c.id || (app.prefs.sheetStyle !== "classic" && app.prefs.sheetStyle !== "advanced"))) return stylePicker(app);
 
@@ -121,10 +125,9 @@ export function renderSheet(app) {
       </section>`}
       ${tab === "stats" ? tourCard("sheet") : ""}
       ${body}
-      ${tab === "stats" && app.prefs.sheetStyle !== "advanced" ? `<button class="fabdice press" data-a="toolOpen" data-id="dice" aria-label="Dice roller">${dieIco}</button>` : ""}
     </main>
     <nav class="tabs" aria-label="Sheet sections"><div class="in" style="grid-template-columns:repeat(${tabs.length},1fr)">
-      ${tabs.map(([id, label, icon, act]) => `<button data-a="${act || "sheetTab"}"${act ? "" : ` data-tab="${id}"`} ${tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span>${dots.has(id) ? '<i class="newdot" aria-hidden="true"></i>' : ""}</button>`).join("")}
+      ${tabs.map(([id, label, icon, act]) => id === "hub" ? hubCell(app) : `<button data-a="${act || "sheetTab"}"${act ? "" : ` data-tab="${id}"`} ${tab === id ? 'aria-current="page"' : ""}>${icon}<span>${label}</span>${dots.has(id) ? '<i class="newdot" aria-hidden="true"></i>' : ""}</button>`).join("")}
     </div></nav></div>`;
 }
 
@@ -336,8 +339,14 @@ function figureFor(c) {
     </g></svg>`;
 }
 
+// The one way into the shop: a wide amber button, unlike the small buttons around it.
+export function shopBanner(c) {
+  const gp = (c.coins && c.coins.gp) || 0;
+  return `<button class="shopban press" data-a="openShop"><span class="sb-ic">${toolIco("shop")}</span><span class="sb-t"><b>Shop</b><i>${gp.toLocaleString()} gp</i></span><span class="sb-go" aria-hidden="true">${ICONS.chev || "\u203a"}</span></button>`;
+}
+
 export function coinsPanel(c) {
-  return `<div class="panel"><div class="panel-head"><h2>Coins</h2><button class="btn sm" data-a="openShop">Shop</button></div><div class="panel-body">
+  return `<div class="panel"><div class="panel-head"><h2>Coins</h2></div><div class="panel-body">
       <div class="coinrow">
         ${[["pp", "#D9D6E2", "Platinum"], ["gp", "#E3BF5C", "Gold"], ["ep", "#CFC49A", "Electrum"], ["sp", "#C9CCD1", "Silver"], ["cp", "#C98B5B", "Copper"]].map(([k, col, nm]) => `<label class="coinc"><i style="background:radial-gradient(circle at 35% 30%,#fff9,${col} 55%,${col})" aria-hidden="true">${k.toUpperCase()}</i><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" aria-label="${nm} pieces"></label>`).join("")}
       </div></div></div>`;
@@ -346,7 +355,7 @@ export function coinsPanel(c) {
 // Advanced sheet gear: status strip, loadouts, worn gear as rows, then the bag and coins.
 export function loadoutGearTab(app, c, d) {
   const sel = app.selItem ? itemById(c, app.selItem) : null;
-  return `<div class="ld-page">${readinessStrip(app, c, d)}${loadoutCards(app, c)}
+  return `<div class="ld-page">${shopBanner(c)}${readinessStrip(app, c, d)}${loadoutCards(app, c)}
     ${sel ? `<div class="selbar"><span>Tap a slot to equip <b>${esc(sel.name)}</b></span><button class="btn sm" data-a="clearSel">Cancel</button></div>` : ""}
     <div class="ld-cols"><div>${wornRows(app, c)}</div><div>${bagGrid(app, c)}${coinsPanel(c)}</div></div></div>`;
 }
@@ -354,7 +363,7 @@ export function loadoutGearTab(app, c, d) {
 export function gearTab(app, c, d, { attacks = true } = {}) {
   const sel = app.selItem ? itemById(c, app.selItem) : null;
   const ac = d.acInfo;
-  return `<div class="gear-grid"><div class="doll-col">
+  return `${shopBanner(c)}<div class="gear-grid"><div class="doll-col">
     <div class="panel"><div class="panel-head"><h2>Equipment</h2>
       <span class="sub2">${attunedCount(c)}/3 attuned</span></div>
       ${sel ? `<div class="selbar"><span>Tap a glowing slot to equip <b>${esc(sel.name)}</b></span><button class="btn sm" data-a="clearSel">Cancel</button></div>` : ""}
@@ -418,7 +427,7 @@ function bagGrid(app, c) {
   return `<div class="panel" data-drop-bag="1"><div class="panel-head"><h2>Bag <span class="sub2">${c.inventory.length}</span></h2>
       <span class="btnrow">
         <select class="f sortsel" data-a="bagSort" aria-label="Sort bag">${SORTS.map(([v, l]) => `<option value="${v}" ${(app.bagSort || "type") === v ? "selected" : ""}>Sort: ${l}</option>`).join("")}</select>
-        <button class="btn sm" data-a="openShop">Shop</button><button class="btn sm" data-a="openPicker" data-picker="items">Add</button>
+        <button class="btn sm" data-a="openPicker" data-picker="items">Add</button>
       </span></div>
     <div class="panel-body">
       ${c.inventory.length > 5 ? `<div class="st-find"><div class="seg" role="group" aria-label="Bag category">${BAG_CATS.map(([k, l]) => `<button data-a="bagCat" data-k="${k}" aria-pressed="${bc === k}">${l}</button>`).join("")}</div>

@@ -235,6 +235,7 @@ export function topbar(title, sub, { back, backLabel, actions = [] } = {}) {
     ${back ? (backLabel ? `<button class="btn sm" data-a="${back}">${ICONS.back}<span>${esc(backLabel)}</span></button>` : `<button class="iconbtn" data-a="${back}" aria-label="Back">${ICONS.back}</button>`) : ""}
     <div class="grow"><h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ""}</div>
     ${actions.map(x => `<button class="iconbtn" data-a="${x.a}"${x.id ? ` data-id="${esc(x.id)}"` : ""} aria-label="${esc(x.label)}">${ICONS[x.icon]}</button>`).join("")}
+    <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.help}</button>
     ${actions.some(x => x.a === "openSettings") ? "" : `<button class="iconbtn" data-a="openSettings" aria-label="Settings">${ICONS.settings}</button>`}
   </div></header>`;
 }

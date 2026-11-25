@@ -284,7 +284,7 @@ await check("DM tour: every step finds its target, tabs follow", async () => {
   for (const [w, h] of [[1280, 720], [390, 844]]) {
     const p = await open(w, h, { touch: w < 700 });
     await p.evaluate(() => CR.ACTIONS.goDmMode()); await p.waitForSelector(".dmmode");
-    assert(await p.locator('#help-btn:visible').count() === 1, "help button on the DM screen");
+    assert(await p.locator('[data-a="helpOpen"]:visible').count() === 1, "help button on the DM screen");
     await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "dm" } })); await p.waitForSelector("#tour-card");
     const n = parseInt((await p.locator(".tour-prog em").innerText()).split(" of ")[1]);
     assert(n >= 7, "steps " + n);
@@ -399,7 +399,7 @@ await check("Tours: highlight sits on its target at every text size", async () =
   }
 });
 
-await check("Tours: home runs 6 steps and sheet 4, skip works, finishing unlocks Silver", async () => {
+await check("Tours: home runs 6 steps and sheet 6, skip works, finishing unlocks Silver", async () => {
   for (const [w, h] of [[390, 844], [1280, 800]]) {
     const p = await open(w, h, { touch: w < 700 });
     await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(300);
@@ -431,7 +431,7 @@ await check("Tours: home runs 6 steps and sheet 4, skip works, finishing unlocks
     const st2 = await p.evaluate(() => JSON.parse(localStorage.getItem("dnd-tour-v1")));
     assert(st2.sheet === "skipped", "skip state " + JSON.stringify(st2));
     await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "sheet" } })); await p.waitForSelector("#tour-card");
-    for (let i = 0; i < 4; i++) { const g = await geom(); assert(g.card.t >= 0 && g.card.b <= g.vh + 1 && g.card.r <= g.vw + 1, "sheet card off screen " + i + JSON.stringify(g)); await p.locator('[data-a="tourNext"]').click(); }
+    for (let i = 0; i < 6; i++) { const g = await geom(); assert(g.card.t >= 0 && g.card.b <= g.vh + 1 && g.card.r <= g.vw + 1, "sheet card off screen " + i + JSON.stringify(g)); await p.locator('[data-a="tourNext"]').click(); }
     noErrs(p); await p.context().close();
   }
 });
@@ -1380,7 +1380,7 @@ await check("style chooser: shows first, picking applies at once, switching late
   assert(await p.evaluate(() => !APP.prefs.sheetStyle), "a tap alone must not apply the sheet");
   await pickSheet(p, "classic"); await p.waitForTimeout(350);
   assert(await p.locator(".classic").count() === 1, "classic sheet missing");
-  assert(await p.locator('[data-a="sheetTab"]').count() === 4, "sheet tabs should be Character, Rules, Shop, Settings (Notes is its own action)");
+  assert(await p.locator('[data-a="sheetTab"]').count() === 3, "sheet tabs should be Character, Rules, Settings (Notes is its own action, Tools is the hub)");
   assert(await p.locator('.profchk').count() === 0, "profs belong on the Features sub-tab");
   await p.locator('[data-a="classicSub"][data-sub="features"]').click(); await p.waitForTimeout(250);
   assert(await p.locator('.profchk input').count() === 6, "expected 6 training check boxes");
@@ -1564,14 +1564,13 @@ await check("Tabs: unvisited sections carry a dot until opened; sheet tour offer
   await openSample(p);
   await p.waitForSelector("#tour-root .tour, #tour-root [data-a='tourNext']", { timeout: 6000 });
   assert(/Level|HP|AC/i.test(await p.locator("#tour-root").innerText()), "sheet tour did not start on first open");
-  assert(await p.locator("nav.tabs .newdot").count() >= 3, "expected dots on Notes, Rules and Shop");
+  assert(await p.locator("nav.tabs .newdot").count() >= 2, "expected dots on Notes and Rules");
   await p.locator('[data-a="tourSkip"]').first().click(); await p.waitForTimeout(300);
   await p.locator('nav.tabs [data-tab="rules"]').click(); await p.waitForTimeout(400);
   assert(await p.locator('nav.tabs [data-tab="rules"] .newdot').count() === 0, "dot stayed after visiting Rules");
   await p.reload(); await p.waitForSelector("#home-book"); await clickA(p, "goRoster"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForTimeout(2200);
   assert(await p.locator("#tour-root [data-a='tourNext']").count() === 0, "tour offered a second time");
   assert(await p.locator('nav.tabs [data-tab="rules"] .newdot').count() === 0, "Rules dot came back");
-  assert(await p.locator('nav.tabs [data-tab="shop"] .newdot').count() === 1, "Shop dot lost");
   assert(p.errs.length === 0, p.errs.join(" || ")); await ctx.close();
 });
 
@@ -1692,11 +1691,23 @@ await check("Classic 2.0: conditions above the HP bar change speed, Tools grid, 
     assert(spd === 0, "Restrained sets speed to 0, got " + spd);
     await p.locator('.condbar [data-a="removeCondition"]').first().click(); await p.waitForTimeout(250);
     assert(await speedNow() > 0, "speed returns when removed");
-    assert(await p.locator(".fabdice:visible").count() === 1, "floating dice button");
-    await p.locator(".fabdice").click(); await p.waitForTimeout(300);
+    assert(await p.locator(".fabdice").count() === 0, "floating dice button is gone");
+    assert(await p.locator(".hubbtn:visible").count() === 1, "round Tools button");
+    await p.locator(".hubbtn:visible").click(); await p.waitForTimeout(450);
+    assert(await p.locator(".hubopt").count() === 5, "hub fans out five tools");
+    await p.locator('.hubopt[data-id="rest"]').click(); await p.waitForTimeout(300);
+    assert(await p.locator('.modal [data-a="openLongRest"]').count() === 1, "Rest asks short or long"); await clickA(p, "closeModal");
+    await p.locator(".hubbtn:visible").click(); await p.waitForTimeout(450); await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+    assert(await p.locator(".hubopt").count() === 0, "Escape closes the hub");
+    await p.locator(".hubbtn:visible").click(); await p.waitForTimeout(450);
+    await p.locator('.hubopt[data-id="dice"]').click(); await p.waitForTimeout(300);
     assert(await p.locator(".modal .st-die, .modal [data-a=\"trayAdd\"]").count() >= 6, "dice tray opens"); await clickA(p, "closeModal");
+    await p.locator('[data-a="classicSub"][data-sub="gear"]').click(); await p.waitForTimeout(250);
+    assert(await p.locator(".shopban:visible").count() === 1, "Shop banner on Gear");
+    await p.locator(".shopban").click(); await p.waitForSelector(".shop-page"); assert(await p.evaluate(() => APP.sheetTab) === "shop", "Shop banner opens the shop");
+    await p.locator('nav.tabs [data-tab="stats"]:visible').click(); await p.waitForTimeout(250);
     await p.locator('[data-a="classicSub"][data-sub="tools"]').click(); await p.waitForTimeout(250);
-    assert(await p.locator(".toolbtn").count() === 12, "twelve tools");
+    assert(await p.locator(".toolbtn").count() === 13, "thirteen tools");
     assert(await p.locator('[data-a="classicSub"][data-sub="notes"]').count() === 0, "no Notes sub-tab");
     await p.locator('[data-a="toolOpen"][data-id="calc"]').click(); await p.waitForTimeout(250);
     for (const k of ["2", "+", "3", "\u00d7", "4", "="]) await p.locator(`.calc-b[data-k="${k}"]`).click();
@@ -1708,14 +1719,14 @@ await check("Classic 2.0: conditions above the HP bar change speed, Tools grid, 
 
 await check("Help: ? button on every screen, first-run popup, full reset needs a password", async () => {
   const p = await open(390, 844, { touch: true });
-  const vis = async where => assert(await p.locator("#help-btn:visible").count() === 1, "? button missing on " + where);
+  const vis = async where => assert(await p.locator('[data-a="helpOpen"]:visible').count() === 1, "? button missing on " + where);
   await vis("home");
-  assert((await p.locator("#help-btn").getAttribute("aria-label")) === "Help", "label");
+  assert((await p.locator('[data-a="helpOpen"]:visible').getAttribute("aria-label")) === "Help", "label");
   await clickA(p, "goRoster"); await vis("roster");
   await clickA(p, "helpOpen"); assert(await p.locator('.modal [data-a="tourStart"]').count() === 3, "help list on a screen without a tour"); await clickA(p, "closeModal");
   await clickA(p, "importGandork"); await clickA(p, "openChar", '[data-id="gandork"]'); await p.waitForSelector('[data-a="openHp"], .stylefull');
   if (await p.locator(".stylefull").count()) await pickSheet(p, "classic"); await p.waitForSelector('[data-a="openHp"]'); await vis("sheet");
-  await clickA(p, "helpOpen"); await p.waitForSelector("#tour-card"); assert(/1 of 4/.test(await p.locator(".tour-prog em").innerText()), "sheet tour from ?"); await p.evaluate(() => CR.ACTIONS.tourSkip());
+  await clickA(p, "helpOpen"); await p.waitForSelector("#tour-card"); assert(/1 of 6/.test(await p.locator(".tour-prog em").innerText()), "sheet tour from ?"); await p.evaluate(() => CR.ACTIONS.tourSkip());
   await p.evaluate(() => { CR.ACTIONS.backToRoster(); CR.ACTIONS.goDmMode(); }); await p.waitForSelector(".dmmode"); await vis("dm");
   await clickA(p, "helpOpen"); await p.waitForSelector("#tour-card"); await p.evaluate(() => CR.ACTIONS.tourSkip());
   await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(200);
