@@ -104,7 +104,7 @@ function expertiseCount(cls, level) {
   return /\bone of your\b|\bone skill\b/i.test(f.text || "") && !/\btwo\b/i.test(f.text || "") ? 1 : 2;
 }
 // "Divine Order" / "Primal Order": one feature, a few named options written as "Name. Text" paragraphs.
-const ORDER_RE = /^(Divine Order|Primal Order)$/i;
+const ORDER_RE = /^(Divine Order|Primal Order|Blessed Strikes)$/i;
 export function parseOrderOptions(text) {
   return String(text || "").split(/\n\s*\n/).map(p => /^([A-Z][A-Za-z' ]{2,24})\.\s+([\s\S]+)$/.exec(p.trim())).filter(Boolean).map(m => ({ name: m[1], text: m[2].trim() }));
 }

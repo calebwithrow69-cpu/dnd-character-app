@@ -16,46 +16,73 @@ const P = {
   notes: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
   rules: '<path d="M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M8 4v13"/>',
   shop: '<path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v11H4zM9 20v-6h6v6"/>',
-  pdf: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>'
+  pdf: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+  d20: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5"/>',
+  death: '<path d="M12 3a7 7 0 00-4 12.7V19h8v-3.3A7 7 0 0012 3z"/><path d="M9.5 11h.01M14.5 11h.01M10 19v2M14 19v2"/>',
+  edit: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
+  stats: '<path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/>',
+  backup: '<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7M8 20v-6h8v6"/>'
 };
 const ico = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[k]}</svg>`;
 export const dieIco = ico("dice");
 export const toolIco = ico;
 
-// The round hub on the sheet bar fans these out. [id, label, icon]
-export const HUB = [["dice", "Dice", "dice"], ["cond", "Conditions", "cond"], ["calc", "Calculator", "calc"], ["rest", "Rest", "short"], ["init", "Initiative", "init"]];
-// Phone: an arc above the hub. Wide: a column to the right of the rail. Pixel offsets from the hub centre.
+// The Quick button on the sheet bar shows the tools in prefs.quick (up to QUICK_MAX), picked from TOOLS.
+export const QUICK_MAX = 5;
+export const QUICK_DEFAULT = ["dice", "cond", "calc", "rest", "init"];
+export function quickIds(prefs) {
+  const ok = new Set(TOOLS.map(t => t[0])), raw = prefs && Array.isArray(prefs.quick) ? prefs.quick : [];
+  const ids = raw.filter((x, i, arr) => ok.has(x) && arr.indexOf(x) === i).slice(0, QUICK_MAX);
+  return ids.length ? ids : QUICK_DEFAULT;
+}
+// Phone: an arc above the button (slot positions are pixel offsets from its centre; fewer tools use the middle slots).
 const HUB_XY = [[-122, -78], [-74, -144], [0, -166], [74, -144], [122, -78]];
-const HUB_WXY = [[74, -132], [116, -66], [132, 0], [116, 66], [74, 132]];
+const HUB_SLOTS = { 1: [2], 2: [1, 3], 3: [1, 2, 3], 4: [0, 1, 3, 4], 5: [0, 1, 2, 3, 4] };
 const HUB_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M13.2 2.5 5 13.2h5.6l-1 8.3 8.4-11.1h-5.7z"/></svg>';
 const HUB_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 export function hubCell(app) {
-  const open = !!app.hubOpen;
-  const fan = open ? `<div class="hubfan" role="menu" aria-label="Quick">${HUB.map(([id, label, icon], i) =>
-    `<button class="hubopt" role="menuitem" data-a="hubGo" data-id="${id}" style="--x:${HUB_XY[i][0]}px;--y:${HUB_XY[i][1]}px;--wx:${HUB_WXY[i][0]}px;--wy:${HUB_WXY[i][1]}px;--d:${i * 30}ms"><span class="ho-ic">${ico(icon)}</span><span class="ho-l">${esc(label)}</span></button>`).join("")}</div>` : "";
-  return `<div class="hubcell">${open ? `<div class="hubscrim" data-a="hubClose"></div>` : ""}<div class="hubanchor">${fan}<button class="hubbtn ${open ? "open" : ""}" data-a="hubToggle" aria-haspopup="menu" aria-expanded="${open}" aria-label="Quick">${open ? HUB_CLOSE : HUB_ICON}</button></div><span class="hublbl">Quick</span></div>`;
+  const open = !!app.hubOpen, tools = quickIds(app.prefs).map(id => TOOLS.find(t => t[0] === id)), slots = HUB_SLOTS[tools.length];
+  const fan = open ? `<div class="hubfan" role="menu" aria-label="Quick">${tools.map(([id, label, icon, how, q], i) =>
+    `<button class="hubopt" role="menuitem" data-a="hubGo" data-id="${id}" style="--x:${HUB_XY[slots[i]][0]}px;--y:${HUB_XY[slots[i]][1]}px;--d:${i * 30}ms"><span class="ho-ic">${ico(icon)}</span><span class="ho-l">${esc(q || label)}</span></button>`).join("")}</div>` : "";
+  return `<div class="hubcell">${open ? `<div class="hubscrim" data-a="hubClose"></div>` : ""}<div class="hubanchor">${fan}<button class="hubbtn ${open ? "open" : ""}" data-a="hubToggle" aria-haspopup="menu" aria-expanded="${open}" aria-label="Quick">${open ? HUB_CLOSE : HUB_ICON}<span class="hb-t">Quick</span></button></div><span class="hublbl">Quick</span></div>`;
 }
 
 // [id, label, icon, how]: how = {modal} opens a tool, {a, ...attrs} runs an action.
 export const TOOLS = [
-  ["dice", "Dice roller", "dice", { modal: "dice" }],
+  ["dice", "Dice roller", "dice", { modal: "dice" }, "Dice"],
+  ["d20", "Roll d20", "d20", { a: "quickRoll", attrs: 'data-sides="20" data-count="1"' }],
   ["calc", "Calculator", "calc", { modal: "calc" }],
   ["cond", "Conditions", "cond", { a: "openConditions" }],
   ["hp", "Hit points", "hp", { a: "openHp" }],
   ["init", "Initiative", "init", { a: "rollInit" }],
+  ["death", "Death save", "death", { a: "rollDeathSave" }],
+  ["rest", "Rest", "short", { a: "restPick" }],
   ["short", "Short rest", "short", { a: "openShortRest" }],
   ["long", "Long rest", "long", { a: "openLongRest" }],
   ["insp", "Inspiration", "insp", { a: "toggleInsp" }],
   ["level", "Level up", "level", { a: "openLevelMenu" }],
+  ["stats", "Stat sources", "stats", { a: "openBreakdown" }, "Sources"],
+  ["edit", "Edit character", "edit", { a: "openEdit" }, "Edit"],
   ["notes", "Notes", "notes", { a: "goNotes" }],
   ["rules", "Rules", "rules", { a: "sheetTab", attrs: 'data-tab="rules"' }],
   ["shop", "Shop", "shop", { a: "openShop" }],
-  ["pdf", "Sheet PDF", "pdf", { a: "downloadPdf" }]
+  ["pdf", "Sheet PDF", "pdf", { a: "downloadPdf" }, "PDF"],
+  ["backup", "Back up", "backup", { a: "exportAll" }]
 ];
+
+// The Quick menu editor: pick up to QUICK_MAX tools, in the order tapped.
+export function renderQuickEdit(app) {
+  const ids = quickIds(app.prefs);
+  const rows = TOOLS.map(([id, label, icon]) => {
+    const on = ids.includes(id), full = !on && ids.length >= QUICK_MAX;
+    return `<button class="optcard" data-a="quickToggle" data-id="${id}" aria-pressed="${on}" ${full ? "disabled" : ""}><span class="qe-ic">${ico(icon)}</span><span class="grow"><b>${esc(label)}</b></span>${on ? `<span class="tag amber">${ids.indexOf(id) + 1}</span>` : ""}</button>`;
+  }).join("");
+  return modalShell("Quick menu", `<p class="sub2">${ids.length}/${QUICK_MAX}</p><div class="optlist">${rows}</div>`, `<button class="btn" data-a="quickReset">Reset</button><button class="btn pri" data-a="closeModal">Done</button>`, "toolm");
+}
 
 export function toolGrid(app, c) {
   const badge = id => id === "cond" ? (c.conditions.length + (c.exhaustion > 0 ? 1 : 0) || "") : id === "insp" ? (c.inspiration ? "On" : "") : "";
-  return `<section class="toolgrid" aria-label="Tools">${TOOLS.map(([id, label, icon, how]) => {
+  return `<div class="toolbar"><button class="btn sm" data-a="quickEditOpen">Edit Quick menu</button></div><section class="toolgrid" aria-label="Tools">${TOOLS.map(([id, label, icon, how]) => {
     const b = badge(id), act = how.modal ? `data-a="toolOpen" data-id="${how.modal}"` : `data-a="${how.a}" ${how.attrs || ""}`;
     return `<button class="toolbtn press" ${act}><span class="tb-ic">${ico(icon)}${b !== "" ? `<i class="tb-b">${esc(b)}</i>` : ""}</span><span class="tb-l">${esc(label)}</span></button>`;
   }).join("")}</section>`;

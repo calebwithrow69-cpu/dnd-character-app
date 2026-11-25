@@ -2,11 +2,44 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.82";
+export const VERSION = "0.1.83";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.83",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Custom Quick menu, six new tools, Sneak Attack and more combat buttons.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "Sneak Attack shows as an extra-damage button on Finesse and ranged hits, with the right dice for your level.",
+          "Brutal Strike adds its extra damage button while Reckless Attack is on.",
+          "Cleric level 7 picks Divine Strike or Potent Spellcasting. Divine Strike adds a 1d8 button on weapon hits.",
+          "Steady Aim gives Advantage on your attack while it is on.",
+          "Choose what the Quick button shows: Edit Quick menu on the Tools tab, or Settings. Up to 5 tools.",
+          "New tools: Roll d20, Death save, Rest, Stat sources, Edit character, Back up."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "On laptops Quick is a button at the bottom of the side rail. It opens a menu beside the rail."
+        ]
+      },
+      {
+        title: "Fixed",
+        items: [
+          "Rogue expertise picks made at creation are now saved on the character.",
+          "Blowgun damage reads 1, not 1.0.",
+          "Milestone characters no longer show an XP line."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.82",
     date: "2026-11-25",

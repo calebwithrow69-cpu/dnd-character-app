@@ -125,7 +125,7 @@ export function renderSheet(app) {
           </button>
           <button class="shieldbtn tier-${armorTier(d.ac).key}" data-a="openAc" aria-label="Armor class ${d.ac}, ${armorTier(d.ac).name}">${shieldSvg(d.ac)}<b>${d.ac}</b><span>AC</span></button>
         </div>
-        ${app.prefs.showxp === false ? "" : `<p class="xpline">${c.level >= 20 ? "Max level" : `${(c.xp || 0).toLocaleString()} XP \u00b7 ${xpReady ? "ready for level " + (c.level + 1) : (xpForLevel(c.level + 1) - (c.xp || 0)).toLocaleString() + " to level " + (c.level + 1)}`}</p>`}
+        ${app.prefs.showxp === false || c.levelMode === "milestone" ? "" : `<p class="xpline">${c.level >= 20 ? "Max level" : `${(c.xp || 0).toLocaleString()} XP \u00b7 ${xpReady ? "ready for level " + (c.level + 1) : (xpForLevel(c.level + 1) - (c.xp || 0)).toLocaleString() + " to level " + (c.level + 1)}`}</p>`}
         ${app.prefs.showquick === false ? "" : `<div class="quick">
           <button data-a="rollInit"><b>${fmtMod(d.initiative)}</b><span>Initiative · roll</span></button>
           <button data-a="openBreakdown" aria-label="Speed ${d.speed} feet"><b>${d.speed}</b><span>Speed ft</span></button>

@@ -66,7 +66,8 @@ export function settingsBody(app) {
     choice("startTab", "Open characters on", "Which tab shows first.", [["stats", "Character"], ["rules", "Rules"]], p.startTab || "stats", { kw: "default start tab" }) +
     choice("width", "Laptop width", "Standard or full window.", [["standard", "Standard"], ["wide", "Wide"]], p.width || "standard", { kw: "wide layout desktop screen" }) +
     sw("showxp", "Show XP line", "Experience under the level seal.", p.showxp !== false, { kw: "experience points level" }) +
-    sw("showquick", "Show quick stats", "Initiative, speed, proficiency, passive perception.", p.showquick !== false, { kw: "initiative speed passive perception header" });
+    sw("showquick", "Show quick stats", "Initiative, speed, proficiency, passive perception.", p.showquick !== false, { kw: "initiative speed passive perception header" }) +
+    `<div class="setrow" data-s="quick menu tools button shortcuts"><div class="setinfo"><div class="setlabel">Quick menu</div><div class="sethint">Tools on the Quick button.</div></div><button class="btn sm" data-a="quickEditOpen">Edit</button></div>`;
 
   const play =
     sw("wake", "Keep screen awake", HAS_WAKE ? "Stops your phone sleeping while the app is open at the table." : "Not supported on this browser.", !!p.wake && HAS_WAKE, { disabled: !HAS_WAKE, kw: "sleep screen on" }) +

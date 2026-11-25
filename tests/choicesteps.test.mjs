@@ -22,4 +22,7 @@ for (const c of library.classes) {
   const ids = lu.plan(a).steps.map(s => s.id).join(","), want = cp.steps.map(s => s.id).join(",");
   n++; if (ids !== want) { bad++; console.log("MISMATCH", c.name, ids, "vs", want); }
 }
+{ const d = cr.blankDraft(), app = { library, campaign, info: new Set() }; cr.pickClass(d, app, "Rogue"); const cp = cr.choicePlan(d, app);
+  const full = lu.fullPlan({ library, campaign, char: cp.tmp, lvl: cp.lvl, info: new Set() }).steps.map(s => s.id);
+  if (!full.includes("expertise")) { bad++; console.log("fullPlan lost Expertise (applyLevelUp would drop the picks):", full.join(",")); } }
 console.log(n, "classes,", bad, "mismatches"); process.exit(bad ? 1 : 0);

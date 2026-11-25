@@ -42,7 +42,7 @@ import {
 } from "./creation.js";
 import { rollMods } from "./effects.js";
 import { autoFailBy } from "./conditions.js";
-import { calcPress } from "./views/tools.js";
+import { calcPress, TOOLS, quickIds, QUICK_MAX } from "./views/tools.js";
 import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
 import { boxById } from "./lootbox.js";
@@ -70,7 +70,7 @@ import { renderModal, renderRollCard } from "./views/modals.js";
 import { renderShopResults, shopPrice } from "./views/shop.js";
 import { renderCxShopResults } from "./views/cxshop.js";
 import { shopStock, pay, fmtPrice } from "./equipment.js";
-import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
+import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, fullPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
 import { syncCustom, loadCustom, saveCustom, blankCustom, customValid } from "./custombg.js";
 import { featAbilityIncrease, applyFeat, ASI_FEAT } from "./featfx.js";
 import { setEffectsSource, syncHp, FX_TARGETS } from "./effects.js";
@@ -1984,13 +1984,22 @@ const ACTIONS = {
   hubToggle() { APP.hubOpen = !APP.hubOpen; render(); },
   hubClose() { if (APP.hubOpen) { APP.hubOpen = false; render(); } },
   hubGo(el) {
-    const id = el.dataset.id; APP.hubOpen = false;
-    if (id === "dice" || id === "calc") ACTIONS.toolOpen({ dataset: { id } });
-    else if (id === "cond") ACTIONS.openConditions();
-    else if (id === "init") { render(); ACTIONS.rollInit(); }
-    else if (id === "rest") openModal({ type: "restPick" });
-    else render();
+    const t = TOOLS.find(x => x[0] === el.dataset.id); APP.hubOpen = false; render();
+    if (!t) return;
+    const how = t[3], data = {};
+    if (how.modal) { ACTIONS.toolOpen({ dataset: { id: how.modal } }); return; }
+    for (const m of (how.attrs || "").matchAll(/data-([\w-]+)="([^"]*)"/g)) data[m[1].replace(/-(\w)/g, (x, ch) => ch.toUpperCase())] = m[2];
+    if (APP.char && APP.char.dead && !DEAD_OK.has(how.a)) { toast(`${APP.char.name} is dead. Revive them first.`); return; }
+    const fn = ACTIONS[how.a]; if (fn) fn({ dataset: data, closest: () => null, getAttribute: () => null });
   },
+  restPick() { openModal({ type: "restPick" }); },
+  quickEditOpen() { APP.hubOpen = false; openModal({ type: "quickEdit" }); },
+  quickToggle(el) {
+    const id = el.dataset.id, ids = quickIds(APP.prefs).slice(), i = ids.indexOf(id);
+    if (i >= 0) { if (ids.length > 1) ids.splice(i, 1); } else if (ids.length < QUICK_MAX) ids.push(id);
+    APP.prefs.quick = ids; savePrefs(); render();
+  },
+  quickReset() { delete APP.prefs.quick; savePrefs(); render(); },
   toolOpen(el) { openModal({ type: "tool", id: el.dataset.id }); },
   calcKey(el) { APP.calc = calcPress(APP.calc || {}, el.dataset.k); render(); },
   openConditions() { openModal({ type: "conditions" }); },
@@ -2612,7 +2621,7 @@ function animateHp() {
 function refreshLevelResults() { const y = window.scrollY; render(); window.scrollTo(0, y); }
 
 function applyLevelUp() {
-  const c = APP.char, d = APP.lvl, p = levelPlan(APP);
+  const c = APP.char, d = APP.lvl, p = fullPlan(APP);
   const ids = new Set(p.steps.map(s => s.id));
   const before = { level: c.level, con: c.abilities.con };
   const log = [];

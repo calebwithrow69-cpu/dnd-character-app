@@ -193,6 +193,22 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     const plain = numA(hold([], "longbow")).toHit, arch = numA(hold(["Archery"], "longbow")).toHit;
     eq(arch - plain, 2); eq(numA(hold(["Archery"], "longsword")).toHit, numA(hold([], "longsword")).toHit);
   }));
+  t("Sneak Attack is a once-per-turn rider for finesse or ranged weapons, scaling with level", () => withReal(() => {
+    const rg = (w, lv) => numA(hold([], w, null, { class: "Rogue", level: lv })).riders.dmg.map(r => [r.src, r.dice, r.once]);
+    eq(rg("dagger", 1), [["Sneak Attack", "1d6", true]]); eq(rg("dagger", 5), [["Sneak Attack", "3d6", true]]); eq(rg("dagger", 20), [["Sneak Attack", "10d6", true]]);
+    eq(rg("longbow", 1), [["Sneak Attack", "1d6", true]]); eq(rg("longsword", 5), []);
+    eq(numA(hold([], "dagger", null, { class: "Fighter", level: 5 })).riders.dmg.length, 0);
+  }));
+  t("Brutal Strike, Steady Aim and Divine Strike", () => withReal(() => {
+    const bar = (lv, active) => numA(hold([], "greatsword", null, { class: "Barbarian", level: lv, active, abilities: { str: 18, dex: 12, con: 14, int: 8, wis: 10, cha: 8 } }));
+    eq(bar(9, []).riders.dmg.length, 0); eq(bar(5, [{ id: "t:Reckless Attack" }]).riders.dmg.length, 0);
+    eq(bar(9, [{ id: "t:Reckless Attack" }]).riders.dmg.map(r => [r.src, r.dice, r.once]), [["Brutal Strike", "1d10", true]]);
+    eq(bar(17, [{ id: "t:Reckless Attack" }]).riders.dmg.map(r => r.dice), ["2d10"]);
+    const sa = (lv, active) => numA(hold([], "dagger", null, { class: "Rogue", level: lv, active }));
+    eq(sa(3, [{ id: "t:Steady Aim" }]).adv.includes("Steady Aim"), true); eq(sa(3, []).adv.includes("Steady Aim"), false); eq(sa(2, [{ id: "t:Steady Aim" }]).adv.includes("Steady Aim"), false);
+    const cl = (ch) => numA(hold([], "longsword", null, { class: "Cleric", level: 7, choices: ch })).riders.dmg.map(r => [r.src, r.dice]);
+    eq(cl({ "Blessed Strikes": "Divine Strike" }), [["Divine Strike", "1d8"]]); eq(cl({ "Blessed Strikes": "Potent Spellcasting" }), []); eq(cl({}), []);
+  }));
   t("Dueling: +2 damage with one melee weapon in hand and nothing else, not with a second weapon", () => withReal(() => {
     const base = numA(hold([], "longsword")).dmgMod;
     eq(numA(hold(["Dueling"], "longsword")).dmgMod - base, 2);
