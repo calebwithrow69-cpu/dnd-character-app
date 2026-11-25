@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.76";
+export const VERSION = "0.1.77";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.77",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "The Classic sheet shows more of what the printed sheet has.",
+    groups: [
+      {
+        title: "Added",
+        items: [
+          "Senses and defenses box: passive Perception, Investigation and Insight, senses, resistances, immunities.",
+          "Spell slot pips on the Sheet page, under Spellcasting.",
+          "Cantrips in the weapons list with a Cast button.",
+          "Character details on Features: alignment, appearance, backstory."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.76",
     date: "2026-11-24",

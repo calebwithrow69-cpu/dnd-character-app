@@ -132,7 +132,7 @@ export function renderSheet(app) {
 }
 
 // ---- Attacks (shared by the Stats and Gear tabs) ----
-export function attacksPanel(app, c, d, { head = "Attacks" } = {}) {
+export function attacksPanel(app, c, d, { head = "Attacks", extra = "" } = {}) {
   const weapons = attacksOf(c);
   const where = id => slotsOf(c, id).map(k => SLOTS.find(s => s.key === k).label).join(" + ");
   const mastered = it => (c.masteries || []).some(m => m === it.name || m === it.weapon?.base);
@@ -148,7 +148,8 @@ export function attacksPanel(app, c, d, { head = "Attacks" } = {}) {
       actions: `${hotbarToggle(c, "attack", it.id, it.name, false)}<button class="btn pri sm" data-a="attackRoll" data-id="${it.id}">Attack</button>`,
       extra: w.ammo ? `${esc(w.ammo.name)}: <span class="stepper"><button data-a="ammoStep" data-id="${it.id}" data-n="-1" aria-label="Spend ammo">\u2212</button><b>${w.ammo.cur}</b><button data-a="ammoStep" data-id="${it.id}" data-n="1" aria-label="Add ammo">+</button></span>` : ""
     });
-  }).join("") : `<p class="muted small" style="padding:12px 0">No weapons in your bag yet.</p>`}
+  }).join("") : (extra ? "" : `<p class="muted small" style="padding:12px 0">No weapons in your bag yet.</p>`)}
+      ${extra}
       </div></div>`;
 }
 

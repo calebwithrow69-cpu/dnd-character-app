@@ -989,7 +989,7 @@ function onInput(e) {
     e.draft[ds.nb] = el.value; nbRefresh({ foot: 1 }); return;
   }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
-  if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
+  if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes", "alignment", "appearance", "backstory"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
   if (ds.itemNotes != null && APP.char) { const it = APP.char.inventory[+ds.itemNotes]; if (it) { it.notes = el.value; save(); } return; }
   if (ds.modal && APP.modal) { APP.modal[ds.modal] = el.value; return; }
 }
