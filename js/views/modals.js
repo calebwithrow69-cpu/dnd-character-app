@@ -64,7 +64,7 @@ export function renderModal(app) {
 
     case "ac": {
       const d = deriveCharacter(c);
-      return modalShell(`Armor class ${d.ac}`, `<p class="sub2" style="margin-bottom:8px">AC sources. Worn armor and shields are included.</p>${acBody(c, d)}`, `<button class="btn pri" data-a="closeModal">Done</button>`);
+      return modalShell(`Armor class ${d.ac}`, `${acBody(c, d)}`, `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
     case "tile": {
@@ -526,13 +526,14 @@ function renderStorage(app) {
   const body = `<div class="stor">
     <p class="stor-lede">${esc(COPY.lede)}</p>
     <div class="stor-risk risk-${r.level}"><span class="tag risk-tag">${esc(r.label)}</span><b>${esc(r.headline)}</b><span class="sub2">${esc(r.line)}</span></div>
-    ${r.why.map(t => `<p>${esc(t)}</p>`).join("")}
+    ${first ? "" : r.why.map(t => `<p>${esc(t)}</p>`).join("")}
     <h3>${esc(COPY.steps)}</h3>
     <ol class="stor-steps">${r.steps.map(t => `<li>${esc(t)}</li>`).join("")}</ol>
     ${!r.info.standalone && !r.info.ios && !r.info.memory ? installCard(app, { inSettings: true }) : ""}
+    ${first ? `<details class="stor-more"><summary>Details</summary>${r.why.map(t => `<p>${esc(t)}</p>`).join("")}` : ""}
     <h3>${esc(COPY.erase)}</h3>
     <ul class="stor-erase">${r.erase.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
-    <p class="stor-close">${esc(COPY.close)}</p>
+    <p class="stor-close">${esc(COPY.close)}</p>${first ? "</details>" : ""}
     <p class="sub2">Browser protection: ${r.persisted ? "On" : "Off"} \u00b7 Last backup: ${esc(backupAge(app.prefs.lastBackup))}</p>
   </div>`;
   const foot = (has ? `<button class="btn" data-a="exportAll">Back up now</button>` : "") + (first ? `<button class="btn pri" data-a="storageAck">I understand</button>` : `<button class="btn pri" data-a="closeModal">Done</button>`);

@@ -171,7 +171,7 @@ export function classicBody(app, c, d) {
   return `<div class="classic">
     <div class="subtabs seg" role="group" aria-label="Sheet sections" style="--n:${subs.length}">
       ${subs.map(([id, label]) => `<button data-a="classicSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}</div>
-    ${sub === "tools" ? "" : `${searchBox("sheet", app.sheetQuery, "Search your sheet: skills, features, spells, items...")}
+    ${sub === "tools" ? "" : `${searchBox("sheet", app.sheetQuery, "Search sheet")}
     <div id="results-sheet">${renderSheetSearch(app)}</div>`}
     ${!c.subclass && c.level >= 3 && subclassesFor(app.library, c.class).length ? `<div class="panel"><div class="panel-body"><div class="rowline" style="border:0"><span class="nm" style="color:var(--amber)">No subclass chosen yet</span><button class="btn sm" data-a="openEdit">Choose</button></div></div></div>` : ""}
     ${needsFirstChoices(app, c) ? `<div class="panel"><div class="panel-body"><div class="rowline" style="border:0"><span class="nm" style="color:var(--amber)">Level 1 choices not made yet</span><button class="btn sm pri" data-a="startFirstChoices">Choose</button></div></div></div>` : ""}

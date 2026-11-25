@@ -130,20 +130,20 @@ function renderBonus(app, d) {
   const opts = bgAbilities(app, d);
   if (!opts.length) return "";
   const cls = findByName(app.library.classes, d.class);
-  const optSel = (key, exclude) => `<select class="f" data-draft="${key}">
+  const optSel = (key, exclude, label) => `<select class="f" data-draft="${key}" aria-label="${label}">
       <option value="">Choose\u2026</option>
-      ${opts.filter(a => a !== exclude).map(a => { const f = abilFit(app.library, cls, a); return `<option value="${a}" ${d[key] === a ? "selected" : ""} class="${f ? "cx-bg-" + f.tone : ""}">${f ? FIT_MARK[f.tone] + " " : ""}${ABILITY_LABEL[a]}</option>`; }).join("")}
+      ${opts.filter(a => a !== exclude).map(a => { const f = abilFit(app.library, cls, a); return `<option value="${a}" ${d[key] === a ? "selected" : ""} class="${f ? "cx-bg-" + f.tone : ""}">${ABILITY_LABEL[a]}${f ? " \u00b7 " + FIT_WORD[f.tone] : ""}</option>`; }).join("")}
     </select>`;
   const bonusDone = d.bonusMode === "111" || (!!d.plus2 && !!d.plus1 && d.plus1 !== d.plus2);
   return `<div class="choice${bonusDone ? "" : " need"}"><div class="choice-head"><h3>Ability score increases</h3><span class="sub2">${esc(d.background)}</span></div>
-    <p class="small">Raise ${opts.map(a => `<span class="cx-ab ${cls ? abilColor(app.library, cls, a) : ""}">${ABILITY_LABEL[a]}</span>`).join(", ")}.${cls ? ` ${esc(cls.name)} primary ability: <b>${esc(cls.primary)}</b>.` : ""}</p>
+    <p class="small">Raise ${opts.map(a => `<span class="cx-ab ${cls ? abilColor(app.library, cls, a) : ""}">${ABILITY_LABEL[a]}</span>`).join(", ")}.</p>
     <div class="seg" role="group" aria-label="Bonus type" style="margin-top:8px">
       <button data-a="bonusMode" data-mode="21" aria-pressed="${d.bonusMode === "21"}">+2 and +1</button>
       <button data-a="bonusMode" data-mode="111" aria-pressed="${d.bonusMode === "111"}">+1 to all three</button>
     </div>
-    ${d.bonusMode === "21" ? `<div class="grid2" style="margin-top:8px">
-      <div class="field"><label>+2 to</label>${optSel("plus2", null)}</div>
-      <div class="field"><label>+1 to</label>${optSel("plus1", d.plus2)}</div></div>` : ""}</div>`;
+    ${d.bonusMode === "21" ? `<div style="margin-top:8px;display:grid;gap:8px">
+      <div class="field"><label>+2 to</label>${optSel("plus2", null, "Plus 2 to")}</div>
+      <div class="field"><label>+1 to</label>${optSel("plus1", d.plus2, "Plus 1 to")}</div></div>` : ""}</div>`;
 }
 
 
@@ -375,9 +375,9 @@ function skillsGearBody(app, d) {
     ${toolDefs.map(def => renderChoice(app, d, def)).join("")}
     <div class="choice${d.classSkills.length < need ? " need" : ""}"><div class="choice-head"><h3>Class skills</h3><span class="sub2">Choose ${need} \u00b7 ${d.classSkills.length}/${need}</span></div>
       <div class="optlist">
-        ${taken.map(id => `<div class="optcard locked" aria-pressed="true"><input type="checkbox" checked disabled><span class="grow"><b>${esc(SKILLS.find(s => s.id === id).label)}</b><span>You have this</span></span></div>`).join("")}
         ${choices.map(id => { const on = d.classSkills.includes(id), s = SKILLS.find(x => x.id === id);
           return `<label class="optcard" aria-pressed="${on}"><input type="checkbox" data-a="toggleSkill" data-id="${id}" ${on ? "checked" : ""} ${!on && d.classSkills.length >= need ? "disabled" : ""}><span class="grow"><b>${esc(s.label)}</b><span>${ABILITY_LABEL[s.ability]}</span></span></label>`; }).join("")}
+        ${taken.map(id => `<div class="optcard locked" aria-pressed="true"><input type="checkbox" checked disabled><span class="grow"><b>${esc(SKILLS.find(s => s.id === id).label)}</b><span>You have this</span></span></div>`).join("")}
       </div></div>
     ${expertisePanel(app, d)}
     ${renderEquipGroup(app, d, "class")}${renderEquipGroup(app, d, "bg")}
@@ -440,13 +440,11 @@ function finishBody(app, d) {
   const skills = [...takenSkills(app, d), ...d.classSkills].map(id => SKILLS.find(s => s.id === id)?.label).filter(Boolean);
   const open = unresolvedDecisions(d, app).filter(x => x.chapter !== "finish");
   const picks = choiceLines(app, d);
-  return `<div class="btnrow"><button class="btn pri" data-a="randomDetails">Randomize all</button></div>
+  return `<div class="btnrow"><button class="btn" data-a="randomDetails">Randomize details</button></div>
     <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-name">Character name</label><button class="btn sm" data-a="randomName" aria-label="Random name">Random</button></div>
       <input class="f" id="f-name" value="${esc(d.name)}" placeholder="e.g. Gandork the Green" maxlength="60" autocomplete="off" enterkeyhint="next"></div>
-    <div class="grid2" style="margin-top:12px">
-      <div class="field"><div class="rlabel"><label for="f-align">Alignment (optional)</label><button class="btn sm" data-a="randomAlign" aria-label="Random alignment">Random</button></div><select class="f" id="f-align" data-draft="alignment"><option value="">Choose...</option>${ALIGNMENTS.map(a => `<option ${d.alignment === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
-      <div class="field"><label>Languages</label><input class="f" value="${esc(["Common", ...[].concat(d.picks["bg:lang"] || [])].join(", "))}" disabled aria-label="Languages from your background"></div>
-    </div>
+    <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-align">Alignment (optional)</label><button class="btn sm" data-a="randomAlign" aria-label="Random alignment">Random</button></div><select class="f" id="f-align" data-draft="alignment"><option value="">Choose...</option>${ALIGNMENTS.map(a => `<option ${d.alignment === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
+    <div class="field" style="margin-top:12px"><label>Languages</label><input class="f" value="${esc(["Common", ...[].concat(d.picks["bg:lang"] || [])].join(", "))}" disabled aria-label="Languages from your background"></div>
     <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-look">Appearance (optional)</label><button class="btn sm" data-a="randomLook" aria-label="Random appearance">Random</button></div><textarea class="f" id="f-look" rows="3" data-draft-text="appearance" placeholder="Height, build, hair, scars, clothing">${esc(d.appearance || "")}</textarea></div>
     <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-story">Backstory and personality (optional)</label><button class="btn sm" data-a="randomStory" aria-label="Random backstory and personality">Random</button></div><textarea class="f" id="f-story" rows="5" data-draft-text="backstory" placeholder="Where from, what they want, how they act">${esc(d.backstory || "")}</textarea></div>
     <div class="choice"><div class="choice-head"><h3>Summary</h3></div><dl class="kv">
@@ -580,7 +578,7 @@ export function renderCreate(app) {
       <div class="sp-list" id="wizard-results">${renderWizardResults(app)}</div>`;
   } else if (id === "abilities") content = abilitiesBody(app, d);
   else if (id === "classOpts") {
-    tools = `<button class="btn sm pri" data-a="cxOpenShop">Shop \u00b7 ${esc(fmtPrice(walletLeftCp(app, d) / 100) || "0 gp")}</button> <button class="btn sm" data-a="randomSkills">Randomize skills</button>` + (gearChoices(app, d).some(g => !g.fixed) ? ` <button class="btn sm" data-a="randomGear">Randomize equipment</button>` : "");
+    tools = `<button class="btn sm" data-a="cxOpenShop">Shop \u00b7 ${esc(fmtPrice(walletLeftCp(app, d) / 100) || "0 gp")}</button> <button class="btn sm" data-a="randomSkills">Randomize skills</button>` + (gearChoices(app, d).some(g => !g.fixed) ? ` <button class="btn sm" data-a="randomGear">Randomize equipment</button>` : "");
     content = skillsGearBody(app, d);
   } else if (id === "classChoices") content = classChoicesBody(app, d);
   else content = finishBody(app, d);

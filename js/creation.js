@@ -7,7 +7,7 @@ import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, skillIdByLabel, abilityMod
   primaryAbility, speciesSpeed, speciesSize, hpAverageGain, standardArray,
   roll4d6DropLowest, SUGGESTED_ARRAYS, parseProfs } from "./rules.js";
 import { newId, normalize } from "./store.js";
-import { levelUpPlan, stepValidFor, optionPrereq, spellsFor, expertiseOptions } from "./progression.js";
+import { levelUpPlan, stepValidFor, optionPrereq, spellsFor, expertiseOptions, masteryOk } from "./progression.js";
 import {
   draftChoices, optionsFor, isAnswered, applyChoices, backgroundToolChoice,
   backgroundFeatNames, bgSkillIds, bgAbilityIds, speciesBaseText, grantedSpells,
@@ -253,7 +253,7 @@ export function randomizeStep(app, tmp, lvl, st) {
   else if (st.id === "order") lvl.order = any(st.options).name;
   else if (st.id === "language") lvl.language = any(LANGUAGES);
   else if (st.id === "expertise") lvl.expertise = some(expertiseOptions(tmp), st.n).map(x => x.id);
-  else if (st.id === "mastery") lvl.mastery = some(allWeapons(L, C).filter(w => w.mastery && !(tmp.masteries || []).includes(w.name)), st.n).map(w => w.name);
+  else if (st.id === "mastery") lvl.mastery = some(allWeapons(L, C).filter(w => masteryOk(tmp.class, w) && !(tmp.masteries || []).includes(w.name)), st.n).map(w => w.name);
   else if (st.id === "options") {
     const ok = st.group.options.filter(o => { const p = optionPrereq(o); return p.level <= lvl.next && !p.needs.length; });
     lvl.options = some(ok, st.n).map(o => o.name);

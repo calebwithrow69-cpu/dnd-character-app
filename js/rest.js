@@ -1,4 +1,5 @@
 // Long rest: rations, and the things a character may change when finishing one. No DOM in here.
+import { masteryOk } from "./progression.js";
 import { subclassSpellTables, pickKey, syncSubclassSpells } from "./subclassspells.js";
 
 // ---- rations: they stay ordinary bag items (so they weigh something); the count is read from the bag
@@ -31,7 +32,7 @@ export function restOptions(L, c, weapons = []) {
   }
   if ((c.masteries || []).length) {
     const have = c.masteries.slice(), taken = new Set(have);
-    out.push({ kind: "swap", id: "mastery", label: "Weapon mastery", have, choices: weapons.filter(w => w.mastery && !taken.has(w.name)).map(w => w.name).sort() });
+    out.push({ kind: "swap", id: "mastery", label: "Weapon mastery", have, choices: weapons.filter(w => masteryOk(c.class, w) && !taken.has(w.name)).map(w => w.name).sort() });
   }
   if (PREPARES.has(c.class)) out.push({ kind: "note", id: "prepared", label: "Prepared spells", text: "You can change your prepared spells after this rest.", action: "lrSpells", button: "Open spells" });
   return out;

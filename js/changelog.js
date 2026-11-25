@@ -2,11 +2,33 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.79";
+export const VERSION = "0.1.80";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.80",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Quick button, class weapon mastery, Natural Armor, creation cleanup.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "The round bottom button is now Quick: white, with a bolt icon.",
+          "Weapon Mastery lists only the weapons your class can use. Barbarian: melee. Rogue: Finesse or Light.",
+          "Altered: Natural Armor now sets AC to 13 plus Dex or Con.",
+          "Classic is preselected on the sheet chooser.",
+          "The sheet header wraps the class line instead of cutting it.",
+          "Skills you already have are listed after the ones you can pick.",
+          "Background increases show Primary, Useful or Low value in words.",
+          "Randomize all is Randomize details. Alignment and Languages fill the width.",
+          "The first-run storage notice folds its long explanations into Details."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.79",
     date: "2026-11-25",

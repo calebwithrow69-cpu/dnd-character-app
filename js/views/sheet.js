@@ -34,7 +34,7 @@ export function sheetTabs(app) {
   return [
     ["stats", "Character", ICONS.stats],
     ["notes", "Notes", ICONS.notes, "goNotes"],
-    ["hub", "Tools", ""],
+    ["hub", "Quick", ""],
     ["rules", "Rules", ICONS.book],
     ["settings", "Settings", ICONS.settings]
   ];

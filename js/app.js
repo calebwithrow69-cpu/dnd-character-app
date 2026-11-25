@@ -1441,7 +1441,7 @@ const ACTIONS = {
     if (el.dataset.k === "startTab") toast("Characters will open on " + el.textContent);
   },
   stylePick(el) { APP.stylePending = el.dataset.v; render(); },
-  styleRun() { APP.styleStep = "style"; render(); window.scrollTo(0, 0); },
+  styleRun() { APP.styleStep = "style"; APP.stylePending = APP.stylePending || "classic"; render(); window.scrollTo(0, 0); },
   styleBack() { APP.styleStep = "mode"; APP.stylePending = null; render(); window.scrollTo(0, 0); },
   styleConfirm() {
     const v = APP.stylePending; if (v !== "classic" && v !== "advanced") return;

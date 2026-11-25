@@ -5,7 +5,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { isSustained } from "../js/combat.js";
 import { normalizeSubclass, subclassGaps } from "../js/data.js";
-import { newFeatures } from "../js/progression.js";
+import { newFeatures, masteryOk } from "../js/progression.js";
 import { bookName, bookKey, listBooks, allowed, allowedBy, effectiveCampaign, groupRuleset, blankRuleset, copyRuleset, encodeRuleset, decodeRuleset, clean as cleanRuleset, problems } from "../js/rulesets.js";
 import { templatePayload, templateCode, readShared } from "../js/templates.js";
 import { blankDraft } from "../js/creation.js";
@@ -300,6 +300,19 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     eq(LIB.species.find(s2 => s2.name === "Goliath").trackers.map(t2 => t2.name), ["Giant Ancestry", "Large Form"]); // hand-made ones are left alone
     const g = mk({ class: "Druid", level: 5, species: "Human" }); ensureLuck(g); eq(g.resources.map(r => r.name), ["Wild Shape", "Wild Resurgence"]);
     const w = mk({ class: "Fighter", level: 9, subclass: "Battle Master" }); ensureLuck(w); eq(w.resources.map(r => r.name).sort(), ["Action Surge", "Indomitable", "Know Your Enemy", "Second Wind"].sort());
+  }));
+  t("weapon mastery pools follow the class text", () => withReal(() => {
+    const ws = LIB.weapons.filter(w => w.mastery);
+    eq(ws.filter(w => masteryOk("Barbarian", w)).every(w => /melee/i.test(w.kind || "Melee")), true);
+    eq(ws.some(w => w.name === "Blowgun") && masteryOk("Barbarian", ws.find(w => w.name === "Blowgun")), false);
+    eq(ws.filter(w => masteryOk("Rogue", w)).every(w => /finesse|light/i.test(w.props || "")), true);
+    eq(masteryOk("Fighter", ws.find(w => w.name === "Blowgun")), true);
+  }));
+  t("real rules: Altered Natural Armor is AC 13 + chosen ability, only when picked", () => withReal(() => {
+    const base = { class: "Fighter", level: 1, abilities: { str: 16, dex: 14, con: 12, int: 10, wis: 10, cha: 8 }, feats: ["Altered"], ac: { base: 10, bonus: 0, shield: false, dexCap: null, armorName: "", override: null } };
+    eq(computeAC(mk({ ...base, choices: { Altered: ["Natural Armor"], "Natural Armor ability": ["dex"] } })).total, 15);
+    eq(computeAC(mk({ ...base, choices: { Altered: ["Natural Armor"], "Natural Armor ability": ["con"] } })).total, 14);
+    eq(computeAC(mk({ ...base, choices: { Altered: ["Night Vision"] } })).total, 12);
   }));
   t("real rules: species trackers, Goliath/Azurite boons, Danger Sense", () => withReal(() => {
     eq(LIB.species.flatMap(sp => (sp.effects || []).flatMap(validateEffect)), []);

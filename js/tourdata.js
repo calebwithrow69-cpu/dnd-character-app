@@ -5,7 +5,7 @@ export const TOURS = {
   home: {
     name: "Home tour",
     steps: [
-      { sel: "#home-book", title: "Continue", body: "The big button opens the last character you played. In DM mode it opens the last campaign." },
+      { sel: "#home-book", title: "Main button", body: "Opens your last character, or starts your first. In DM mode it opens the last campaign." },
       { sel: ".hmode", title: "Player or DM", body: "Switch between your characters and your campaigns. Each DM campaign keeps its own party, creatures and fights." },
       { sel: ".hsec", title: "Your list", body: "Newest first. New creates one, and search appears past six. Manage holds imports and the graveyard." },
       { sel: ".hparts", title: "Rules and Notes", body: "Both work offline. Rules is the glossary. Notes belong to you, not to one character." },
@@ -32,7 +32,7 @@ export const TOURS = {
     steps: [
       { sel: ".status .vitals", title: "Level, HP, AC", body: "The seal is level and XP. The vial is hit points. The shield is armor class. Each one opens its own controls." },
       { sel: 'nav.tabs [data-tab="rules"]', title: "Rules", body: "Every class, spell, item and condition, searchable offline. Notes sits beside it." },
-      { sel: ".hubbtn", title: "Tools hub", body: "Dice, conditions, calculator, rest and initiative. Tap, then pick one. The Shop is on the Gear tab." },
+      { sel: ".hubbtn", title: "Quick", body: "Dice, conditions, calculator, rest and initiative. Tap, then pick one. The Shop is on the Gear tab." },
       { sel: '[data-a="openEdit"]', title: "Edit character", body: "Level up or lower, add feats, change scores, mark a character as dead." },
       { sel: ".navchar", title: "Back to character", body: "The portrait jumps straight to your character from any page. The arrow goes back one page." },
       { sel: '[data-a="helpOpen"]', title: "Help", body: "The ? replays this tour. Every screen has one in its header." },

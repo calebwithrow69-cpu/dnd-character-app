@@ -5,7 +5,7 @@ import { esc, topbar, formatText, searchBox, infoRow, glossaryEntry, ICONS, kRow
 import { detailFor, spellSub } from "./sheet.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, abilityMod, fmtMod, hpAverageGain, slotRows } from "../rules.js";
 import { findByName, findFeat, enabledFeats, allWeapons, subclassesFor } from "../data.js";
-import { levelUpPlan, featEligible, optionPrereq, spellsFor, stepValidFor, expertiseOptions } from "../progression.js";
+import { levelUpPlan, featEligible, optionPrereq, spellsFor, stepValidFor, expertiseOptions, masteryOk } from "../progression.js";
 import { lineageSpells, LANGUAGES } from "../choices.js";
 import { recommendFeats } from "../featfit.js";
 import { renderFeatControls, renderFeatGrid, renderFeatSheet } from "./feats.js";
@@ -225,7 +225,7 @@ export function levelBody(app) {
 
   else if (step.id === "mastery") {
     const have = c.masteries || [];
-    const ws = allWeapons(L, app.campaign).filter(w => w.mastery && !have.includes(w.name)).sort((a, b) => a.name.localeCompare(b.name));
+    const ws = allWeapons(L, app.campaign).filter(w => masteryOk(c.class, w) && !have.includes(w.name)).sort((a, b) => a.name.localeCompare(b.name));
     body = `<p class="small muted">Choose ${step.n} \u00b7 ${d.mastery.length}/${step.n}</p>
       <div class="optlist">${pickList(ws, d.mastery, "lvlMastery", { kind: "mastery", max: step.n, detail: masteryDetail, render: w => `${esc(w.mastery)} · ${esc(w.cat || "")} ${esc(w.kind || "")}` })}</div>`;
   }

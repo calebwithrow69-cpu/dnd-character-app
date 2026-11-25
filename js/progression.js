@@ -24,6 +24,14 @@ const FIXED_MASTERY = { Paladin: 2, Ranger: 2, Rogue: 2 };
 
 const num = v => (v == null || v === "—" || v === "-" ? 0 : (parseInt(String(v).replace(/[^\d]/g, ""), 10) || 0));
 
+// Which weapons a class may take Weapon Mastery on (2024 Player's Handbook class text).
+export function masteryOk(cls, w) {
+  if (!w || !w.mastery) return false;
+  if (cls === "Barbarian") return /melee/i.test(w.kind || "Melee");
+  if (cls === "Rogue") return /finesse|light/i.test(w.props || "");
+  return true;
+}
+
 export function tableCounts(cls, level) {
   if (!cls || !cls.table) return null;
   const spec = TABLE_TAIL[cls.name];

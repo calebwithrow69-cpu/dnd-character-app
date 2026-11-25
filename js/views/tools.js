@@ -27,12 +27,13 @@ export const HUB = [["dice", "Dice", "dice"], ["cond", "Conditions", "cond"], ["
 // Phone: an arc above the hub. Wide: a column to the right of the rail. Pixel offsets from the hub centre.
 const HUB_XY = [[-122, -78], [-74, -144], [0, -166], [74, -144], [122, -78]];
 const HUB_WXY = [[74, -132], [116, -66], [132, 0], [116, 66], [74, 132]];
-const HUB_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.2"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2.1 2.1M15.9 15.9L18 18M18 6l-2.1 2.1M8.1 15.9L6 18"/></svg>';
+const HUB_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M13.2 2.5 5 13.2h5.6l-1 8.3 8.4-11.1h-5.7z"/></svg>';
+const HUB_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 export function hubCell(app) {
   const open = !!app.hubOpen;
-  const fan = open ? `<div class="hubfan" role="menu" aria-label="Quick tools">${HUB.map(([id, label, icon], i) =>
+  const fan = open ? `<div class="hubfan" role="menu" aria-label="Quick">${HUB.map(([id, label, icon], i) =>
     `<button class="hubopt" role="menuitem" data-a="hubGo" data-id="${id}" style="--x:${HUB_XY[i][0]}px;--y:${HUB_XY[i][1]}px;--wx:${HUB_WXY[i][0]}px;--wy:${HUB_WXY[i][1]}px;--d:${i * 30}ms"><span class="ho-ic">${ico(icon)}</span><span class="ho-l">${esc(label)}</span></button>`).join("")}</div>` : "";
-  return `<div class="hubcell">${open ? `<div class="hubscrim" data-a="hubClose"></div>` : ""}<div class="hubanchor">${fan}<button class="hubbtn ${open ? "open" : ""}" data-a="hubToggle" aria-haspopup="menu" aria-expanded="${open}" aria-label="Quick tools">${HUB_ICON}</button></div><span class="hublbl">Tools</span></div>`;
+  return `<div class="hubcell">${open ? `<div class="hubscrim" data-a="hubClose"></div>` : ""}<div class="hubanchor">${fan}<button class="hubbtn ${open ? "open" : ""}" data-a="hubToggle" aria-haspopup="menu" aria-expanded="${open}" aria-label="Quick">${open ? HUB_CLOSE : HUB_ICON}</button></div><span class="hublbl">Quick</span></div>`;
 }
 
 // [id, label, icon, how]: how = {modal} opens a tool, {a, ...attrs} runs an action.
