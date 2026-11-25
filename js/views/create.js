@@ -222,6 +222,7 @@ function cfgFor(app, d, kind) {
       traitsTitle: "Traits and abilities",
       chips: o => d.class && speciesFit(d.class, o.name) ? [{ label: "Recommended", full: "Recommended for " + d.class, tone: "good" }] : [],
       fitWord: { good: "Suggested", ok: "", bad: "" }, noFitBlock: true,
+      recLabel: d.class ? "Recommended for " + d.class : "Recommended",
       synergyScore: d.class ? o => (speciesFit(d.class, o.name) ? 1 : 0) : undefined,
       synergyGood: o => speciesFit(d.class, o.name),
       choices: o => choiceBundle(app, d, "species", o)
@@ -257,6 +258,7 @@ function cfgFor(app, d, kind) {
         ["Feat", backgroundFeatNames(b).join(" or ")], ["Equipment", eq || ""]].filter(f => f[1]);
     },
     fitFor: d.class || "",
+    recLabel: d.class ? "Recommended for " + d.class : "Recommended",
     synergyScore: b => {
       const cls = findByName(L.classes, d.class); if (!cls) return 0;
       return bgAbilityIds(b).reduce((n, a) => { const f = abilFit(L, cls, a); return n + (f.tone === "good" ? 10 : f.tone === "ok" ? 1 : 0); }, 0);

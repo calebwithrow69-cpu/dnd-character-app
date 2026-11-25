@@ -2,11 +2,33 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.80";
+export const VERSION = "0.1.81";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.81",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Rogue creation fix, Altered fix, full book titles.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "Rogue creation could not pass Class Choices: Weapon mastery showed the Expertise list.",
+          "Altered: Natural Armor and Natural Weapons now apply.",
+          "Source filters and the ruleset book list show full titles, not codes."
+        ]
+      },
+      {
+        title: "Changed",
+        items: [
+          "Species and Background say Recommended for your class."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.80",
     date: "2026-11-25",

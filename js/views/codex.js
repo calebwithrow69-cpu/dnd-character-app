@@ -6,6 +6,7 @@
 import { esc, formatText } from "../ui.js";
 import { portraitFor } from "../portraits.js";
 import { emblem, emblemFor } from "../emblems.js";
+import { bookTitle } from "../rulesets.js";
 
 const I = {
   chev: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
@@ -46,7 +47,7 @@ export function renderControls(app, cfg) {
       </select></label>
     <label class="sp-sel"><span>${esc(cfg.filterLabel)}</span>
       <select class="f" data-a="cxFilter" data-kind="${cfg.kind}" aria-label="Filter ${cfg.noun}">
-        ${cfg.filterOptions.map(o => `<option value="${esc(o)}" ${u.filter === o ? "selected" : ""}>${esc(o)}</option>`).join("")}
+        ${cfg.filterOptions.map(o => `<option value="${esc(o)}" ${u.filter === o ? "selected" : ""}>${esc(cfg.sources ? bookTitle(o) : o)}</option>`).join("")}
       </select></label>
   </div>`;
 }
@@ -131,9 +132,9 @@ export function renderCodexList(app, cfg) {
   const q = (cfg.query || "").trim().toLowerCase();
   let items = cfg.items.filter(o => (u.filter === "All" || cfg.test(o, u.filter)) && (!q || o.name.toLowerCase().includes(q)));
   if (!items.length) return `<p class="muted small" style="padding:12px 0">No matches.</p>`;
-  const src = s => s || "No source";
+  const src = s => bookTitle(s || "No source");
   const by = (a, b) => a.name.localeCompare(b.name);
-  const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : u.sort === "rec" && cfg.synergyScore ? (cfg.synergyGood(o) ? "Recommended" : "Other") : o.name[0].toUpperCase();
+  const group = o => u.sort === "source" ? src(o.source) : u.sort === "fav" ? (fav.includes(o.name) ? "Favorites" : "All " + cfg.noun) : u.sort === "rec" && cfg.synergyScore ? (cfg.synergyGood(o) ? (cfg.recLabel || "Recommended") : "Other") : o.name[0].toUpperCase();
   items = items.sort((a, b) => {
     if (u.sort === "source") return src(a.source).localeCompare(src(b.source)) || by(a, b);
     if (u.sort === "fav") return (fav.includes(b.name) - fav.includes(a.name)) || by(a, b);

@@ -9,6 +9,14 @@ export const GROUP_ID = "group";
 
 // ---- books: "PHB'24 p87" and "Phb'24" are the same book
 export const bookName = e => String((e && e.source) || "").replace(/\s+p\.?\s?\d[\d–-]*\s*$/i, "").replace(/\s+/g, " ").trim() || "Unlabelled";
+// Full titles for the source codes used in the rules (the 5e.tools codes). Unknown codes show as written.
+export const BOOK_TITLES = {
+  "phb'24": "Player's Handbook (2024)", "mpmm": "Mordenkainen Presents: Monsters of the Multiverse",
+  "abh": "Astarion's Book of Hungers", "efa": "Eberron: Forge of the Artificer", "xge": "Xanathar's Guide to Everything",
+  "tce": "Tasha's Cauldron of Everything", "bgg": "Bigby Presents: Glory of the Giants", "frhof": "Forgotten Realms: Heroes of Faer\u00fbn",
+  "egw": "Explorer's Guide to Wildemount", "ftd": "Fizban's Treasury of Dragons", "tdcsr": "Tal'Dorei Campaign Setting Reborn"
+};
+export const bookTitle = code => { const t = BOOK_TITLES[String(code || "").trim().toLowerCase()]; return t ? `${code} \u00b7 ${t}` : code; };
 export const bookKey = e => bookName(e).toLowerCase();
 export const entryKey = (kind, e) => kind === "subclasses" ? `${e.cls}|${e.name}` : e.name;
 

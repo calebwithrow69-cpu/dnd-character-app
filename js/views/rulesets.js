@@ -1,6 +1,6 @@
 // Rulesets screen: make, copy, share and edit sets of allowed books and entries. ASCII only.
 import { esc, topbar, searchBox } from "../ui.js";
-import { KINDS, listBooks, allowed, allowedBy, entryKey, blankRuleset, copyRuleset, groupRuleset, findSet, saveSets, clean, encodeRuleset, decodeRuleset, countAllowed, problems, GROUP_ID, bookName } from "../rulesets.js";
+import { KINDS, bookTitle, listBooks, allowed, allowedBy, entryKey, blankRuleset, copyRuleset, groupRuleset, findSet, saveSets, clean, encodeRuleset, decodeRuleset, countAllowed, problems, GROUP_ID, bookName } from "../rulesets.js";
 
 export const rsUiDefault = () => ({ edit: null, tab: "books", kind: "classes", q: "", filter: "all", share: null, confirmDel: null, msg: "" });
 const LIMIT = 120;
@@ -54,7 +54,7 @@ function editor(app, ui, L) {
       <div class="panel"><div class="panel-body flush">${books.map(b => {
         const on = typeof rs.books[b.key] === "boolean" ? rs.books[b.key] : rs.defaultBooks !== false;
         const parts = KINDS.filter(k => b.counts[k[0]]).map(k => `${b.counts[k[0]]} ${k[1].toLowerCase()}`).join(", ");
-        return `<div class="rowline"><span class="nm" style="flex-direction:column;align-items:flex-start;gap:0"><span>${esc(b.name)}${b.key === "unlabelled" ? " (no book recorded)" : ""}</span><span class="sub2">${esc(parts)}</span></span>
+        return `<div class="rowline"><span class="nm" style="flex-direction:column;align-items:flex-start;gap:0"><span>${esc(bookTitle(b.name))}${b.key === "unlabelled" ? " (no book recorded)" : ""}</span><span class="sub2">${esc(parts)}</span></span>
           <button class="btn sm ${on ? "pri" : ""}" data-a="rsBook" data-key="${esc(b.key)}" aria-pressed="${on}" ${dis}>${on ? "On" : "Off"}</button></div>`;
       }).join("")}</div></div>
       <p class="sub2">A single entry set under Entries beats its book.</p>`;

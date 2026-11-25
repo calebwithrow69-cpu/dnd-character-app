@@ -232,7 +232,7 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     eq(first({ ...mk({ feats: ["Unarmed Fighting"] }), inventory: [], equipment: {} }).dice, "1d8");
     eq(first(hold(["Unarmed Fighting"], "longsword")).dice, "1d6");
     eq(first(mk({ feats: ["Altered"] })).dice, "1");
-    eq(first({ ...mk({ feats: ["Altered"] }), choices: { Altered: ["Natural Weapons"] } }).dice, "1d8");
+    eq(first({ ...mk({ feats: ["Altered"] }), choices: { "Altered: Altered": ["Natural Weapons"] } }).dice, "1d8");
     eq(first(mk({ species: "Dhampir" })).ability, "con");
     eq(names(mk({ species: "Shifter" })), ["Unarmed Strike", "Longtooth"]);
     eq(names(mk({ species: "Tabaxi", feats: ["Tavern Brawler"] })), ["Unarmed Strike"]);
@@ -310,9 +310,9 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
   }));
   t("real rules: Altered Natural Armor is AC 13 + chosen ability, only when picked", () => withReal(() => {
     const base = { class: "Fighter", level: 1, abilities: { str: 16, dex: 14, con: 12, int: 10, wis: 10, cha: 8 }, feats: ["Altered"], ac: { base: 10, bonus: 0, shield: false, dexCap: null, armorName: "", override: null } };
-    eq(computeAC(mk({ ...base, choices: { Altered: ["Natural Armor"], "Natural Armor ability": ["dex"] } })).total, 15);
-    eq(computeAC(mk({ ...base, choices: { Altered: ["Natural Armor"], "Natural Armor ability": ["con"] } })).total, 14);
-    eq(computeAC(mk({ ...base, choices: { Altered: ["Night Vision"] } })).total, 12);
+    eq(computeAC(mk({ ...base, choices: { "Altered: Altered": ["Natural Armor"], "Altered: Natural Armor ability": ["dex"] } })).total, 15);
+    eq(computeAC(mk({ ...base, choices: { "Altered: Altered": ["Natural Armor"], "Altered: Natural Armor ability": ["con"] } })).total, 14);
+    eq(computeAC(mk({ ...base, choices: { "Altered: Altered": ["Night Vision"] } })).total, 12);
   }));
   t("real rules: species trackers, Goliath/Azurite boons, Danger Sense", () => withReal(() => {
     eq(LIB.species.flatMap(sp => (sp.effects || []).flatMap(validateEffect)), []);

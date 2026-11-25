@@ -26,7 +26,10 @@ export function newLevelDraft(char, { fromCreation = false } = {}) {
 
 export function plan(app) {
   const d = app.lvl;
-  return levelUpPlan(app.library, app.char, d.next, d, { fromCreation: d.fromCreation });
+  const out = levelUpPlan(app.library, app.char, d.next, d, { fromCreation: d.fromCreation || !!d.forClass });
+  // creation asks Expertise on Skills and Gear and hides "review", so the step list must match choicePlan's
+  if (d.forClass) out.steps = out.steps.filter(x => x.id !== "review" && x.id !== "expertise");
+  return out;
 }
 
 export function asiResult(c, d) {
