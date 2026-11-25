@@ -50,7 +50,7 @@ export function renderDmMode(app) {
   const cards = Object.values(d.party), avg = cards.length ? Math.round(cards.reduce((a, c) => a + c.level, 0) / cards.length * 10) / 10 : null;
   const xp = dm.encounterXp(d);
   return `<div class="sheetview dmview">
-    ${topbar("DM", app.campaign && app.campaign.name || "This device", { back: "goHome", actions: [{ a: "tourStart", label: "Tutorial", icon: "info", id: "dm" }] })}
+    ${topbar(dm.readIndex().list.find(x => x.id === dm.activeId()).name, "Dungeon Master", { back: "goHome", backLabel: "Main menu", actions: [{ a: "dmCampOpen", label: "Campaigns", icon: "book" }, { a: "tourStart", label: "Tutorial", icon: "info", id: "dm" }] })}
     <main class="wrap page wide dmmode">
       <section class="status" aria-label="Table"><div class="quick">
         <div><b>${cards.length || "--"}</b><span>Characters</span></div>
@@ -255,11 +255,24 @@ function screenView(app, s) {
 export function renderDmModal(app) {
   const m = app.modal, s = app.dmm;
   if (m.type === "dmSend") return sendModal(m);
+  if (m.type === "dmCamps") return campsModal(m);
+  if (m.type === "dmCampName") return campNameModal(m);
   if (!s) return "";
   if (m.type === "dmRow") return rowModal(s, m);
   if (m.type === "dmCreature") return creatureModal(s, m);
   if (m.type === "dmMon") return monModal(app, s, m);
   return "";
+}
+function campsModal(m) {
+  const ix = dm.readIndex(), rows = ix.list.slice().sort((a, b) => b.at - a.at).map(c => { const g = dm.campaignGlance(c);
+    return `<div class="dmcamp${c.id === ix.active ? " on" : ""}"><button class="dmcamp-main press" data-a="dmCampPick" data-id="${esc(c.id)}"><b>${esc(c.name)}</b><span>${g.n} ${g.n === 1 ? "character" : "characters"}${c.id === ix.active ? " \u00b7 Open" : ""}</span></button>
+      <button class="iconbtn" data-a="dmCampRename" data-id="${esc(c.id)}" aria-label="Rename ${esc(c.name)}">${ICONS.edit}</button>
+      <button class="${_confirm === "camp" + c.id ? "btn sm danger" : "iconbtn"}" data-a="dmCampDelete" data-id="${esc(c.id)}" aria-label="Delete ${esc(c.name)}">${_confirm === "camp" + c.id ? "Delete?" : ICONS.trash}</button></div>`; }).join("");
+  return modalShell("Campaigns", `<div class="stack dmcamps">${rows}</div>`, `<button class="btn pri" data-a="dmCampNew">New campaign</button>`);
+}
+function campNameModal(m) {
+  return modalShell(m.id ? "Rename campaign" : "New campaign", `<label class="field"><span class="lab">Name</span><input class="f" id="dm-cname" maxlength="40" value="${esc(m.name || "")}" autocomplete="off"></label>`,
+    `<button class="btn" data-a="${m.home ? "closeModal" : "dmCampOpen"}">Cancel</button><button class="btn pri" data-a="dmCampSave">Save</button>`);
 }
 function sendModal(m) {
   return modalShell("Send to DM", `<label class="field"><span class="lab">${esc(m.name)}, current stats</span><textarea class="f mono" id="dm-send" rows="5" readonly spellcheck="false" onfocus="this.select()">${esc(m.code)}</textarea></label>`,

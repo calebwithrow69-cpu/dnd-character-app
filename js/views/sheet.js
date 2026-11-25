@@ -40,11 +40,11 @@ function sheetBar(c, d, meta) {
   const sub = [c.species, c.class + (c.subclass ? " (" + c.subclass + ")" : "")].filter(Boolean).join(" \u00b7 ");
   const pill = (v, l) => `<span class="sb-pill"><b>${v}</b><i>${l}</i></span>`;
   return `<header class="topbar sheetbar"><div class="wrap row sb-phone">
-      <button class="iconbtn" data-a="backToRoster" aria-label="Back">${ICONS.back}</button>
+      <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Main menu</span></button>
       <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">${esc(meta)}</div></div>
       <button class="iconbtn" data-a="openEdit" aria-label="Edit character">${ICONS.edit}</button></div>
     <div class="wrap row sb-wide">
-      <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Characters</span></button>
+      <button class="btn sm" data-a="backToRoster">${ICONS.back}<span>Main menu</span></button>
       <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">Level ${c.level} \u00b7 ${esc(sub)}</div></div>
       <div class="sb-pills">${pill(c.hp.cur + "/" + c.hp.max, "HP")}${pill(d.ac, "AC")}${pill(d.speed, "Speed")}${pill(fmtMod(d.initiative), "Init")}${pill(fmtMod(d.prof), "Prof")}</div>
       <button class="btn sm" data-a="openEdit">${ICONS.edit}<span>Edit</span></button></div></header>`;

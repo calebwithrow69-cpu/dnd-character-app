@@ -25,7 +25,7 @@ import { exportSettings, cleanSettings, resetKeys } from "./prefsdata.js";
 import { toast, platform, dateStamp, setGlossary, glossaryEntry, formatText, esc, ICONS, conditionIcon } from "./ui.js";
 import { renderRoster, renderUnlock } from "./views/roster.js";
 import { renderGraveyard } from "./views/graveyard.js";
-import { renderHome, renderRulesPage, lastCharacter } from "./views/home.js";
+import { renderHome, renderRulesPage, lastCharacter, homeGrid } from "./views/home.js";
 import { promptInstall, downloadShortcut, appUrl } from "./install.js";
 import { trashAdd, trashTake, trashList } from "./trash.js";
 import { deviceInfo, assess } from "./storagerisk.js";
@@ -199,7 +199,7 @@ async function init() {
   if (!APP._listening) {
     APP._listening = true;
     window.addEventListener("online", () => APP.recheck());
-    window.addEventListener("storage", e => { if (e.key === dmData.KEY && APP.dmm && (APP.screen === "dmview" || APP.screen === "dmmode")) { APP.dmm.d = dmData.load(); if (APP.screen === "dmview") render(); else queueRender(); } });
+    window.addEventListener("storage", e => { if (e.key && e.key.startsWith(dmData.KEY) || e.key === dmData.INDEX_KEY) if (APP.dmm && (APP.screen === "dmview" || APP.screen === "dmmode")) { APP.dmm.d = dmData.load(); if (APP.screen === "dmview") render(); else queueRender(); } });
     window.addEventListener("cr-install-change", () => render());
     document.addEventListener("visibilitychange", () => { if (!document.hidden) { APP.recheck(); syncWake(); } else save(); });
     document.addEventListener("toggle", e => { const t = e.target; if (t && t.matches && t.matches("details.setsec")) { if (t.open) APP.setOpen.add(t.dataset.sec); else APP.setOpen.delete(t.dataset.sec); } }, true);
@@ -678,7 +678,7 @@ function exportChars(ids, label) {
   const safe = (label || "characters").replace(/[^\w-]+/g, "-").slice(0, 40);
   const payload = store.backupPayload(ids);
   if (!ids) { const d = notes.load(notesStore); if (d.notes.length) payload.notes = notes.exportData(d); }
-  if (!ids) { const d = dmData.load(); if (Object.keys(d.party).length || d.creatures.length) payload.dm = { party: d.party, creatures: d.creatures }; }
+  if (!ids) { const all = dmData.exportAll(); if (all.length) { payload.dmc = all; const m = all.find(c => c.id === "main"); if (m) payload.dm = { party: m.party, creatures: m.creatures }; } }
   shareOrDownload(`character-runner-${safe}-${stamp}.json`, JSON.stringify(payload, null, 1));
 }
 function importPrompt() {
@@ -692,7 +692,7 @@ function importPrompt() {
       try { chars = store.parseImport(text); } catch (err) { if (!/"notes"/.test(text)) throw err; }
       chars.forEach(c => store.saveCharacter(store.normalize(c, APP.library)));
       try { const j = JSON.parse(text); if (j && j.notes) { const d = notes.load(notesStore); notes.mergeImport(d, j.notes); notes.save(d, notesStore); APP.nb = null; } } catch (err) { /* notes are optional */ }
-      try { const j = JSON.parse(text); if (j && j.dm) { const d = dmData.load(); dmData.mergeImport(d, j.dm); dmData.save(d); } } catch (err) { /* DM data is optional */ }
+      try { const j = JSON.parse(text); if (j && j.dmc) dmData.mergeAll(j.dmc); else if (j && j.dm) { const d = dmData.load(localStorage, "main"); dmData.mergeImport(d, j.dm); dmData.save(d, localStorage, "main"); } } catch (err) { /* DM data is optional */ }
       const pics = await importPortraits(store.parsePortraits(text));
       toast(`Restored ${chars.length} character${chars.length === 1 ? "" : "s"}${pics ? ` and ${pics} portrait${pics === 1 ? "" : "s"}` : ""}`);
       APP.modal = null; APP.screen = "roster"; APP.char = null; store.setActiveId(null);
@@ -931,6 +931,7 @@ function onInput(e) {
   if (ds.loadName != null && APP.load && APP.load.preview && APP.load.preview.draft) { APP.load.preview.draft.name = el.value; return; }
   if (ds.rsName != null && APP.rs) { ACTIONS.rsRename(el.value); return; }
   if (ds.query === "rsq" && APP.rs) { APP.rs.q = el.value; render(); return; }
+  if (ds.query === "homeq") { APP.homeQ = el.value; const g = document.getElementById("home-grid"); if (g) g.innerHTML = homeGrid(APP); return; }
   if (ds.query === "dmq" && APP.dm) { APP.dm.q = el.value; const l = document.getElementById("dm-list"); if (l) l.innerHTML = dmListHtml(APP); else render(); return; }
   if (ds.setSearch) {
     const q = el.value.trim().toLowerCase();
@@ -1225,6 +1226,10 @@ const ACTIONS = {
   },
   nbExport() { const d = nbState(APP).data; if (!d.notes.length) { toast("No notes"); return; } shareOrDownload(`notes-${dateStamp()}.md`, notes.toMarkdownFile(d)); },
   goRules() { APP.screen = "rules"; render(); window.scrollTo(0, 0); },
+  homeMode(el) { APP.prefs.homeMode = el.dataset.v === "dm" ? "dm" : "player"; APP.homeQ = ""; savePrefs(); render(); },
+  homeCampContinue() { ACTIONS.goDmMode(); },
+  homeCampOpen(el) { dmData.setActive(el.dataset.id); ACTIONS.goDmMode(); },
+  homeCampNew() { openModal({ type: "dmCampName", id: "", name: "", home: true }); },
   homeContinue() {
     const last = lastCharacter(APP); if (!last) { ACTIONS.newCharHome(); return; }
     ACTIONS.openChar({ dataset: { id: last.id } });
@@ -1241,7 +1246,7 @@ const ACTIONS = {
     if (gained.length) setTimeout(() => toast(`Added your species spells: ${gained.join(", ")}`), 300);
     else if (subGained.length) setTimeout(() => toast(`Added your subclass spells: ${subGained.join(", ")}`), 300);
     APP.sheetTab = APP.prefs.startTab || "stats"; APP.roll = null; APP.turn.round = 0; APP.turn.spent = {}; APP.turn.attacks = 0; APP.concPrompt = null; APP.charSub = "play"; APP.classicSub = "sheet"; preloadSamples();
-    store.setActiveId(APP.char.id); APP.prefs.lastChar = APP.char.id; savePrefs();
+    store.setActiveId(APP.char.id); APP.prefs.lastChar = APP.char.id; APP.prefs.recent = { ...(APP.prefs.recent || {}), [APP.char.id]: Date.now() }; savePrefs();
     APP.screen = "sheet"; render(); window.scrollTo(0, 0);
   },
   async installApp() {
@@ -1648,7 +1653,7 @@ const ACTIONS = {
     const char = store.normalize(buildCharacter(d, APP), APP.library);
     const goldOnly = char.inventory.length === 0 && (char.coins.gp > 0);
     APP.char = char; APP.screen = "sheet"; save();
-    store.setActiveId(char.id); APP.prefs.lastChar = char.id; savePrefs();
+    store.setActiveId(char.id); APP.prefs.lastChar = char.id; APP.prefs.recent = { ...(APP.prefs.recent || {}), [char.id]: Date.now() }; savePrefs();
     clearDraft(); APP.createDraft = null; APP.progressOpen = false; APP.sheetTab = "stats"; APP.roll = null; APP.lvl = null;
     APP.shopAfterChoices = goldOnly;
     APP.styleAsk = char.id; // every new character gets to pick its sheet style first
@@ -1661,7 +1666,7 @@ const ACTIONS = {
   },
 
   // sheet nav
-  backToRoster() { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = "roster"; render(); window.scrollTo(0, 0); },
+  backToRoster() { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = "home"; render(); window.scrollTo(0, 0); },
   sheetTab(el) { APP.sheetTab = el.dataset.tab; APP.selItem = null; render(); window.scrollTo(0, 0); },
   glCat(el) { const g = glState(APP); Object.assign(g, { cat: el.dataset.cat, picked: true, sel: null, f: {}, sort: "", desc: false, limit: 150 }); glRefresh({ tabs: 1, filters: 1, list: 1, pane: 1 }); },
   glFilter(el) { const g = glState(APP); g.f[el.dataset.id] = el.value; g.limit = 150; glRefresh({ filters: 1, list: 1 }); },

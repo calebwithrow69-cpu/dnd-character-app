@@ -187,3 +187,22 @@ if (existsSync(libUrl)) t("real SRD monsters import cleanly", () => {
   assert.equal(M.find(m => m.id === "goblin-warrior").xp, 50); assert.ok(dm.searchMonsters(M, { q: "dragon" }).length > 5);
 });
 console.log(`dmmode: ${n} checks passed`);
+
+// ---- campaigns
+{
+  const mem = () => { const m = new Map(); return { getItem: k => m.has(k) ? m.get(k) : null, setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k), _m: m }; };
+  const st = mem();
+  assert.equal(dm.activeId(st), "main"); assert.equal(dm.keyFor("main"), dm.KEY, "first campaign keeps the old key");
+  const old = dm.blank(); old.creatures = [dm.sanitizeCreature({ name: "Rat", cr: "0", hp: 1 })]; st.setItem(dm.KEY, JSON.stringify(old));
+  assert.equal(dm.load(st).creatures.length, 1, "existing data is campaign 1, no migration");
+  const id = dm.createCampaign("Stonehell", st); assert.ok(id); assert.equal(dm.activeId(st), id);
+  assert.equal(dm.load(st).creatures.length, 0, "a new campaign starts empty");
+  const d = dm.load(st); d.rw.gp = 50; dm.save(d, st); dm.setActive("main", st); assert.equal(dm.load(st).rw.gp, 0); assert.equal(dm.load(st, id).rw.gp, 50);
+  assert.equal(dm.readIndex(st).list.length, 2); dm.renameCampaign(id, "  Stonehell Deep  ", st); assert.equal(dm.readIndex(st).list.find(x => x.id === id).name, "Stonehell Deep");
+  const all = dm.exportAll(st); assert.equal(all.length, 1, "empty campaigns are not exported"); assert.equal(all[0].id, "main");
+  const st2 = mem(); assert.equal(dm.mergeAll(JSON.parse(JSON.stringify(all)), st2), 1); assert.equal(dm.readIndex(st2).list.length, 1); assert.equal(dm.load(st2, "main").creatures.length, 1);
+  dm.deleteCampaign(id, st); assert.equal(dm.readIndex(st).list.length, 1); assert.equal(st.getItem(dm.keyFor(id)), null);
+  dm.deleteCampaign("main", st); assert.equal(dm.readIndex(st).list.length, 1, "the last campaign stays"); assert.equal(dm.load(st).creatures.length, 0, "and is emptied");
+  st.setItem(dm.INDEX_KEY, "{bad"); assert.equal(dm.readIndex(st).active, "main", "bad index falls back");
+  console.log("dmmode: campaigns ok");
+}

@@ -2,11 +2,35 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.72";
+export const VERSION = "0.1.73";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.73",
+    date: "2026-11-24",
+    stage: "Pre-build",
+    blurb: "New main menu and multiple DM campaigns.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Home has a Continue button, a Player and DM switch, and a list of characters or campaigns, newest first.",
+          "Rules and Notes are their own cards on Home. Settings uses a gear icon.",
+          "Back buttons on the sheet and DM mode read Main menu.",
+          "The Home tour and the DM tour cover the new layout."
+        ]
+      },
+      {
+        title: "Added",
+        items: [
+          "DM mode holds several campaigns, each with its own party, creatures and fights.",
+          "Backups include every campaign."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.72",
     date: "2026-11-24",

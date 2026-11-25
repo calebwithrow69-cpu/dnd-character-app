@@ -36,6 +36,23 @@ export function dmModeActions({ APP, render, toast, openModal, closeModal, share
   function monId() { const m = APP.modal; return m && m.type === "dmMon" ? m.id : ""; }
 
   return {
+    dmCampOpen() { openModal({ type: "dmCamps" }); },
+    dmCampPick(el) { dm.setActive(el.dataset.id); APP.dmm = { d: dm.load(), ui: dmUiDefault() }; closeModal(); render(); window.scrollTo(0, 0); },
+    dmCampNew() { openModal({ type: "dmCampName", id: "", name: "" }); },
+    dmCampRename(el) { const c = dm.readIndex().list.find(x => x.id === el.dataset.id); if (c) openModal({ type: "dmCampName", id: c.id, name: c.name }); },
+    dmCampSave() {
+      const m = APP.modal, name = val("dm-cname") || "";
+      if (m.id) { dm.renameCampaign(m.id, name); openModal({ type: "dmCamps" }); render(); return; }
+      if (!dm.createCampaign(name)) { toast("Campaign limit reached"); return; }
+      APP.dmm = { d: dm.load(), ui: dmUiDefault() }; closeModal(); APP.screen = "dmmode"; render(); window.scrollTo(0, 0);
+    },
+    dmCampDelete(el) {
+      const id = el.dataset.id, ix = dm.readIndex(); if (ix.list.length < 2) { toast("Keep at least one campaign"); return; }
+      if (!ask("camp" + id)) return;
+      const was = ix.active; dm.deleteCampaign(id);
+      if (was === id) APP.dmm = { d: dm.load(), ui: dmUiDefault() };
+      render();
+    },
     goDmMode() { APP.dmm = { d: dm.load(), ui: dmUiDefault() }; APP.screen = "dmmode"; render(); window.scrollTo(0, 0); },
     dmTab(el) { const s = S(); s.ui.tab = el.dataset.v; s.ui.msg = ""; s.ui.confirm = ""; setConfirm(""); render(); },
 

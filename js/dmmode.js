@@ -217,8 +217,60 @@ export function clean(o) {
   }
   return out;
 }
-export function load(store = globalThis.localStorage) { try { return clean(JSON.parse(store.getItem(KEY))); } catch (e) { return blank(); } }
-export function save(d, store = globalThis.localStorage) { try { store.setItem(KEY, JSON.stringify(d)); return true; } catch (e) { return false; } }
+// ---------------------------------------------------------------- campaigns
+// Several campaigns, each its own record. The first one ("main") keeps the old key, so nothing needs migrating;
+// the others live under `dnd-dm-mode-v1#<id>`. The index says which one is open (both DM windows follow it).
+export const INDEX_KEY = "dnd-dm-campaigns-v1";
+const ST = () => globalThis.localStorage;
+const cname = v => txt(v, 40) || "Campaign";
+export const keyFor = id => (!id || id === "main" ? KEY : KEY + "#" + id);
+export function readIndex(store = ST()) {
+  let o = null; try { o = JSON.parse(store.getItem(INDEX_KEY)); } catch (e) { o = null; }
+  const list = [];
+  if (o && Array.isArray(o.list)) o.list.slice(0, 60).forEach(x => { const id = txt(x && x.id, 24); if (id && !list.some(y => y.id === id)) list.push({ id, name: cname(x.name), at: num(x.at, 0, 9e15, 0) }); });
+  if (!list.some(x => x.id === "main")) list.unshift({ id: "main", name: "Campaign 1", at: 0 });
+  const active = list.some(x => x.id === (o && o.active)) ? o.active : "main";
+  return { active, list };
+}
+export function writeIndex(ix, store = ST()) { try { store.setItem(INDEX_KEY, JSON.stringify(ix)); return true; } catch (e) { return false; } }
+export const activeId = (store = ST()) => readIndex(store).active;
+export function setActive(id, store = ST()) {
+  const ix = readIndex(store); if (!ix.list.some(x => x.id === id)) return ix;
+  ix.active = id; const c = ix.list.find(x => x.id === id); c.at = Date.now(); writeIndex(ix, store); return ix;
+}
+export function createCampaign(name, store = ST()) {
+  const ix = readIndex(store); if (ix.list.length >= 60) return null;
+  const id = uid(); ix.list.push({ id, name: cname(name) === "Campaign" ? "Campaign " + (ix.list.length + 1) : cname(name), at: Date.now() }); ix.active = id; writeIndex(ix, store);
+  save(blank(), store, id); return id;
+}
+export function renameCampaign(id, name, store = ST()) { const ix = readIndex(store), c = ix.list.find(x => x.id === id); if (!c) return false; c.name = cname(name); return writeIndex(ix, store); }
+// The last campaign cannot be deleted; deleting "main" empties it instead of removing the entry.
+export function deleteCampaign(id, store = ST()) {
+  const ix = readIndex(store); if (!ix.list.some(x => x.id === id)) return ix;
+  try { store.removeItem(keyFor(id)); } catch (e) { /* ignore */ }
+  if (ix.list.length > 1) { ix.list = ix.list.filter(x => x.id !== id); if (ix.active === id) ix.active = ix.list[0].id; }
+  writeIndex(ix, store); return ix;
+}
+export function load(store = ST(), id) { try { return clean(JSON.parse(store.getItem(keyFor(id || activeId(store))))); } catch (e) { return blank(); } }
+export function save(d, store = ST(), id) {
+  try { store.setItem(keyFor(id || activeId(store)), JSON.stringify(d)); const ix = readIndex(store), c = ix.list.find(x => x.id === (id || ix.active)); if (c) { c.at = Date.now(); writeIndex(ix, store); } return true; } catch (e) { return false; }
+}
+// Facts for the Home grid: name, last used, size of the party.
+export function campaignGlance(c, store = ST()) { const d = load(store, c.id); return { id: c.id, name: c.name, at: c.at, n: Object.keys(d.party).length, round: d.combat ? d.combat.round : 0 }; }
+// Backups carry every campaign's party and creatures.
+export function exportAll(store = ST()) {
+  const ix = readIndex(store);
+  return ix.list.map(c => { const d = load(store, c.id); return { id: c.id, name: c.name, party: d.party, creatures: d.creatures }; }).filter(c => Object.keys(c.party).length || c.creatures.length);
+}
+export function mergeAll(list, store = ST()) {
+  if (!Array.isArray(list)) return 0; let n = 0;
+  list.slice(0, 60).forEach(o => {
+    const id = txt(o && o.id, 24); if (!id) return;
+    let ix = readIndex(store); if (!ix.list.some(x => x.id === id)) { ix.list.push({ id, name: cname(o.name), at: 0 }); writeIndex(ix, store); }
+    const d = load(store, id); mergeImport(d, o); save(d, store, id); n++;
+  });
+  return n;
+}
 export const exportData = d => JSON.parse(JSON.stringify(d));
 // A restore adds cards and creatures it does not have; the running combat and encounter on this device stay.
 export function mergeImport(d, o) {

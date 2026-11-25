@@ -5,15 +5,18 @@ export const TOURS = {
   home: {
     name: "Home tour",
     steps: [
-      { sel: "#home-book", title: "Start here", body: "Your latest character opens from this card. With none yet, it opens the start menu: build one, roll one at random, or load a file." },
-      { sel: '[data-a="goRoster"]', title: "Characters", body: "Everyone saved on this device. Imports, new characters and the graveyard are on that screen." },
-      { sel: ".float", title: "Rules and Notes", body: "The rules glossary works offline. Notes belong to you, not to one character." },
-      { sel: '[data-a="openSettings"]', title: "Settings and backups", body: "Characters are stored in this browser only. Export a backup from Data and backups, and install the app so the browser keeps it." }
+      { sel: "#home-book", title: "Continue", body: "The big button opens the last character you played. In DM mode it opens the last campaign." },
+      { sel: ".hmode", title: "Player or DM", body: "Switch between your characters and your campaigns. Each DM campaign keeps its own party, creatures and fights." },
+      { sel: ".hsec", title: "Your list", body: "Newest first. New creates one, and search appears past six. Manage holds imports and the graveyard." },
+      { sel: ".hparts", title: "Rules and Notes", body: "Both work offline. Rules is the glossary. Notes belong to you, not to one character." },
+      { sel: ".hbk", title: "Backups", body: "Everything is stored in this browser only. Back up here, and install the app so the browser keeps it." },
+      { sel: '[data-a="openSettings"]', title: "Settings", body: "Sheet style, rulesets, sounds, the update history and data tools." }
     ]
   },
   dm: {
     name: "DM tour",
     steps: [
+      { go: "dm:party", sel: '[data-a="dmCampOpen"]', title: "Campaigns", body: "Each campaign keeps its own party, creatures, encounters and fight. Switch, rename or add one here." },
       { go: "dm:party", sel: 'nav.tabs [data-v="party"]', title: "Party", body: "Players send a code from Edit character. Each card is a snapshot with its age. Start combat from here with everyone added." },
       { go: "dm:combat", sel: '.dmvsw', title: "Board, List, Screen", body: "Board is the table layout with real numbers. Tap a portrait to change HP or conditions. List shows initiative inputs. Screen is for the TV." },
       { go: "dm:combat", sel: '[data-a="dmNext"], [data-a="dmNewCombat"]', title: "Run the turns", body: "Roll initiative, then Next turn. Conditions with rounds tick down at the end of their creature's turn." },

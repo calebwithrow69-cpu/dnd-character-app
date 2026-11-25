@@ -206,7 +206,7 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     const code = await p.locator("#dm-send").inputValue(); assert(/^CRP1\./.test(code), "no code " + code.slice(0, 20));
     const card = dmm.decodeCard(code); assert(card && /^Gandork/.test(card.name), "card " + JSON.stringify(card));
     await p.evaluate(() => CR.ACTIONS.closeModal()); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(250);
-    await clickA(p, "goDmMode");
+    await p.evaluate(() => CR.ACTIONS.goDmMode()); await p.waitForSelector(".dmmode");
     assert(await p.locator("nav.tabs button:visible").count() === 5, "five tabs"); assert(await p.locator(".sheetview .quick > div").count() === 4, "status strip");
     await p.locator("#dm-code").fill("junk\n" + code); await clickA(p, "dmImport");
     assert((await p.locator(".dmcard").count()) === 1, "card not shown: n=" + await p.locator(".dmcard").count() + " msg=" + await p.locator(".dmmsg").allInnerTexts() + " body=" + (await p.locator("main").innerText()).slice(0, 300)); assert(/Gandork/i.test(await p.locator(".dmcard").innerText()), "card text");
@@ -271,7 +271,7 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
     { const t = (await p.locator("main").innerText()).replace(/,/g, ""); assert(/Combat XP\s*50/i.test(t) && /Total XP\s*150/i.test(t), "reward totals: " + t.slice(0, 300)); assert(/150 XP/.test(t) && /30 gp/.test(t), "per character: " + t.slice(0, 400)); }
     assert(await hscroll(p) <= 0, "rewards sideways scroll");
     if (w === 390) await p.screenshot({ path: "/tmp/dm-rewards-390.png" }); else await p.screenshot({ path: "/tmp/dm-rewards-1280.png" });
-    await p.reload(); await p.waitForSelector("#home-book, .float"); await clickA(p, "goDmMode");
+    await p.reload(); await p.waitForSelector("#home-book"); await p.evaluate(() => CR.ACTIONS.goDmMode()); await p.waitForSelector(".dmmode");
     assert(await p.locator(".dmcard").count() === 1, "party lost on reload");
     await clickA(p, "dmTab", '[data-v="combat"]'); await clickA(p, "dmCview", '[data-v="list"]'); assert(await p.locator(".dmrow").count() === 8, "combat lost on reload");
     await clickA(p, "dmEndCombat"); assert(await p.locator(".dmrow").count() === 8, "end needs a second tap"); await clickA(p, "dmEndCombat");
@@ -283,7 +283,7 @@ await check("DM mode: send card, import, run combat, creature book, encounter bu
 await check("DM tour: every step finds its target, tabs follow", async () => {
   for (const [w, h] of [[1280, 720], [390, 844]]) {
     const p = await open(w, h, { touch: w < 700 });
-    await clickA(p, "goDmMode");
+    await p.evaluate(() => CR.ACTIONS.goDmMode()); await p.waitForSelector(".dmmode");
     assert(await p.locator('[data-a="tourStart"][data-id="dm"]').count() === 1, "tutorial button");
     await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "dm" } })); await p.waitForSelector("#tour-card");
     const n = parseInt((await p.locator(".tour-prog em").innerText()).split(" of ")[1]);
@@ -305,7 +305,7 @@ await check("DM tour: every step finds its target, tabs follow", async () => {
 await check("DM player view: both sides, initiative in the middle, stacks on a phone, second window follows", async () => {
   for (const [w, h] of [[1280, 720], [390, 844]]) {
     const p = await open(w, h, { touch: w < 700 });
-    await clickA(p, "goDmMode"); await clickA(p, "dmTab", '[data-v="combat"]'); await clickA(p, "dmNewCombat");
+    await p.evaluate(() => CR.ACTIONS.goDmMode()); await p.waitForSelector(".dmmode"); await clickA(p, "dmTab", '[data-v="combat"]'); await clickA(p, "dmNewCombat");
     await clickA(p, "dmAddToggle");
     await p.locator("#dm-qn").fill("Goblin"); await p.locator("#dm-qh").fill("7"); await p.locator("#dm-qc").fill("3"); await clickA(p, "dmAddQuick");
     await p.locator("#dm-qn").fill("Knight"); await p.locator("#dm-qh").fill("30"); await p.locator("#dm-qc").fill("1"); await clickA(p, "dmAddQuick");
@@ -380,10 +380,10 @@ await check("Tours: highlight sits on its target at every text size", async () =
     await p.evaluate(s => { if (s === "normal") document.documentElement.removeAttribute("data-size"); else document.documentElement.setAttribute("data-size", s); }, size);
     await p.waitForTimeout(150);
     await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "home" } })); await p.waitForSelector("#tour-card");
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       const g = await p.evaluate(() => {
         const hole = document.querySelector(".tour-hole").getBoundingClientRect(), card = document.getElementById("tour-card").getBoundingClientRect();
-        const sels = ["#home-book", '[data-a="goRoster"]', ".float", '[data-a="openSettings"]'];
+        const sels = ["#home-book", ".hmode", ".hsec", ".hparts", ".hbk", '[data-a="openSettings"]'];
         const lab = document.querySelector(".tour-prog em").innerText, k = parseInt(lab) - 1;
         const el = [...document.querySelectorAll(sels[k])].find(e => e.offsetParent !== null && e.getBoundingClientRect().width > 4), r = el.getBoundingClientRect();
         return { dx: (hole.left + hole.width / 2) - (r.left + r.width / 2), dy: (hole.top + hole.height / 2) - (r.top + r.height / 2), dw: hole.width - r.width, dh: hole.height - r.height,
@@ -399,20 +399,20 @@ await check("Tours: highlight sits on its target at every text size", async () =
   }
 });
 
-await check("Tours: home and sheet run 4 steps, skip works, finishing unlocks Silver", async () => {
+await check("Tours: home runs 6 steps and sheet 4, skip works, finishing unlocks Silver", async () => {
   for (const [w, h] of [[390, 844], [1280, 800]]) {
     const p = await open(w, h, { touch: w < 700 });
     await clickA(p, "goRoster"); await clickA(p, "importGandork"); await p.evaluate(() => CR.ACTIONS.goHome()); await p.waitForTimeout(300);
     assert(await p.locator(".tourcard").count() === 0, "tour card must not show under automation");
     const geom = () => p.evaluate(() => { const c = document.getElementById("tour-card")?.getBoundingClientRect(), hl = document.querySelector(".tour-hole")?.getBoundingClientRect(); return { card: c && { l: c.left, t: c.top, r: c.right, b: c.bottom }, hole: hl && { w: hl.width, h: hl.height }, vw: innerWidth, vh: innerHeight, sx: document.documentElement.scrollWidth > innerWidth }; });
     await p.evaluate(() => CR.ACTIONS.tourStart({ dataset: { id: "home" } })); await p.waitForSelector("#tour-card");
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       const g = await geom(); const label = await p.locator(".tour-prog em").innerText();
-      assert(label === (i + 1) + " of 4", "progress " + label);
+      assert(label === (i + 1) + " of 6", "progress " + label);
       assert(g.card.l >= 0 && g.card.r <= g.vw + 1 && g.card.t >= 0 && g.card.b <= g.vh + 1, "card off screen step " + (i + 1) + " " + JSON.stringify(g.card));
       assert(g.hole.w > 20 && g.hole.h > 20, "no spotlight on step " + (i + 1));
       assert(!g.sx, "sideways scroll during tour");
-      if (i === 1) { await p.locator('[data-a="tourBack"]').click(); assert((await p.locator(".tour-prog em").innerText()) === "1 of 4", "Back"); await p.locator('[data-a="tourNext"]').click(); }
+      if (i === 1) { await p.locator('[data-a="tourBack"]').click(); assert((await p.locator(".tour-prog em").innerText()) === "1 of 6", "Back"); await p.locator('[data-a="tourNext"]').click(); }
       await p.locator('[data-a="tourNext"]').click();
     }
     assert(await p.locator("#tour-card").count() === 0, "tour did not close");
@@ -873,7 +873,7 @@ await check("random character builds and lands on a sheet", async () => {
 
 await check("a new character always asks which sheet to use, even after a style was chosen (phone)", async () => {
   const p = await open(390, 844, { touch: true }); await openSample(p);
-  await clickA(p, "backToRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await clickA(p, "randomAll"); await p.waitForTimeout(1500);
+  await clickA(p, "backToRoster"); await clickA(p, "goRoster"); await clickA(p, "newChar"); await clickA(p, "startManual"); await clickA(p, "randomAll"); await p.waitForTimeout(1500);
   for (let i = 0; i < 12 && !(await p.locator(".stylefull").count()); i++) {
     const nxt = p.locator('[data-a="nextStep"], [data-a="finishCreate"]'); if (!(await nxt.count())) break;
     await nxt.first().click(); await p.waitForTimeout(500);
@@ -1051,7 +1051,7 @@ await check("Graveyard: mark dead (black and white), tombstone, open sheet, revi
   await p.locator("#f-cause").fill("Eaten by a mimic"); await clickA(p, "confirmDead"); await p.waitForTimeout(400);
   assert(await p.locator(".deadbar").count() === 1, "no death banner on the sheet");
   assert(await p.evaluate(() => document.documentElement.classList.contains("dead")), "page is not black and white");
-  await clickA(p, "backToRoster"); await p.waitForTimeout(300);
+  await clickA(p, "backToRoster"); await clickA(p, "goRoster"); await p.waitForTimeout(300);
   assert(await p.locator('.rosteritem[data-id="gandork"]').count() === 0, "dead character still in the list");
   assert(!(await p.evaluate(() => document.documentElement.classList.contains("dead"))), "roster should be in colour");
   await clickA(p, "goGraveyard");
@@ -1063,7 +1063,7 @@ await check("Graveyard: mark dead (black and white), tombstone, open sheet, revi
   await clickA(p, "reviveAsk"); await clickA(p, "reviveGo"); await p.waitForTimeout(400);
   assert(await p.locator(".deadbar").count() === 0, "banner after revive");
   assert(!(await p.evaluate(() => document.documentElement.classList.contains("dead"))), "still black and white");
-  await clickA(p, "backToRoster");
+  await clickA(p, "backToRoster"); await clickA(p, "goRoster");
   assert(await p.locator('.rosteritem[data-id="gandork"]').count() === 1, "revived character is not back in the list");
   noErrs(p); await p.context().close();
 });
@@ -1639,6 +1639,41 @@ await check("Update window: catch-up since the last version, rules inside, off s
   await p.reload(); await p.waitForSelector("#home-book"); await p.waitForTimeout(800);
   assert(await p.locator(".wnmodal").count() === 0, "window opened while turned off");
   assert(p.errs.length === 0, p.errs.join(" || ")); await ctx.close();
+});
+
+await check("Home: 12 characters and 12 campaigns, modes, search, back label", async () => {
+  for (const [w, h] of [[390, 844], [1280, 800]]) {
+    const p = await open(w, h, { touch: w < 700 });
+    await clickA(p, "goRoster"); await clickA(p, "importGandork");
+    await p.evaluate(() => {
+      const r = JSON.parse(localStorage.getItem("dnd-roster-v1")), base = Object.values(r)[0];
+      for (let i = 1; i < 12; i++) r["c" + i] = { ...base, id: "c" + i, name: "Hero " + i, class: i % 2 ? "Wizard" : "Fighter" };
+      localStorage.setItem("dnd-roster-v1", JSON.stringify(r));
+    });
+    await p.evaluate(() => { const ix = { active: "main", list: [{ id: "main", name: "Campaign 1", at: 1 }] }; for (let i = 1; i < 12; i++) ix.list.push({ id: "k" + i, name: "Camp " + i, at: 1 + i }); localStorage.setItem("dnd-dm-campaigns-v1", JSON.stringify(ix)); });
+    await p.reload(); await p.waitForSelector("#home-book");
+    assert(await p.locator("#home-book:visible").count() === 1, "continue button");
+    const sx = () => p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
+    assert(!(await sx()), "sideways scroll players " + w);
+    assert(await p.locator("#home-grid .hcard:not(.new)").count() === 12, "12 character cards");
+    assert(await p.locator("#home-q").count() === 1, "search shows past six");
+    await p.locator("#home-q").fill("hero 7"); assert(await p.locator("#home-grid .hcard").count() === 1, "search filters");
+    await p.locator("#home-q").fill("");
+    assert(await p.locator(".hparts .hpart").count() === 2, "rules and notes");
+    await clickA(p, "homeMode", '[data-v="dm"]');
+    assert(await p.locator("#home-grid .hcard.camp").count() === 12, "12 campaign cards"); assert(!(await sx()), "sideways scroll dm " + w);
+    await p.locator("#home-grid .hcard.camp").first().click(); await p.waitForSelector(".dmmode");
+    assert(await p.locator('.topbar .btn:has-text("Main menu")').count() === 1, "DM back label");
+    await clickA(p, "dmCampOpen"); assert(await p.locator(".dmcamp").count() === 12, "camp list");
+    await clickA(p, "dmCampNew"); await p.locator("#dm-cname").fill("Stonehell"); await clickA(p, "dmCampSave"); await p.waitForTimeout(200);
+    assert((await p.locator(".topbar h1").first().innerText()) === "Stonehell", "new campaign opens");
+    await p.locator('.topbar .btn:has-text("Main menu")').click(); await p.waitForSelector("#home-book");
+    assert(await p.locator("#home-grid .hcard.camp").count() === 13, "13th campaign");
+    await clickA(p, "homeMode", '[data-v="player"]'); await p.locator("#home-grid .hcard:not(.new)").first().click(); await p.waitForTimeout(400); await pickSheet(p, "classic"); const dbg = await p.evaluate(() => ({ s: APP.screen, m: APP.modal && APP.modal.type, e: document.getElementById("app").innerText.slice(0, 120) })).catch(() => null); await p.waitForSelector(".sheetbar", { timeout: 5000 }).catch(e => { throw new Error("no sheetbar " + JSON.stringify(dbg)); });
+    assert(await p.locator('.sheetbar .btn:has-text("Main menu"):visible').count() === 1, "sheet back label");
+    await p.locator('.sheetbar .btn:has-text("Main menu"):visible').click(); await p.waitForSelector("#home-book");
+    noErrs(p); await p.context().close();
+  }
 });
 
 await browser.close(); server.close(); rmSync(tmp, { recursive: true, force: true });

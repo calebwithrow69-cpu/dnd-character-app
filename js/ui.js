@@ -203,7 +203,7 @@ export const ICONS = {
   spell: svg('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/>'),
   gear: svg('<path d="M6 7h12l-1 13H7L6 7zM9 7V5a3 3 0 016 0v2"/>'),
   book: svg('<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5z"/><path d="M4 19a2 2 0 012-2h13"/>'),
-  settings: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>'),
+  settings: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>'),
   edit: svg('<path d="M4 20h4L19 9l-4-4L4 16v4z"/>'),
   search: svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'),
   check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
@@ -229,9 +229,9 @@ export const ICONS = {
 };
 
 // Top bar. `actions` = [{a, icon, label}] buttons on the right.
-export function topbar(title, sub, { back, actions = [] } = {}) {
+export function topbar(title, sub, { back, backLabel, actions = [] } = {}) {
   return `<header class="topbar"><div class="wrap row">
-    ${back ? `<button class="iconbtn" data-a="${back}" aria-label="Back">${ICONS.back}</button>` : ""}
+    ${back ? (backLabel ? `<button class="btn sm" data-a="${back}">${ICONS.back}<span>${esc(backLabel)}</span></button>` : `<button class="iconbtn" data-a="${back}" aria-label="Back">${ICONS.back}</button>`) : ""}
     <div class="grow"><h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ""}</div>
     ${actions.map(x => `<button class="iconbtn" data-a="${x.a}"${x.id ? ` data-id="${esc(x.id)}"` : ""} aria-label="${esc(x.label)}">${ICONS[x.icon]}</button>`).join("")}
     ${actions.some(x => x.a === "openSettings") ? "" : `<button class="iconbtn" data-a="openSettings" aria-label="Settings">${ICONS.settings}</button>`}
