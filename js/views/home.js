@@ -21,7 +21,7 @@ const ic = (k, s = 30, col = "currentColor") => `<svg width="${s}" height="${s}"
 
 // The last character the player opened (falls back to the first one on this device).
 export function lastCharacter(app) {
-  const all = listCharacters();
+  const all = listCharacters().filter(c => !c.dead);
   return all.find(c => c.id === app.prefs.lastChar) || all[0] || null;
 }
 
@@ -80,7 +80,7 @@ export function renderHome(app) {
       <span class="hstats"><div><b>${esc(g.hp)}</b><small>HP</small></div><div><b>${esc(g.ac)}</b><small>AC</small></div><div><b>${esc(g.speed)}</b><small>SPEED</small></div><div><b>+${g.prof}</b><small>PROF</small></div></span>
       <span class="hgo">CONTINUE AS ${esc((c.name || "character").toUpperCase())} ${ARROW}</span></button>`;
   } else {
-    hero = `<button class="hero press" id="home-book" data-a="newCharHome"><span class="k">START</span><h2>Make your first character</h2><span class="hgo">NEW CHARACTER ${ARROW}</span></button>`;
+    hero = `<button class="hero press" id="home-book" data-a="newCharHome"><span class="k">START</span><h2>${listCharacters().length ? "Make a new character" : "Make your first character"}</h2><span class="hgo">NEW CHARACTER ${ARROW}</span></button>`;
   }
   const count = mode === "dm" ? dm.readIndex().list.length : n;
   const bk = app.prefs && app.prefs.lastBackup, days = bk ? Math.floor((Date.now() - bk) / 864e5) : null;
@@ -94,7 +94,7 @@ export function renderHome(app) {
       <div class="seg hmode" role="group" aria-label="Mode"><button data-a="homeMode" data-v="player" aria-pressed="${mode === "player"}">Player</button><button data-a="homeMode" data-v="dm" aria-pressed="${mode === "dm"}">DM</button></div>
       ${hero}
       <section class="hsec" aria-label="${mode === "dm" ? "Campaigns" : "Characters"}">
-        <div class="hsec-h"><h2>${mode === "dm" ? "Campaigns" : "Characters"}<em>${count}</em></h2>${mode === "player" && n > 0 ? `<button class="btn sm ghost" data-a="goRoster">Manage</button>` : ""}</div>
+        <div class="hsec-h"><h2>${mode === "dm" ? "Campaigns" : "Characters"}<em>${count}</em></h2>${mode === "player" && listCharacters().length > 0 ? `<button class="btn sm ghost" data-a="goRoster">Manage</button>` : ""}</div>
         ${count >= GRID_SEARCH_MIN ? `<input class="f hsearch" id="home-q" data-query="homeq" type="search" placeholder="${mode === "dm" ? "Search campaigns" : "Search characters"}" value="${esc(app.homeQ || "")}" autocomplete="off">` : ""}
         <div class="hgrid" id="home-grid">${homeGrid(app)}</div>
       </section>

@@ -47,7 +47,7 @@ import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
 import { boxById } from "./lootbox.js";
 import { showLoot, rollLoot, boxCount } from "./views/lootbox.js";
-import { startTour, tourGo, skipTour, tourMark, tourUnseen, tourActive, tourHooks } from "./tour.js";
+import { startTour, tourGo, skipTour, tourMark, tourUnseen, tourActive, tourHooks, tourReady } from "./tour.js";
 import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./views/start.js";
 import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
@@ -249,12 +249,21 @@ function maybeAutoTour() {
   else if (sc === "sheet" && APP.char && !APP.char.dead && APP.sheetTab === "stats" && tourUnseen("sheet") && document.querySelector(".status .vitals, .sheetbar")) id = "sheet";
   if (!id) return;
   APP._tourPending = true;
-  setTimeout(() => {
+  // The tour starts only on a quiet screen: no window or page over it, and its first target in view. Otherwise it waits and retries.
+  const quiet = () => {
+    if (APP.modal || tourActive() || APP.screen !== sc) return false;
+    if (id === "intro") return true;
+    if (id === "sheet" && (APP.sheetTab !== "stats" || APP.styleAsk || APP._shopLater || APP.shopAfterChoices)) return false;
+    return tourReady(id);
+  };
+  const attempt = n => setTimeout(() => {
+    if (APP.screen !== sc || tourActive()) { APP._tourPending = false; return; }
+    if (!quiet()) { if (n < 8) attempt(n + 1); else APP._tourPending = false; return; }
     APP._tourPending = false;
-    if (APP.modal || tourActive() || APP.screen !== sc) return;
     if (id === "intro") { if (!helpSeen()) openModal({ type: "helpIntro" }); }
     else if (tourUnseen(id)) startTour(id);
-  }, id === "intro" ? 60 : 900);
+  }, n ? 800 : id === "intro" ? 60 : 900);
+  attempt(0);
 }
 // The ? button lives in each screen's header (topbar, sheet bar, Home, Characters). No floating copy.
 function syncBarHeight() {
@@ -406,10 +415,14 @@ function renderNow() {
   else if (APP.screen === "sheet" && APP.char) {
     const ch = APP.char;
     // a third failed death save is death, at once and for good: nothing to undo by editing the pips
-    if (ch.deathSaves.fail >= 3 && !ch.dead && !rollStageOpen()) { killCharacter(ch); APP._showDied = ch.id; }
+    // a third failed death save asks before the character is marked dead; "Not dead" takes the last failure back
+    if (ch.deathSaves.fail < 3) APP._diedAsk = null;
+    else if (!ch.dead && !rollStageOpen() && APP._diedAsk !== ch.id && !(APP.modal && APP.modal.type === "died")) {
+      APP._diedAsk = ch.id;
+      setTimeout(() => { if (APP.char === ch && !ch.dead && ch.deathSaves.fail >= 3 && !APP.modal) openModal({ type: "died" }); }, 900);
+    }
     if (syncHp(ch)) save(); mount.innerHTML = renderSheet(APP);
     if (ch.dead) lockDead();
-    if (APP._showDied === ch.id) { APP._showDied = null; setTimeout(() => { if (APP.char === ch && ch.dead) openModal({ type: "died" }); }, 900); }
   }
   else if (APP.screen === "levelup" && APP.char && APP.lvl) mount.innerHTML = renderLevelUp(APP);
 
@@ -472,6 +485,7 @@ function openModal(m) {
 }
 function closeModal() {
   if (!APP.modal) return;
+  if (APP.modal.type === "died" && APP.char && !APP.char.dead && APP.char.deathSaves.fail >= 3) { APP.char.deathSaves.fail = 2; save(); }
   if (APP._under) {
     APP.modal = APP._under; APP._under = null; render();
     const b = modalRoot.querySelector(".modal-body"); if (b) b.scrollTop = APP._underScroll || 0;

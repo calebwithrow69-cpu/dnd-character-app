@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.86";
+export const VERSION = "0.1.87";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.87",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Dead characters leave Continue, death asks first, the tour waits.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "A character who died no longer shows under Continue on Home. With no living character, Home offers a new one and Manage still opens the Graveyard.",
+          "A third failed death save or massive damage asks before the character is marked dead. Not dead takes the last failure back.",
+          "The sheet tour waits for a quiet screen: no open window or page over it, and its first target in view."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.86",
     date: "2026-11-25",

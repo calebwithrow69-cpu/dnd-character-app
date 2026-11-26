@@ -20,6 +20,8 @@ const root = () => document.getElementById("tour-root") || document.body.appendC
 const target = sel => [...document.querySelectorAll(sel)].find(el => { const r = el.getBoundingClientRect(); return el.offsetParent !== null && r.width > 4 && r.height > 4; }) || null;
 
 export function tourActive() { return !!run; }
+// A tour may start when its first target is on screen (or the step moves there itself).
+export function tourReady(id) { const st = TOURS[id] && TOURS[id].steps[0]; return !!st && (!st.sel || !!st.go || !!target(st.sel)); }
 export function tourStep() { return run ? { id: run.id, i: run.i, n: TOURS[run.id].steps.length } : null; }
 
 export function startTour(id) {
