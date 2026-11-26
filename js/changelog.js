@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.85";
+export const VERSION = "0.1.86";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.86",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Storage risk tag readable in the light theme.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "The storage risk tag in Settings and the storage notice was too faint in the light theme."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.85",
     date: "2026-11-25",
