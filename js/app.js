@@ -956,7 +956,7 @@ function refreshWizardChrome() {
 function playKeys(e) {
   if (APP.char && APP.char.dead) return;
   if (APP.screen !== "sheet" || APP.prefs.keys === false || APP.modal || rollStageOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
-  if ((APP.prefs.sheetStyle || "classic") !== "advanced" || APP.sheetTab !== "stats" || APP.charSub !== "play") return;
+  if (APP.sheetTab !== "stats" || ((APP.prefs.sheetStyle || "classic") === "advanced" ? APP.charSub !== "play" : APP.classicSub !== "play")) return;
   const t = e.target, typing = t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
   if (typing) { if (e.key === "Escape" && t.id === "pm-q") { t.blur(); } return; }
   const k = e.key;

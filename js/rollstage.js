@@ -204,6 +204,7 @@ function paint() {
     const a = document.createElement("b"); a.textContent = t; const n = document.createElement("small"); n.textContent = used && r.once ? "Used this turn" : r.note || "";
     b.append(a, n); box.appendChild(b);
   });
+  if (!st.busy && box.childElementCount && ph !== "ready") { const hd = document.createElement("small"); hd.className = "rs-pickhd"; hd.textContent = "Add to this roll"; box.prepend(hd); }
 }
 
 function setMode(m) {
@@ -216,6 +217,25 @@ function addRow(label, total, bd, xtra) {
   row.className = "rs-r" + (xtra ? " xtra" : ""); lab.textContent = label; bdel.textContent = bd; big.textContent = total; row.append(lab, big, bdel); $(".rs-res").appendChild(row);
   return { row, big, bd: bdel };
 }
+// Every die of a roll, drawn one by one: its size, its face, dropped dice struck through, crit dice marked.
+function dieStrip(R, calm) {
+  const box = document.createElement("div"); box.className = "rs-dice";
+  let k = 0;
+  const add = (x, cls) => x.groups.forEach(g => g.rolls.forEach((v, i) => {
+    const d = document.createElement("i"), lab = document.createElement("em"), n = document.createElement("strong");
+    const dropped = !g.keptIdx.has(i);
+    d.className = "rs-dd" + (cls ? " " + cls : "") + (dropped ? " drop" : "");
+    lab.textContent = "d" + g.sides; n.textContent = (g.sign < 0 ? "\u2212" : "") + v; d.append(lab, n);
+    d.setAttribute("aria-label", `${cls === "crit" ? "Crit " : ""}d${g.sides}: ${v}${dropped ? ", dropped" : ""}`);
+    if (!calm) d.style.animationDelay = Math.min(1.2, 0.05 * k++) + "s";
+    box.appendChild(d);
+  }));
+  add(R.r, ""); if (R.extra) add(R.extra, "crit");
+  if (R.r.mod) { const m = document.createElement("i"), n = document.createElement("strong"); m.className = "rs-dd mod"; n.textContent = (R.r.mod > 0 ? "+" : "\u2212") + Math.abs(R.r.mod); m.appendChild(n); box.appendChild(m); }
+  if (box.children.length > 16) box.classList.add("many");
+  return box;
+}
+function drawDice(row, R, calm) { const old = row.row.querySelector(".rs-dice"); if (old) old.remove(); row.row.appendChild(dieStrip(R, calm)); }
 async function flick(el, to, calm) {
   if (calm || !isFinite(to)) { el.textContent = to; return; }
   const st = pending, id = st && st.id;
@@ -291,9 +311,10 @@ const recalc = x => { x.total = x.groups.reduce((t, g) => t + g.sign * [...g.kep
 function redrawBase(st, note) {
   const R = st.dmgR, total = Math.max(0, R.r.total + (R.extra ? R.extra.total : 0));
   const bd = describeGroups(R.r).replace(/<[^>]*>/g, "") + R.rnote + (R.extra ? " + " + describeGroups(R.extra).replace(/<[^>]*>/g, "") : "") + (note ? " (" + note + ")" : "");
-  st.dmgBase = { total, bd }; st.baseRow.bd.textContent = bd; st.baseRow.big.textContent = total;
+  st.dmgBase = { total, bd }; st.baseRow.bd.textContent = dmgFormula(st) + R.rnote + (note ? " (" + note + ")" : ""); st.baseRow.big.textContent = total; drawDice(st.baseRow, R, st.calm);
   st.dmgSum = total + st.dmgRows.reduce((t, x) => t + x.total, 0); showTotal(st);
 }
+const dmgFormula = st => { const d = st.spec.dmg, c = st.nat === "20"; return `${d.dice}${d.mod ? (d.mod > 0 ? " + " : " \u2212 ") + Math.abs(d.mod) : ""}${c ? " + " + d.dice + " crit" : ""}`; };
 const rrAvail = (st, r) => {
   if (st.used[r.id] || (r.once && st.opts.onceUsed && st.opts.onceUsed(r.id))) return false;
   if (r.mode === "d20") return !!st.spec.d20 && st.rolled && !st.dmgDone && (!r.onNat1 || st.nat === "1");
@@ -340,7 +361,7 @@ async function rollDamage(st) {
   st.dmgR = { r, extra, rnote };
   st.dmgRows = []; st.dmgBase = { total, bd: describeGroups(r).replace(/<[^>]*>/g, "") + rnote + (extra ? " + " + describeGroups(extra).replace(/<[^>]*>/g, "") : "") };
   const row = addRow(crit ? "Crit damage" : (d.label || "Damage") + (d.type ? " \u00b7 " + d.type : ""), "", st.dmgBase.bd, crit);
-  st.baseRow = row; fxChips(row.row, d.parts, st.calm);
+  st.baseRow = row; row.bd.textContent = dmgFormula(st) + rnote; drawDice(row, st.dmgR, st.calm); fxChips(row.row, d.parts, st.calm);
   await flick(row.big, total, st.calm);
   if (!pending || pending.id !== id) return;
   sfx("rdone"); st.dmgDone = true; st.rolled = true; st.dmgSum = total; st.busy = false; st.phase = "done"; st.hasRolledDmg = true;
@@ -363,21 +384,21 @@ async function useOpt(kind, rid) {
   if (st.used[rid]) return;
   st.used[rid] = true; st.busy = true; const id = st.id;
   const crit = st.nat === "20";
-  let total, bd;
+  let total, bd, rf = null;
   if (r.dice) {
     const f = rollFormula((crit && kind === "damage" ? r.dice.replace(/^(\d+)/, n => 2 * n) : r.dice) + (r.flat ? (r.flat > 0 ? "+" : "") + r.flat : ""));
-    total = f ? f.total : 0; bd = f ? describeGroups(f).replace(/<[^>]*>/g, "") : r.dice;
+    total = f ? f.total : 0; bd = f ? describeGroups(f).replace(/<[^>]*>/g, "") : r.dice; rf = f;
   } else { total = r.flat || 0; bd = (r.flat > 0 ? "+" : "") + r.flat; }
   if (r.once && st.opts.markOnce) st.opts.markOnce(r.id);
   if (r.res && st.opts.spend) st.opts.spend(r.res);
   paint();
   if (kind === "attack") {
     st.atkExtra.push({ label: r.label, total, bd });
-    const row = addRow(r.label, "", bd, false); await flick(row.big, total, st.calm);
+    const row = addRow(r.label, "", rf ? r.dice : bd, false); if (rf) drawDice(row, { r: rf, extra: null }, st.calm); await flick(row.big, total, st.calm);
     if (!pending || pending.id !== id) return;
     setLine(st); sfx("rdone"); st.busy = false; paint(); return;
   }
-  const row = addRow(r.label, "", bd, crit); await flick(row.big, total, st.calm);
+  const row = addRow(r.label, "", rf ? (crit && kind === "damage" ? r.dice.replace(/^(\d+)/, n => 2 * n) : r.dice) : bd, crit); if (rf) drawDice(row, { r: rf, extra: null }, st.calm); await flick(row.big, total, st.calm);
   if (!pending || pending.id !== id) return;
   sfx("rdone"); st.dmgRows.push({ label: r.label, total, bd }); st.dmgSum += total; showTotal(st); st.busy = false; paint();
 }

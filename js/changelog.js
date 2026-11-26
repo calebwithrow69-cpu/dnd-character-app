@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.87";
+export const VERSION = "0.1.88";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.88",
+    date: "2026-11-26",
+    stage: "Pre-build",
+    blurb: "Roll card shows every die. Classic sheet gets a Play tab.",
+    groups: [
+      {
+        title: "New",
+        items: [
+          "Classic sheet: a Play tab with one-tap abilities, attacks and spells, the same list as the Advanced sheet.",
+          "Roll card: every damage die is drawn with its size and face, crit dice marked, dropped dice struck through. Extras you add (Sneak Attack, Smite) show their dice too.",
+          "Roll card: the extras you can add to a roll sit under an Add to this roll label."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.87",
     date: "2026-11-25",
