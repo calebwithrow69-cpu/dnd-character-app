@@ -7,6 +7,7 @@ import { attacksOf } from "./gear.js";
 import { optionNames, optionGroup } from "./progression.js";
 import { parseSpecies, classifyText } from "./species.js";
 import { variantDef, stripVariantText } from "./choices.js";
+import { evalDice } from "./effects.js";
 
 export const COSTS = ["Action", "Bonus", "Reaction", "Passive"];
 export const COST_LABEL = { Action: "Action", Bonus: "Bonus Action", Reaction: "Reaction", Passive: "Passive", Other: "Other" };
@@ -114,6 +115,21 @@ export function buildCombat(app, c, d) {
       block, res, text: f.text, detail: { kind: f.kind, name: f.name, from: f.from }, resIdx: res ? res.i : null,
       act: res ? { a: "useRes", i: res.i } : null });
   });
+
+  // Data-driven rolls on a feature (`actions` in the rules: Energy Blast, Guard Breaker, Deflect redirect...).
+  // { name, cost, dice: Expr, mod: "dex", type, label, note, res: "Focus Points", save: "Dexterity", dcAbil: "wis", half: true, lv }
+  [...((cls?.features) || []).map(f => ({ ...f, from: c.class })), ...((sub?.features) || []).map(f => ({ ...f, from: c.subclass }))]
+    .filter(f => f.lv <= c.level && f.actions).forEach(f => f.actions.filter(a => (a.lv || f.lv || 1) <= c.level).forEach(a => {
+      const res = a.res ? resFor(a.res) : null, cost = a.cost || "Other";
+      let block = turnBlock(c, turn, cost, false);
+      if (!block && res && res.cur <= 0) block = `No ${a.res} left. Back on a ${res.reset === "short" ? "short or long" : "long"} rest.`;
+      const modv = a.mod ? Math.floor((Number((c.abilities || {})[a.mod] || 10) - 10) / 2) : 0;
+      const dice = evalDice(a.dice, c);
+      const dc = a.dcAbil ? 8 + d.prof + Math.floor((Number((c.abilities || {})[a.dcAbil] || 10) - 10) / 2) : null;
+      const note = [a.save && dc != null ? `${a.save} save DC ${dc}${a.half ? ", half on a success" : ""}` : "", a.mod ? `includes your ${a.mod.toUpperCase()} modifier` : "", a.note || ""].filter(Boolean).join(" \u00b7 ");
+      add({ id: "a:" + f.from + ":" + a.name, name: a.name, cost, src: f.from + " " + (a.lv || f.lv), type: "feature", lv: a.lv || f.lv, kind: "Ability", block, res, text: a.text || "",
+        act: { a: "rollBoon", dice: dice || String(modv), mod: dice ? modv : 0, type: a.type || "", label: a.label || "Damage", note, title: a.name, res: res ? res.i : "" } });
+    }));
 
   // Species traits
   const sp = findByName(L.species, c.species);

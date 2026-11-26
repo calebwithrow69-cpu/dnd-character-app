@@ -2,11 +2,33 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.84";
+export const VERSION = "0.1.85";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.85",
+    date: "2026-11-25",
+    stage: "Pre-build",
+    blurb: "Monk Unarmed Strike uses Dexterity. Focus Point damage rolls.",
+    groups: [
+      {
+        title: "Fixed",
+        items: [
+          "Monk Unarmed Strikes and Monk weapons use Dexterity when it is higher, with no armor and no shield.",
+          "The Martial Arts die (d6, d8 at 5, d10 at 11, d12 at 17) shows on the Unarmed Strike."
+        ]
+      },
+      {
+        title: "Added",
+        items: [
+          "Monk and Warrior of the Street Focus Point rolls: Deflect Redirect, Energy Blast, Guard Breaker. Each spends a point.",
+          "Combo shows as an optional bonus on the Unarmed Strike attack roll."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.84",
     date: "2026-11-25",

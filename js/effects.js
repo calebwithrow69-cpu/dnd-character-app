@@ -21,6 +21,7 @@ const baseName = n => String(n || "").replace(/\s*\(.*$/, "");
 //   { t: target, op?: "add"|"set"|"max"|"min"|"adv"|"dis"|"reroll"|"grant", v?: Expr, when?: Cond, lv?: n, name?: label }
 // Targets (stat):  ac  ac.base  speed  init  hp.max  pp  save.<ab>|save.all  skill.<id>|skill.all|skill.nonprof  spell.dc  spell.atk
 // Targets (roll):  atk  dmg  check.<ab> (ability checks; skills also read their ability)  (use `when` with {attack:..} / {wield:..} to narrow them), plus save.* skill.* init for adv/dis
+// Targets (ability): abil.alt, op grant, v:{abil:"dex"} = a weapon or Unarmed Strike may use that modifier instead when it is better (Dexterous Attacks); `when` {wield:"monk"} = simple melee or Light martial weapon
 // Targets (grant): grant.resist.<type>  grant.immune.<type>  grant.prof.<skill|save|armor|weapon|tool>.<name>  grant.sense.<name>  grant.language.<name>
 // Expr:   a number, or { perLevel } { lvl } { prof } { halfProf } { abil, min } { classLevel } { steps:[[lvl,n]..] }
 //         { add:[..] } { mul:[a,b] } { half:e } { neg:e } { max:[..] } { min:[..] } { if:Cond, then:e, else:e }
@@ -38,7 +39,7 @@ export const FX_TARGETS = [
   ["save.all", "All saving throws"], ["skill.all", "All skills"], ["spell.dc", "Spell save DC"], ["spell.atk", "Spell attack"]
 ];
 const ABS = "str|dex|con|int|wis|cha";
-const TARGET_RES = [new RegExp("^check\\.(" + ABS + ")$"), /^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
+const TARGET_RES = [new RegExp("^check\\.(" + ABS + ")$"), /^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks|abil\.alt)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
   /^grant\.(resist|immune|prof|sense|language)\.[A-Za-z. ]+$/];
 const OPS = ["add", "set", "max", "min", "adv", "dis", "reroll", "grant"];
 const EXPR_KEYS = ["ctx", "perLevel", "lvl", "prof", "halfProf", "abil", "classLevel", "steps", "add", "mul", "half", "neg", "max", "min", "if", "dice"];
@@ -291,7 +292,11 @@ export function syncHp(c) {
 
 // Unarmed Strike profiles the character has: the basic 1 + Str, plus any a trait or feat grants
 // ({ t:"unarmed", op:"grant", v:{ dice, dtype, abil, flat } }). Each is { src, dice, dtype, abil }.
+// Other abilities a weapon or Unarmed Strike may swing with (the better modifier wins).
+export function abilAlts(c, ctx = {}) {
+  return collectEffects(c).filter(e => e.t === "abil.alt" && applies(e, c, ctx)).map(e => e.v && e.v.abil).filter(Boolean);
+}
 export function unarmedOptions(c, ctx = {}) {
   return collectEffects(c).filter(e => e.t === "unarmed" && applies(e, c, ctx))
-    .map(e => ({ src: e.src, dice: e.v.dice || null, flat: e.v.flat || 0, dtype: e.v.dtype || "bludgeoning", abil: e.v.abil || "str", separate: !!e.v.separate }));
+    .map(e => ({ src: e.src, dice: evalDice(e.v, c) || null, flat: e.v.flat || 0, dtype: e.v.dtype || "bludgeoning", abil: e.v.abil || "str", separate: !!e.v.separate }));
 }

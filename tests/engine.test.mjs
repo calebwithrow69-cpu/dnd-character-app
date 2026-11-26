@@ -240,6 +240,23 @@ if (existsSync(new URL("../data/library.json", import.meta.url))) {
     const on = { ...hold([], "greatsword", null, { class: "Barbarian" }), active: [{ id: "feature:Reckless Attack", name: "Reckless Attack" }] };
     eq(numA(on).adv, ["Reckless Attack"]); eq(numA(hold([], "greatsword", null, { class: "Barbarian" })).adv, []);
   }));
+  t("Monk: Martial Arts die and Dexterity for Unarmed Strikes and Monk weapons, only with no armor and no shield", () => withReal(() => {
+    const monk = (lv, extra = {}) => mk({ class: "Monk", level: lv, abilities: { str: 8, dex: 19, con: 14, int: 12, wis: 14, cha: 10 }, ...extra });
+    const un = c => { const w = unarmedWeapons(c)[0].weapon; return [w.dice, weaponNumbers(w, c).toHit, weaponNumbers(w, c).dmgMod]; };
+    eq(un(monk(1)), ["1d6", 6, 4]); eq(un(monk(5)), ["1d8", 7, 4]); eq(un(monk(11))[0], "1d10"); eq(un(monk(17))[0], "1d12");
+    eq(un({ ...monk(8), ac: { shield: true } }), ["1", 2, -1]);
+    const spear = { id: "sp", name: "Spear", qty: 1, weapon: { dice: "1d6", dtype: "Piercing", kind: "Melee", props: "Thrown (Range 20/60), Versatile (1d8)", cat: "Simple", ability: null, magic: 0 } };
+    const c = monk(8, { inventory: [spear], equipment: { main: "sp" } });
+    eq(weaponNumbers(spear.weapon, c).dmgMod, 4); eq(weaponNumbers(spear.weapon, { ...c, ac: { shield: true } }).dmgMod, -1);
+    eq(weaponNumbers(spear.weapon, mk({ class: "Fighter", level: 8, abilities: { str: 8, dex: 19, con: 14, int: 12, wis: 14, cha: 10 }, inventory: [spear], equipment: { main: "sp" } })).dmgMod, -1);
+  }));
+  t("Warrior of the Street: Combo is an optional Focus Point bonus on Unarmed Strike attacks only", () => withReal(() => {
+    const m = (extra = {}) => mk({ class: "Monk", level: 8, subclass: "Warrior of the Street", abilities: { str: 8, dex: 19, con: 14, int: 12, wis: 14, cha: 10 }, ...extra });
+    const riders = (c, w) => weaponNumbers(w, c).riders.atk.map(r => [r.src, r.flat, r.res]);
+    eq(riders(m(), unarmedWeapons(m())[0].weapon), [["Combo", 2, "Focus Points"]]);
+    eq(riders(m({ subclass: "Warrior of the Open Hand" }), unarmedWeapons(m())[0].weapon), []);
+    eq(riders(m(), { dice: "1d6", kind: "Melee", props: "", cat: "Simple", ability: null, magic: 0 }), []);
+  }));
   t("Unarmed Strike: one strike; species, Tavern Brawler, Unarmed Fighting and Altered improve it, only separate attacks get a row", () => withReal(() => {
     const names = c => unarmedWeapons(c).map(i => i.name), first = c => unarmedWeapons(c)[0].weapon;
     eq(names(mk({})), ["Unarmed Strike"]); eq(first(mk({})).dice, "1");
