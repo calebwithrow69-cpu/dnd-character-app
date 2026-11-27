@@ -2,11 +2,21 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.116";
+export const VERSION = "0.1.117";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.117",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Spell follow-ups: editable role tags, loadouts that survive removed spells, spell hints, and a cap icon for help.",
+    groups: [
+      { title: "Spells", items: ["The DM editor has a Role tags field on every spell. Blank means the tags are read from the text.", "A loadout keeps spells you removed and marks them Removed. Applying it skips them and says how many."] },
+      { title: "Help", items: ["The help button and the first-run note use the cap icon from the hints.", "New hints for spell icons, Prepare, Edit list, the browser filter, levels, Wanted and area diagrams."] }
+    ]
+  },
   {
     v: "0.1.116",
     date: "2026-11-27",

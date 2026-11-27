@@ -210,6 +210,7 @@ export const ICONS = {
   search: svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'),
   check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
   close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+  cap: svg('<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11.6V16c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.4M22 9v6"/>'),
   help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.4 9.3a2.7 2.7 0 015.2.9c0 1.8-2.6 2.3-2.6 4M12 17.2h.01"/>'),
   info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
   sword: svg('<path d="M14.5 4L20 4l0 5.5L9 20.5 6 20l-.5-3z"/><path d="M5 15l-2 2 3 3 2-2"/>'),
@@ -241,7 +242,7 @@ export function topbar(title, sub, { back, backLabel, actions = [] } = {}) {
     ${back ? (backLabel ? `<button class="btn sm" data-a="${back}">${ICONS.back}<span>${esc(backLabel)}</span></button>` : `<button class="iconbtn" data-a="${back}" aria-label="Back">${ICONS.back}</button>`) : ""}
     <div class="grow"><h1>${esc(title)}</h1>${sub ? `<div class="sub">${esc(sub)}</div>` : ""}</div>
     ${actions.map(x => `<button class="iconbtn" data-a="${x.a}"${x.id ? ` data-id="${esc(x.id)}"` : ""} aria-label="${esc(x.label)}">${ICONS[x.icon]}</button>`).join("")}
-    <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.help}</button>
+    <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.cap}</button>
     ${actions.some(x => x.a === "openSettings") ? "" : `<button class="iconbtn" data-a="openSettings" aria-label="Settings">${ICONS.settings}</button>`}
   </div></header>`;
 }

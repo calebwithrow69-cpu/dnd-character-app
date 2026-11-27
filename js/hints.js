@@ -95,6 +95,16 @@ HINTS.push(
     body: "Narrow the bag to equipped, consumables, attunement or heavy items." }
 );
 
+HINTS.push(
+  { id: "spIcons", where: "sheet", sel: ".k-row .spi", title: "Spell icons", body: "The numeral is the spell level and the ring is a cantrip. The school sets the colour and lettering." },
+  { id: "spPrepare", where: "sheet", sel: '[data-a="spPrepOpen"]', title: "Prepare spells", body: "Count against your limit, All and None, search, and saved loadouts." },
+  { id: "spEdit", where: "sheet", sel: '[data-a="spEditToggle"]', title: "Edit list", body: "Shows the remove buttons. Tap again to hide them." },
+  { id: "spFilter", where: "spbrowse", sel: '[data-a="spFilterOpen"]', title: "Filter and sort", body: "Narrow by school, role, area shape, damage, saving throw and casting time." },
+  { id: "spLevels", where: "spbrowse", sel: ".sblv", title: "Spell levels", body: "Numerals are spell levels. The ring is cantrips." },
+  { id: "spHeart", where: "spbrowse", sel: ".sprow .heart", title: "Wanted", body: "Heart a spell to keep it on the Wanted shelf for later." },
+  { id: "spArea", where: "spdetail", sel: ".areahit", title: "Area diagrams", body: "Underlined areas open a 5-foot grid. Switch between square and hex." }
+);
+
 const wideNow = () => typeof matchMedia === "function" && matchMedia("(min-width:1100px)").matches;
 export function hintState() {
   try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); return s && typeof s === "object" ? s : {}; } catch (e) { return {}; }

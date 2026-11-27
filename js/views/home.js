@@ -86,7 +86,7 @@ export function renderHome(app) {
   const count = mode === "dm" ? dm.readIndex().list.length : n;
   const bk = app.prefs && app.prefs.lastBackup, days = bk ? Math.floor((Date.now() - bk) / 864e5) : null;
   return `<main class="home" aria-label="Home">
-    <header class="hh">${LOGO}<h1 class="hh-t">THE SHEET</h1><span class="hh-r"><button class="ibtn2" data-a="helpOpen" aria-label="Help">${ICONS.help}</button></span></header>
+    <header class="hh">${LOGO}<h1 class="hh-t">THE SHEET</h1><span class="hh-r"><button class="ibtn2" data-a="helpOpen" aria-label="Help">${ICONS.cap}</button></span></header>
     <div class="hh-mid">
       ${storageBanner(app)}
       ${cuPendingCount(app) && !navigator.webdriver ? `<button class="hwarn" data-a="openUpdate">${cuPendingCount(app)} rule changes</button>` : ""}

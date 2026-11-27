@@ -52,7 +52,7 @@ export function renderModal(app) {
   if (!m) return "";
   const c = app.char;
   switch (m.type) {
-    case "helpIntro": return modalShell("Need help?", `<div class="helpintro"><span class="hi-q">${ICONS.help}</span><p>Look for the ? symbol if you are ever lost or confused.</p></div>`, `<button class="btn" data-a="helpIntroSkip">Skip tour</button><button class="btn pri" data-a="helpIntroGo">Start tour</button>`);
+    case "helpIntro": return modalShell("Need help?", `<div class="helpintro"><span class="hi-q">${ICONS.cap}</span><p>Look for the cap icon if you are ever lost or confused.</p></div>`, `<button class="btn" data-a="helpIntroSkip">Skip tour</button><button class="btn pri" data-a="helpIntroGo">Start tour</button>`);
     case "help": return modalShell("Help", `<div class="stack"><button class="btn block" data-a="tourAsk" data-id="home">Home tour</button><button class="btn block" data-a="tourAsk" data-id="sheet">Sheet tour</button><button class="btn block" data-a="tourAsk" data-id="dm">DM tour</button></div>`, `<button class="btn" data-a="closeModal">Done</button>`);
     case "tourAsk": { const T = { home: ["Home tour", "Goes to Home."], sheet: ["Sheet tour", "Opens your last character."], dm: ["DM tour", "Opens DM mode."] }[m.id] || ["Tour", ""];
       return modalShell(`Start the ${T[0]}?`, `<p>${T[1]}</p>`, `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="tourConfirm">Start</button>`); }

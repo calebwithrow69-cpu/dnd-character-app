@@ -111,6 +111,7 @@ export function knownRows(app, c) {
 }
 export function preparedNames(c) { return c.spellcasting.spells.filter(s => s.prepared && !s.always).map(s => s.name); }
 
+const gone = (app, c, l) => { const k = new Set(c.spellcasting.spells.map(s => s.name)); return l.prep.filter(n => !k.has(n)).length; };
 export function renderPrepModal(app) {
   const c = app.char, rows = knownRows(app, c).filter(s => s.ref.level > 0);
   const lim = prepLimit(app, c), n = rows.filter(s => s.prepared || s.always).length;
@@ -124,7 +125,7 @@ export function renderPrepModal(app) {
     <div class="seg sblv" role="group" aria-label="Spell level"><button data-a="spPLv" data-lv="" aria-pressed="${lv == null}">All</button>${levels.map(l => `<button data-a="spPLv" data-lv="${l}" aria-pressed="${lv === l}">${NUMERAL[l]}</button>`).join("")}</div>
     <div class="results" id="results-spprep">${prepList(shown)}</div>
     <h4 class="sbh">Loadouts</h4>
-    ${loads.length ? `<div class="optlist">${loads.map(l => `<div class="inforow"><div class="inforow-top"><button class="optcard" data-a="spLoadPreview" data-id="${esc(l.id)}"><span class="grow"><b>${esc(l.name)}</b><span>${l.prep.length} spells</span></span><span class="tag">Apply</span></button>
+    ${loads.length ? `<div class="optlist">${loads.map(l => `<div class="inforow"><div class="inforow-top"><button class="optcard" data-a="spLoadPreview" data-id="${esc(l.id)}"><span class="grow"><b>${esc(l.name)}</b><span>${l.prep.length} spells${gone(app, c, l) ? ` \u00b7 ${gone(app, c, l)} removed` : ""}</span></span><span class="tag">Apply</span></button>
         <button class="iconbtn" data-a="spLoadDelete" data-id="${esc(l.id)}" aria-label="Delete ${esc(l.name)}">${ICONS.close}</button></div></div>`).join("")}</div>` : `<p class="muted small">No loadouts</p>`}
     <div class="sbsave"><input class="f" id="sp-lname" maxlength="30" placeholder="Loadout name" autocomplete="off"><button class="btn sm" data-a="spLoadSave" ${loads.length >= 8 ? "disabled" : ""}>Save current</button></div>`;
   return modalShell("Prepare spells", body, `<button class="btn pri" data-a="closeModal">Done</button>`);
@@ -145,6 +146,6 @@ export function renderLoadPreview(app, id) {
   const known = new Set(c.spellcasting.spells.map(s => s.name)), cur = new Set(preparedNames(c)), want = new Set(l.prep);
   const on = [...want].filter(n => known.has(n) && !cur.has(n)), off = [...cur].filter(n => !want.has(n)), miss = [...want].filter(n => !known.has(n));
   const list = (t, a, tone) => a.length ? `<h4 class="sbh">${t} (${a.length})</h4><div class="chips">${a.map(n => `<span class="tag ${tone}">${esc(n)}</span>`).join("")}</div>` : "";
-  return modalShell(l.name, `${list("Prepare", on, "amber")}${list("Unprepare", off, "")}${list("Not in your list", miss, "")}${!on.length && !off.length ? `<p class="muted small">Already matches</p>` : ""}`,
+  return modalShell(l.name, `${list("Prepare", on, "amber")}${list("Unprepare", off, "")}${list("Removed, will be skipped", miss, "")}${!on.length && !off.length && !miss.length ? `<p class="muted small">Already matches</p>` : ""}`,
     `<button class="btn" data-a="closeModal">Back</button><button class="btn pri" data-a="spLoadApply" data-id="${esc(l.id)}">Apply</button>`);
 }

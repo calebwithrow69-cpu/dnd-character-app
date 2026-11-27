@@ -61,14 +61,14 @@ function sheetBar(app, c, d, meta) {
   return `<header class="topbar sheetbar"><div class="wrap row sb-phone">
       ${back}
       <div class="grow"><h1>${esc(title)}</h1><div class="sub">${esc(trail || meta)}</div></div>
-      <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.help}</button>
+      <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.cap}</button>
       <button class="iconbtn jumpbtn-i" data-a="jumpOpen" aria-label="Search">${ICONS.search}</button>
       ${portrait}</div>
     <div class="wrap row sb-wide">
       <button class="btn sm" data-a="navBack">${ICONS.back}<span>${esc(prev)}</span></button>
       <div class="grow"><h1>${esc(c.name)}</h1><div class="sub">${esc(trail ? path.join(" \u203a ") : `Level ${c.level} \u00b7 ${sub}`)}</div></div>
       <div class="sb-pills">${pill(c.hp.cur + "/" + c.hp.max, "HP")}${pill(d.ac, "AC")}${pill(d.speed, "Speed")}${pill(fmtMod(d.initiative), "Init")}${pill(fmtMod(d.prof), "Prof")}</div>
-      <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.help}</button>
+      <button class="iconbtn" data-a="helpOpen" aria-label="Help">${ICONS.cap}</button>
       <button class="jumpbtn" data-a="jumpOpen" aria-label="Search">${ICONS.search}<span>Search or jump to</span><kbd>Ctrl K</kbd></button>
       ${portrait}</div></header>`;
 }

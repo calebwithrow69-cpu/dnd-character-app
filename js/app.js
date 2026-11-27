@@ -259,12 +259,13 @@ const hintPlace = () => [APP.screen, APP.sheetTab, APP.charSub, APP.classicSub].
 document.addEventListener("tour-end", () => { hintPause = Date.now() + 15000; hintCool = "pending"; setTimeout(() => render(), 15100); });
 const hintScreen = () => APP.screen === "home" ? "home" : (APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes")) ? "notes"
   : (APP.screen === "rules" || (APP.screen === "sheet" && APP.sheetTab === "rules")) ? "rules" : APP.screen === "sheet" ? "sheet" : "";
+const hintModal = () => !APP.modal ? "" : APP.modal.type === "picker" && APP.modal.picker === "spells" ? "spbrowse" : APP.modal.type === "detail" && APP.modal.kind === "spell" ? "spdetail" : "";
 function syncHint() {
   if (hintCool === "pending") hintCool = hintPlace();
   if (hintCool && (hintPlace() !== hintCool || Date.now() > hintPause)) { if (hintPlace() !== hintCool) hintPause = 0; hintCool = null; }
-  const quiet = !navigator.webdriver && hintsOn(APP.prefs) && !APP.modal && !tourActive() && !APP._tourPending && storageAcked() && helpSeen()
-    && !!hintScreen() && !tourUnseen("home") && (APP.screen !== "sheet" || (APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen)) && Date.now() > hintPause;
-  const n = quiet ? nextHint(hintScreen()) : null;
+  const ms = hintModal(), quiet = !navigator.webdriver && hintsOn(APP.prefs) && (!APP.modal || !!ms) && !tourActive() && !APP._tourPending && storageAcked() && helpSeen()
+    && !!(ms || hintScreen()) && !tourUnseen("home") && (APP.screen !== "sheet" || (APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen)) && Date.now() > hintPause;
+  const n = quiet ? nextHint(ms || hintScreen()) : null;
   if (!n) { if (hintShownId()) clearHint(); return; }
   showHint(n);
 }
@@ -1682,7 +1683,8 @@ const ACTIONS = {
   spLoadApply(el) {
     const c = APP.char, l = (c.spellLoadouts || []).find(x => x.id === el.dataset.id); if (!l) return;
     const want = new Set(l.prep); c.spellcasting.spells.forEach(s => { if (!s.always) s.prepared = want.has(s.name); });
-    save(); APP._under = null; APP.modal = { type: "spPrep" }; render(); toast("Loadout applied");
+    const k = new Set(c.spellcasting.spells.map(s => s.name)), miss = l.prep.filter(n => !k.has(n)).length;
+    save(); APP._under = null; APP.modal = { type: "spPrep" }; render(); toast(miss ? `Applied. ${miss} removed skipped` : "Loadout applied");
   },
   areaShow(el) { if (APP.modal && ["subclass", "detail"].includes(APP.modal.type)) { APP._under = APP.modal; APP._underScroll = modalRoot.querySelector(".modal-body")?.scrollTop || 0; } const d = el.dataset; openModal({ type: "area", shape: d.shape, r: d.r, size: d.size, len: d.len, wid: d.wid, h: d.h }); },
   areaMode(el) { APP.prefs.gridMode = el.dataset.mode === "hex" ? "hex" : "square"; savePrefs(); render(); },

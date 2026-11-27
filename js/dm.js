@@ -62,6 +62,7 @@ export const SCHEMA = {
     { k: "comp", label: "Components", t: "text", hint: "V, S, M (what the material is)" }, { k: "dur", label: "Duration", t: "text" },
     { k: "conc", label: "Concentration", t: "bool" }, { k: "ritual", label: "Ritual", t: "bool" },
     { k: "classes", label: "Classes (comma separated)", t: "csv" }, { k: "source", label: "Source", t: "text" },
+    { k: "tags", label: "Role tags (comma separated)", t: "csv", hint: "Damage, Healing, Control, Buff, Utility. Blank = read from the text." },
     { k: "text", label: "Rules text", t: "area", rows: 10, hint: "First line: 'Evocation Cantrip' or '3rd-level Evocation'. Then the description. Add 'Using a Higher-Level Spell Slot.' or 'Cantrip Upgrade.' paragraphs if needed." }] },
   weapons: { label: "Weapons", one: "weapon", fields: [
     { k: "name", label: "Name", t: "text" }, { k: "cat", label: "Category", t: "select", opts: ["Simple", "Martial"] },
@@ -85,7 +86,7 @@ export const BLOCKS = {
   subclasses: [["Basics", ["cls", "name", "source"]], ["Features", ["features"]]],
   backgrounds: [["Basics", ["name", "source", "desc"]], ["What it gives", ["abilities", "feat", "skills", "tool"]], ["Rules block", ["effect"]]],
   feats: [["Basics", ["name", "source", "type"]], ["Rules text", ["text"]]],
-  spells: [["Basics", ["name", "level", "school", "source"]], ["Casting", ["time", "range", "comp", "dur", "conc", "ritual"]], ["Classes", ["classes"]], ["Rules text", ["text"]]],
+  spells: [["Basics", ["name", "level", "school", "source"]], ["Casting", ["time", "range", "comp", "dur", "conc", "ritual"]], ["Classes and tags", ["classes", "tags"]], ["Rules text", ["text"]]],
   weapons: [["Basics", ["name", "cat", "kind"]], ["Damage", ["dice", "dtype", "mastery", "props"]], ["Price", ["price"]]],
   items: [["Basics", ["name", "type", "source", "slots"]], ["Price", ["price", "priceTxt", "base"]], ["Description", ["text"]]],
   rules: [["Rule", ["name", "text"]]]

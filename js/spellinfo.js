@@ -54,6 +54,7 @@ export function highlightAreas(html) {
 const COND = /\b(Blinded|Charmed|Deafened|Frightened|Grappled|Incapacitated|Paralyzed|Petrified|Poisoned|Prone|Restrained|Stunned|Unconscious|Invisible)\b|speed (?:becomes|is reduced)|difficult terrain|can't (?:move|take)/;
 // Rough reading of what a spell is for: Damage, Healing, Control, Buff, Utility.
 export function rolesOf(sp) {
+  if (Array.isArray(sp.tags) && sp.tags.length) { const set = sp.tags.map(t => String(t).trim().toLowerCase()); const r = ROLES.filter(x => set.includes(x.toLowerCase())); if (r.length) return r; }
   const t = String(sp.text || ""), a = analyzeSpell(sp), r = [];
   if (a.damage || /\b\w+ damage\b/.test(t) && /damage/i.test(t) && !/damage Resistance/i.test(t) && /takes?|taking|deals?/i.test(t)) r.push("Damage");
   if (a.heal || /regains? (?:\d+d\d+|a number of) Hit Points|Temporary Hit Points/i.test(t)) r.push("Healing");

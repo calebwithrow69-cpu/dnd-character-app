@@ -3098,7 +3098,7 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .statwrap{container:statbox / inline-size}
 
 /* One-time hints */
-#hint-root{position:fixed;inset:0;pointer-events:none;z-index:60}
+#hint-root{position:fixed;inset:0;pointer-events:none;z-index:70}
 .hint-ring{position:fixed;border:2px solid var(--amber);border-radius:12px;box-shadow:0 0 0 4px color-mix(in srgb,var(--amber) 25%,transparent);pointer-events:none}
 .hint-bubble{position:fixed;pointer-events:auto;padding:14px 16px 12px;border-radius:14px;color:var(--card-ink);background:linear-gradient(160deg,var(--card-hi),var(--card-lo));border:1px solid #ffffff2e;box-shadow:0 14px 34px #00000066}
 .hint-bubble::before{content:"";position:absolute;left:var(--ax,30px);top:-7px;width:12px;height:12px;margin-left:-6px;transform:rotate(45deg);background:var(--card-hi);border-left:1px solid #ffffff2e;border-top:1px solid #ffffff2e}
