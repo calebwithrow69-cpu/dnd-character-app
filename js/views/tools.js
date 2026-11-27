@@ -42,8 +42,8 @@ const HUB_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentCo
 const HUB_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 export function hubCell(app) {
   const open = !!app.hubOpen, tools = quickIds(app.prefs).map(id => TOOLS.find(t => t[0] === id)), slots = HUB_SLOTS[tools.length];
-  const fan = open ? `<div class="hubfan" role="menu" aria-label="Quick">${tools.map(([id, label, icon, how, q], i) =>
-    `<button class="hubopt" role="menuitem" data-a="hubGo" data-id="${id}" style="--x:${HUB_XY[slots[i]][0]}px;--y:${HUB_XY[slots[i]][1]}px;--d:${i * 30}ms"><span class="ho-ic">${ico(icon)}</span><span class="ho-l">${esc(q || label)}</span></button>`).join("")}</div>` : "";
+  const fan = `<div class="hubfan${open ? " is-open" : ""}" role="menu" aria-label="Quick"><span class="hubhd">Quick</span>${tools.map(([id, label, icon, how, q], i) =>
+    `<button class="hubopt" role="menuitem" data-a="hubGo" data-id="${id}" style="--x:${HUB_XY[slots[i]][0]}px;--y:${HUB_XY[slots[i]][1]}px;--d:${i * 30}ms"><span class="ho-ic">${ico(icon)}</span><span class="ho-l">${esc(q || label)}</span></button>`).join("")}</div>`;
   return `<div class="hubcell">${open ? `<div class="hubscrim" data-a="hubClose"></div>` : ""}<div class="hubanchor">${fan}<button class="hubbtn ${open ? "open" : ""}" data-a="hubToggle" aria-haspopup="menu" aria-expanded="${open}" aria-label="Quick">${open ? HUB_CLOSE : HUB_ICON}<span class="hb-t">Quick</span></button></div><span class="hublbl">Quick</span></div>`;
 }
 

@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.88";
+export const VERSION = "0.1.89";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.89",
+    date: "2026-11-26",
+    stage: "Pre-build",
+    blurb: "Quick options listed on the laptop sidebar. New app icon.",
+    groups: [
+      {
+        title: "Changed",
+        items: [
+          "Laptop: the Quick options (Dice, Conditions, Calculator, Rest, Initiative) are listed in the sidebar, one click each. Phones and tablets keep the Quick button.",
+          "App icon is now the die symbol used in the app header. Installed copies pick it up after an update; an already-installed home-screen icon may need a reinstall to change."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.88",
     date: "2026-11-26",
