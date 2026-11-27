@@ -69,6 +69,8 @@ import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
 import { renderModal, renderRollCard } from "./views/modals.js";
 import { renderShopResults, shopPrice, shopRows, shopCtx, shopRowMap } from "./views/shop.js";
+import { ftState, ftResults } from "./views/features.js";
+import { featureEntries, ftDefault } from "./featurelist.js";
 import * as SD from "./shopdata.js";
 import { renderCxShopResults } from "./views/cxshop.js";
 import { shopStock, pay, fmtPrice, walletCp, applyDeltas, netCp } from "./equipment.js";
@@ -1084,6 +1086,7 @@ function onInput(e) {
   }
   if (ds.query === "fx") { APP.fxQ = el.value; const r = document.getElementById("fx-list"); if (r && APP.char) r.innerHTML = fxListHtml(APP, APP.char); return; }
   if (ds.query === "cxshop") { APP.cxShopQuery = el.value; const r = document.getElementById("results-cxshop"); if (r) r.innerHTML = renderCxShopResults(APP); return; }
+  if (ds.query === "ft") { ftState(APP).q = el.value; const r = document.getElementById("results-ft"); if (r) r.innerHTML = ftResults(APP, APP.char); return; }
   if (ds.query === "shop") { APP.shopQuery = el.value; const r = document.getElementById("results-shop"); if (r) r.innerHTML = renderShopResults(APP); return; }
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
   if (ds.query === "sheet") { APP.sheetQuery = el.value; const r = document.getElementById("results-sheet"); if (r) r.innerHTML = renderSheetSearch(APP); return; }
@@ -2337,6 +2340,26 @@ const ACTIONS = {
   shopView(el) { APP.shopView = el.dataset.v; render(); window.scrollTo(0, 0); },
   shopSort(el) { APP.shopSort = el.value; render(); },
   shopFilt(el) { APP.shopFilt = { ...(APP.shopFilt || {}), [el.dataset.k]: !(APP.shopFilt || {})[el.dataset.k] }; render(); },
+  ftTab(el) { ftState(APP).tab = el.dataset.v; ftState(APP).sel = null; keepY(() => render()); },
+  ftFilterOpen() { openModal({ type: "ftFilter" }); },
+  ftSet(el) { ftState(APP)[el.dataset.k] = el.dataset.v; render(); },
+  ftOnly(el) { const o = ftState(APP).only; o[el.dataset.k] = !o[el.dataset.k]; render(); },
+  ftUpcoming() { const s = ftState(APP); s.upcoming = !s.upcoming; render(); },
+  ftReset() { const q = ftState(APP).q, t = ftState(APP).tab; APP.ft = { ...ftDefault(), q, tab: t }; render(); },
+  ftOpen(el) {
+    const pane = document.querySelector(".ft-pane");
+    if (pane && pane.offsetParent) { const s = ftState(APP); s.sel = s.sel === el.dataset.key ? null : el.dataset.key; keepY(() => render()); return; }
+    ACTIONS.showDetail(el);
+  },
+  ftMark(el) {
+    const c = APP.char, k = el.dataset.key, m = c.featMarks || (c.featMarks = []), i = m.indexOf(k);
+    if (i >= 0) m.splice(i, 1); else m.push(k);
+    keepY(() => saveAndRender());
+  },
+  ftHotbar(el) {
+    const e = featureEntries(APP, APP.char).find(x => x.key === el.dataset.key);
+    if (e) ACTIONS.addHotbar({ dataset: { kind: "ability", name: e.name } });
+  },
   shopFilterOpen() { openModal({ type: "shopFilter" }); },
   shopFilterReset() { APP.shopSort = "rel"; APP.shopFilt = {}; APP.shopTrained = true; render(); },
   shopOpenItem(el) { openModal({ type: "shopItem", name: el.dataset.name }); },

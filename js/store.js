@@ -39,7 +39,7 @@ function prep(c) {
   if (!plain(c)) c = {};
   const o = { ...c };
   ["name", "species", "class", "subclass", "background", "alignment", "appearance", "backstory", "languages", "classFeatureNotes", "notes", "profsText", "size", "wielded"].forEach(k => { if (k in o) o[k] = txt(o[k], k === "backstory" || k === "notes" || k === "appearance" ? 20000 : 200); });
-  ["feats", "conditions", "saveProf", "skillProf", "skillExpertise", "inventory", "resources", "weapons", "masteries", "lineageGranted", "hotbar", "loadouts", "pins", "formulas", "levelLog", "custom", "active"].forEach(k => { if (k in o && !Array.isArray(o[k])) o[k] = []; });
+  ["feats", "conditions", "saveProf", "skillProf", "skillExpertise", "inventory", "resources", "weapons", "masteries", "lineageGranted", "hotbar", "loadouts", "featMarks", "pins", "formulas", "levelLog", "custom", "active"].forEach(k => { if (k in o && !Array.isArray(o[k])) o[k] = []; });
   ["inventory", "resources", "weapons"].forEach(k => { if (k in o) o[k] = o[k].filter(plain); });
   if (o.inventory) o.inventory = o.inventory.map(it => { const r = { ...it, name: txt(it.name, 120) || "Item" }; if ("contents" in r) { r.contents = Array.isArray(r.contents) ? r.contents.filter(x => x && typeof x === "object").slice(0, 60).map((x, i) => ({ id: txt(x.id, 24) || "p" + i, name: txt(x.name, 80) || "Item", qty: Math.max(1, Math.min(999, Math.round(Number(x.qty)) || 1)) })) : undefined; if (!r.contents) delete r.contents; } return r; });
   if (o.weapons) o.weapons = o.weapons.map(w => ({ ...w, name: txt(w.name, 120) || "Weapon" }));
@@ -109,6 +109,7 @@ export function normalize(c, library) {
     h.kind === "spell" ? out.spellcasting.spells.some(s => s.name === h.name)
     : (h.kind === "attack" || h.kind === "item") ? out.inventory.some(i => i.id === h.id)
     : h.kind === "ability" ? true : false));
+  out.featMarks = (Array.isArray(c.featMarks) ? c.featMarks : []).filter((k, i, a) => typeof k === "string" && k.length < 160 && a.indexOf(k) === i).slice(0, 200);
   out.loadouts = (Array.isArray(c.loadouts) ? c.loadouts : []).filter(l => l && l.id && l.name && l.eq && typeof l.eq === "object").slice(0, 12);
   // Rolls tab: pinned checks ("init", "abil:str", "save:con", "skill:stealth") and saved dice formulas
   out.pins = (Array.isArray(c.pins) ? c.pins : ["init"]).filter((k, i, a) => typeof k === "string" && /^(init|(abil|save):[a-z]{3}|skill:[a-z-]+)$/.test(k) && a.indexOf(k) === i).slice(0, 12);

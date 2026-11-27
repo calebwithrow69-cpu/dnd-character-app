@@ -4,7 +4,8 @@ import { findByName, subclassesFor } from "../data.js";
 import { CASTER_TYPE } from "../rules.js";
 import { optionNames, optionGroup } from "../progression.js";
 import { needsFirstChoices, spellsTab, loadoutGearTab } from "./sheet.js";
-import { playTab, trackHtml } from "./play.js";
+import { playTab } from "./play.js";
+import { featuresView } from "./features.js";
 import { statsTab, rollsTab } from "./stats.js";
 import { buildCombat } from "../combat.js";
 import { playEntries } from "../play.js";
@@ -24,38 +25,7 @@ export function characterBody(app, c, d) {
     </div>${body}`;
 }
 
-// ---------------- Features ----------------
-function featuresTab(app, c, d) {
-  const cls = findByName(app.library.classes, c.class);
-  const sub = c.subclass ? findByName(app.library.subclasses, c.subclass) : null;
-  const hide = optionNames(cls), group = optionGroup(cls);
-  const chosen = group ? (c.choices[group.key] || []) : [];
-  const classRows = [
-    ...((cls?.features) || []).filter(f => f.lv <= c.level && !hide.has(f.name)).map(f => ({ name: f.name, sub: `Level ${f.lv}`, lv: f.lv, kind: "classFeature", from: c.class })),
-    ...((sub?.features) || []).filter(f => f.lv <= c.level && !f.intro).map(f => ({ name: f.name, sub: `${c.subclass} \u00b7 level ${f.lv}`, lv: f.lv, kind: "subclassFeature", from: c.subclass })),
-    ...chosen.map(n => ({ name: n, sub: group.label, lv: 99, kind: "classFeature", from: c.class }))
-  ].sort((a, b) => a.lv - b.lv || a.name.localeCompare(b.name));
-  const rowOf = (r, tone, glyph) => kRow({ glyph: glyph || r.name[0], tone, title: r.name, cap: r.sub,
-    mainAttrs: `data-a="showDetail" data-kind="${r.kind}" data-name="${esc(r.dn || r.name)}" ${r.from ? `data-from="${esc(r.from)}"` : ""} ${r.i != null ? `data-i="${r.i}"` : ""}` });
-  const warn = [
-    !c.subclass && c.level >= 3 && subclassesFor(app.library, c.class).length ? `<div class="rowline"><span class="nm" style="color:var(--amber)">No subclass chosen yet</span><button class="btn sm" data-a="openEdit">Choose</button></div>` : "",
-    needsFirstChoices(app, c) ? `<div class="rowline"><span class="nm" style="color:var(--amber)">Level 1 choices not made yet</span><button class="btn sm pri" data-a="startFirstChoices">Choose</button></div>` : "",
-    (c.masteries || []).length ? `<div class="rowline"><span class="nm">Weapon mastery</span><span class="sub2" style="text-align:right">${esc(c.masteries.join(", "))}</span></div>` : "",
-    c.level >= 11 && !(cls?.features || []).some(x => x.lv > 10) ? `<p class="sub2" style="padding:8px 0">Rules data ends at level 10.</p>` : ""
-  ].join("");
-  return `
-    <div class="panel"><div class="panel-head"><h2>Level ${c.level} ${esc(c.class)}</h2>
-      <button class="btn sm pri" data-a="openLevelMenu" ${c.level >= 20 ? "disabled" : ""}>Level up</button></div>
-      ${warn ? `<div class="panel-body flush">${warn}</div>` : ""}</div>
-    <div class="pm prog-wrap"><div class="prog-head">${kGroup("Progression", "level 1 to 20", { tone: "blue" })}</div>${trackHtml(app, c)}</div>
-    ${kGroup("Class", classRows.length, { tone: "amber" })}<div class="k-list">${classRows.map(r => rowOf(r, "amber")).join("")}</div>
-    ${kGroup("Species and background", 2, { tone: "green" })}<div class="k-list">
-      ${rowOf({ name: `${c.species} traits`, sub: "Species", kind: "species", dn: c.species }, "green")}
-      ${rowOf({ name: c.background, sub: "Background", kind: "background", dn: c.background }, "blue")}</div>
-    ${kGroup("Feats", c.feats.length, { tone: "feat" })}<div class="k-list">
-      ${c.feats.map((f, i) => rowOf({ name: f, sub: "Feat", kind: "feat", i }, "feat")).join("")}</div>
-    ${c.classFeatureNotes ? `<div class="panel" style="margin-top:14px"><div class="panel-head"><h2>Class notes</h2></div><div class="panel-body"><textarea class="f" data-field="classFeatureNotes" aria-label="Class notes">${esc(c.classFeatureNotes)}</textarea></div></div>` : ""}`;
-}
+function featuresTab(app, c) { return featuresView(app, c); }
 
 export function findTile(app, c, d, id) {
   const all = playEntries(app, c, d).flatMap(e => [e, ...(e.kids || [])]);

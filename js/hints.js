@@ -49,6 +49,12 @@ HINTS.push(
 );
 
 HINTS.push(
+  { id: "ftTabs", where: "sheet", sel: ".ft-tabs", title: "Feature shelves",
+    body: "Class, subclass, species and feats each have a shelf. Saved holds your bookmarks." },
+  { id: "ftSort", where: "sheet", sel: ".shop-sortbtn[data-a=\"ftFilterOpen\"]", title: "Group and filter",
+    body: "Group by source or level, sort, show only actions or limited-use, or show upcoming features." },
+  { id: "ftStar", where: "sheet", sel: ".ft-star", title: "Bookmark",
+    body: "Star a feature to keep it on the Saved shelf. This is separate from the hotbar." },
   { id: "shopViews", where: "sheet", sel: ".shop-views", title: "Browse, Cart, Lists",
     body: "Browse the stock, review your cart, or open your wish lists. Counts show on the tabs." },
   { id: "shopSearch", where: "sheet", sel: ".shop-find .search", title: "Search",

@@ -3346,3 +3346,30 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 
 /* All tools: the hub's extra entry */
 .hubopt.hubmore .ho-ic{border-style:dashed}
+
+/* Features page */
+.ft-tabs{margin-top:12px}
+.ft-wrap{container-type:inline-size;margin-top:10px}
+.ft-main{display:block}
+.ft-pane{display:none}
+@container (min-width:640px){
+  .ft-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.9fr);gap:16px;align-items:start}
+  .ft-pane{display:block;border:1px solid var(--line);border-radius:var(--card-ri,12px);background:var(--raised);padding:14px;position:sticky;top:12px}
+  .ft-pane h3{margin:0 0 8px;font:700 1rem var(--display)}
+  .ft-text p{margin:0 0 8px;font-size:.9rem;line-height:1.45}
+  .ft-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+  .ft-pane .btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+}
+.ft-use{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ft-use.u-action,.ft-use.u-bonus,.ft-use.u-reaction,.ft-use.u-other{border-color:var(--amber);color:var(--amber)}
+.ft-new{display:inline-block;padding:2px 7px;border-radius:999px;background:var(--amber);color:var(--amber-ink);font-size:.66rem;font-weight:800;text-transform:uppercase;margin-right:6px}
+.ft-pips{display:inline-flex;gap:3px;margin-right:6px;vertical-align:middle}
+.ft-pips i{width:9px;height:9px;border-radius:50%;background:var(--amber);display:block}
+.ft-pips i.used{background:transparent;border:1.5px solid var(--line)}
+.ft-uses{font-weight:700;margin-right:6px;font-size:.8rem}
+.ft-star{color:var(--muted)}
+.ft-star.on{color:var(--amber)}
+.ft-star.on svg{fill:currentColor}
+.k-row.sel{outline:2px solid var(--amber);outline-offset:-2px}
+.ft-track{margin-top:16px}
+.ft-track summary{cursor:pointer;font:700 .8rem var(--display);letter-spacing:.1em;text-transform:uppercase;padding:8px 2px}

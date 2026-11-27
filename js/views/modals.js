@@ -35,6 +35,7 @@ import { applyDeltas, netCp, fmtNet, COIN_INFO } from "../equipment.js";
 import { packBody, packAddBody, isPack } from "./packview.js";
 import { renderLoadoutBody, renderLoadoutSave, loadoutsOf, isActive, loadoutPlan } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
+import { ftFilterModal } from "./features.js";
 import { shopItemModal, shopListsModal, shopListNameModal, shopFilterModal } from "./shop.js";
 import { COPY, backupAge, storageReport } from "../storagerisk.js";
 import { trashList, daysLeft } from "../trash.js";
@@ -283,6 +284,7 @@ export function renderModal(app) {
     }
 
     case "shopItem": { const r = shopItemModal(app, c, m); return modalShell(r.title, r.body, r.foot); }
+    case "ftFilter": { const r = ftFilterModal(app); return modalShell(r.title, r.body, r.foot); }
     case "shopFilter": { const r = shopFilterModal(app, c); return modalShell(r.title, r.body, r.foot); }
     case "shopLists": { const r = shopListsModal(app, c, m); return modalShell(r.title, r.body, r.foot); }
     case "shopListName": { const r = shopListNameModal(app, c, m); return modalShell(r.title, r.body, r.foot); }

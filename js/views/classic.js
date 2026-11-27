@@ -1,6 +1,7 @@
 // The classic character sheet: one page laid out like the printed 2024 sheet
 // (header, vitals, six ability blocks with their saves and skills, weapons,
 // class features, species traits, feats, training). Everything is tappable.
+import { featuresView } from "./features.js";
 import { toolGrid } from "./tools.js";
 import { esc, ICONS, searchBox } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, fmtMod, deriveCharacter, PROF_GROUPS } from "../rules.js";
@@ -146,24 +147,9 @@ export function classicBody(app, c, d) {
     ${trackersPanel(c)}
       </div>
     </div>`,
-    features: `<div class="pm prog-wrap"><div class="prog-head"><h2 class="sub2">Progression, level 1 to 20</h2></div>${trackHtml(app, c)}</div>
-    <div class="cl-cols3 cl-two"><div>
-    <div class="panel"><div class="panel-head"><h2>Class features</h2>
-      <button class="btn sm pri" data-a="openLevelMenu" ${c.level >= 20 ? "disabled" : ""}>Level up</button></div><div class="panel-body flush">
-      ${(c.masteries || []).length ? `<div class="rowline"><span class="nm">Weapon mastery</span><span class="sub2" style="text-align:right">${esc(c.masteries.join(", "))}</span></div>` : ""}
-      ${classRows.map(r => row(r.name, r.sub, r.kind, `data-name="${esc(r.name)}" data-from="${esc(r.from)}"`)).join("")}
-      ${c.level >= 11 && !(cls?.features || []).some(x => x.lv > 10) ? `<p class="sub2" style="padding:8px 0">Your rules data stops at level 10, so level ${c.level} features aren't listed.</p>` : ""}
-    </div></div>
-    </div><div>
-    <div class="panel"><div class="panel-head"><h2>Species traits</h2></div><div class="panel-body flush">
-      ${row(`${c.species} traits`, "Species", "species", `data-name="${esc(c.species)}"`)}
-      ${row(c.background, "Background", "background", `data-name="${esc(c.background)}"`)}
-    </div></div>
-    ${detailsPanel(c)}
+    features: `${featuresView(app, c)}<div class="cl-cols3 cl-two"><div>
+    ${detailsPanel(c)}</div><div>
     ${profsBox}
-    <div class="panel"><div class="panel-head"><h2>Feats</h2></div><div class="panel-body flush">
-      ${c.feats.length ? c.feats.map((f, i) => row(f, "Feat", "feat", `data-name="${esc(f)}" data-i="${i}"`)).join("") : `<p class="muted small" style="padding:12px 0">No feats yet.</p>`}
-    </div></div>
     </div></div>`,
     spells: () => (si ? spellsTab(app, c, d) : ""),
     gear: () => classicGear(app, c, d),

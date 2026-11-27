@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.109";
+export const VERSION = "0.1.110";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.110",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Features page rebuilt.",
+    groups: [
+      { title: "Features", items: [
+        "Shelves: All, Class, Subclass, Species, Feats and Saved, with counts.",
+        "One sort button: group by source or level, sort by level, name or uses left, show only action types or limited use, show upcoming.",
+        "Each row shows its source, level, use type and uses left. New features from your last level-up are tagged.",
+        "Star a feature to bookmark it. Bookmarks are saved per character.",
+        "On laptops a detail pane sits beside the list with Bookmark and Add to hotbar.",
+        "Level track is folded under the list. Both sheet styles use the same page."
+      ] }
+    ]
+  },
   {
     v: "0.1.109",
     date: "2026-11-27",
