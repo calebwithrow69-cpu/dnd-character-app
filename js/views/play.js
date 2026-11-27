@@ -2,6 +2,7 @@
 // it takes. Laptop: sections rail | list | detail panel with a roll log. Phone: one column.
 // Tap a name to read it; the button on the right does it. Buttons dim when something
 // is missing (the action itself, a spell slot, a use) and tapping one says why.
+import { favoritesOnSheet } from "../sheetlayout.js";
 import { esc, ICONS, formatText } from "../ui.js";
 import { playEntries, playShow, levelTrack, SOURCES } from "../play.js";
 import { COST_LABEL, isSustained } from "../combat.js";
@@ -203,7 +204,7 @@ export function playTab(app, c, d) {
       </div>
     </div>
     ${dying ? deathPanel(c) : ""}
-    ${!phone || pv === "Action" ? hotbar(app, c, d) : ""}
+    ${(!phone || pv === "Action") && !favoritesOnSheet(app.prefs) ? hotbar(app, c, d) : ""}
     ${gwmRow(app, c)}
     <div class="pm-main">
       <aside class="pm-rail" aria-label="Resources">${slotsRail(c, d)}</aside>

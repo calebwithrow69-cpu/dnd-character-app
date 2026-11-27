@@ -3,13 +3,14 @@
 // class features, species traits, feats, training). Everything is tappable.
 import { featuresView } from "./features.js";
 import { layoutOf, PRESETS, blockOf } from "../sheetlayout.js";
+import { PHYS } from "../phys.js";
 import { toolGrid } from "./tools.js";
 import { esc, ICONS, searchBox } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, fmtMod, deriveCharacter, PROF_GROUPS } from "../rules.js";
 import { findByName, enabledSpells } from "../data.js";
 import { grantsOf } from "../effects.js";
 import { optionNames, optionGroup } from "../progression.js";
-import { attacksPanel, needsFirstChoices, spellsTab, coinsPanel, weightBar } from "./sheet.js";
+import { attacksPanel, needsFirstChoices, spellsTab, coinsPanel, weightBar, hotbar } from "./sheet.js";
 import { statCard, skillsMain } from "./stats.js";
 import { SLOTS, itemById, attunedCount, weaponsOf } from "../gear.js";
 import { classicGear } from "./classicgear.js";
@@ -19,15 +20,19 @@ import { playTab, trackHtml } from "./play.js";
 
 const row = (name, sub, kind, extra = "") => `<button class="rowline rollable" data-a="showDetail" data-kind="${kind}" ${extra}><span class="nm">${esc(name)}</span><span class="sub2">${esc(sub)}</span></button>`;
 
-function abilityBlock(c, d, a) {
-  const skills = d.skills.filter(s => s.ability === a);
-  return `<section class="abblk" aria-label="${ABILITY_LABEL[a]}">
-    <h3>${ABILITY_LABEL[a]}</h3>
-    <button class="abmod" data-a="rollAbility" data-ab="${a}" aria-label="${ABILITY_LABEL[a]} check ${fmtMod(d.mods[a])}"><b>${fmtMod(d.mods[a])}</b><span>${c.abilities[a]}</span></button>
-    <button class="abrow save" data-a="rollSave" data-ab="${a}"><span class="dot ${c.saveProf.includes(a) ? "on" : ""}"></span><span class="nm">Save</span><b>${fmtMod(d.saves[a])}</b></button>
-    ${skills.map(s => `<div class="abrow"><button class="pip" data-a="cycleSkill" data-id="${s.id}" aria-label="${s.label} proficiency: ${s.expert ? "expertise" : s.proficient ? "proficient" : "none"}"><span class="dot ${s.expert ? "exp" : s.proficient ? "on" : ""}"></span></button>
-      <button class="nm linkbtn" data-a="rollSkill" data-id="${s.id}">${s.label}</button><button class="v" data-a="rollSkill" data-id="${s.id}">${fmtMod(s.bonus)}</button></div>`).join("")}
-  </section>`;
+function skillCards(app, c, d) {
+  const only = app.stF === "Proficient";
+  const card = a => {
+    const sk = d.skills.filter(s => s.ability === a && (!only || s.proficient || s.expert));
+    const rows = sk.map(s => `<div class="skr ${s.expert ? "ex" : s.proficient ? "pr" : ""}"><button class="skp" data-a="cycleSkill" data-id="${s.id}" aria-label="${esc(s.label)} proficiency: ${s.expert ? "expertise" : s.proficient ? "proficient" : "none"}"><i></i></button>
+      <button class="skn" data-a="rollSkill" data-id="${s.id}">${esc(s.label)}</button><button class="skv" data-a="rollSkill" data-id="${s.id}" aria-label="Roll ${esc(s.label)}">${fmtMod(s.bonus)}</button></div>`).join("");
+    return `<section class="skc" aria-label="${ABILITY_LABEL[a]}"><header><h3>${ABILITY_LABEL[a]}</h3>
+        <button class="skm" data-a="rollAbility" data-ab="${a}" aria-label="${ABILITY_LABEL[a]} check ${fmtMod(d.mods[a])}"><b>${fmtMod(d.mods[a])}</b><span>${c.abilities[a]}</span></button></header>
+      <div class="skr sv ${c.saveProf.includes(a) ? "pr" : ""}"><span class="skp static"><i></i></span><button class="skn" data-a="rollSave" data-ab="${a}">Saving throw</button><button class="skv" data-a="rollSave" data-ab="${a}" aria-label="Roll ${ABILITY_LABEL[a]} save">${fmtMod(d.saves[a])}</button></div>
+      ${rows ? `<div class="sk-rows">${rows}</div>` : ""}</section>`;
+  };
+  return `<div class="panel"><div class="panel-head"><h2>Abilities and skills</h2><button class="chipbtn" data-a="stFilter" data-k="${only ? "All" : "Proficient"}" aria-pressed="${only}">Proficient only</button></div>
+    <div class="panel-body"><div class="skg">${ABILITIES.map(card).join("")}</div></div></div>`;
 }
 
 
@@ -135,7 +140,10 @@ export function classicBody(app, c, d) {
         <span class="dsr"><em>Failures</em><span class="pips">${pips(c.deathSaves.fail, "fail", "fail")}</span></span>
         ${c.hp.cur <= 0 ? `<button class="btn sm pri" data-a="rollDeathSave" ${c.deathSaves.fail >= 3 || c.deathSaves.success >= 3 ? "disabled" : ""}>Roll death save</button>` : ""}<span>Death saves</span></div>
     </div>`,
-    abilities: () => `<div class="abgrid">${ABILITIES.map(a => abilityBlock(c, d, a)).join("")}</div>`,
+    abilities: () => skillCards(app, c, d),
+    favorites: () => hotbar(app, c, d),
+    physical: () => `<div class="panel"><div class="panel-head"><h2>Physical traits</h2></div><div class="panel-body"><div class="phys-grid">${PHYS.map(([k, l, ph]) => `<label class="phys-f"><span>${l}</span><input class="f" data-phys="${k}" value="${esc((c.phys || {})[k] || "")}" placeholder="${esc(ph)}" maxlength="40" autocomplete="off"></label>`).join("")}</div></div></div>`,
+    allies: () => `<div class="panel"><div class="panel-head"><h2>Allies and organizations</h2></div><div class="panel-body"><textarea class="f" data-field="allies" aria-label="Allies and organizations" style="min-height:90px">${esc(c.allies || "")}</textarea></div></div>`,
     weapons: () => attacksPanel(app, c, d, { head: "Weapons and damage", extra: cantripRows(app, c) }),
     spellcasting: () => si ? `<div class="panel"><div class="panel-head"><h2>Spellcasting</h2></div><div class="panel-body">
       <div class="cvals three">${val("Ability", ABILITY_LABEL[si.ability])}${val("Modifier", fmtMod(si.mod))}${val("Spell save DC", si.dc)}${val("Spell attack", fmtMod(si.attackBonus))}</div>${slotPips(si, c)}</div></div>` : "",

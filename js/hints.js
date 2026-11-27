@@ -10,7 +10,7 @@ export const HINTS = [
     wideBody: "Always open at the side: dice, effects, rest, initiative. Edit the list in Settings." },
   { id: "effects", where: "sheet", sel: ".addcond", title: "Active effects",
     body: "Conditions, spell effects and drains that change your numbers. End any of them with one tap." },
-  { id: "hotbar", where: "sheet", sel: ".hotbar-panel, .hb-slim", title: "Hotbar",
+  { id: "hotbar", where: "sheet", sel: ".hotbar-panel, .hb-slim", title: "Favorites",
     body: "Pin attacks, spells and items here. One tap uses them." },
   { id: "loadouts", where: "sheet", sel: '[data-a="loadoutsMenu"]', title: "Loadouts",
     body: "Save what you wear and hold as a set. Tap to see your sets and swap with a preview." },
@@ -51,6 +51,8 @@ HINTS.push(
 HINTS.push(
   { id: "sheetLayout", where: "sheet", sel: ".sl-bar .btn", title: "Sheet layout",
     body: "Pick a preset, then reorder or hide blocks. It applies to every character on this device." },
+  { id: "abSkills", where: "sheet", sel: ".skg", title: "Abilities and skills",
+    body: "Tap a score, save or skill to roll. Tap the dot to change proficiency." },
   { id: "ftTabs", where: "sheet", sel: ".ft-tabs", title: "Feature shelves",
     body: "Class, subclass, species and feats each have a shelf. Saved holds your bookmarks." },
   { id: "ftSort", where: "sheet", sel: ".shop-sortbtn[data-a=\"ftFilterOpen\"]", title: "Group and filter",

@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.113";
+export const VERSION = "0.1.114";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.114",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Sheet page is its own page.",
+    groups: [
+      { title: "Sheet", items: [
+        "Abilities and skills: six compact cards, each with the score, its saving throw and the skills under it. Proficient only filters them.",
+        "New Physical traits block: age, height, weight, eyes, hair and skin. Added to character creation. Existing characters are asked once.",
+        "New Allies and organizations notes block.",
+        "Favorites (the old Hotbar) moves to the Sheet page. Play shows it only when the block is hidden.",
+        "The default layout is Character sheet: only what other tabs do not show. Weapons, spellcasting, trackers, equipped, coins and feats are off by default. Everything turns them all on."
+      ] }
+    ]
+  },
   {
     v: "0.1.113",
     date: "2026-11-27",

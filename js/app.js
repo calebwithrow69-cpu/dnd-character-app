@@ -266,6 +266,13 @@ function syncHint() {
   if (!n) { if (hintShownId()) clearHint(); return; }
   showHint(n);
 }
+// A character made before physical traits existed is asked once when its sheet opens.
+function maybePhys() {
+  const c = APP.char;
+  if (navigator.webdriver || APP.screen !== "sheet" || !c || c.dead || c.physAsked || APP.modal || tourActive() || APP._tourPending || !storageAcked() || APP.styleAsk || tourUnseen("sheet")) return;
+  c.physAsked = true; save();
+  openModal({ type: "phys" });
+}
 function maybeAutoTour() {
   if (navigator.webdriver || APP._tourPending || APP.modal || tourActive() || !storageAcked()) return;
   const sc = APP.screen;
@@ -400,6 +407,7 @@ function renderOnce() {
   renderNow();
   maybeStorageIntro();
   maybeAutoTour();
+  maybePhys();
   syncHint();
   syncHelpBtn();
   syncBarHeight();
@@ -1076,6 +1084,7 @@ function onInput(e) {
     if (APP.createDraft.pointBuy) { APP.createDraft.pointBuy = false; document.querySelectorAll(".cx-pb, .cx-budget").forEach(e => e.remove()); }
     refreshWizardChrome(); return;
   }
+  if (ds.phys && APP.char) { APP.char.phys = { ...(APP.char.phys || {}), [ds.phys]: el.value.slice(0, 40) }; save(); return; }
   if (ds.draftText && APP.createDraft) { APP.createDraft[ds.draftText] = el.value; refreshWizardChrome(); return; }
   if (ds.pickText && APP.createDraft) { APP.createDraft.picks[ds.pickText] = el.value; refreshWizardChrome(); return; }
   if (ds.query === "wizard") { APP.createDraft.query = el.value; const r = document.getElementById("wizard-results"); if (r) r.innerHTML = renderWizardResults(APP); return; }
@@ -1098,7 +1107,7 @@ function onInput(e) {
     e.draft[ds.nb] = el.value; nbRefresh({ foot: 1 }); return;
   }
   // Text on the sheet saves on every keystroke, so closing the app mid-sentence loses nothing.
-  if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes", "alignment", "appearance", "backstory"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
+  if (ds.field && APP.char && ["notes", "profsText", "languages", "classFeatureNotes", "alignment", "appearance", "backstory", "allies"].includes(ds.field)) { APP.char[ds.field] = el.value; save(); return; }
   if (ds.itemNotes != null && APP.char) { const it = APP.char.inventory[+ds.itemNotes]; if (it) { it.notes = el.value; save(); } return; }
   if (ds.modal && APP.modal) { APP.modal[ds.modal] = el.value; return; }
 }

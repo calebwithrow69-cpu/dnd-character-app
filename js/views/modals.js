@@ -1,3 +1,4 @@
+import { PHYS } from "../phys.js";
 import { renderDmModal } from "./dmmode.js";
 import { renderToolModal, renderQuickEdit, renderAllTools, condEffectsBlock } from "./tools.js";
 import { condLine, condNotes } from "../conditions.js";
@@ -285,6 +286,7 @@ export function renderModal(app) {
     }
 
     case "shopItem": { const r = shopItemModal(app, c, m); return modalShell(r.title, r.body, r.foot); }
+    case "phys": return modalShell("Physical traits", `<div class="phys-grid">${PHYS.map(([k, l, ph]) => `<label class="phys-f"><span>${l}</span><input class="f" data-phys="${k}" value="${esc((c.phys || {})[k] || "")}" placeholder="${esc(ph)}" maxlength="40" autocomplete="off"></label>`).join("")}</div>`, `<button class="btn pri" data-a="closeModal">Done</button>`);
     case "sheetLayout": { const r = layoutModal(app); return modalShell(r.title, r.body, r.foot); }
     case "ftFilter": { const r = ftFilterModal(app); return modalShell(r.title, r.body, r.foot); }
     case "shopFilter": { const r = shopFilterModal(app, c); return modalShell(r.title, r.body, r.foot); }

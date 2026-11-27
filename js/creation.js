@@ -3,6 +3,7 @@
 //   a CreationState that tracks every decision, validates,
 //   persists to sessionStorage, and reports what's unresolved.
 
+import { physOf } from "./phys.js";
 import { ABILITIES, ABILITY_LABEL, SKILLS, parseList, skillIdByLabel, abilityMod, fmtMod,
   primaryAbility, speciesSpeed, speciesSize, hpAverageGain, standardArray,
   roll4d6DropLowest, SUGGESTED_ARRAYS, parseProfs } from "./rules.js";
@@ -38,6 +39,7 @@ export function blankDraft() {
     chapter: 0,
     name: "",
     alignment: "",
+    age: "", height: "", weight: "", eyes: "", hair: "", skin: "",
     appearance: "",
     backstory: "",
     species: "",
@@ -75,7 +77,7 @@ export const cleanName = s => String(s == null ? "" : s).replace(/[\u200B-\u200D
 export function sanitizeDraft(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const d = blankDraft(), str = v => (typeof v === "string" ? v : "");
-  for (const k of ["name", "alignment", "appearance", "backstory", "species", "class", "background", "subclass", "plus2", "plus1", "equipClass", "equipBg"]) {
+  for (const k of ["name", "alignment", "age", "height", "weight", "eyes", "hair", "skin", "appearance", "backstory", "species", "class", "background", "subclass", "plus2", "plus1", "equipClass", "equipBg"]) {
     if (typeof raw[k] === "string") d[k] = raw[k];
   }
   d.bonusMode = raw.bonusMode === "111" ? "111" : "21";
@@ -624,7 +626,7 @@ export function buildCharacter(d, app) {
     resources: [], weapons: [], inventory: [], equipment: {},
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     classFeatureNotes: "", notes: "",
-    alignment: d.alignment || "", appearance: (d.appearance || "").trim(), backstory: (d.backstory || "").trim(),
+    alignment: d.alignment || "", phys: physOf(d), physAsked: true, appearance: (d.appearance || "").trim(), backstory: (d.backstory || "").trim(),
   };
   if (tool?.options && d.picks["bg:tool"]) char.profsText = [char.profsText, d.picks["bg:tool"]].filter(Boolean).join(". ");
 

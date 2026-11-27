@@ -2,6 +2,7 @@
 // portrait list; then ability scores (with the background bonus), skills and gear, and a
 // final page for the name and roleplay details. "View progress" opens a sheet of every chapter.
 // All data and validation live in ../creation.js. ASCII only in this file.
+import { PHYS } from "../phys.js";
 import { esc, topbar, formatText, searchBox, infoRow, snipOf, kRow, ICONS } from "../ui.js";
 import { enabledClasses, enabledSpecies, enabledBackgrounds, findByName, subclassesFor } from "../data.js";
 import { ABILITIES, ABILITY_LABEL, ABILITY_BY_LABEL, SKILLS, parseList, abilityMod, fmtMod, speciesSpeed, speciesSize, primaryAbilities } from "../rules.js";
@@ -447,6 +448,7 @@ function finishBody(app, d) {
       <input class="f" id="f-name" value="${esc(d.name)}" placeholder="e.g. Gandork the Green" maxlength="60" autocomplete="off" enterkeyhint="next"></div>
     <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-align">Alignment (optional)</label><button class="btn sm" data-a="randomAlign" aria-label="Random alignment">Random</button></div><select class="f" id="f-align" data-draft="alignment"><option value="">Choose...</option>${ALIGNMENTS.map(a => `<option ${d.alignment === a ? "selected" : ""}>${a}</option>`).join("")}</select></div>
     <div class="field" style="margin-top:12px"><label>Languages</label><input class="f" value="${esc(["Common", ...[].concat(d.picks["bg:lang"] || [])].join(", "))}" disabled aria-label="Languages from your background"></div>
+    <div class="field" style="margin-top:12px"><label>Physical traits (optional)</label><div class="phys-grid">${PHYS.map(([k, l, ph]) => `<label class="phys-f"><span>${l}</span><input class="f" data-draft-text="${k}" value="${esc(d[k] || "")}" placeholder="${esc(ph)}" maxlength="40" autocomplete="off"></label>`).join("")}</div></div>
     <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-look">Appearance (optional)</label><button class="btn sm" data-a="randomLook" aria-label="Random appearance">Random</button></div><textarea class="f" id="f-look" rows="3" data-draft-text="appearance" placeholder="Height, build, hair, scars, clothing">${esc(d.appearance || "")}</textarea></div>
     <div class="field" style="margin-top:12px"><div class="rlabel"><label for="f-story">Backstory and personality (optional)</label><button class="btn sm" data-a="randomStory" aria-label="Random backstory and personality">Random</button></div><textarea class="f" id="f-story" rows="5" data-draft-text="backstory" placeholder="Where from, what they want, how they act">${esc(d.backstory || "")}</textarea></div>
     <div class="choice"><div class="choice-head"><h3>Summary</h3></div><dl class="kv">

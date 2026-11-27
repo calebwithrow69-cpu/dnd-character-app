@@ -7,14 +7,14 @@
 // - Rules data (data/*.json): network first when online, cache when not.
 //   Those update live without a version bump.
 // - Google Fonts: cached the first time they load, so offline keeps the look.
-const CACHE_VERSION = "v190";
+const CACHE_VERSION = "v191";
 const SHELL = "shell-" + CACHE_VERSION;
 const FONTS = "fonts-v1";
 
 const SHELL_FILES = [
   "./", "index.html", "manifest.json", "css/styles.css",
   "js/app.js", "js/data.js", "js/store.js", "js/rules.js", "js/dice.js", "js/ui.js", "js/gear.js", "js/progression.js", "js/crypt.js", "js/spells.js", "js/install.js", "js/choices.js", "js/subclassspells.js", "js/views/trackers.js", "js/rest.js", "js/rulesets.js", "js/templates.js", "js/views/start.js", "js/views/rulesets.js", "js/equipment.js", "js/qr.js", "js/sfx.js", "js/changelog.js", "js/species.js", "js/speciesfit.js", "js/glossary.js", "js/views/glossary.js", "js/contentupdate.js", "js/markdown.js", "js/notes.js", "js/kv.js", "js/prefsdata.js", "js/milestones.js", "js/notespdf.js", "js/views/notes.js", "js/views/contentupdate.js", "js/portraits.js", "js/dm.js", "js/creation.js", "js/pdf.js", "js/views/feats.js", "js/featfx.js", "js/combat.js", "js/subtone.js", "js/shield.js", "js/weights.js", "js/views/subclass.js", "js/views/classic.js", "js/hpbar.js", "js/views/character.js", "js/views/play.js", "js/play.js", "js/rollstage.js", "js/riders.js", "js/emblems.js", "js/cxfx.js", "assets/sfx/hit.mp3", "assets/sfx/hit-big.mp3", "js/custombg.js", "js/views/home.js", "js/vendor/pdf-lib.min.js",
-  "js/views/roster.js", "js/conditions.js", "js/views/tools.js", "js/views/effects.js", "assets/hint-cap.png", "js/sheetlayout.js", "js/views/layoutedit.js", "js/featurelist.js", "js/views/features.js", "js/hints.js", "js/packs.js", "js/encumbrance.js", "js/kits.js", "js/shopdata.js", "js/shopsearch.js", "js/views/packview.js", "js/spellfx.js",
+  "js/views/roster.js", "js/conditions.js", "js/views/tools.js", "js/views/effects.js", "assets/hint-cap.png", "js/sheetlayout.js", "js/phys.js", "js/views/layoutedit.js", "js/featurelist.js", "js/views/features.js", "js/hints.js", "js/packs.js", "js/encumbrance.js", "js/kits.js", "js/shopdata.js", "js/shopsearch.js", "js/views/packview.js", "js/spellfx.js",
   "js/nav.js", "js/views/create.js", "js/views/cxshop.js", "js/views/shopkit.js", "js/views/shop.js", "js/views/stats.js", "js/levelfix.js", "js/tour.js", "js/storagerisk.js", "js/trash.js", "js/lootbox.js", "js/tabsseen.js", "js/views/lootbox.js", "js/subclassinfo.js",
   "js/dmmode.js",
   "js/dmactions.js",

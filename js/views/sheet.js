@@ -195,17 +195,17 @@ export function hotbar(app, c, d) {
       <button class="hb-btn" data-a="${edit ? "noop" : "hotbarUse"}" data-i="${i}" ${edit ? "disabled" : ""} aria-label="${esc(sub)} ${esc(label)}">
         <span class="hb-ic">${hotbarGlyph(app, c, h)}</span><span class="hb-lbl">${esc(label)}</span><span class="hb-sub">${sub}</span>
       </button>
-      ${edit ? `<button class="hb-x" data-a="removeHotbar" data-i="${i}" aria-label="Remove ${esc(label)} from hotbar">${ICONS.close}</button>` : ""}
+      ${edit ? `<button class="hb-x" data-a="removeHotbar" data-i="${i}" aria-label="Remove ${esc(label)} from favorites">${ICONS.close}</button>` : ""}
     </div>`;
   }).join("");
-  if (!(c.hotbar || []).length) return `<div class="hb-slim"><span class="lab">Hotbar</span><span class="muted small">Empty</span><button class="btn sm" data-a="openHotbarAdd">Add</button></div>`;
-  return `<div class="panel hotbar-panel"><div class="panel-head"><h2>Hotbar</h2>
+  if (!(c.hotbar || []).length) return `<div class="hb-slim"><span class="lab">Favorites</span><span class="muted small">Empty</span><button class="btn sm" data-a="openHotbarAdd">Add</button></div>`;
+  return `<div class="panel hotbar-panel"><div class="panel-head"><h2>Favorites</h2>
       <span class="btnrow">
         <button class="btn sm" data-a="openHotbarAdd">Add</button>
         <button class="btn sm ${edit ? "pri" : ""}" data-a="toggleHotbarEdit" ${(c.hotbar || []).length ? "" : "disabled"}>${edit ? "Done" : "Edit"}</button>
       </span></div>
     <div class="panel-body">
-      ${(c.hotbar || []).length ? `<div class="hotbar">${slots}</div>` : `<p class="muted small" style="padding:0">Hotbar empty.</p>`}
+      ${(c.hotbar || []).length ? `<div class="hotbar">${slots}</div>` : `<p class="muted small" style="padding:0">No favorites yet.</p>`}
     </div></div>`;
 }
 

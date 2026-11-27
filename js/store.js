@@ -2,6 +2,7 @@ import { allPortraits } from "./portraits.js";
 import { parseProfs } from "./rules.js";
 import { repairLevels } from "./levelfix.js";
 import { cleanShop } from "./shopdata.js";
+import { physOf, physFilled } from "./phys.js";
 
 // Character roster: lives in this device's localStorage only.
 // Backups are plain JSON files the player saves wherever they like.
@@ -81,7 +82,8 @@ export function normalize(c, library) {
     coins: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0, ...(c.coins || {}) },
     wielded: typeof c.wielded === "string" ? c.wielded : "", furyChoice: c.furyChoice === "Potent Spellcasting" ? "Potent Spellcasting" : "",
     classFeatureNotes: c.classFeatureNotes || "", notes: c.notes || "",
-    alignment: c.alignment || "", appearance: c.appearance || "", backstory: c.backstory || ""
+    alignment: c.alignment || "", appearance: c.appearance || "", backstory: c.backstory || "",
+    phys: physOf(c.phys), physAsked: c.physAsked === true || physFilled(physOf(c.phys)), allies: typeof c.allies === "string" ? c.allies.slice(0, 20000) : ""
   };
   if (!out.hitDice.die) out.hitDice.die = cls ? cls.hd : 8;
   out.hitDice.total = out.level;

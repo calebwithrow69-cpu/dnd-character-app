@@ -3,9 +3,12 @@
 export const BLOCKS = [
   { id: "identity", label: "Identity", about: "Class, subclass, species, background", wide: true },
   { id: "status", label: "Status", about: "Inspiration, size, hit dice, death saves", wide: true },
-  { id: "abilities", label: "Ability cards", about: "Each score with its save and skills" },
+  { id: "abilities", label: "Abilities and skills", about: "Six cards: score, save and the skills under each", wide: true },
+  { id: "favorites", label: "Favorites", about: "Your one-tap attacks, spells, items and abilities", wide: true },
+  { id: "physical", label: "Physical traits", about: "Age, height, weight, eyes, hair, skin" },
+  { id: "allies", label: "Allies and organizations", about: "Free notes on who you travel with" },
   { id: "statweb", label: "Stat web", about: "Radar of the six scores, tap to roll" },
-  { id: "skills", label: "Saves and skills", about: "Searchable list with proficiency and rolls" },
+  { id: "skills", label: "Saves and skills list", about: "One searchable list, as on the Stats page" },
   { id: "weapons", label: "Weapons and damage", about: "Attacks and cantrips" },
   { id: "spellcasting", label: "Spellcasting", about: "Ability, DC, attack bonus, slots", caster: true },
   { id: "senses", label: "Senses and defenses", about: "Passives, senses, resistances" },
@@ -17,11 +20,12 @@ export const BLOCKS = [
   { id: "details", label: "Character details", about: "Alignment, appearance, backstory" }
 ];
 export const PRESETS = [
-  { id: "printed", label: "Printed sheet", about: "The 2024 sheet's order", on: ["identity", "status", "abilities", "weapons", "spellcasting", "senses", "trackers", "profs", "details"] },
-  { id: "web", label: "Stat web", about: "Radar, then saves and skills", on: ["status", "statweb", "skills", "senses", "profs", "details"] },
+  { id: "printed", label: "Character sheet", about: "Only what other tabs do not show", on: ["identity", "status", "favorites", "abilities", "senses", "physical", "profs", "details", "allies"] },
+  { id: "web", label: "Stat web", about: "Radar, then saves and skills", on: ["status", "favorites", "statweb", "skills", "senses", "physical", "profs", "details", "allies"] },
   { id: "numbers", label: "Numbers", about: "Scores, saves, skills, proficiencies", on: ["status", "abilities", "senses", "profs"] },
-  { id: "caster", label: "Caster", about: "Spells up front", on: ["status", "spellcasting", "abilities", "trackers", "senses"] },
-  { id: "combat", label: "Combat", about: "Attacks and counters first", on: ["status", "weapons", "trackers", "abilities", "senses", "spellcasting"] }
+  { id: "caster", label: "Caster", about: "Spells up front", on: ["status", "favorites", "spellcasting", "abilities", "trackers", "senses"] },
+  { id: "combat", label: "Combat", about: "Attacks and counters first", on: ["status", "favorites", "weapons", "trackers", "abilities", "senses", "spellcasting"] },
+  { id: "full", label: "Everything", about: "Every block, repeats included", on: ["identity", "status", "favorites", "abilities", "weapons", "spellcasting", "senses", "trackers", "equipped", "coins", "feats", "physical", "profs", "details", "allies"] }
 ];
 const IDS = BLOCKS.map(b => b.id);
 export const blockOf = id => BLOCKS.find(b => b.id === id);
@@ -55,4 +59,9 @@ export function moveBlock(layout, id, dir) {
 export function toggleBlock(layout, id) {
   const b = layout.blocks.map(x => x.id === id ? { ...x, on: !x.on } : { ...x });
   return b.some(x => x.on) ? b : null;
+}
+
+// The Favorites bar lives on the Sheet page of the Classic sheet when that block is shown; otherwise Play keeps it.
+export function favoritesOnSheet(prefs) {
+  return prefs && prefs.sheetStyle !== "advanced" && layoutOf(prefs).blocks.some(b => b.id === "favorites" && b.on);
 }
