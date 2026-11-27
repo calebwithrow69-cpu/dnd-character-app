@@ -3373,3 +3373,11 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .k-row.sel{outline:2px solid var(--amber);outline-offset:-2px}
 .ft-track{margin-top:16px}
 .ft-track summary{cursor:pointer;font:700 .8rem var(--display);letter-spacing:.1em;text-transform:uppercase;padding:8px 2px}
+
+/* Play top row on phones: the tracker takes its own row and scrolls, search and Sort share the next one (fixes sideways page after Start combat) */
+@media (max-width:1099px){
+  .pm-cmd .pm-top{flex-wrap:wrap;min-width:0;max-width:100%}
+  .pm-cmd .pm-top .tracker{flex:1 1 100%;min-width:0;max-width:100%;flex-wrap:wrap;overflow:visible}
+  .pm-cmd .pm-top .srch{flex:1 1 0;min-width:0;width:auto}
+  .pm-cmd .pm-top .psm{flex:none}
+}

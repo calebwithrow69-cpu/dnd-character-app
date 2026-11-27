@@ -2,11 +2,23 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.110";
+export const VERSION = "0.1.111";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.111",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Fix: sideways page after Start combat.",
+    groups: [
+      { title: "Fixes", items: [
+        "Play: Start combat no longer pushes the page wider than the phone screen.",
+        "Turn tracker wraps onto two lines; search and Sort stay on one row."
+      ] }
+    ]
+  },
   {
     v: "0.1.110",
     date: "2026-11-27",
