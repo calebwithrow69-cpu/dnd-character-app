@@ -101,6 +101,7 @@ export function renderHome(app) {
       <section class="hparts" aria-label="Reference">
         <button class="hpart press" data-a="goRules"><span class="hp-ic">${ic("book", 28)}</span><span class="hp-b"><b>Rules</b><small>Classes, spells, items, conditions</small></span></button>
         <button class="hpart press" data-a="goNotes"><span class="hp-ic">${ic("notes", 28)}</span><span class="hp-b"><b>Notes</b><small>Yours, not tied to one character</small></span></button>
+        <button class="hpart press" data-a="rsOpen"><span class="hp-ic">${ic("book", 28)}</span><span class="hp-b"><b>Rulesets</b><small>${esc(app.campaign && app.campaign.rulesetName || "Base game")}</small></span></button>
       </section>
       <div class="hbk"><span>${bk ? `Backup ${days === 0 ? "today" : days + (days === 1 ? " day ago" : " days ago")}` : "No backup yet"}</span><button class="btn sm" data-a="exportAll">Back up</button></div>
       <p class="devnote" role="note">Under development. Expect issues.</p>

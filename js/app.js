@@ -44,7 +44,7 @@ import { rollMods } from "./effects.js";
 import { autoFailBy } from "./conditions.js";
 import { calcPress, TOOLS, quickIds, QUICK_MAX } from "./views/tools.js";
 import { syncSubclassSpells } from "./subclassspells.js";
-import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
+import { loadSets, activeSet, effectiveCampaign, setSrdNames } from "./rulesets.js";
 import { boxById } from "./lootbox.js";
 import { showLoot, rollLoot, boxCount } from "./views/lootbox.js";
 import { moveHint, nextHint, showHint, clearHint, hintShownId, hintMark, hintsOn, hintsReset } from "./hints.js";
@@ -155,6 +155,7 @@ async function init() {
     const { library, campaign, pendingLock } = await loadData();
   window.__boot && window.__boot(70, "Reading the rules");
 
+    try { const sr = await fetch("data/srd-names.json"); if (sr.ok) setSrdNames(await sr.json()); } catch (e) { /* offline and not cached: the base game list is unavailable */ }
     APP.rawLibrary = library; APP.rawCampaign = campaign; setRules();
     loadPortraits().then(() => { if (APP.screen === "create") spRefresh(); else if (APP.screen === "dmview") render(); });
     if (pendingLock) { APP.lockErr = pendingLock; APP.needsNewPassword = true; }

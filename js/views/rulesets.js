@@ -1,6 +1,6 @@
 // Rulesets screen: make, copy, share and edit sets of allowed books and entries. ASCII only.
 import { esc, topbar, searchBox } from "../ui.js";
-import { KINDS, bookTitle, listBooks, allowed, allowedBy, entryKey, blankRuleset, copyRuleset, groupRuleset, findSet, saveSets, clean, encodeRuleset, decodeRuleset, countAllowed, problems, GROUP_ID, bookName } from "../rulesets.js";
+import { KINDS, bookTitle, listBooks, allowed, allowedBy, entryKey, blankRuleset, copyRuleset, groupRuleset, srdRuleset, builtinSets, findSet, saveSets, clean, encodeRuleset, decodeRuleset, countAllowed, problems, GROUP_ID, SRD_ID, bookName } from "../rulesets.js";
 
 export const rsUiDefault = () => ({ edit: null, tab: "books", kind: "classes", q: "", filter: "all", share: null, confirmDel: null, msg: "" });
 const LIMIT = 120;
@@ -12,12 +12,13 @@ function summary(rs, L) {
 export function renderRulesets(app) {
   const ui = app.rs, L = app.library;
   if (ui.edit) return editor(app, ui, L);
-  const C = app.campaignRaw, sets = app.rulesets, group = groupRuleset(C, L);
+  const C = app.campaignRaw, sets = app.rulesets;
   const card = rs => {
-    const active = (sets.active || GROUP_ID) === rs.id || (!sets.sets.some(x => x.id === sets.active) && rs.id === GROUP_ID);
+    const known = [GROUP_ID, SRD_ID].includes(sets.active) || sets.sets.some(x => x.id === sets.active);
+    const active = (known ? sets.active : GROUP_ID) === rs.id;
     const bad = problems(rs, L);
     return `<div class="panel rs-card"><div class="panel-head"><h2>${esc(rs.name)}</h2>${active ? `<span class="chip">In use</span>` : ""}</div>
-      <div class="panel-body"><p class="sub2">${rs.builtin ? "Group rules, read-only. " : ""}${esc(summary(rs, L))}</p>
+      <div class="panel-body"><p class="sub2">${rs.srd ? "Free SRD 5.2 content only, read-only. " : rs.builtin ? "Group rules, read-only. " : ""}${esc(summary(rs, L))}</p>
         ${bad.length ? `<p class="sub2 lrwarn">${esc(bad[0])}</p>` : ""}
         <div class="btnrow">
           ${active ? "" : `<button class="btn pri" data-a="rsUse" data-id="${esc(rs.id)}" ${bad.length ? "disabled" : ""}>Use</button>`}
@@ -32,7 +33,7 @@ export function renderRulesets(app) {
   return `${topbar("Rulesets", "This device", { back: "rsExit" })}
     <main class="wrap page">
       
-      ${[group, ...sets.sets].map(card).join("")}
+      ${[...builtinSets(C, L), ...sets.sets].map(card).join("")}
       <div class="stack" style="margin-top:12px">
         <button class="btn pri block" data-a="rsNew">New ruleset (everything on)</button>
         <label class="field"><span class="lab">Import a ruleset code</span><textarea class="f mono" id="rs-import" rows="3" placeholder="CRR1...." spellcheck="false"></textarea></label>
@@ -94,18 +95,18 @@ export function rsActions(APP, h) {
   const editing = () => (APP.rs.edit && mine(APP.rs.edit)) || null;
   const touched = () => (sets().active === APP.rs.edit); // the change is live at once when it is the ruleset in use
   const ACT = {
-    rsOpen() { APP.rs = rsUiDefault(); APP.screen = "rulesets"; h.render(); window.scrollTo(0, 0); },
-    rsExit() { APP.screen = "roster"; APP.rs = null; h.render(); window.scrollTo(0, 0); },
+    rsOpen() { APP.rsFrom = APP.screen; APP.rs = rsUiDefault(); APP.screen = "rulesets"; h.render(); window.scrollTo(0, 0); },
+    rsExit() { APP.screen = APP.rsFrom === "dm" ? "dm" : "home"; APP.rs = null; h.render(); window.scrollTo(0, 0); },
     rsBack() { APP.rs.edit = null; h.render(); window.scrollTo(0, 0); },
     rsEdit(el) { APP.rs.edit = el.dataset.id; APP.rs.tab = "books"; APP.rs.q = ""; h.render(); window.scrollTo(0, 0); },
     rsUse(el) {
-      const rs = el.dataset.id === GROUP_ID ? groupRuleset(APP.campaignRaw, APP.library) : mine(el.dataset.id);
+      const rs = builtinSets(APP.campaignRaw, APP.library).find(b => b.id === el.dataset.id) || mine(el.dataset.id);
       if (!rs || problems(rs, APP.library).length) return;
       sets().active = rs.id; persist(true); h.toast(`Using ${rs.name}`);
     },
     rsNew() { const rs = blankRuleset("My ruleset"); sets().sets.push(rs); APP.rs.edit = rs.id; APP.rs.tab = "books"; persist(false); window.scrollTo(0, 0); },
     rsCopy(el) {
-      const src = el.dataset.id === GROUP_ID ? groupRuleset(APP.campaignRaw, APP.library) : mine(el.dataset.id); if (!src) return;
+      const src = builtinSets(APP.campaignRaw, APP.library).find(b => b.id === el.dataset.id) || mine(el.dataset.id); if (!src) return;
       const rs = copyRuleset(src, src.builtin ? "My copy of " + src.name : src.name + " copy"); sets().sets.push(rs); APP.rs.edit = rs.id; persist(false); window.scrollTo(0, 0);
     },
     rsDelete(el) {
@@ -115,7 +116,7 @@ export function rsActions(APP, h) {
     },
     rsShare(el) { APP.rs.share = APP.rs.share === el.dataset.id ? null : el.dataset.id; h.render(); },
     async rsCopyCode(el) {
-      const rs = el.dataset.id === GROUP_ID ? groupRuleset(APP.campaignRaw, APP.library) : mine(el.dataset.id);
+      const rs = builtinSets(APP.campaignRaw, APP.library).find(b => b.id === el.dataset.id) || mine(el.dataset.id);
       try { await navigator.clipboard.writeText(encodeRuleset(rs)); h.toast("Code copied"); } catch (e) { h.toast("Select the code and copy it"); }
     },
     rsImport() {

@@ -6,6 +6,7 @@
 export const KINDS = [["classes", "Classes"], ["subclasses", "Subclasses"], ["species", "Species"], ["backgrounds", "Backgrounds"], ["feats", "Feats"], ["spells", "Spells"]];
 export const LS_RULESETS = "dnd-rulesets-v1";
 export const GROUP_ID = "group";
+export const SRD_ID = "srd";
 
 // ---- books: "PHB'24 p87" and "Phb'24" are the same book
 export const bookName = e => String((e && e.source) || "").replace(/\s+p\.?\s?\d[\d–-]*\s*$/i, "").replace(/\s+/g, " ").trim() || "Unlabelled";
@@ -60,9 +61,24 @@ export function groupRuleset(C, L) {
   return rs;
 }
 
+// The base game: only what the free 2024 SRD 5.2 contains (names in data/srd-names.json). Read-only; copy it to change it.
+let SRD = null;
+export const setSrdNames = n => { SRD = n && typeof n === "object" ? n : null; };
+const norm = s => String(s || "").toLowerCase().replace(/[\u2019']/g, "'").replace(/-/g, " ").replace(/\s+/g, " ").trim();
+export function srdRuleset(L) {
+  const rs = { id: SRD_ID, name: "Base game (SRD 5.2)", builtin: true, srd: true, defaultBooks: !SRD, books: {}, entries: {} };
+  if (!SRD || !L) return rs;
+  KINDS.forEach(([kind]) => {
+    const on = new Set((SRD[kind] || []).map(norm)); rs.entries[kind] = {};
+    (L[kind] || []).forEach(e => { rs.entries[kind][entryKey(kind, e)] = on.has(norm(e.name)); });
+  });
+  return rs;
+}
+export const builtinSets = (C, L) => [groupRuleset(C, L), srdRuleset(L)];
+
 // A campaign object the rest of the app reads (enabled name lists), made from the chosen ruleset.
 export function effectiveCampaign(rawC, L, rs) {
-  if (!rs || rs.builtin) return { ...rawC, _subAllow: null, rulesetName: rs ? rs.name : "" };
+  if (!rs || (rs.builtin && !rs.srd)) return { ...rawC, _subAllow: null, rulesetName: rs ? rs.name : "" };
   const enabled = {}, hb = (rawC && rawC.homebrew) || {};
   ["classes", "species", "backgrounds", "feats", "spells"].forEach(kind => { enabled[kind] = [...(L[kind] || [])].filter(e => allowed(rs, kind, e)).map(e => e.name); });
   const subs = (L.subclasses || []).filter(e => allowed(rs, "subclasses", e)).map(e => entryKey("subclasses", e));
@@ -70,12 +86,14 @@ export function effectiveCampaign(rawC, L, rs) {
 }
 
 // ---- storage: { active, sets: [ruleset] }
+const hasCharacters = () => { try { return ["dnd-characters-v1", "dnd-roster-v1"].some(k => { const v = localStorage.getItem(k); return !!v && v !== "{}" && v !== "[]"; }); } catch (e) { return false; } };
 export function loadSets() {
   try { const d = JSON.parse(localStorage.getItem(LS_RULESETS) || "null"); if (d && Array.isArray(d.sets)) return { active: d.active || GROUP_ID, sets: d.sets.map(clean).filter(Boolean) }; } catch (e) { /* damaged */ }
-  return { active: GROUP_ID, sets: [] };
+  // A device that already has characters keeps the group rules; a new one starts on the base game.
+  return { active: hasCharacters() ? GROUP_ID : SRD_ID, sets: [] };
 }
 export function saveSets(s) { try { localStorage.setItem(LS_RULESETS, JSON.stringify(s)); return true; } catch (e) { return false; } }
-export const findSet = (s, C, id, L) => id === GROUP_ID || !id ? groupRuleset(C, L) : (s.sets.find(x => x.id === id) || null);
+export const findSet = (s, C, id, L) => id === GROUP_ID || !id ? groupRuleset(C, L) : id === SRD_ID ? srdRuleset(L) : (s.sets.find(x => x.id === id) || null);
 export const activeSet = (s, C, L) => findSet(s, C, s.active, L) || groupRuleset(C, L);
 
 // Accepts anything, returns a safe ruleset or null.

@@ -29,7 +29,6 @@ export function renderRoster(app) {
       ${fallen ? `<button class="btn" data-a="goGraveyard">Graveyard (${fallen})</button>` : ""}
       <button class="btn" data-a="importPrompt">Restore backup</button>
       ${trashList().length ? `<button class="btn" data-a="openTrash">Recently deleted (${trashList().length})</button>` : ""}
-      <button class="btn" data-a="rsOpen">Rulesets</button>
       <button class="btn" data-a="dmOpen">DM editor</button>
       ${seedAvailable ? `<button class="btn" data-a="importGandork">Add Gandork</button>` : ""}
     </div>

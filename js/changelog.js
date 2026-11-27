@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.97";
+export const VERSION = "0.1.98";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.98",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Base game ruleset, Rulesets on Home.",
+    groups: [
+      { title: "Rulesets", items: [
+        "New built-in ruleset: Base game (SRD 5.2). Only the free SRD classes, species, backgrounds, feats and spells.",
+        "New devices start on the base game. Devices with characters keep the group rules.",
+        "The group rules stay selectable as the second built-in ruleset.",
+        "Rulesets moved to a card on Home. Removed from the Characters page."
+      ] }
+    ]
+  },
   {
     v: "0.1.97",
     date: "2026-11-27",
