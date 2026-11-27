@@ -2,11 +2,32 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.92";
+export const VERSION = "0.1.93";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.93",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Subclass picker, informed HP roll, Quick tools.",
+    groups: [
+      {
+        title: "Level up",
+        items: [
+          "Subclass list and page: Ability score needed (green, gold or red against your score) first, Features at level last.",
+          "Rolling hit points asks first and shows the range and the average. The roll is final once confirmed."
+        ]
+      },
+      {
+        title: "Navigation",
+        items: [
+          "The Quick button is now Quick tools, in the bar, the menu, Settings and the tour."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.92",
     date: "2026-11-27",

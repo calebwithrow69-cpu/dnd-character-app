@@ -67,7 +67,7 @@ export function settingsBody(app) {
     choice("width", "Laptop width", "Standard or full window.", [["standard", "Standard"], ["wide", "Wide"]], p.width || "standard", { kw: "wide layout desktop screen" }) +
     sw("showxp", "Show XP line", "Experience under the level seal.", p.showxp !== false, { kw: "experience points level" }) +
     sw("showquick", "Show quick stats", "Initiative, speed, proficiency, passive perception.", p.showquick !== false, { kw: "initiative speed passive perception header" }) +
-    `<div class="setrow" data-s="quick menu tools button shortcuts"><div class="setinfo"><div class="setlabel">Quick menu</div><div class="sethint">Tools on the Quick button.</div></div><button class="btn sm" data-a="quickEditOpen">Edit</button></div>`;
+    `<div class="setrow" data-s="quick menu tools button shortcuts"><div class="setinfo"><div class="setlabel">Quick tools</div><div class="sethint">Shortcuts on the Quick tools button.</div></div><button class="btn sm" data-a="quickEditOpen">Edit</button></div>`;
 
   const play =
     sw("wake", "Keep screen awake", HAS_WAKE ? "Screen stays on while the app is open." : "Not supported on this browser.", !!p.wake && HAS_WAKE, { disabled: !HAS_WAKE, kw: "sleep screen on" }) +

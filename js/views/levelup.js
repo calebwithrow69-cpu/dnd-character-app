@@ -178,9 +178,13 @@ export function levelBody(app) {
     body = `<p>Each level adds hit points: one d${die} plus your Constitution modifier (${fmtMod(conMod)}).</p>
       <div class="lvl-choice-row">
         <button class="bigchoice" data-a="lvlHp" data-mode="avg" aria-pressed="${d.hpMode === "avg"}" ${d.rolled ? "disabled" : ""}><b>+${hpAverageGain(die, conMod)}</b><span>Take the average</span></button>
-        <button class="bigchoice" data-a="lvlHp" data-mode="roll" aria-pressed="${d.hpMode === "roll"}"><b>${d.rolled ? "+" + Math.max(1, d.rolled + conMod) : "d" + die}</b><span>${d.rolled ? `Rolled ${d.rolled} ${fmtMod(conMod)}` : "Roll for it"}</span></button>
+        <button class="bigchoice" data-a="lvlHp" data-mode="roll" aria-pressed="${d.hpMode === "roll" && (!!d.rolled || !!d.askRoll)}"><b>${d.rolled ? "+" + Math.max(1, d.rolled + conMod) : "d" + die}</b><span>${d.rolled ? `Rolled ${d.rolled} ${fmtMod(conMod)}` : "Roll for it"}</span></button>
       </div>
-      <p class="sub2" style="margin-top:10px">Roll is final once made.</p>`;
+      ${d.askRoll && !d.rolled ? `<div class="panel" style="margin-top:12px"><div class="panel-body stack">
+        <b>Roll d${die}?</b>
+        <p class="sub2">Final once rolled. Range +${Math.max(1, 1 + conMod)} to +${Math.max(1, die + conMod)}, average +${hpAverageGain(die, conMod)}.</p>
+        <div class="btnrow"><button class="btn" data-a="lvlRollCancel">Cancel</button><button class="btn pri" data-a="lvlRollGo">Roll</button></div>
+      </div></div>` : `<p class="sub2" style="margin-top:10px">${d.rolled ? "Roll is final." : "A roll is final once made."}</p>`}`;
   }
 
   else if (step.id === "subclass") {

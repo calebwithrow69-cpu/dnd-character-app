@@ -57,8 +57,8 @@ export function renderSubclassPage(app) {
         <div><p class="kick">${esc(c.class)} subclass</p><h2>${esc(sc.name)}</h2>${tag ? `<p class="tagl">${esc(tag)}</p>` : ""}</div>
         ${info.rec ? `<span class="tag amber">Recommended</span>` : ""}</header>
       <div class="scbody">
-        ${info.needs.length ? `<div class="scstats" aria-label="Abilities used"><span class="lab">Uses</span>${chips(info.needs)}${info.needs.some(n => n.off) ? `<span class="tag">Not a ${esc(c.class)} stat</span>` : ""}</div>` : ""}
-        <div class="lvpstrip" aria-label="Feature levels">${strip(sc)}</div>
+        ${`<div class="scstats" aria-label="Ability score needed"><span class="lab">Ability score needed</span>${info.needs.length ? chips(info.needs) : `<span class="sub2">None</span>`}${info.needs.some(n => n.off) ? `<span class="tag">Not a ${esc(c.class)} stat</span>` : ""}</div>`}
+        <div class="scstats" aria-label="Feature levels"><span class="lab">Features at level</span><span class="lvpstrip">${strip(sc)}</span></div>
         ${rest.trim() ? `<div class="about">${formatText(rest)}</div>` : ""}
         ${levels}
         ${app.library.credits && /srd|creative commons|CC-BY/i.test(sc.source || "") ? `<p class="sub2">Contains SRD 5.2 content, CC-BY-4.0.</p>` : ""}
@@ -90,5 +90,5 @@ export function subRow(app, sc) {
   return `<button class="scrow${on ? " on" : ""}" style="${toneStyle(t)}" data-a="scOpen" data-name="${esc(sc.name)}">
     ${seal(t)}<span class="scrt"><span class="scname"><b>${esc(sc.name)}</b>${info.rec ? `<span class="tag amber">Recommended</span>` : ""}${on ? `<span class="tag">Chosen</span>` : ""}</span>
       <span class="sub2 scpitch">${esc(p || (sc.source || ""))}</span>
-      <span class="scmeta">${chips(info.needs, false)}<span class="lvpstrip">${strip(sc)}</span></span></span></button>`;
+      <span class="scmeta"><span class="scline"><span class="lab">Ability score needed</span>${info.needs.length ? chips(info.needs, false) : `<span class="sub2">None</span>`}</span><span class="scline"><span class="lab">Features at level</span><span class="lvpstrip">${strip(sc)}</span></span></span></span></button>`;
 }

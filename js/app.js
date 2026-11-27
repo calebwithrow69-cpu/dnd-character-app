@@ -1957,9 +1957,16 @@ const ACTIONS = {
     const d = APP.lvl;
     if (d.rolled) { d.hpMode = "roll"; return; } // already rolled: locked in
     d.hpMode = el.dataset.mode;
-    if (d.hpMode === "roll") { d.rolled = rollDie(APP.char.hitDice.die || 8); if (!d.fromCreation) { APP.char.hpRoll = { level: d.next, v: d.rolled }; save(); } }
+    if (d.hpMode === "roll") { d.askRoll = !d.askRoll; render(); return; } // confirm first: a roll is final
+    d.askRoll = false; render();
+  },
+  lvlRollGo() {
+    const d = APP.lvl; if (d.rolled) return;
+    d.hpMode = "roll"; d.askRoll = false; d.rolled = rollDie(APP.char.hitDice.die || 8);
+    if (!d.fromCreation) { APP.char.hpRoll = { level: d.next, v: d.rolled }; save(); }
     render();
   },
+  lvlRollCancel() { APP.lvl.askRoll = false; APP.lvl.hpMode = "avg"; render(); },
   lvlGainOpen(el) { const d = APP.lvl; d.gainOpen = d.gainOpen === el.dataset.name ? "" : el.dataset.name; render(); },
   lvlGap(el) { const d = APP.lvl; d.gapMode = d.gapMode === el.dataset.v ? "" : el.dataset.v; Object.assign(d, { feat: "", featAb: "", featNeedsAb: false, fxOpen: false, query: "" }); render(); },
   lvlSubclass(el) { APP.lvl.subclass = el.dataset.name; render(); },
