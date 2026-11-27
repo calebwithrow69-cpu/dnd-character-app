@@ -12,6 +12,7 @@ import { emblem, emblemFor } from "../emblems.js";
 const ICON = {
   people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6M16 5a3.5 3.5 0 010 6.5M18 14c2 .6 3.3 2.4 3.6 6"/>',
   dm: '<path d="M3 20V9l4-3 5 3 5-3 4 3v11"/><path d="M12 9v11M7 6v14M17 6v14"/>',
+  sliders: '<path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/>',
   notes: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
   book: '<path d="M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M8 4v13"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>',
@@ -85,7 +86,7 @@ export function renderHome(app) {
   const count = mode === "dm" ? dm.readIndex().list.length : n;
   const bk = app.prefs && app.prefs.lastBackup, days = bk ? Math.floor((Date.now() - bk) / 864e5) : null;
   return `<main class="home" aria-label="Home">
-    <header class="hh">${LOGO}<h1 class="hh-t">THE SHEET</h1><span class="hh-r"><button class="ibtn2" data-a="helpOpen" aria-label="Help">${ICONS.help}</button><button class="ibtn2" data-a="openSettings" aria-label="Settings">${ic("gear", 22)}</button></span></header>
+    <header class="hh">${LOGO}<h1 class="hh-t">THE SHEET</h1><span class="hh-r"><button class="ibtn2" data-a="helpOpen" aria-label="Help">${ICONS.help}</button></span></header>
     <div class="hh-mid">
       ${storageBanner(app)}
       ${cuPendingCount(app) && !navigator.webdriver ? `<button class="hwarn" data-a="openUpdate">${cuPendingCount(app)} rule changes</button>` : ""}
@@ -101,7 +102,8 @@ export function renderHome(app) {
       <section class="hparts" aria-label="Reference">
         <button class="hpart press" data-a="goRules"><span class="hp-ic">${ic("book", 28)}</span><span class="hp-b"><b>Rules</b><small>Classes, spells, items, conditions</small></span></button>
         <button class="hpart press" data-a="goNotes"><span class="hp-ic">${ic("notes", 28)}</span><span class="hp-b"><b>Notes</b><small>Yours, not tied to one character</small></span></button>
-        <button class="hpart press" data-a="rsOpen"><span class="hp-ic">${ic("book", 28)}</span><span class="hp-b"><b>Rulesets</b><small>${esc(app.campaign && app.campaign.rulesetName || "Base game")}</small></span></button>
+        <button class="hpart press" data-a="rsOpen"><span class="hp-ic">${ic("sliders", 28)}</span><span class="hp-b"><b>Rulesets</b><small>Content allowed: ${esc(app.campaign && app.campaign.rulesetName || "Base game")}</small></span></button>
+        <button class="hpart press" data-a="openSettings"><span class="hp-ic">${ic("gear", 28)}</span><span class="hp-b"><b>Settings</b><small>Look, play, backups, about</small></span></button>
       </section>
       <div class="hbk"><span>${bk ? `Backup ${days === 0 ? "today" : days + (days === 1 ? " day ago" : " days ago")}` : "No backup yet"}</span><button class="btn sm" data-a="exportAll">Back up</button></div>
       <p class="devnote" role="note">Under development. Expect issues.</p>

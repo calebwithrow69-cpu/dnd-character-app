@@ -2,11 +2,21 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.106";
+export const VERSION = "0.1.107";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.107",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Gear layout fix and Home tidy-up.",
+    groups: [
+      { title: "Gear", items: ["On wide screens the item list sits in the left column under Equipped, and the item details, coins and armor class sit in the right column, so no empty gap."] },
+      { title: "Home", items: ["Rulesets has a sliders icon and reads Content allowed with the active ruleset.", "Settings moved from the header to a card beside Rulesets."] }
+    ]
+  },
   {
     v: "0.1.106",
     date: "2026-11-27",
