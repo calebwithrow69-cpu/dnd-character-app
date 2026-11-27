@@ -6,7 +6,7 @@ import { installCard } from "../install.js";
 import { rewardEarned } from "../tour.js";
 import { storageReport } from "../storagerisk.js";
 import { VERSION, STAGE, TESTERS, CHANGELOG } from "../changelog.js";
-import { hintsLeft } from "../hints.js";
+import { hintsLeft, hintsSeenCount } from "../hints.js";
 
 const HAS_VIBRATE = typeof navigator !== "undefined" && "vibrate" in navigator;
 const HAS_WAKE = typeof navigator !== "undefined" && "wakeLock" in navigator;
@@ -116,9 +116,8 @@ export function settingsBody(app) {
     </div>`;
 
   const tourRow =
-    `<div class="setrow col" data-s="tour guide help walkthrough replay silver reward">
-      <div class="setinfo"><div class="setlabel">Tours</div><div class="sethint">${rewardEarned() ? "Silver accent unlocked." : "Finish one to unlock the Silver accent."}</div></div>
-      <div class="btnrow"><button class="btn" data-a="tourStart" data-id="home">Home tour</button><button class="btn" data-a="tourStart" data-id="sheet">Sheet tour</button><button class="btn" data-a="tourStart" data-id="dm">DM tour</button></div>
+    `<div class="setrow col" data-s="silver accent reward hints unlock">
+      <div class="setinfo"><div class="setlabel">Silver accent</div><div class="sethint">${rewardEarned() ? "Unlocked." : `${Math.min(10, hintsSeenCount())}/10 hints seen`}</div></div>
     </div>`;
   const experimental = sw("experimental", "Loot boxes", "Adds a Loot boxes shelf to the Shop", !!p.experimental, { kw: "experimental beta gamble random" }) +
     sw("debug", "Debug mode", "Set sheet numbers by hand. Not for normal play.", !!p.debug, { kw: "debug override cheat edit numbers" });

@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.119";
+export const VERSION = "0.1.120";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.120",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Hints replace the first-run tours.",
+    groups: [
+      { title: "Hints", items: [
+        "Hints replace the Home, sheet and DM tours. Each one pops in with an animation.",
+        "A hint follows you: scroll its target away and after 3 seconds it hops to the next unseen hint on screen.",
+        "Got it moves to the next hint after a short pause, so hints form a trail.",
+        "The cap button always shows a hint for the screen, including ones you have seen. Tap again for the next.",
+        "DM screens have hints for tabs, the screen view and initiative.",
+        "Silver accent unlocks after seeing 10 hints.",
+      ] },
+    ],
+  },
   {
     v: "0.1.119",
     date: "2026-11-27",

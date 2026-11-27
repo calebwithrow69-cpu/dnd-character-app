@@ -1,3 +1,5 @@
+import { hintState } from "./hints.js";
+const hintsSeen = () => Object.keys(hintState()).length;
 // Guided tour: state (localStorage dnd-tour-v1) + the overlay. The overlay lives in #tour-root,
 // outside #app, so redraws do not remove it. Content is in tourdata.js. ASCII only.
 import { TOURS, REWARD } from "./tourdata.js";
@@ -9,7 +11,7 @@ export function tourState() {
 function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* storage denied: tour state is not kept */ } }
 export function tourUnseen(id) { return !!TOURS[id] && !tourState()[id]; }
 export function tourMark(id, status) { const s = tourState(); s[id] = status; save(s); }
-export function rewardEarned() { return !!tourState().earned; }
+export function rewardEarned() { return !!tourState().earned || hintsSeen() >= 10; }
 // Tours start themselves the first time (app.js maybeAutoTour); the ? button replays them. Kept so older views still import it.
 export function tourCard() { return ""; }
 

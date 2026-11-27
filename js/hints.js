@@ -5,6 +5,7 @@
 const KEY = "dnd-hints-v1";
 // where = screen the hint belongs to; sel = first visible match; wideSel/wideBody = laptop wording (1100px and up).
 export const HINTS = [
+  { id: "cap", where: "*", sel: '[data-a="helpOpen"]', title: "Hints", body: "Tap the cap any time to see a hint for what is on screen, even one you have seen." },
   { id: "quick", where: "sheet", sel: ".hubbtn", wideSel: ".hubfan", title: "Quick tools",
     body: "Tap for dice, effects, rest, initiative and your own shortcuts. Edit the list in Settings.",
     wideBody: "Always open at the side: dice, effects, rest, initiative. Edit the list in Settings." },
@@ -112,6 +113,12 @@ HINTS.push(
   { id: "spArea", where: "spgl", sel: ".areahit", title: "Area diagrams", body: "Underlined areas open a 5-foot grid. Switch between square and hex." }
 );
 
+HINTS.push(
+  { id: "dmTabs", where: "dm", sel: ".dmview nav.tabs", title: "DM sections", body: "Party, Combat, Bestiary, Encounters and Rewards." },
+  { id: "dmView", where: "dm", sel: ".dmvsw", title: "Combat views", body: "Board for you, List for editing, Screen for the table." },
+  { id: "dmInit", where: "dm", sel: '[data-a="dmRollInit"]', title: "Initiative", body: "Rolls for every creature, then Start begins round one." }
+);
+
 const wideNow = () => typeof matchMedia === "function" && matchMedia("(min-width:1100px)").matches;
 export function hintState() {
   try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); return s && typeof s === "object" ? s : {}; } catch (e) { return {}; }
@@ -119,25 +126,59 @@ export function hintState() {
 export const hintsOn = prefs => !prefs || prefs.hints !== false;
 export function hintMark(id) { const s = hintState(); s[id] = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* not kept */ } }
 export function hintsReset() { try { localStorage.removeItem(KEY); } catch (e) { /* nothing to clear */ } }
+export const hintsSeenCount = () => Object.keys(hintState()).length;
 export function hintsLeft() { const s = hintState(); return HINTS.filter(h => !s[h.id]).length; }
 
 const visible = sel => [...document.querySelectorAll(sel)].find(el => { const r = el.getBoundingClientRect(); return el.offsetParent !== null && r.width > 4 && r.height > 4; }) || null;
-// The first unseen hint on this screen whose target is on screen: { hint, el }.
-export function nextHint(screen) {
+const inView = el => { const r = el.getBoundingClientRect(); return r.bottom > 64 && r.top < innerHeight - 74 && r.right > 0 && r.left < innerWidth; };
+const hintAt = (h, wide) => { const el = visible(wide && h.wideSel ? h.wideSel : h.sel); return el ? { hint: h, el, body: wide && h.wideBody ? h.wideBody : h.body } : null; };
+const onScreen = (h, screen) => h.where === screen || h.where === "*";
+// The first unseen hint for this screen: one whose target is in view first, else one further down the page.
+export function nextHint(screen, skip) {
   const s = hintState(), wide = wideNow();
+  let far = null;
   for (const h of HINTS) {
-    if (h.where !== screen || s[h.id]) continue;
-    const el = visible(wide && h.wideSel ? h.wideSel : h.sel);
-    if (el) return { hint: h, el, body: wide && h.wideBody ? h.wideBody : h.body };
+    if (!onScreen(h, screen) || s[h.id] || h.id === skip) continue;
+    const n = hintAt(h, wide);
+    if (!n) continue;
+    if (inView(n.el)) return n;
+    if (!far) far = n;
   }
-  return null;
+  return far;
 }
+// The cap button: a hint that is on screen right now, found or not. Repeated taps move through them.
+let forceN = 0;
+export function forceHint(screen) {
+  const wide = wideNow(), list = HINTS.filter(h => onScreen(h, screen) && h.id !== "cap").map(h => hintAt(h, wide)).filter(n => n && inView(n.el));
+  const cap = HINTS.find(h => h.id === "cap"), c0 = hintAt(cap, wide);
+  if (!list.length && c0) list.push(c0);
+  if (!list.length) return false;
+  const i = forceN++ % list.length, pick = list[shown && list[i].hint.id === shown ? (i + 1) % list.length : i];
+  showHint(pick, true);
+  return true;
+}
+let screenOf = () => "";
+export function hintScreenGetter(fn) { screenOf = fn; }
 
 let shown = null;
 const root = () => document.getElementById("hint-root") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "hint-root" }));
 export function hintShownId() { return shown; }
-export function clearHint() { shown = null; anchor = null; const r = document.getElementById("hint-root"); if (r) r.innerHTML = ""; }
+export function clearHint() { shown = null; anchor = null; stopChase(); const r = document.getElementById("hint-root"); if (r) r.innerHTML = ""; }
 function zoomOf() { const e = root(); const k = e && e.offsetWidth ? e.getBoundingClientRect().width / e.offsetWidth : 1; return k > 0.2 && k < 5 ? k : 1; }
+const CHASE_MS = 3000;
+let chaseTimer = 0, chaseReady = false;
+function stopChase() { clearTimeout(chaseTimer); chaseTimer = 0; chaseReady = false; }
+// The hint's target was scrolled away. After a short wait the bubble hops to the next unseen hint that is on screen.
+function startChase() {
+  if (!anchor) return;
+  if (chaseReady) { hop(); return; }
+  if (!chaseTimer) chaseTimer = setTimeout(() => { chaseTimer = 0; chaseReady = true; hop(); }, CHASE_MS);
+}
+function hop() {
+  if (!anchor) return;
+  const n = nextHint(screenOf(), anchor.hint.id);
+  if (n && inView(n.el)) { stopChase(); showHint(n); }
+}
 let anchor = null; // { hint, sel } of the bubble on screen; it follows its element while the page scrolls
 function place() {
   if (!anchor) return;
@@ -147,7 +188,8 @@ function place() {
   const r = el ? el.getBoundingClientRect() : null, vw = innerWidth, vh = innerHeight;
   const off = !r || r.bottom < 56 || r.top > vh - 60 || r.right < 0 || r.left > vw;
   ring.style.display = b.style.display = off ? "none" : "";
-  if (off) return;
+  if (off) { startChase(); return; }
+  stopChase();
   anchor.el = el;
   const k = zoomOf(), w = Math.min(300, vw - 24);
   ring.style.left = Math.round((r.left - 4) / k) + "px"; ring.style.top = Math.round((r.top - 4) / k) + "px";
@@ -163,12 +205,12 @@ function place() {
 }
 let moving = 0;
 export function moveHint() { if (!anchor || moving) return; moving = requestAnimationFrame(() => { moving = 0; place(); }); }
-export function showHint({ hint, el, body }) {
-  shown = hint.id;
+export function showHint({ hint, el, body }, forced) {
+  shown = hint.id; stopChase();
   const wide = wideNow();
   anchor = { hint, el, sel: wide && hint.wideSel ? hint.wideSel : hint.sel };
-  root().innerHTML = `<div class="hint-ring"></div>
-    <div class="hint-bubble" id="hint-bubble" role="note" aria-label="Hint: ${hint.title}">
+  root().innerHTML = `<div class="hint-ring enter"></div>
+    <div class="hint-bubble enter" id="hint-bubble" role="note" aria-label="Hint: ${hint.title}">
       <div class="hint-hd"><span class="hint-ic"><img src="assets/hint-cap.png" alt="" width="22" height="15"></span><h3><span>Hint:</span> ${hint.title}</h3></div><p>${body}</p>
       <div class="hint-act"><button class="linkbtn" data-a="hintsOff">Turn off hints</button><span class="grow"></span><button class="btn sm pri" data-a="hintDone" data-id="${hint.id}">Got it</button></div>
     </div>`;

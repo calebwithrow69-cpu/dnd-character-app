@@ -3539,3 +3539,11 @@ html[data-mode="dark"] .spi .em-c{fill:hsl(var(--h) 70% 62%)}
 .slotchip .spi.small{--h:30}
 .recent{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0 8px}.recent span{font:600 .7rem var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .spg-detail>p.sub2{display:none}
+
+/* Hints: entrance, pulse, hop */
+@keyframes hintPop{0%{opacity:0;transform:translateY(10px) scale(.88)}60%{opacity:1;transform:translateY(-3px) scale(1.03)}100%{opacity:1;transform:none}}
+@keyframes hintRingIn{0%{opacity:0;transform:scale(1.5)}60%{opacity:1;transform:scale(.97)}100%{opacity:1;transform:none}}
+@keyframes hintPulse{0%,100%{box-shadow:0 0 0 4px color-mix(in srgb,var(--amber) 25%,transparent)}50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--amber) 8%,transparent)}}
+.hint-bubble.enter{animation:hintPop .42s cubic-bezier(.2,.9,.3,1.2)}
+.hint-ring.enter{animation:hintRingIn .45s cubic-bezier(.2,.9,.3,1.1),hintPulse 2.2s ease-in-out .45s infinite}
+@media (prefers-reduced-motion:reduce){.hint-bubble.enter,.hint-ring.enter{animation:none}}

@@ -47,7 +47,7 @@ import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign, setSrdNames } from "./rulesets.js";
 import { boxById } from "./lootbox.js";
 import { showLoot, rollLoot, boxCount } from "./views/lootbox.js";
-import { moveHint, nextHint, showHint, clearHint, hintShownId, hintMark, hintsOn, hintsReset } from "./hints.js";
+import { moveHint, nextHint, showHint, clearHint, hintShownId, hintMark, hintsOn, hintsReset, forceHint, hintScreenGetter } from "./hints.js";
 import { startTour, tourGo, skipTour, tourMark, tourUnseen, tourActive, tourHooks, tourReady } from "./tour.js";
 import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./views/start.js";
 import { templatePayload, templateCode, readShared } from "./templates.js";
@@ -260,26 +260,30 @@ let hintPause = 0, hintCool = null;
 // After a tour ends, hints wait 15 seconds or until the player moves to another tab or subtab.
 const hintPlace = () => [APP.screen, APP.sheetTab, APP.charSub, APP.classicSub].join("|");
 document.addEventListener("tour-end", () => { hintPause = Date.now() + 15000; hintCool = "pending"; setTimeout(() => render(), 15100); });
-const hintScreen = () => APP.screen === "sheet" && APP.sheetTab === "spellgl" ? "spgl" : APP.screen === "home" ? "home" : (APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes")) ? "notes"
+const hintScreen = () => APP.screen === "dmmode" ? "dm" : APP.screen === "sheet" && APP.sheetTab === "spellgl" ? "spgl" : APP.screen === "home" ? "home" : (APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes")) ? "notes"
   : (APP.screen === "rules" || (APP.screen === "sheet" && APP.sheetTab === "rules")) ? "rules" : APP.screen === "sheet" ? "sheet" : "";
+hintScreenGetter(() => hintModal() || hintScreen());
 const hintModal = () => !APP.modal ? "" : APP.modal.type === "detail" && APP.modal.kind === "spell" ? "spdetail" : "";
 function syncHint() {
   if (hintCool === "pending") hintCool = hintPlace();
   if (hintCool && (hintPlace() !== hintCool || Date.now() > hintPause)) { if (hintPlace() !== hintCool) hintPause = 0; hintCool = null; }
-  const ms = hintModal(), quiet = !navigator.webdriver && hintsOn(APP.prefs) && (!APP.modal || !!ms) && !tourActive() && !APP._tourPending && storageAcked() && helpSeen()
-    && !!(ms || hintScreen()) && !tourUnseen("home") && (APP.screen !== "sheet" || (APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen)) && Date.now() > hintPause;
+  const ms = hintModal(), quiet = !navigator.webdriver && hintsOn(APP.prefs) && (!APP.modal || !!ms) && !tourActive() && storageAcked()
+    && !!(ms || hintScreen()) && (APP.screen !== "sheet" || (APP.char && !APP.char.dead && !APP.hubOpen)) && Date.now() > hintPause;
   const n = quiet ? nextHint(ms || hintScreen()) : null;
   if (!n) { if (hintShownId()) clearHint(); return; }
+  if (hintShownId() === n.hint.id) { moveHint(); return; }
+  if (hintShownId()) return;
   showHint(n);
 }
 // A character made before physical traits existed is asked once when its sheet opens.
 function maybePhys() {
   const c = APP.char;
-  if (navigator.webdriver || APP.screen !== "sheet" || !c || c.dead || c.physAsked || APP.modal || tourActive() || APP._tourPending || !storageAcked() || APP.styleAsk || tourUnseen("sheet")) return;
+  if (navigator.webdriver || APP.screen !== "sheet" || !c || c.dead || c.physAsked || APP.modal || tourActive() || !storageAcked() || APP.styleAsk) return;
   c.physAsked = true; save();
   openModal({ type: "phys" });
 }
 function maybeAutoTour() {
+  return; // hints replaced the first-run tours; the function stays for the play mode tour
   if (navigator.webdriver || APP._tourPending || APP.modal || tourActive() || !storageAcked()) return;
   const sc = APP.screen;
   let id = null;
@@ -1286,11 +1290,9 @@ const ACTIONS = {
     toast("Added Gandork"); render();
   },
   helpOpen() {
-    const sc = APP.screen;
-    if (sc === "home") ACTIONS.tourStart({ dataset: { id: "home" } });
-    else if (sc === "sheet" && APP.char) ACTIONS.tourStart({ dataset: { id: "sheet" } });
-    else if (sc === "dmmode") ACTIONS.tourStart({ dataset: { id: "dm" } });
-    else openModal({ type: "help" });
+    if (APP.roll || tourActive()) return;
+    const sc = (hintModal() || hintScreen());
+    if (!sc || !forceHint(sc)) toast("No hints here");
   },
   helpIntroGo() { try { localStorage.setItem(LS_HELP_INTRO, String(Date.now())); } catch (e) { } closeModal(); setTimeout(() => startTour("home"), 80); },
   helpIntroSkip() { try { localStorage.setItem(LS_HELP_INTRO, String(Date.now())); } catch (e) { } tourMark("home", "skipped"); closeModal(); },
@@ -1643,7 +1645,7 @@ const ACTIONS = {
     };
     input.click();
   },
-  hintDone(el) { hintMark(el.dataset.id); clearHint(); hintCool = null; hintPause = Date.now() + 10000; setTimeout(() => render(), 10100); },
+  hintDone(el) { hintMark(el.dataset.id); clearHint(); hintCool = null; hintPause = Date.now() + 700; setTimeout(() => render(), 800); },
   hintsOff() { APP.prefs.hints = false; savePrefs(); clearHint(); toast("Hints off", { action: "Undo", onAction: () => { APP.prefs.hints = true; savePrefs(); hintPause = 0; render(); } }); },
   hintsShowAgain() { hintsReset(); APP.prefs.hints = true; savePrefs(); hintPause = 0; render(); toast("Hints on"); },
   testSound() { sfx("confirm"); sfx("dice"); },
