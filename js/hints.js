@@ -49,6 +49,8 @@ HINTS.push(
 );
 
 HINTS.push(
+  { id: "sheetLayout", where: "sheet", sel: ".sl-bar .btn", title: "Sheet layout",
+    body: "Pick a preset, then reorder or hide blocks. It applies to every character on this device." },
   { id: "ftTabs", where: "sheet", sel: ".ft-tabs", title: "Feature shelves",
     body: "Class, subclass, species and feats each have a shelf. Saved holds your bookmarks." },
   { id: "ftSort", where: "sheet", sel: ".shop-sortbtn[data-a=\"ftFilterOpen\"]", title: "Group and filter",

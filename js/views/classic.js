@@ -2,6 +2,7 @@
 // (header, vitals, six ability blocks with their saves and skills, weapons,
 // class features, species traits, feats, training). Everything is tappable.
 import { featuresView } from "./features.js";
+import { layoutOf, PRESETS, blockOf } from "../sheetlayout.js";
 import { toolGrid } from "./tools.js";
 import { esc, ICONS, searchBox } from "../ui.js";
 import { ABILITIES, ABILITY_LABEL, fmtMod, deriveCharacter, PROF_GROUPS } from "../rules.js";
@@ -120,12 +121,11 @@ export function classicBody(app, c, d) {
       <div class="field"><label>Tools and other training</label><textarea class="f" data-field="profsText" style="min-height:60px">${esc(c.profsText)}</textarea></div>
       <div class="field"><label>Languages</label><input class="f" data-field="languages" value="${esc(c.languages)}"></div>
     </div></div>`;
-  const pages = {
-    sheet: `    <div class="panel paperid"><div class="panel-body">
+  const blk = {
+    identity: () => `<div class="panel paperid"><div class="panel-body">
       <div class="idgrid wide4"><div><span>Class</span><b>${esc(c.class)}</b></div><div><span>Subclass</span><b>${esc(c.subclass || "None yet")}</b></div>
-        <div><span>Species</span><b>${esc(c.species)}</b></div><div><span>Background</span><b>${esc(c.background)}</b></div></div></div></div>
-
-    <div class="paperrow">
+        <div><span>Species</span><b>${esc(c.species)}</b></div><div><span>Background</span><b>${esc(c.background)}</b></div></div></div></div>`,
+    status: () => `<div class="paperrow">
       <button class="pbox" data-a="toggleInsp" aria-pressed="${!!c.inspiration}"><b>${c.inspiration ? "\u2713" : "\u2013"}</b><span>Heroic Inspiration</span></button>
       <div class="pbox"><b>${esc(c.size || "Medium")}</b><span>Size</span></div>
       <div class="pbox hd"><b>${hd.total - hd.spent}<i> / ${hd.total}</i></b><span>Hit dice d${hd.die}</span>
@@ -133,23 +133,24 @@ export function classicBody(app, c, d) {
       <div class="pbox ds"><span class="dsr"><em>Successes</em><span class="pips">${pips(c.deathSaves.success, "success", "ok")}</span></span>
         <span class="dsr"><em>Failures</em><span class="pips">${pips(c.deathSaves.fail, "fail", "fail")}</span></span>
         ${c.hp.cur <= 0 ? `<button class="btn sm pri" data-a="rollDeathSave" ${c.deathSaves.fail >= 3 || c.deathSaves.success >= 3 ? "disabled" : ""}>Roll death save</button>` : ""}<span>Death saves</span></div>
-    </div>
-
-    <div class="cl-cols">
-      <div class="cl-ab">
-    <div class="abgrid">${ABILITIES.map(a => abilityBlock(c, d, a)).join("")}</div>
-      </div>
-      <div class="cl-side">
-    ${attacksPanel(app, c, d, { head: "Weapons and damage", extra: cantripRows(app, c) })}
-    ${si ? `<div class="panel"><div class="panel-head"><h2>Spellcasting</h2></div><div class="panel-body">
-      <div class="cvals three">${val("Ability", ABILITY_LABEL[si.ability])}${val("Modifier", fmtMod(si.mod))}${val("Spell save DC", si.dc)}${val("Spell attack", fmtMod(si.attackBonus))}</div>${slotPips(si, c)}</div></div>` : ""}
-    ${sensesPanel(c, d)}
-    ${trackersPanel(c)}
-      </div>
     </div>`,
+    abilities: () => `<div class="abgrid">${ABILITIES.map(a => abilityBlock(c, d, a)).join("")}</div>`,
+    weapons: () => attacksPanel(app, c, d, { head: "Weapons and damage", extra: cantripRows(app, c) }),
+    spellcasting: () => si ? `<div class="panel"><div class="panel-head"><h2>Spellcasting</h2></div><div class="panel-body">
+      <div class="cvals three">${val("Ability", ABILITY_LABEL[si.ability])}${val("Modifier", fmtMod(si.mod))}${val("Spell save DC", si.dc)}${val("Spell attack", fmtMod(si.attackBonus))}</div>${slotPips(si, c)}</div></div>` : "",
+    senses: () => sensesPanel(c, d),
+    trackers: () => trackersPanel(c),
+    profs: () => profsBox,
+    details: () => detailsPanel(c)
+  };
+  const lay = layoutOf(app.prefs), shown = id => lay.blocks.some(x => x.id === id && x.on);
+  const sheetPage = () => `<div class="sl-bar"><span class="sub2">${esc(lay.custom ? "Custom layout" : (PRESETS.find(x => x.id === lay.preset) || {}).label)}</span><button class="btn sm" data-a="slOpen">Edit layout</button></div>
+    <div class="cl-flow">${lay.blocks.filter(x => x.on).map(x => { const h = blk[x.id](); return h ? `<div class="slb ${(blockOf(x.id) || {}).wide ? "wide" : ""}" data-block="${x.id}">${h}</div>` : ""; }).join("")}</div>`;
+  const pages = {
+    sheet: sheetPage,
     features: `${featuresView(app, c)}<div class="cl-cols3 cl-two"><div>
-    ${detailsPanel(c)}</div><div>
-    ${profsBox}
+    ${shown("details") ? "" : detailsPanel(c)}</div><div>
+    ${shown("profs") ? "" : profsBox}
     </div></div>`,
     spells: () => (si ? spellsTab(app, c, d) : ""),
     gear: () => classicGear(app, c, d),

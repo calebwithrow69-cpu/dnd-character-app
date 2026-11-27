@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.111";
+export const VERSION = "0.1.112";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.112",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Sheet page layout presets.",
+    groups: [
+      { title: "Sheet", items: [
+        "The Sheet page is built from blocks you can reorder and hide: Identity, Status, Abilities, Weapons, Spellcasting, Senses, Trackers, Proficiencies and Character details.",
+        "Edit layout offers four presets: Printed sheet, Numbers, Caster and Combat.",
+        "The layout is saved on this device and applies to every character. Reset restores the preset. One block always stays shown.",
+        "Proficiencies and details move off the Features page when you show them on Sheet."
+      ] }
+    ]
+  },
   {
     v: "0.1.111",
     date: "2026-11-27",

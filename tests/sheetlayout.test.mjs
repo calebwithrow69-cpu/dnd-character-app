@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { layoutOf, presetBlocks, moveBlock, toggleBlock, BLOCKS } from "../js/sheetlayout.js";
+let n = 0; const t = (m, f) => { f(); n++; };
+t("default is printed", () => { const l = layoutOf({}); assert.equal(l.preset, "printed"); assert.equal(l.custom, false); assert.equal(l.blocks.length, BLOCKS.length); });
+t("bad data falls back", () => { const l = layoutOf({ sheetLayout: { preset: "x", blocks: [{ id: "zzz", on: true }, { id: "status", on: false }] } }); assert.ok(l.blocks.some(b => b.on)); assert.equal(new Set(l.blocks.map(b => b.id)).size, BLOCKS.length); });
+t("dupes removed, missing appended off", () => { const l = layoutOf({ sheetLayout: { preset: "printed", blocks: [{ id: "senses", on: true }, { id: "senses", on: false }] } }); assert.equal(l.blocks.filter(b => b.id === "senses").length, 1); assert.equal(l.blocks.length, BLOCKS.length); });
+t("move and toggle", () => { const l = layoutOf({}); const m = moveBlock(l, "status", -1); assert.equal(m[0].id, "status"); assert.equal(moveBlock(l, "identity", -1)[0].id, "identity"); });
+t("last block cannot be hidden", () => { let l = { blocks: [{ id: "identity", on: true }, { id: "status", on: false }] }; assert.equal(toggleBlock(l, "identity"), null); assert.ok(toggleBlock(l, "status")); });
+t("custom flag", () => { const b = presetBlocks("combat"); assert.equal(layoutOf({ sheetLayout: { preset: "combat", blocks: b } }).custom, false); b.reverse(); assert.equal(layoutOf({ sheetLayout: { preset: "combat", blocks: b } }).custom, true); });
+console.log("sheetlayout: " + n + " checks passed");

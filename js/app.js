@@ -69,6 +69,7 @@ import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
 import { renderModal, renderRollCard } from "./views/modals.js";
 import { renderShopResults, shopPrice, shopRows, shopCtx, shopRowMap } from "./views/shop.js";
+import { layoutOf, presetBlocks, moveBlock, toggleBlock } from "./sheetlayout.js";
 import { ftState, ftResults } from "./views/features.js";
 import { featureEntries, ftDefault } from "./featurelist.js";
 import * as SD from "./shopdata.js";
@@ -2340,6 +2341,15 @@ const ACTIONS = {
   shopView(el) { APP.shopView = el.dataset.v; render(); window.scrollTo(0, 0); },
   shopSort(el) { APP.shopSort = el.value; render(); },
   shopFilt(el) { APP.shopFilt = { ...(APP.shopFilt || {}), [el.dataset.k]: !(APP.shopFilt || {})[el.dataset.k] }; render(); },
+  slOpen() { openModal({ type: "sheetLayout" }); },
+  slPreset(el) { APP.prefs.sheetLayout = { preset: el.dataset.v, blocks: presetBlocks(el.dataset.v) }; savePrefs(); render(); },
+  slMove(el) { const l = layoutOf(APP.prefs); APP.prefs.sheetLayout = { preset: l.preset, blocks: moveBlock(l, el.dataset.id, +el.dataset.dir) }; savePrefs(); render(); },
+  slToggle(el) {
+    const l = layoutOf(APP.prefs), b = toggleBlock(l, el.dataset.id);
+    if (!b) { toast("Keep one block shown"); return; }
+    APP.prefs.sheetLayout = { preset: l.preset, blocks: b }; savePrefs(); render();
+  },
+  slReset() { const l = layoutOf(APP.prefs); APP.prefs.sheetLayout = { preset: l.preset, blocks: presetBlocks(l.preset) }; savePrefs(); render(); },
   ftTab(el) { ftState(APP).tab = el.dataset.v; ftState(APP).sel = null; keepY(() => render()); },
   ftFilterOpen() { openModal({ type: "ftFilter" }); },
   ftSet(el) { ftState(APP)[el.dataset.k] = el.dataset.v; render(); },
