@@ -3103,7 +3103,11 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .hint-bubble{position:fixed;pointer-events:auto;padding:14px 16px 12px;border-radius:14px;color:var(--card-ink);background:linear-gradient(160deg,var(--card-hi),var(--card-lo));border:1px solid #ffffff2e;box-shadow:0 14px 34px #00000066}
 .hint-bubble::before{content:"";position:absolute;left:var(--ax,30px);top:-7px;width:12px;height:12px;margin-left:-6px;transform:rotate(45deg);background:var(--card-hi);border-left:1px solid #ffffff2e;border-top:1px solid #ffffff2e}
 .hint-bubble.up::before{top:auto;bottom:-7px;transform:rotate(225deg);background:var(--card-lo)}
-.hint-bubble h3{margin:0 0 4px;font:700 .86rem var(--display);letter-spacing:.1em;text-transform:uppercase}
+.hint-hd{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+.hint-ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--card-inset);border:1px solid #ffffff33}
+.hint-ic img{width:20px;height:auto;display:block}
+.hint-bubble h3{margin:0;font:700 .86rem var(--display);letter-spacing:.08em;text-transform:uppercase;min-width:0}
+.hint-bubble h3 span{color:var(--card-label)}
 .hint-bubble p{margin:0 0 10px;font-size:.88rem;line-height:1.4;color:var(--card-sub)}
 .hint-act{display:flex;align-items:center;gap:10px}
 .hint-act .linkbtn{color:var(--card-label);font-size:.74rem}
@@ -3309,7 +3313,7 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .iconbtn.heart{color:var(--muted)}
 .iconbtn.heart.on{color:#c0504a}
 .iconbtn.heart.on svg{fill:currentColor}
-.cartbar{position:sticky;bottom:92px;z-index:6;display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:var(--card-bg,#4a1620);color:var(--card-ink,#fbeede);box-shadow:0 8px 22px rgba(30,8,12,.4);grid-column:1/-1}
+.cartbar{position:sticky;bottom:92px;z-index:6;display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:linear-gradient(160deg,var(--card-hi),var(--card-lo));color:var(--card-ink);box-shadow:0 8px 22px rgba(30,8,12,.4);grid-column:1/-1}
 .cartbar .cb-n{display:flex;align-items:center;gap:6px}.cartbar .cb-n svg{width:22px;height:22px}
 .cartbar .cb-t{flex:1;display:grid;line-height:1.15}
 .cartbar .cb-t b{font:700 1.05rem var(--display)}
@@ -3339,3 +3343,6 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .shop-sortbtn em{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--amber);color:var(--amber-ink);font:700 .68rem/18px system-ui,sans-serif;font-style:normal;text-align:center;padding:0 4px}
 .shop-views button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .shop-views button svg{width:18px;height:18px;flex:none}
+
+/* All tools: the hub's extra entry */
+.hubopt.hubmore .ho-ic{border-style:dashed}

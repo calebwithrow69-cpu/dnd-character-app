@@ -129,7 +129,8 @@ function applyPrefs() {
   setAttr("data-font", APP.prefs.font === "plain", "plain");
   setAttr("data-motion", APP.prefs.motion === "reduced", "reduced");
   setAttr("data-tap", !!APP.prefs.bigtap, "big");
-  setAttr("data-accent", APP.prefs.accent && APP.prefs.accent !== "oxblood", APP.prefs.accent);
+  const accent = APP.prefs.accent || "blue";
+  setAttr("data-accent", accent !== "oxblood", accent);
   setAttr("data-corners", APP.prefs.corners && APP.prefs.corners !== "soft", APP.prefs.corners);
   setAttr("data-density", APP.prefs.density && APP.prefs.density !== "normal", APP.prefs.density);
   setAttr("data-width", APP.prefs.width === "wide", "wide");
@@ -2145,8 +2146,9 @@ const ACTIONS = {
   // conditions & concentration
   hubToggle() { APP.hubOpen = !APP.hubOpen; render(); },
   hubClose() { if (APP.hubOpen) { APP.hubOpen = false; render(); } },
+  toolsAll() { APP.hubOpen = false; openModal({ type: "allTools" }); },
   hubGo(el) {
-    const t = TOOLS.find(x => x[0] === el.dataset.id); APP.hubOpen = false; render();
+    const t = TOOLS.find(x => x[0] === el.dataset.id); APP.hubOpen = false; if (APP.modal && APP.modal.type === "allTools") APP.modal = null; render();
     if (!t) return;
     const how = t[3], data = {};
     if (how.modal) { ACTIONS.toolOpen({ dataset: { id: how.modal } }); return; }

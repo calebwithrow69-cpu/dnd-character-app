@@ -1,5 +1,5 @@
 import { renderDmModal } from "./dmmode.js";
-import { renderToolModal, renderQuickEdit, condEffectsBlock } from "./tools.js";
+import { renderToolModal, renderQuickEdit, renderAllTools, condEffectsBlock } from "./tools.js";
 import { condLine, condNotes } from "../conditions.js";
 import { esc, modalShell, searchBox, ICONS, hotbarToggle } from "../ui.js";
 import { boxById, boxByName } from "../lootbox.js";
@@ -57,6 +57,7 @@ export function renderModal(app) {
       `<button class="btn" data-a="closeModal">Cancel</button><button class="btn danger" data-a="resetAppGo" ${app.resetBusy ? "disabled" : ""}>${app.resetBusy ? "Checking" : "Erase everything"}</button>`);
     case "tool": return renderToolModal(app, c, deriveCharacter(c));
     case "quickEdit": return renderQuickEdit(app);
+    case "allTools": return renderAllTools(app, c);
     case "detail": {
       const d = detailFor(app, m.kind, m.name, m.i, m.from);
       const foot = [

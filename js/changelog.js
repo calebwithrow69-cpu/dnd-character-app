@@ -2,11 +2,30 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.108";
+export const VERSION = "0.1.109";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.109",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "All tools, hint icon, blue default.",
+    groups: [
+      { title: "Tools", items: [
+        "Quick tools menu has an All tools entry that opens every tool in one window.",
+        "All tools links to Edit Quick tools, no Settings trip needed."
+      ] },
+      { title: "Hints", items: [
+        "Every hint shows the graduation cap icon with Hint: and its name beside it."
+      ] },
+      { title: "Look", items: [
+        "Blue is the default accent. A colour you picked stays.",
+        "Fixed the shop checkout bar staying red on other accents."
+      ] }
+    ]
+  },
   {
     v: "0.1.108",
     date: "2026-11-27",

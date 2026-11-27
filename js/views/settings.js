@@ -47,7 +47,7 @@ export function settingsBody(app) {
 
   const appearance =
     choice("theme", "Theme", "Auto follows your device.", [["auto", "Auto"], ["dark", "Dark Tome"], ["light", "Parchment"]], theme, { kw: "dark light mode" }) +
-    choice("accent", "Accent colour", "Buttons, highlights and tabs.", [["oxblood", "Oxblood"], ["teal", "Teal"], ["violet", "Violet"], ["gold", "Gold"], ["blue", "Blue"], ["green", "Green"]].concat(rewardEarned() ? [["silver", "Silver"]] : []), p.accent || "oxblood", { kw: "color colour highlight theme" }) +
+    choice("accent", "Accent colour", "Buttons, highlights and tabs.", [["oxblood", "Oxblood"], ["teal", "Teal"], ["violet", "Violet"], ["gold", "Gold"], ["blue", "Blue"], ["green", "Green"]].concat(rewardEarned() ? [["silver", "Silver"]] : []), p.accent || "blue", { kw: "color colour highlight theme" }) +
     choice("size", "Text size", "", [["small", "Small"], ["normal", "Normal"], ["large", "Large"], ["xl", "Extra large"]], size, { kw: "font zoom" }) +
     choice("font", "Text style", "Plain is easier to read for some people.", [["tome", "Tome serif"], ["plain", "Plain sans"]], p.font || "tome", { kw: "font dyslexia readable" }) +
     choice("corners", "Corners", "", [["sharp", "Sharp"], ["soft", "Soft"], ["round", "Round"]], p.corners || "soft", { kw: "radius shape panels" }) +

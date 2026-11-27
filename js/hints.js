@@ -140,7 +140,7 @@ export function showHint({ hint, el, body }) {
   anchor = { hint, el, sel: wide && hint.wideSel ? hint.wideSel : hint.sel };
   root().innerHTML = `<div class="hint-ring"></div>
     <div class="hint-bubble" id="hint-bubble" role="note" aria-label="Hint: ${hint.title}">
-      <h3>${hint.title}</h3><p>${body}</p>
+      <div class="hint-hd"><span class="hint-ic"><img src="assets/hint-cap.png" alt="" width="22" height="15"></span><h3><span>Hint:</span> ${hint.title}</h3></div><p>${body}</p>
       <div class="hint-act"><button class="linkbtn" data-a="hintsOff">Turn off hints</button><span class="grow"></span><button class="btn sm pri" data-a="hintDone" data-id="${hint.id}">Got it</button></div>
     </div>`;
   place();

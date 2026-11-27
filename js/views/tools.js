@@ -21,6 +21,7 @@ const P = {
   death: '<path d="M12 3a7 7 0 00-4 12.7V19h8v-3.3A7 7 0 0012 3z"/><path d="M9.5 11h.01M14.5 11h.01M10 19v2M14 19v2"/>',
   edit: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
   stats: '<path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/>',
+  grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
   backup: '<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7M8 20v-6h8v6"/>'
 };
 const ico = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[k]}</svg>`;
@@ -43,7 +44,7 @@ const HUB_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 export function hubCell(app) {
   const open = !!app.hubOpen, tools = quickIds(app.prefs).map(id => TOOLS.find(t => t[0] === id)), slots = HUB_SLOTS[tools.length];
   const fan = `<div class="hubfan${open ? " is-open" : ""}" role="menu" aria-label="Quick tools"><span class="hubhd">Quick tools</span>${tools.map(([id, label, icon, how, q], i) =>
-    `<button class="hubopt" role="menuitem" data-a="hubGo" data-id="${id}" style="--x:${HUB_XY[slots[i]][0]}px;--y:${HUB_XY[slots[i]][1]}px;--d:${i * 30}ms"><span class="ho-ic">${ico(icon)}</span><span class="ho-l">${esc(q || label)}</span></button>`).join("")}</div>`;
+    `<button class="hubopt" role="menuitem" data-a="hubGo" data-id="${id}" style="--x:${HUB_XY[slots[i]][0]}px;--y:${HUB_XY[slots[i]][1]}px;--d:${i * 30}ms"><span class="ho-ic">${ico(icon)}</span><span class="ho-l">${esc(q || label)}</span></button>`).join("")}<button class="hubopt hubmore" role="menuitem" data-a="toolsAll" style="--x:0px;--y:-232px;--d:${tools.length * 30}ms"><span class="ho-ic">${ico("grid")}</span><span class="ho-l">All tools</span></button></div>`;
   return `<div class="hubcell">${open ? `<div class="hubscrim" data-a="hubClose"></div>` : ""}<div class="hubanchor">${fan}<button class="hubbtn ${open ? "open" : ""}" data-a="hubToggle" aria-haspopup="menu" aria-expanded="${open}" aria-label="Quick tools">${open ? HUB_CLOSE : HUB_ICON}<span class="hb-t">Quick tools</span></button></div><span class="hublbl">Quick tools</span></div>`;
 }
 
@@ -78,6 +79,14 @@ export function renderQuickEdit(app) {
     return `<button class="optcard" data-a="quickToggle" data-id="${id}" aria-pressed="${on}" ${full ? "disabled" : ""}><span class="qe-ic">${ico(icon)}</span><span class="grow"><b>${esc(label)}</b></span>${on ? `<span class="tag amber">${ids.indexOf(id) + 1}</span>` : ""}</button>`;
   }).join("");
   return modalShell("Quick tools", `<p class="sub2">${ids.length}/${QUICK_MAX}</p><div class="optlist">${rows}</div>`, `<button class="btn" data-a="quickReset">Reset</button><button class="btn pri" data-a="closeModal">Done</button>`, "toolm");
+}
+
+// Every tool in one modal: no trip through Settings to use one that is not in Quick tools.
+export function renderAllTools(app, c) {
+  const badge = id => id === "cond" ? (c.conditions.length + (c.exhaustion > 0 ? 1 : 0) || "") : id === "insp" ? (c.inspiration ? "On" : "") : "";
+  const tiles = TOOLS.map(([id, label, icon]) => { const b = badge(id);
+    return `<button class="toolbtn press" data-a="hubGo" data-id="${id}"><span class="tb-ic">${ico(icon)}${b !== "" ? `<i class="tb-b">${esc(b)}</i>` : ""}</span><span class="tb-l">${esc(label)}</span></button>`; }).join("");
+  return modalShell("All tools", `<section class="toolgrid" aria-label="Tools">${tiles}</section>`, `<button class="btn" data-a="quickEditOpen">Edit Quick tools</button><button class="btn pri" data-a="closeModal">Done</button>`, "toolm");
 }
 
 export function toolGrid(app, c) {
