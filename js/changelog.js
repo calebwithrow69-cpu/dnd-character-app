@@ -19,14 +19,16 @@ export const CHANGELOG = [
           "Phone: one list at a time. Action, Bonus, Reaction, Spells and More, each with its own count. Spells group by level with slots on top; More holds trackers and rests.",
           "Sort menu: Type, Level, Uses left, A to Z. Hotbar items stay on top and show a star. The Show list moved inside it.",
           "Lighter rows: only attacks, spells and items show a description line.",
-          "Phone: Start combat, Search and Sort share one row. Laptop: slimmer hotbar."
+          "Phone: Start combat, Search and Sort share one row, and the hotbar sits in one compact strip. Laptop: slimmer hotbar.",
+          "The Turn tracker: On button is gone; switch it off in Settings."
         ]
       },
       {
         title: "Hints",
         items: [
           "New hints: Sheet sections, Hit points, Sort and show, One list at a time, Details, Turn tracker, Spell slots, Rests, Shop, Backups (Home).",
-          "Hints now also appear on Home."
+          "Hints now also appear on Home.",
+          "After a tour ends, hints wait 15 seconds or until you open another tab or subtab."
         ]
       }
     ]

@@ -3143,3 +3143,25 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 }
 .pm .pm-top .psm{position:relative;flex:none}
 .pm .pm-top .psm-menu{right:0;left:auto}
+
+@media (max-width:759px){
+  .pm .pm-top .tk{padding:0 9px}
+  .pm .pm-top .showbtn b{display:none}
+}
+@media (min-width:1100px){
+  .pm .hotbar-panel{display:flex;align-items:center;gap:14px;padding:0 12px 0 0}
+  .pm .hotbar-panel .panel-head{order:2;margin-left:auto;padding:0;border:0;background:none;flex:none}
+  .pm .hotbar-panel .panel-head h2{display:none}
+  .pm .hotbar-panel .panel-body{flex:1;min-width:0;padding:8px 12px}
+  .pm .hotbar{display:flex;gap:8px;overflow-x:auto}
+}
+.pm .hotbar-panel .panel-head{background:transparent!important;border:0!important;box-shadow:none!important}
+.pm .hotbar-panel .hb-btn{width:68px;min-height:56px;padding:4px}
+.pm .hotbar-panel .panel-body{padding:6px 12px}
+@media (max-width:759px){
+  .pm .hotbar-panel{display:flex;align-items:center;gap:6px;padding:0 8px 0 0;margin-bottom:8px}
+  .pm .hotbar-panel .panel-head{order:2;margin-left:auto;padding:0}
+  .pm .hotbar-panel .panel-head h2{display:none}
+  .pm .hotbar-panel .panel-body{flex:1;min-width:0}
+  .pm .hotbar-panel .btnrow{flex-direction:column;gap:4px}
+}

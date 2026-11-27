@@ -186,7 +186,7 @@ export function playTab(app, c, d) {
   const tk = (k, label, col) => `<button class="tk" style="--c:var(${col})" data-a="turnPip" data-k="${k}" aria-pressed="${!!t.spent[k]}" aria-label="${label} ${t.spent[k] ? "used" : "available"}"><i></i>${label}</button>`;
   const tracker = t.on
     ? `<div class="tracker" role="group" aria-label="This turn">${tk("Action", "Action", "--amber")}${tk("Bonus", "Bonus Action", "--green")}${tk("Reaction", "Reaction", "--blue")}
-        <button class="tk next" data-a="turnNext">${t.round ? "Next turn" : "Start combat"}</button>${t.round ? `<button class="tk" data-a="turnEnd">End</button><span class="rnd">Round <b>${t.round}</b></span>` : ""}<button class="tk" data-a="togglePref" data-k="turns" aria-pressed="true">Turn tracker: On</button></div>`
+        <button class="tk next" data-a="turnNext">${t.round ? "Next turn" : "Start combat"}</button>${t.round ? `<button class="tk" data-a="turnEnd">End</button><span class="rnd">Round <b>${t.round}</b></span>` : ""}</div>`
     : `<div class="tracker"><button class="tk next" data-a="togglePref" data-k="turns" aria-pressed="false">Turn tracker: Off</button></div>`;
   const trackerOut = phone && t.on && !t.round ? `<div class="tracker"><button class="tk next" data-a="turnNext">Start combat</button></div>` : tracker;
   const keys = app.prefs.keys !== false;

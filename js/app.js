@@ -244,8 +244,13 @@ function maybeStorageIntro() {
 const LS_HELP_INTRO = "dnd-help-intro-v1";
 const helpSeen = () => { try { return !!localStorage.getItem(LS_HELP_INTRO); } catch (e) { return true; } };
 // One-time hints: only on a quiet sheet, after the tours, one at a time with a pause between them.
-let hintPause = 0;
+let hintPause = 0, hintCool = null;
+// After a tour ends, hints wait 15 seconds or until the player moves to another tab or subtab.
+const hintPlace = () => [APP.screen, APP.sheetTab, APP.charSub, APP.classicSub].join("|");
+document.addEventListener("tour-end", () => { hintPause = Date.now() + 15000; hintCool = "pending"; setTimeout(() => render(), 15100); });
 function syncHint() {
+  if (hintCool === "pending") hintCool = hintPlace();
+  if (hintCool && (hintPlace() !== hintCool || Date.now() > hintPause)) { if (hintPlace() !== hintCool) hintPause = 0; hintCool = null; }
   const quiet = !navigator.webdriver && hintsOn(APP.prefs) && !APP.modal && !tourActive() && !APP._tourPending && storageAcked() && helpSeen()
     && ((APP.screen === "sheet" && APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen) || (APP.screen === "home" && !tourUnseen("home"))) && Date.now() > hintPause;
   const n = quiet ? nextHint(APP.screen === "home" ? "home" : "sheet") : null;
@@ -1548,7 +1553,7 @@ const ACTIONS = {
     };
     input.click();
   },
-  hintDone(el) { hintMark(el.dataset.id); clearHint(); hintPause = Date.now() + 6000; setTimeout(() => render(), 6100); },
+  hintDone(el) { hintMark(el.dataset.id); clearHint(); hintCool = null; hintPause = Date.now() + 6000; setTimeout(() => render(), 6100); },
   hintsOff() { APP.prefs.hints = false; savePrefs(); clearHint(); toast("Hints off"); },
   hintsShowAgain() { hintsReset(); APP.prefs.hints = true; savePrefs(); hintPause = 0; render(); toast("Hints on"); },
   testSound() { sfx("confirm"); sfx("dice"); },
