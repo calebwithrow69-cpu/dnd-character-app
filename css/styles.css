@@ -3547,3 +3547,4 @@ html[data-mode="dark"] .spi .em-c{fill:hsl(var(--h) 70% 62%)}
 .hint-bubble.enter{animation:hintPop .42s cubic-bezier(.2,.9,.3,1.2)}
 .hint-ring.enter{animation:hintRingIn .45s cubic-bezier(.2,.9,.3,1.1),hintPulse 2.2s ease-in-out .45s infinite}
 @media (prefers-reduced-motion:reduce){.hint-bubble.enter,.hint-ring.enter{animation:none}}
+.spg-page .results{max-height:none;overflow:visible}
