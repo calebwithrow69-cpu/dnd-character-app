@@ -2,11 +2,24 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.99";
+export const VERSION = "0.1.100";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.100",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Debug mode.",
+    groups: [
+      { title: "Settings", items: [
+        "Experimental features > Debug mode. Turning it on shows a warning and downloads a full backup first.",
+        "Edit character gets Debug fields for AC, speed, initiative, hit point max, Passive Perception, spell save DC and spell attack. Type the number you want.",
+        "Each override is a removable Debug bonus in the bonus list. Clear debug changes removes them all."
+      ] }
+    ]
+  },
   {
     v: "0.1.99",
     date: "2026-11-27",

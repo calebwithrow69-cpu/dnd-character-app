@@ -240,6 +240,8 @@ export function renderModal(app) {
         `<button class="btn" data-a="closeModal">Close</button>`);
     }
 
+    case "debugOn": return modalShell("Debug mode", `<div class="stack"><p class="sub2">Debug numbers skip the rules and stay until cleared.</p><p class="sub2">A full backup downloads first.</p></div>`, `<button class="btn" data-a="closeModal">Cancel</button><button class="btn danger" data-a="debugOnGo">Back up, enable</button>`);
+
     case "lootConfirm": {
       const b = boxById(m.box);
       if (!b) return "";
@@ -429,6 +431,10 @@ export function renderModal(app) {
           <p class="lab" style="margin-top:6px">Feats</p>
           <div class="rowline" style="border:0"><span class="nm">${c.feats.length} on the sheet</span><button class="btn sm" data-a="openPicker" data-picker="feats">Add feat</button></div>
           <p class="sub2">Adds the name only. Level up applies ability increases and choices.</p>
+          ${app.prefs.debug ? (() => { const dv = deriveCharacter(c), si = dv.spellInfo, set = (c.custom || []).filter(x => x.kind === "debug").length;
+            const row = (t, l, v) => v == null ? "" : `<div class="field"><label>${l}</label><input class="f num" type="number" inputmode="numeric" data-dbg="${t}" value="${v}"></div>`;
+            return `<p class="lab" style="margin-top:6px">Debug: set final numbers</p><div class="grid2">${row("ac", "Armor Class", dv.ac)}${row("speed", "Speed (ft)", dv.speed)}${row("init", "Initiative", dv.initiative)}${row("hp.max", "Hit point max", c.hp.max)}${row("pp", "Passive Perception", dv.passivePerception)}${row("spell.dc", "Spell save DC", si && si.dc)}${row("spell.atk", "Spell attack", si && si.attackBonus)}</div>
+            <button class="btn block" data-a="debugClear" ${set ? "" : "disabled"}>Clear debug changes${set ? " (" + set + ")" : ""}</button>`; })() : ""}
           <p class="lab" style="margin-top:6px">Custom bonuses</p>
           ${(c.custom || []).map(x => `<div class="rowline"><span class="nm">${esc(x.label || "Custom")} <span class="sub2">${esc((FX_TARGETS.find(t => t[0] === x.t) || [0, x.t])[1])}</span></span><b>${x.v > 0 ? "+" : ""}${x.v}</b><button class="iconbtn" data-a="customRemove" data-id="${esc(x.id)}" aria-label="Remove ${esc(x.label || "bonus")}">${ICONS.close}</button></div>`).join("")}
           <div class="grid3" style="grid-template-columns:1.4fr .7fr 1fr;gap:8px;align-items:end">

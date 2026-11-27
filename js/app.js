@@ -582,6 +582,7 @@ const PREF_TOGGLES = {
   cxfx: { get: p => p.cxfx !== false, set: (p, v) => { p.cxfx = v; } },
   concprompt: { get: p => !!p.concprompt, set: (p, v) => { p.concprompt = v; if (!v) APP.concPrompt = null; } },
   updateSplash: { get: p => p.updateSplash !== false, set: (p, v) => { p.updateSplash = v; } },
+  debug: { get: p => !!p.debug, set: (p, v) => { p.debug = v; } },
   experimental: { get: p => !!p.experimental, set: (p, v) => { p.experimental = v; if (!v && APP.shopCat === "loot") APP.shopCat = "All"; } },
   gwm: { get: () => !!APP.gwm, set: (p, v) => { APP.gwm = v; } }
 };
@@ -1121,6 +1122,15 @@ function onChange(e) {
     w[f] = f === "magic" ? parseInt(v, 10) || 0 : f === "ability" ? (v || null) : v;
     recheckEquipped(); save(); afterFieldChange(el); return;
   }
+  if (ds.dbg) {
+    const t = ds.dbg, d = deriveCharacter(c), want = parseInt(el.value, 10); if (!Number.isFinite(want)) return;
+    const cur = { ac: d.ac, speed: d.speed, init: d.initiative, pp: d.passivePerception, "hp.max": c.hp.max, "spell.dc": d.spellInfo && d.spellInfo.dc, "spell.atk": d.spellInfo && d.spellInfo.attackBonus }[t];
+    if (cur == null) return;
+    const old = (c.custom || []).filter(x => x.kind === "debug" && x.t === t), base = cur - old.reduce((s, x) => s + x.v, 0);
+    c.custom = (c.custom || []).filter(x => !(x.kind === "debug" && x.t === t));
+    if (want !== base) c.custom.push({ id: store.newId(), t, v: want - base, label: "Debug", kind: "debug" });
+    syncHp(c); c.hp.cur = Math.min(c.hp.cur, c.hp.max); saveAndRender(); return;
+  }
   if (ds.coin) { c.coins[ds.coin] = Math.max(0, parseInt(el.value, 10) || 0); save(); return; }
   if (ds.editAbility) { c.abilities[ds.editAbility] = Math.max(1, Math.min(30, parseInt(el.value, 10) || 10)); save(); afterFieldChange(el); return; }
   if (ds.edit) {
@@ -1505,9 +1515,12 @@ const ACTIONS = {
   wnRules() { APP.cu = null; APP.modal = { type: "contentUpdate" }; render(); },
   wnOff() { APP.prefs.updateSplash = false; savePrefs(); closeModal(); toast("Update window off"); },
   cuDone() { const u = pendingUpdate(APP.library, seenId()); if (u) markSeen(u.id); closeModal(); render(); },
+  debugOnGo() { exportChars(null, backupLabel(store.listCharacters())); APP.prefs.lastBackup = Date.now(); APP.prefs.debug = true; savePrefs(); closeModal(); render(); toast("Debug mode on"); },
+  debugClear() { const c = APP.char; c.custom = (c.custom || []).filter(x => x.kind !== "debug"); syncHp(c); saveAndRender(); toast("Debug changes cleared"); },
   togglePref(el) {
     const t = PREF_TOGGLES[el.dataset.k];
     if (!t) return;
+    if (el.dataset.k === "debug" && !APP.prefs.debug) { openModal({ type: "debugOn" }); return; }
     const v = !t.get(APP.prefs);
     t.set(APP.prefs, v); savePrefs(); applyPrefs();
     el.setAttribute("aria-checked", v ? "true" : "false");
@@ -1516,7 +1529,7 @@ const ACTIONS = {
       if (v) sfx("confirm");
     }
     if (el.dataset.k === "haptics" && v) { try { navigator.vibrate(30); } catch (e) { } }
-    if (["vignette", "contrast", "bigtap", "turns", "concprompt", "gwm", "showxp", "showquick", "experimental"].includes(el.dataset.k)) render();
+    if (["vignette", "contrast", "bigtap", "turns", "concprompt", "gwm", "showxp", "showquick", "experimental", "debug"].includes(el.dataset.k)) render();
   },
   setPrefV(el) {
     // Changing an already-chosen sheet style asks first; the very first pick applies at once.

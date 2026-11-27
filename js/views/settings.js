@@ -121,7 +121,8 @@ export function settingsBody(app) {
       <div class="setinfo"><div class="setlabel">Tours</div><div class="sethint">${rewardEarned() ? "Silver accent unlocked." : "Finish one to unlock the Silver accent."}</div></div>
       <div class="btnrow"><button class="btn" data-a="tourStart" data-id="home">Home tour</button><button class="btn" data-a="tourStart" data-id="sheet">Sheet tour</button><button class="btn" data-a="tourStart" data-id="dm">DM tour</button></div>
     </div>`;
-  const experimental = sw("experimental", "Loot boxes", "Adds a Loot boxes shelf to the Shop", !!p.experimental, { kw: "experimental beta gamble random" });
+  const experimental = sw("experimental", "Loot boxes", "Adds a Loot boxes shelf to the Shop", !!p.experimental, { kw: "experimental beta gamble random" }) +
+    sw("debug", "Debug mode", "Set sheet numbers by hand. Not for normal play.", !!p.debug, { kw: "debug override cheat edit numbers" });
   const about =
     sw("hints", "Hints", "One-time tips over parts that are new to a sheet.", p.hints !== false, { kw: "tips tutorial help bubbles" }) +
     `<div class="setrow" data-s="hints tips show again reset"><div class="setinfo"><div class="setlabel">Show hints again</div><div class="sethint">${hintsLeft()} not yet seen.</div></div><button class="btn sm" data-a="hintsShowAgain">Show</button></div>` +
