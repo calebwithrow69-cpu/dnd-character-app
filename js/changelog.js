@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.94";
+export const VERSION = "0.1.95";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.95",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Spells that change your sheet.",
+    groups: [
+      {
+        title: "Spell effects",
+        items: [
+          "13 spells now carry real effects: Longstrider, Shield of Faith, Shield, Mage Armor, Barkskin, Aid, Bless, Pass without Trace, Divine Favor, Hunter's Mark, Hex, Stoneskin, Darkvision.",
+          "Apply from Effects > Spells, or right after casting a spell with no roll. Aid asks which slot level.",
+          "Applied spells show as chips and in Effects, each with End. Concentration spells end when concentration does.",
+          "Barkskin sets AC to at least 17."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.94",
     date: "2026-11-27",

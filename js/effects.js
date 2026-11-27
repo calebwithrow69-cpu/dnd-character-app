@@ -21,6 +21,7 @@ const baseName = n => String(n || "").replace(/\s*\(.*$/, "");
 //   { t: target, op?: "add"|"set"|"max"|"min"|"adv"|"dis"|"reroll"|"grant", v?: Expr, when?: Cond, lv?: n, name?: label }
 // Targets (stat):  ac  ac.base  speed  init  hp.max  pp  save.<ab>|save.all  skill.<id>|skill.all|skill.nonprof  spell.dc  spell.atk
 // Targets (roll):  atk  dmg  check.<ab> (ability checks; skills also read their ability)  (use `when` with {attack:..} / {wield:..} to narrow them), plus save.* skill.* init for adv/dis
+// Targets (floor): ac.floor op max = armor class is at least this (Barkskin).
 // Targets (score): abil.<ab> adds to the ability score itself (a drain is a negative value); every modifier, save, skill and attack reads it through abilScore.
 // Targets (ability): abil.alt, op grant, v:{abil:"dex"} = a weapon or Unarmed Strike may use that modifier instead when it is better (Dexterous Attacks); `when` {wield:"monk"} = simple melee or Light martial weapon
 // Targets (grant): grant.resist.<type>  grant.immune.<type>  grant.prof.<skill|save|armor|weapon|tool>.<name>  grant.sense.<name>  grant.language.<name>
@@ -40,7 +41,7 @@ export const FX_TARGETS = [
   ["save.all", "All saving throws"], ["skill.all", "All skills"], ["spell.dc", "Spell save DC"], ["spell.atk", "Spell attack"]
 ];
 const ABS = "str|dex|con|int|wis|cha";
-const TARGET_RES = [new RegExp("^(check|abil)\\.(" + ABS + ")$"), /^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks|abil\.alt)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
+const TARGET_RES = [new RegExp("^(check|abil)\\.(" + ABS + ")$"), /^(ac|ac\.base|ac\.floor|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks|abil\.alt)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
   /^grant\.(resist|immune|prof|sense|language)\.[A-Za-z. ]+$/];
 const OPS = ["add", "set", "max", "min", "adv", "dis", "reroll", "grant"];
 const EXPR_KEYS = ["ctx", "perLevel", "lvl", "prof", "halfProf", "abil", "classLevel", "steps", "add", "mul", "half", "neg", "max", "min", "if", "dice"];
@@ -173,6 +174,7 @@ export const whenOk = (w, ctx) => evalCond(w, ctx || {}, {}); // older name (no 
 export function collectEffects(c) {
   const s = SRC(), out = [];
   const add = (label, list) => (list || []).forEach(e => { if (e && e.t && (e.lv || 0) <= (c.level || 1)) out.push({ ...e, src: e.name || label }); });
+  (c.spellfx || []).forEach(sf => (sf.effects || []).forEach(e => { if (e && e.t) out.push({ ...e, src: sf.name, spellfx: sf.id }); }));
   (c.custom || []).forEach(e => { if (e && e.t) out.push({ t: e.t, v: Number(e.v) || 0, src: e.label || "Custom", custom: true, id: e.id }); });
   conditionEffects(c).forEach(e => out.push(e));
   if (!s) return out;

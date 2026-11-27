@@ -76,6 +76,7 @@ import { syncCustom, loadCustom, saveCustom, blankCustom, customValid } from "./
 import { featAbilityIncrease, applyFeat, ASI_FEAT } from "./featfx.js";
 import { setEffectsSource, syncHp, FX_TARGETS } from "./effects.js";
 import { fxList as fxListHtml, SPELL_FX } from "./views/effects.js";
+import { hasFx, makeEntry } from "./spellfx.js";
 import { stepValidFor, spellsFor } from "./progression.js";
 import { downloadSheetPdf } from "./pdf.js";
 import { featUiDefault } from "./views/feats.js";
@@ -378,6 +379,7 @@ function render() {
 function renderOnce() {
   APP.nav = navStep(APP.nav || navBlank(), navHere(APP), APP._navBack); APP._navBack = false;
   persistLevelUp();
+  dropConcFx();
   const ae = document.activeElement, fsel = focusSelector(ae);
   const caret = fsel && isTextish(ae) ? [ae.selectionStart, ae.selectionEnd] : null;
   pendingRender = false;
@@ -391,6 +393,11 @@ function renderOnce() {
     const el = document.querySelector(fsel);
     if (el && el !== document.activeElement) { el.focus({ preventScroll: true }); if (caret && el.setSelectionRange) try { el.setSelectionRange(caret[0], caret[1]); } catch (e) { } }
   }
+}
+// Spell effects that need concentration end with it.
+function dropConcFx() {
+  const c = APP.char;
+  if (c && c.spellfx && c.spellfx.some(x => x.conc) && !c.concentration) { c.spellfx = c.spellfx.filter(x => !x.conc); syncHp(c); save(); }
 }
 function killCharacter(c, cause = "") {
   c.dead = { cause, at: new Date().toISOString().slice(0, 10) };
@@ -2168,11 +2175,29 @@ const ACTIONS = {
       if (!row || (used[lvl - 1] || 0) >= row.max) { toast("No slots of that level left"); return; }
       used[lvl - 1] = (used[lvl - 1] || 0) + 1;
     }
-    if (sp && sp.conc) c.concentration = name;
+    if (sp && sp.conc) { c.concentration = name; c.spellfx = (c.spellfx || []).filter(x => !x.conc); syncHp(c); }
     save(); closeModal();
     const rolled = spellRoll(sp, lvl || sp?.level || 1);
+    if (!rolled && hasFx(sp)) { openModal({ type: "applySpell", name, lvl: lvl || sp.level || 1 }); return; }
     if (!rolled) toast(`Cast ${name}${lvl ? ` with a level ${lvl} slot` : ""}${sp && sp.conc ? " — concentrating" : ""}`);
     else if (sp && sp.conc) toast("Concentrating on " + name);
+  },
+  applySpellOpen(el) { openModal({ type: "applySpell", name: el.dataset.name, lvl: +el.dataset.lvl || 0 }); },
+  applySpellGo(el) {
+    const c = APP.char, m = APP.modal, name = (m && m.name) || el.dataset.name, sp = findByName(APP.library.spells, name);
+    const lvl = +el.dataset.lvl || (m && m.lvl) || (sp && sp.level) || 1;
+    if (!hasFx(sp)) { closeModal(); return; }
+    const base = n => String(n).replace(/ \(level \d+\)$/, "");
+    c.spellfx = (c.spellfx || []).filter(x => base(x.name) !== sp.name);
+    if (sp.conc) { c.spellfx = c.spellfx.filter(x => !x.conc); c.concentration = sp.name; }
+    c.spellfx.push(makeEntry(sp, lvl, store.newId()));
+    syncHp(c); closeModal(); saveAndRender(); toast(sp.name + " applied");
+  },
+  spellfxEnd(el) {
+    const c = APP.char, x = (c.spellfx || []).find(y => y.id === el.dataset.id); if (!x) return;
+    c.spellfx = c.spellfx.filter(y => y.id !== x.id);
+    if (x.conc && c.concentration === x.name.replace(/ \(level \d+\)$/, "")) c.concentration = null;
+    syncHp(c); saveAndRender();
   },
   castCantrip(el) {
     const sp = findByName(APP.library.spells, el.dataset.name);

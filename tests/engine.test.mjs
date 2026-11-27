@@ -15,6 +15,7 @@ import { rerollsFor, ensureLuck, shortRestRefill } from "../js/riders.js";
 import { weaponNumbers, deriveCharacter } from "../js/rules.js";
 import { unarmedWeapons, attacksPerAction } from "../js/attackctx.js";
 import { computeAC } from "../js/gear.js";
+import { makeEntry, summary as fxSummary } from "../js/spellfx.js";
 import { abilScore, setEffectsSource, collectEffects, fxList, fxSum, fxStat, rollMods, grantsOf, hpParts, evalExpr, evalDice, diceAverage, validateEffect } from "../js/effects.js";
 
 let pass = 0, fail = 0;
@@ -474,6 +475,22 @@ t("ability drains lower the score, modifiers and saves, and ending one restores 
   c.custom = []; const d2 = deriveCharacter(c); eq([d2.mods.str, d2.saves.str], [3, 6]);
   c.custom = [{ id: "b", t: "abil.str", v: -20, label: "x" }]; eq(abilScore(c, "str"), 1);
   eq(validateEffect({ t: "abil.str", v: -1 }), []);
+});
+t("applied spells feed AC, speed and max HP; upcast grows; barkskin is a floor", () => {
+  setEffectsSource(() => ({ feats: [], classes: [], subclasses: [], species: [], effectsV: 1 }));
+  const base = { level: 5, class: "Druid", abilities: { str: 10, dex: 14, con: 14, int: 10, wis: 16, cha: 8 }, saveProf: [], equipment: {}, inventory: [], custom: [], conditions: [], hp: { cur: 30, max: 30, base: [], adjust: 0 } };
+  const mk = (n, lvl, sp) => makeEntry({ name: n, level: sp.level, conc: !!sp.conc, effects: sp.effects }, lvl, n);
+  const aid = { level: 2, effects: [{ t: "hp.max", v: 5, up: 5 }] };
+  eq(mk("Aid", 2, aid).effects[0].v, 5); eq(mk("Aid", 4, aid).effects[0].v, 15);
+  const shield = mk("Shield of Faith", 1, { level: 1, conc: true, effects: [{ t: "ac", v: 2 }] });
+  const a0 = computeAC({ ...base, spellfx: [] }).total, a1 = computeAC({ ...base, spellfx: [shield] }).total; eq(a1 - a0, 2);
+  const bark = mk("Barkskin", 2, { level: 2, conc: true, effects: [{ t: "ac.floor", op: "max", v: 17 }] });
+  eq(computeAC({ ...base, spellfx: [bark] }).total, 17);
+  eq(computeAC({ ...base, spellfx: [bark, shield] }).total, 17);
+  const ls = mk("Longstrider", 1, { level: 1, effects: [{ t: "speed", v: 10 }] });
+  eq(deriveCharacter({ ...base, spellfx: [ls] }).speed - deriveCharacter({ ...base, spellfx: [] }).speed, 10);
+  eq(fxSummary(ls.effects), "Speed +10");
+  eq(validateEffect({ t: "ac.floor", op: "max", v: 17 }), []);
 });
 console.log(`${pass}/${pass + fail} engine checks passed`);
 process.exit(fail ? 1 : 0);

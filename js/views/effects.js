@@ -6,6 +6,7 @@ import { CONDITIONS, ABILITIES, ABILITY_LABEL } from "../rules.js";
 import { condLine } from "../conditions.js";
 import { condEffectsBlock } from "./tools.js";
 import { FX_TARGETS } from "../effects.js";
+import { spellsWithFx, summary } from "../spellfx.js";
 
 export const FX_TABS = [["all", "All"], ["conditions", "Conditions"], ["spells", "Spells"], ["drains", "Drains"], ["custom", "Custom"]];
 
@@ -34,12 +35,17 @@ function condRows(app, c, q) {
   return rows || exh ? `<div class="condgrid">${rows}</div>${exh}` : "";
 }
 function activeRows(c, q) {
-  return (c.custom || []).filter(x => match(q, x.label, tLabel(x.t))).map(x => `<div class="rowline"><span class="nm">${esc(x.label || "Effect")} <span class="sub2">${esc(tLabel(x.t))}</span></span><b>${sg(x.v)}</b>
+  const sp = (c.spellfx || []).filter(x => match(q, x.name, summary(x.effects))).map(x => `<div class="rowline"><span class="nm">${esc(x.name)} <span class="sub2">${esc(summary(x.effects))}${x.conc ? " \u00b7 Concentration" : ""}</span></span>
+    <button class="btn sm" data-a="spellfxEnd" data-id="${esc(x.id)}" aria-label="End ${esc(x.name)}">End</button></div>`).join("");
+  return sp + (c.custom || []).filter(x => match(q, x.label, tLabel(x.t))).map(x => `<div class="rowline"><span class="nm">${esc(x.label || "Effect")} <span class="sub2">${esc(tLabel(x.t))}</span></span><b>${sg(x.v)}</b>
     <button class="btn sm" data-a="customRemove" data-id="${esc(x.id)}" aria-label="End ${esc(x.label || "effect")}">End</button></div>`).join("");
 }
-function spellRows(q) {
-  return SPELL_FX.map((x, i) => ({ x, i })).filter(({ x }) => match(q, x.name, x.note, tLabel(x.t))).map(({ x, i }) =>
+function spellRows(app, q) {
+  const lib = spellsWithFx(app.library);
+  if (!lib.length) return SPELL_FX.map((x, i) => ({ x, i })).filter(({ x }) => match(q, x.name, x.note, tLabel(x.t))).map(({ x, i }) =>
     `<div class="rowline"><span class="nm">${esc(x.name)} <span class="sub2">${esc(tLabel(x.t))} ${sg(x.v)} \u00b7 ${esc(x.note)}</span></span><button class="btn sm" data-a="fxPreset" data-i="${i}">Apply</button></div>`).join("");
+  return lib.filter(s => match(q, s.name, summary(s.effects))).map(s =>
+    `<div class="rowline"><span class="nm">${esc(s.name)} <span class="sub2">${esc(summary(s.effects))}${s.conc ? " \u00b7 Concentration" : ""}</span></span><button class="btn sm" data-a="applySpellOpen" data-name="${esc(s.name)}" data-lvl="${s.level}">Apply</button></div>`).join("");
 }
 function drainForm(m) {
   return `<div class="grid3" style="grid-template-columns:1.2fr .8fr 1fr;gap:8px;align-items:end">
@@ -65,7 +71,7 @@ export function fxList(app, c) {
   let out = "";
   if (tab === "all") out += sec("Active", activeRows(c, q) || (q ? "" : `<p class="sub2">Nothing active.</p>`));
   if (show("conditions")) out += sec("Conditions", condRows(app, c, q));
-  if (show("spells")) out += sec("Spell effects", spellRows(q)) + (tab !== "all" ? sec("Active", act) : "");
+  if (show("spells")) out += sec("Spell effects", spellRows(app, q)) + (tab !== "all" ? sec("Active", act) : "");
   if (show("drains") && !q) out += sec("Drains", drainForm()) + (tab !== "all" ? sec("Active", act) : "");
   if (show("custom") && !q) out += sec("Custom effect", customForm()) + (tab !== "all" ? sec("Active", act) : "");
   if (tab === "all" && !q) out += `<p class="sub2">Pick Spells, Drains or Custom to add one.</p>`;

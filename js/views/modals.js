@@ -5,6 +5,7 @@ import { esc, modalShell, searchBox, ICONS, hotbarToggle } from "../ui.js";
 import { boxById, boxByName } from "../lootbox.js";
 import { renderWhatsNew } from "./whatsnew.js";
 import { renderEffectsModal } from "./effects.js";
+import { hasFx, upLevels, summary as spellSummary } from "../spellfx.js";
 import { oddsList } from "./lootbox.js";
 import {
   ABILITIES, ABILITY_LABEL, CONDITIONS, abilityMod, fmtMod, deriveCharacter, hpAverageGain, slotRows
@@ -145,6 +146,17 @@ export function renderModal(app) {
     case "levelMenu": return renderLevelMenu(app);
 
     case "cxShop": return renderCxShop(app);
+    case "applySpell": {
+      const sp = findByName(app.library.spells, m.name);
+      if (!hasFx(sp)) return "";
+      const ups = upLevels(sp);
+      const lvls = ups.length ? (m.lvl >= sp.level ? [m.lvl] : []).concat(ups.filter(l => l !== m.lvl)) : [];
+      return modalShell(`Apply ${sp.name}`,
+        `<p class="sub2" style="margin-bottom:10px">${esc(spellSummary(sp.effects))}${sp.conc ? " \u00b7 Concentration" : ""}</p>
+         ${ups.length ? `<div class="optlist" style="margin-top:0">${lvls.map(l => `<button class="optcard" data-a="applySpellGo" data-lvl="${l}"><span class="grow"><b>Level ${l}</b><span>${esc(spellSummary(sp.effects.map(e => typeof e.v === "number" && e.up ? { ...e, v: e.v + e.up * (l - sp.level) } : e)))}</span></span></button>`).join("")}</div>`
+         : `<button class="btn pri block" data-a="applySpellGo" data-lvl="${sp.level}">Apply to yourself</button>`}
+         <button class="btn ghost block" style="margin-top:10px" data-a="closeModal">Not now</button>`);
+    }
     case "cast": {
       const sp = findByName(app.library.spells, m.name) || { name: m.name, level: 1 };
       const rows = slotRows(c.class, c.level).filter(r => r.level >= sp.level);

@@ -165,6 +165,8 @@ export function computeAC(char) {
   if (ac.bonus) { total += +ac.bonus; parts.push(["Other", +ac.bonus]); }
   const ctx = { armored: !!(armorItem && a && a.base != null), heavy: !!(a && a.cat === "Heavy"), shield: !!shieldItem || !!(ac.shield && !eq.off) };
   fxList(char, "ac", ctx).forEach(x => { total += x.v; parts.push([x.src, x.v]); });
+  const fl = fxStat(char, "ac.floor", total, ctx);
+  if (fl.total > total) { parts.push([(fl.parts[fl.parts.length - 1] || ["Floor"])[0].replace(/ \(better base\)$/, "") + " (AC at least " + fl.total + ")", fl.total - total]); total = fl.total; }
   return { total, parts, mode, warn, stealthDis: !!(a && a.stealth), armored: ctx.armored, heavy: ctx.heavy, shield: ctx.shield };
 }
 
