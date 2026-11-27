@@ -3,16 +3,22 @@
 export const BLOCKS = [
   { id: "identity", label: "Identity", about: "Class, subclass, species, background", wide: true },
   { id: "status", label: "Status", about: "Inspiration, size, hit dice, death saves", wide: true },
-  { id: "abilities", label: "Abilities, saves and skills", about: "The six scores with their rolls" },
+  { id: "abilities", label: "Ability cards", about: "Each score with its save and skills" },
+  { id: "statweb", label: "Stat web", about: "Radar of the six scores, tap to roll" },
+  { id: "skills", label: "Saves and skills", about: "Searchable list with proficiency and rolls" },
   { id: "weapons", label: "Weapons and damage", about: "Attacks and cantrips" },
   { id: "spellcasting", label: "Spellcasting", about: "Ability, DC, attack bonus, slots", caster: true },
   { id: "senses", label: "Senses and defenses", about: "Passives, senses, resistances" },
   { id: "trackers", label: "Trackers", about: "Limited-use counters and rations" },
+  { id: "equipped", label: "Equipped", about: "Armor class, attunement, worn gear, weight" },
+  { id: "coins", label: "Coins", about: "Purse with add and spend" },
+  { id: "feats", label: "Feats", about: "Your feats, tap to read" },
   { id: "profs", label: "Proficiencies and languages", about: "Armor, weapons, tools, languages" },
   { id: "details", label: "Character details", about: "Alignment, appearance, backstory" }
 ];
 export const PRESETS = [
-  { id: "printed", label: "Printed sheet", about: "The 2024 sheet's order", on: ["identity", "status", "abilities", "weapons", "spellcasting", "senses", "trackers"] },
+  { id: "printed", label: "Printed sheet", about: "The 2024 sheet's order", on: ["identity", "status", "abilities", "weapons", "spellcasting", "senses", "trackers", "profs", "details"] },
+  { id: "web", label: "Stat web", about: "Radar, then saves and skills", on: ["status", "statweb", "skills", "senses", "profs", "details"] },
   { id: "numbers", label: "Numbers", about: "Scores, saves, skills, proficiencies", on: ["status", "abilities", "senses", "profs"] },
   { id: "caster", label: "Caster", about: "Spells up front", on: ["status", "spellcasting", "abilities", "trackers", "senses"] },
   { id: "combat", label: "Combat", about: "Attacks and counters first", on: ["status", "weapons", "trackers", "abilities", "senses", "spellcasting"] }

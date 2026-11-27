@@ -9,10 +9,11 @@ import { ABILITIES, ABILITY_LABEL, fmtMod, deriveCharacter, PROF_GROUPS } from "
 import { findByName, enabledSpells } from "../data.js";
 import { grantsOf } from "../effects.js";
 import { optionNames, optionGroup } from "../progression.js";
-import { attacksPanel, needsFirstChoices, spellsTab } from "./sheet.js";
+import { attacksPanel, needsFirstChoices, spellsTab, coinsPanel, weightBar } from "./sheet.js";
+import { statCard, skillsMain } from "./stats.js";
+import { SLOTS, itemById, attunedCount, weaponsOf } from "../gear.js";
 import { classicGear } from "./classicgear.js";
 import { subclassesFor } from "../data.js";
-import { weaponsOf } from "../gear.js";
 import { trackersPanel } from "./trackers.js";
 import { playTab, trackHtml } from "./play.js";
 
@@ -140,6 +141,15 @@ export function classicBody(app, c, d) {
       <div class="cvals three">${val("Ability", ABILITY_LABEL[si.ability])}${val("Modifier", fmtMod(si.mod))}${val("Spell save DC", si.dc)}${val("Spell attack", fmtMod(si.attackBonus))}</div>${slotPips(si, c)}</div></div>` : "",
     senses: () => sensesPanel(c, d),
     trackers: () => trackersPanel(c),
+    statweb: () => statCard(app, c, d),
+    skills: () => skillsMain(app, c, d),
+    equipped: () => { const eq = SLOTS.map(sl => [sl.label, itemById(c, c.equipment && c.equipment[sl.key])]).filter(x => x[1]);
+      return `<div class="panel"><div class="panel-head"><h2>Equipped</h2></div><div class="panel-body stack"><div class="cg-stats"><div><span>Armor class</span><b>${d.ac}</b></div><div><span>Attuned</span><b>${attunedCount(c)}/3</b></div><div><span>Items</span><b>${c.inventory.length}</b></div></div>${weightBar(c)}
+        ${eq.length ? eq.map(([l, it]) => `<div class="rowline"><span class="nm">${esc(it.name)}</span><span class="sub2">${esc(l)}</span></div>`).join("") : `<p class="muted small" style="margin:0">Nothing equipped.</p>`}</div></div>`; },
+    coins: () => `<div class="panel"><div class="panel-head"><h2>Coins</h2></div><div class="panel-body">${coinsPanel(c)}</div></div>`,
+    feats: () => `<div class="panel"><div class="panel-head"><h2>Feats</h2></div><div class="panel-body flush">${c.feats.length
+      ? c.feats.map((f, i) => `<button class="rowline rollable" data-a="showDetail" data-kind="feat" data-name="${esc(f)}" data-i="${i}"><span class="nm">${esc(f)}</span><span class="sub2">Feat</span></button>`).join("")
+      : `<p class="muted small" style="padding:12px 0">No feats yet.</p>`}</div></div>`,
     profs: () => profsBox,
     details: () => detailsPanel(c)
   };

@@ -38,7 +38,7 @@ function skillRows(app, c, d) {
   return d.skills.filter(s => (f === "All" || (f === "Proficient" ? (s.proficient || s.expert) : s.ability === f)) && (!q || s.label.toLowerCase().includes(q)));
 }
 
-export function statsTab(app, c, d) {
+function statParts(app, c, d) {
   const cls = findByName(app.library.classes, c.class);
   const prim = a => cls && String(cls.primary || "").includes(ABILITY_LABEL[a]);
   const tiles = ABILITIES.map(a => `<button class="st-six ${prim(a) ? "p" : ""}" data-a="rollAbility" data-ab="${a}" aria-label="${ABILITY_LABEL[a]} ${c.abilities[a]}, modifier ${fmtMod(d.mods[a])}. Roll check">
@@ -56,18 +56,27 @@ export function statsTab(app, c, d) {
       actions: `<button class="pip st-pip" data-a="cycleSkill" data-id="${s.id}" aria-label="${esc(s.label)} proficiency: ${s.expert ? "expertise" : s.proficient ? "proficient" : "none"}"><i style="width:14px;height:14px;${s.expert ? "box-shadow:0 0 0 3px var(--amber-dim),0 0 0 5px var(--amber);" : ""}${s.proficient || s.expert ? "" : "background:transparent;border-color:var(--faint)"}"></i></button>${starBtn(c, key, s.label)}${rollBtn(`data-a="rollSkill" data-id="${s.id}"`, s.bonus, s.label)}` });
   }).join("");
   const seg = FILTERS.map(k => `<button data-a="stFilter" data-k="${k}" aria-pressed="${(app.stF || "All") === k}">${k === "All" || k === "Proficient" ? k : AB(k)}</button>`).join("");
-  return `<div class="st-grid">
-    <aside class="st-card" aria-label="Ability scores">
+  const card = `<aside class="st-card" aria-label="Ability scores">
       ${radar(c)}<div class="st-sixg">${tiles}</div>
       <button class="st-init" data-a="rollInit">${dieIcon}<span>Initiative</span><b>${fmtMod(d.initiative)}</b></button>
-    </aside>
-    <section class="st-main">
+    </aside>`;
+  const main = `<section class="st-main">
       ${kGroup("Saving throws", c.saveProf.length + " proficient", { tone: "amber" })}<div class="k-list">${saves}</div>
       ${kGroup("Skills", sk.length, { tone: "blue" })}
       <div class="st-find"><div class="seg" role="group" aria-label="Filter skills">${seg}</div>
         <label class="st-q"><span class="sr">Search skills</span>${ICONS.search || ""}<input id="st-q" type="search" placeholder="Search" value="${esc(app.stQ || "")}" autocomplete="off"></label></div>
       <div class="k-list">${skills || `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`}</div>
-    </section>
+    </section>`;
+  return { card, main };
+}
+export const statCard = (app, c, d) => statParts(app, c, d).card;
+export const skillsMain = (app, c, d) => statParts(app, c, d).main;
+
+export function statsTab(app, c, d) {
+  const { card, main } = statParts(app, c, d);
+  return `<div class="st-grid">
+    ${card}
+    ${main}
     <aside class="st-side">
       <div class="panel"><div class="panel-head"><h2>Proficiencies &amp; languages</h2></div><div class="panel-body stack">
         ${profsChecks(c)}

@@ -2,11 +2,26 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.112";
+export const VERSION = "0.1.113";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.113",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Stat web and more Sheet blocks.",
+    groups: [
+      { title: "Sheet", items: [
+        "New Stat web block: the ability radar with six tap-to-roll score tiles and Initiative.",
+        "New Saves and skills block: searchable list with proficiency, filters and roll buttons.",
+        "New blocks: Equipped (armor class, attunement, weight, worn gear), Coins and Feats.",
+        "Character details and Proficiencies now show on the Sheet page by default; they leave the Features page while shown.",
+        "New Stat web preset. Ability cards keep their old look."
+      ] }
+    ]
+  },
   {
     v: "0.1.112",
     date: "2026-11-27",
