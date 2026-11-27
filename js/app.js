@@ -74,6 +74,7 @@ import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, fu
 import { syncCustom, loadCustom, saveCustom, blankCustom, customValid } from "./custombg.js";
 import { featAbilityIncrease, applyFeat, ASI_FEAT } from "./featfx.js";
 import { setEffectsSource, syncHp, FX_TARGETS } from "./effects.js";
+import { fxList as fxListHtml, SPELL_FX } from "./views/effects.js";
 import { stepValidFor, spellsFor } from "./progression.js";
 import { downloadSheetPdf } from "./pdf.js";
 import { featUiDefault } from "./views/feats.js";
@@ -96,7 +97,7 @@ const APP = {
   roll: null, history: [], diceFormula: "",
   modal: null, pickerQuery: "", pickerLevel: null, pickerAllClasses: false, rulesQuery: "", sheetQuery: "",
   gl: null, marks: null,
-  setOpen: new Set(["appearance", "feel"]),
+  setOpen: new Set(["appearance"]),
   prefs: readPrefs(), installDismissed: readFlag(LS_INSTALL), persisted: false
 };
 window.APP = APP; // handy from the browser console
@@ -389,7 +390,7 @@ function lockDead() {
   if (["settings", "notes"].includes(APP.sheetTab)) { mount.querySelectorAll(".sheetview [data-a=openEdit]").forEach(el => el.setAttribute("inert", "")); return; }
   mount.querySelectorAll(".sheetview main.page > :not(.deadbar), .sheetview [data-a=openEdit], .sheetview nav").forEach(el => el.setAttribute("inert", ""));
 }
-const DEAD_OK = new Set(["helpOpen", "tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "navBack", "toCharacter", "goRoster", "editCause", "goNotes"]);
+const DEAD_OK = new Set(["helpOpen", "tourAsk", "tourConfirm", "tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "navBack", "toCharacter", "goRoster", "editCause", "goNotes"]);
 const inNotes = () => APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes");
 // Sheet pages (Notes, Shop, Settings) open inside the sheet frame like Rules does.
 function openPage(tab) { closeModal(); APP.selItem = null; APP.hubOpen = false; APP.sheetTab = tab; render(); window.scrollTo(0, 0); }
@@ -520,7 +521,10 @@ function rollSpec(spec, hooks = {}) {
   startRoll(spec, {
     mode: APP.prefs.rollfx || "full",
     commit: (parts, alt) => commitRoll(spec.title, parts, alt),
-    spend: name => { const r = c.resources.find(x => x.name === name); if (r && r.max - r.used > 0) { r.used += 1; save(); } },
+    spend: name => {
+      if (name.startsWith("slot:")) { const u = c.spellcasting.slotsUsed, k = +name.slice(5) - 1; u[k] = (u[k] || 0) + 1; save(); return; }
+      const r = c.resources.find(x => x.name === name); if (r && r.max - r.used > 0) { r.used += 1; save(); }
+    },
     consume: id => { const r = (spec.rerolls || []).find(x => x.id === id); if (!r) return; if (r.insp) c.inspiration = false; if (r.once) { APP.turn.once = APP.turn.once || {}; APP.turn.once[r.id] = true; } save(); },
     markOnce: id => { APP.turn.once = APP.turn.once || {}; APP.turn.once[id] = true; },
     onceUsed: id => !!(APP.turn.once && APP.turn.once[id]),
@@ -1025,6 +1029,7 @@ function onInput(e) {
     if (r) r.innerHTML = APP.modal.picker === "spells" ? renderSpellResults(APP) : renderGearResults(APP, APP.modal.picker);
     return;
   }
+  if (ds.query === "fx") { APP.fxQ = el.value; const r = document.getElementById("fx-list"); if (r && APP.char) r.innerHTML = fxListHtml(APP, APP.char); return; }
   if (ds.query === "cxshop") { APP.cxShopQuery = el.value; const r = document.getElementById("results-cxshop"); if (r) r.innerHTML = renderCxShopResults(APP); return; }
   if (ds.query === "shop") { APP.shopQuery = el.value; const r = document.getElementById("results-shop"); if (r) r.innerHTML = renderShopResults(APP); return; }
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
@@ -1195,6 +1200,17 @@ const ACTIONS = {
     try { const dbs = indexedDB.databases ? await indexedDB.databases() : [{ name: "dnd-kv" }, { name: "dnd-portraits" }]; await Promise.all(dbs.map(d => new Promise(r => { const q = indexedDB.deleteDatabase(d.name); q.onsuccess = q.onerror = q.onblocked = () => r(); }))); } catch (e) { /* ignore */ }
     try { if (navigator.serviceWorker) await Promise.all((await navigator.serviceWorker.getRegistrations()).map(r => r.unregister())); if (window.caches) await Promise.all((await caches.keys()).map(k => caches.delete(k))); } catch (e) { /* ignore */ }
     location.replace(location.pathname);
+  },
+  tourAsk(el) { openModal({ type: "tourAsk", id: el.dataset.id }); },
+  // Confirmed from Help: go where the tour lives, then start it.
+  tourConfirm() {
+    const id = APP.modal && APP.modal.id; closeModal();
+    if (id === "home") { if (APP.screen !== "home") ACTIONS.goHome(); }
+    else if (id === "sheet") {
+      if (!(APP.screen === "sheet" && APP.char)) { const last = lastCharacter(APP); if (!last) { toast("No character yet"); return; } ACTIONS.openChar({ dataset: { id: last.id } }); }
+    } else if (id === "dm") { if (APP.screen !== "dmmode" || !APP.dmm) ACTIONS.goDmMode(); }
+    else return;
+    setTimeout(() => ACTIONS.tourStart({ dataset: { id } }), 350);
   },
   tourStart(el) {
     const id = el.dataset.id;
@@ -2031,7 +2047,26 @@ const ACTIONS = {
   quickReset() { delete APP.prefs.quick; savePrefs(); render(); },
   toolOpen(el) { openModal({ type: "tool", id: el.dataset.id }); },
   calcKey(el) { APP.calc = calcPress(APP.calc || {}, el.dataset.k); render(); },
-  openConditions() { openModal({ type: "conditions" }); },
+  openConditions() { APP.fxQ = ""; APP.fxTab = "all"; openModal({ type: "conditions" }); },
+  fxTab(el) { APP.fxTab = el.dataset.v; APP.fxQ = ""; render(); },
+  fxPreset(el) {
+    const p = SPELL_FX[+el.dataset.i], c = APP.char; if (!p) return;
+    c.custom = c.custom || [];
+    if (c.custom.some(x => x.label === p.name)) { toast(p.name + " is already active"); return; }
+    c.custom.push({ id: store.newId(), t: p.t, v: p.v, label: p.name, kind: "spell" });
+    syncHp(c); saveAndRender();
+  },
+  fxRollDrain(el) {
+    const n = document.getElementById("fx-n"); if (n) n.value = rollDie(+el.dataset.d);
+  },
+  fxDrain() {
+    const ab = document.getElementById("fx-ab"), n = document.getElementById("fx-n"), l = document.getElementById("fx-l");
+    const v = Math.max(1, Math.min(20, parseInt(n && n.value, 10) || 0));
+    if (!ab || !n || !parseInt(n.value, 10)) { toast("Enter an amount"); return; }
+    const c = APP.char; c.custom = c.custom || [];
+    c.custom.push({ id: store.newId(), t: "abil." + ab.value, v: -v, label: (l && l.value.trim()) || ABILITY_LABEL[ab.value] + " Drain", kind: "drain" });
+    syncHp(c); saveAndRender();
+  },
   toggleCondition(el) {
     const list = APP.char.conditions, n = el.dataset.name, i = list.indexOf(n);
     if (i >= 0) list.splice(i, 1); else list.push(n);
@@ -2362,7 +2397,7 @@ const ACTIONS = {
     const n = weaponNumbers(w, c), exh = c.exhaustion * 2;
     const pb = APP.gwm && c.feats.includes("Great Weapon Master") && /heavy/i.test(w.props || "") ? d.prof : 0;
     const mastery = w.mastery && (c.masteries || []).includes(it.name) ? `mastery: ${w.mastery}` : (w.via ? `using ${w.via}` : "");
-    const rid = ridersFor(APP, c, d, { kind: "weapon" });
+    const rid = ridersFor(APP, c, d, { kind: "weapon", melee: !!(n.ctx && n.ctx.wield && n.ctx.wield.melee) });
     const asRider = (r, i, k) => ({ id: `fx${k}${i}`, label: r.src, dice: r.dice || undefined, flat: r.flat || undefined, note: r.note || "", once: r.once, res: r.res || undefined });
     n.riders.atk.forEach((r, i) => rid.attack.push(asRider(r, i, "a")));
     n.riders.dmg.forEach((r, i) => rid.damage.push(asRider(r, i, "d")));

@@ -116,7 +116,7 @@ export function normalize(c, library) {
   { const fixed = repairLevels(out); out.levelFix = fixed.length ? fixed : (Array.isArray(c.levelFix) ? c.levelFix : []); }
   out.dead =c.dead && typeof c.dead === "object" ? { cause: String(c.dead.cause || "").slice(0, 300), at: String(c.dead.at || "").slice(0, 10) } : null;
   out.hpRoll = c.hpRoll && c.hpRoll.level ? { level: Number(c.hpRoll.level), v: Number(c.hpRoll.v) } : undefined;
-  out.custom = (Array.isArray(c.custom) ? c.custom : []).filter(x => x && x.id && x.t).map(x => ({ id: x.id, t: x.t, v: Number(x.v) || 0, label: x.label || "Custom" }));
+  out.custom = (Array.isArray(c.custom) ? c.custom : []).filter(x => x && x.id && x.t).map(x => ({ id: x.id, t: x.t, v: Number(x.v) || 0, label: String(x.label || "Custom").slice(0, 40), kind: x.kind ? String(x.kind).slice(0, 12) : undefined }));
   out.schema = 3;
   if (!out.profs) { const r = parseProfs(out.profsText); out.profs = r.profs; out.profsText = r.rest; }
   return out;

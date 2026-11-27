@@ -2,11 +2,43 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.89";
+export const VERSION = "0.1.90";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.90",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Active effects menu, smite prompts, one accent colour, cleaner Settings.",
+    groups: [
+      {
+        title: "Active effects",
+        items: [
+          "The Conditions menu is now Active effects, with search and tabs: Conditions, Spells, Drains, Custom.",
+          "Spells tab: Aid, Shield of Faith, Shield and Longstrider apply in one tap and End in one tap. Aid raises max and current HP.",
+          "Drains tab: lower an ability score (roll 1d4 or 1d6). Modifiers, saves, skills, attacks, spell DC and HP follow it.",
+          "Active effects show as chips under the header."
+        ]
+      },
+      {
+        title: "Rolls",
+        items: [
+          "Smite spells and Divine Smite are offered after a melee weapon damage roll, one chip per slot level. Slots are spent when you pick one.",
+          "Paladins get the free Divine Smite once per long rest."
+        ]
+      },
+      {
+        title: "Help and look",
+        items: [
+          "The ? menu now asks before starting a tour, then takes you to the right screen.",
+          "Accent colour now changes the header, cards, level seal and Home card, not just buttons.",
+          "Settings regrouped into 8 sections, only Appearance open at first. Accessibility joined Appearance. Per-section reset buttons removed, Reset settings stays."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.89",
     date: "2026-11-26",

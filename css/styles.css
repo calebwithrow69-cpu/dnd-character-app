@@ -753,16 +753,16 @@ g[data-worn].pop{animation:wornIn .45s cubic-bezier(.3,.9,.3,1.4)}
 .ibtn2{width:42px;height:42px;display:grid;place-items:center;border-radius:var(--card-ri);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:0;min-height:0}
 .ibtn2 svg{width:22px;height:22px}
 .hh-mid{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:22px;width:100%;max-width:460px;margin:0 auto}
-.hero{position:relative;display:block;width:100%;padding:22px 20px 18px;border-radius:18px;text-align:left;color:#fff;background:linear-gradient(160deg,#7A1F2B,#4A101A);border:1px solid #00000033;box-shadow:inset 0 1px 0 #ffffff33,0 14px 30px #3a0a1240;overflow:hidden;min-height:0}
+.hero{position:relative;display:block;width:100%;padding:22px 20px 18px;border-radius:18px;text-align:left;color:#fff;background:linear-gradient(160deg,var(--card-hi),var(--card-lo));border:1px solid #00000033;box-shadow:inset 0 1px 0 #ffffff33,0 14px 30px #3a0a1240;overflow:hidden;min-height:0}
 .hero::before{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;border-radius:50%;border:1px solid #ffffff22;box-shadow:0 0 0 28px #ffffff09,0 0 0 60px #ffffff05;pointer-events:none}
-.hero .k,.hero .s{text-align:left}.hero .k{display:block;font-family:var(--display);font-size:.7rem;letter-spacing:.22em;color:#F0C9BE}
+.hero .k,.hero .s{text-align:left}.hero .k{display:block;font-family:var(--display);font-size:.7rem;letter-spacing:.22em;color:var(--card-label)}
 .hero h2{position:relative;font-family:var(--display);font-weight:700;font-size:1.65rem;line-height:1.15;margin:8px 0 4px;color:#fff}
-.hero .s{display:block;position:relative;font-size:.95rem;color:#F1D8D0}
+.hero .s{display:block;position:relative;font-size:.95rem;color:var(--card-sub)}
 .hstats{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:18px;background:#ffffff2b;border-radius:10px;overflow:hidden}
-.hstats div{background:#3A0D16;padding:11px 4px;text-align:center}
+.hstats div{background:var(--card-inset);padding:11px 4px;text-align:center}
 .hstats b{display:block;font-family:var(--display);font-size:1.3rem;font-weight:600}
-.hstats small{display:block;font-size:.62rem;letter-spacing:.14em;color:#E6BBB0;margin-top:2px}
-.hgo{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding:14px;border-radius:11px;background:#F5ECD6;color:#4A101A;font-family:var(--display);font-weight:700;font-size:.82rem;letter-spacing:.16em}
+.hstats small{display:block;font-size:.62rem;letter-spacing:.14em;color:var(--card-label);margin-top:2px}
+.hgo{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding:14px;border-radius:11px;background:#F5ECD6;color:var(--card-accent-ink);font-family:var(--display);font-weight:700;font-size:.82rem;letter-spacing:.16em}
 .hgo svg{width:18px;height:18px}
 .float{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .fbtn{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 4px 12px;border-radius:var(--card-ri);background:var(--panel);border:1px solid var(--line);color:var(--ink);box-shadow:0 10px 22px #2a1a1022;font-family:var(--display);font-weight:700;font-size:.72rem;letter-spacing:.14em;min-height:0}
@@ -2516,6 +2516,15 @@ html[data-size="small"] body{zoom:.92}
 /* ===== TOUR ===== */
 :root[data-accent="silver"][data-mode="dark"]{--amber:#C3CCD6;--amber-dim:#2B323A}
 :root[data-accent="silver"][data-mode="light"]{--amber:#4C5A69;--amber-dim:#DCE2E8}
+/* The level wax seal follows the accent too */
+:root[data-accent] .seal .wax{background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--amber) 85%,#fff),var(--amber) 55%,color-mix(in srgb,var(--amber) 55%,#000))}
+/* Accent also recolours the card surfaces (sheet header, vitals, rail), which were fixed oxblood */
+:root[data-accent="teal"]{--card-hi:#1E5E57;--card-lo:#0F3A36;--card-inset:#0A2A27;--card-sub:#D3ECE7;--card-label:#A9D6CE;--card-accent-ink:#0F3A36}
+:root[data-accent="violet"]{--card-hi:#4B3A87;--card-lo:#2B2050;--card-inset:#1F1640;--card-sub:#E1DAF4;--card-label:#C6BAE8;--card-accent-ink:#2B2050}
+:root[data-accent="gold"]{--card-hi:#7A5A12;--card-lo:#4A3508;--card-inset:#3A2A06;--card-sub:#F3E6BF;--card-label:#E6D193;--card-accent-ink:#4A3508}
+:root[data-accent="blue"]{--card-hi:#234F86;--card-lo:#132E52;--card-inset:#0D2240;--card-sub:#D5E3F4;--card-label:#AFC9E8;--card-accent-ink:#132E52}
+:root[data-accent="green"]{--card-hi:#2E6B3A;--card-lo:#19411F;--card-inset:#113016;--card-sub:#D7EBD6;--card-label:#B1D5AE;--card-accent-ink:#19411F}
+:root[data-accent="silver"]{--card-hi:#5A6672;--card-lo:#343D46;--card-inset:#262D34;--card-sub:#E3E8ED;--card-label:#C3CCD6;--card-accent-ink:#343D46}
 .tourcard{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel);padding:10px 12px;margin:0 0 12px}
 .tourcard .tc-t{display:flex;flex-direction:column;gap:2px;min-width:0}
 .tourcard .tc-t b{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:.8rem}

@@ -4,6 +4,7 @@ import { condLine, condNotes } from "../conditions.js";
 import { esc, modalShell, searchBox, ICONS, hotbarToggle } from "../ui.js";
 import { boxById, boxByName } from "../lootbox.js";
 import { renderWhatsNew } from "./whatsnew.js";
+import { renderEffectsModal } from "./effects.js";
 import { oddsList } from "./lootbox.js";
 import {
   ABILITIES, ABILITY_LABEL, CONDITIONS, abilityMod, fmtMod, deriveCharacter, hpAverageGain, slotRows
@@ -42,7 +43,9 @@ export function renderModal(app) {
   const c = app.char;
   switch (m.type) {
     case "helpIntro": return modalShell("Need help?", `<div class="helpintro"><span class="hi-q">${ICONS.help}</span><p>Look for the ? symbol if you are ever lost or confused.</p></div>`, `<button class="btn" data-a="helpIntroSkip">Skip tour</button><button class="btn pri" data-a="helpIntroGo">Start tour</button>`);
-    case "help": return modalShell("Help", `<div class="stack"><button class="btn block" data-a="tourStart" data-id="home">Home tour</button><button class="btn block" data-a="tourStart" data-id="sheet">Sheet tour</button><button class="btn block" data-a="tourStart" data-id="dm">DM tour</button></div>`, `<button class="btn" data-a="closeModal">Done</button>`);
+    case "help": return modalShell("Help", `<div class="stack"><button class="btn block" data-a="tourAsk" data-id="home">Home tour</button><button class="btn block" data-a="tourAsk" data-id="sheet">Sheet tour</button><button class="btn block" data-a="tourAsk" data-id="dm">DM tour</button></div>`, `<button class="btn" data-a="closeModal">Done</button>`);
+    case "tourAsk": { const T = { home: ["Home tour", "Goes to Home."], sheet: ["Sheet tour", "Opens your last character."], dm: ["DM tour", "Opens DM mode."] }[m.id] || ["Tour", ""];
+      return modalShell(`Start the ${T[0]}?`, `<p>${T[1]}</p>`, `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="tourConfirm">Start</button>`); }
     case "restPick": return modalShell("Rest", `<div class="stack"><button class="btn block" data-a="openShortRest">Short rest</button><button class="btn block" data-a="openLongRest">Long rest</button></div>`, `<button class="btn" data-a="closeModal">Cancel</button>`);
     case "resetApp": return modalShell("Reset app", `<div class="stack"><p class="sub2">Erases every character, note and setting on this device.</p>
       <div class="field"><label for="f-reset">Group password</label><input class="f" id="f-reset" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" ${app.resetBusy ? "disabled" : ""}></div>
@@ -357,21 +360,7 @@ export function renderModal(app) {
         `<button class="btn" data-a="closeModal">Go back</button><button class="btn pri" data-a="confirmLongRest" ${short ? "disabled" : ""}>Long rest</button>`);
     }
 
-    case "conditions": {
-      const firstLine = n => { const g = glossaryEntry(n); return g ? esc(g.text.split(/(?<=\.)\s/)[0]).slice(0, 110) : ""; };
-      return modalShell("Conditions",
-        `
-        <div class="condgrid">${CONDITIONS.map(x => {
-          const on = c.conditions.includes(x), key = "condition:" + x;
-          return infoRow({ key, action: "toggleCondition", data: { name: x }, title: x, sub: condLine(x) || firstLine(x), pressed: on, open: app.info.has(key),
-            detail: app.info.has(key) ? formatText(glossaryEntry(x)?.text || "") : "",
-            badge: `${conditionIcon(x)}` });
-        }).join("")}</div>
-        ${condEffectsBlock(c)}
-        <div class="rowline" style="margin-top:12px"><span class="nm">${conditionIcon("Exhaustion")} <button class="term" data-term="condition:Exhaustion">Exhaustion</button></span>
-          <span class="stepper"><button data-a="exhStep" data-n="-1" aria-label="Less exhaustion">−</button><b>${c.exhaustion}</b><button data-a="exhStep" data-n="1" aria-label="More exhaustion">+</button></span></div>`,
-        `<button class="btn pri" data-a="closeModal">Done</button>`);
-    }
+    case "conditions": return renderEffectsModal(app, c);
 
     case "resource": {
       const r = m.i != null ? c.resources[m.i] : { name: "", max: 2, reset: "long" };

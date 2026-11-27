@@ -12,10 +12,10 @@ import { blankDraft } from "../js/creation.js";
 import { rationsHave, rationsNeed, spendRations, restOptions, applyRestPicks } from "../js/rest.js";
 import { subclassSpellGrants, subclassSpellTables, syncSubclassSpells, findSpellName, pickKey } from "../js/subclassspells.js";
 import { rerollsFor, ensureLuck, shortRestRefill } from "../js/riders.js";
-import { weaponNumbers } from "../js/rules.js";
+import { weaponNumbers, deriveCharacter } from "../js/rules.js";
 import { unarmedWeapons, attacksPerAction } from "../js/attackctx.js";
 import { computeAC } from "../js/gear.js";
-import { setEffectsSource, collectEffects, fxList, fxSum, fxStat, rollMods, grantsOf, hpParts, evalExpr, evalDice, diceAverage, validateEffect } from "../js/effects.js";
+import { abilScore, setEffectsSource, collectEffects, fxList, fxSum, fxStat, rollMods, grantsOf, hpParts, evalExpr, evalDice, diceAverage, validateEffect } from "../js/effects.js";
 
 let pass = 0, fail = 0;
 const t = (name, fn) => { try { fn(); pass++; } catch (e) { fail++; console.log("FAIL " + name + " - " + e.message); } };
@@ -465,6 +465,15 @@ t("one-shot abilities are not toggles; lasting ones are", () => {
   eq(isSustained("You regain Hit Points equal to 1d10 plus your Fighter level."), false);
   eq(isSustained("You can imbue yourself with a primal power. Your Rage lasts until the end of your next turn, up to 10 minutes."), true);
   eq(isSustained("You assume the form of a Beast for 1 hour."), true);
+});
+t("ability drains lower the score, modifiers and saves, and ending one restores them", () => {
+  setEffectsSource(() => ({ feats: [], classes: [], subclasses: [], species: [], effectsV: 1 }));
+  const c = { level: 5, class: "Fighter", abilities: { str: 16, dex: 12, con: 14, int: 10, wis: 10, cha: 8 }, saveProf: ["str"], custom: [{ id: "a", t: "abil.str", v: -4, label: "Strength Drain" }], conditions: [], hp: { max: 40, cur: 40, base: 30, adjust: 0 } };
+  eq(abilScore(c, "str"), 12);
+  const d = deriveCharacter(c); eq([d.mods.str, d.saves.str], [1, 4]);
+  c.custom = []; const d2 = deriveCharacter(c); eq([d2.mods.str, d2.saves.str], [3, 6]);
+  c.custom = [{ id: "b", t: "abil.str", v: -20, label: "x" }]; eq(abilScore(c, "str"), 1);
+  eq(validateEffect({ t: "abil.str", v: -1 }), []);
 });
 console.log(`${pass}/${pass + fail} engine checks passed`);
 process.exit(fail ? 1 : 0);

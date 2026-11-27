@@ -1,7 +1,7 @@
 // What an attack looks like to the effects engine: which hand, which kind of weapon, which
 // ability. Fighting styles, Rage, Unarmed Strike options and the like read this context.
 // Pure, no DOM. ASCII only.
-import { unarmedOptions, abilAlts, diceAverage, fxStat } from "./effects.js";
+import { abilScore, unarmedOptions, abilAlts, diceAverage, fxStat } from "./effects.js";
 import { armorStats, itemById, wearKind } from "./gear.js";
 
 // Attacks you can make with one Attack action (Extra Attack and its upgrades come from the rules as `attacks` effects).
@@ -36,13 +36,13 @@ export function attackCtx(char, weapon) {
   const monk = weapon.unarmed || (weapon.kind !== "Ranged" && (weapon.cat === "Simple" || (weapon.cat === "Martial" && has(props, /\blight\b/i))));
   const pick = ctx => {
     let key = weaponAbilKey(weapon, char.abilities);
-    abilAlts(char, { ...worn, ...ctx }).forEach(a => { if (modOf((char.abilities || {})[a]) > modOf((char.abilities || {})[key])) key = a; });
+    abilAlts(char, { ...worn, ...ctx }).forEach(a => { if (modOf(abilScore(char, a)) > modOf(abilScore(char, key))) key = a; });
     return key;
   };
   if (weapon.unarmed) {
     const wield = { unarmed: true, monk: true, melee: true, oneHanded: true, alone: !held.length && !shield };
     const abilKey = pick({ wield, attack: ["unarmed", "melee"] });
-    return { ...worn, attack: ["unarmed", "melee"], abil: abilKey, abilMod: modOf((char.abilities || {})[abilKey]), toggles, wield };
+    return { ...worn, attack: ["unarmed", "melee"], abil: abilKey, abilMod: modOf(abilScore(char, abilKey)), toggles, wield };
   }
   const me = inv.find(i => i.weapon === weapon), isOff = !!me && eq.off === me.id;
   const other = held.find(i => i !== me);
@@ -58,7 +58,7 @@ export function attackCtx(char, weapon) {
   };
   const attack = ["weapon", melee ? "melee" : "ranged"];
   const abilKey = pick({ wield, attack });
-  return { ...worn, attack, abil: abilKey, abilMod: modOf((char.abilities || {})[abilKey]), toggles, wield };
+  return { ...worn, attack, abil: abilKey, abilMod: modOf(abilScore(char, abilKey)), toggles, wield };
 }
 
 // Virtual attack entries for Unarmed Strike. A character has ONE Unarmed Strike: when a species trait,
@@ -67,7 +67,7 @@ export function attackCtx(char, weapon) {
 // action cost, like the Shifter's Longtooth) gets a row of its own. Same shape as an inventory weapon item.
 export function unarmedWeapons(char) {
   const probe = attackCtx(char, { unarmed: true, ability: "str" });
-  const score = o => diceAverage(o.dice || "0") + (o.flat || 0) + modOf((char.abilities || {})[weaponAbilKey({ ability: o.abil }, char.abilities)]);
+  const score = o => diceAverage(o.dice || "0") + (o.flat || 0) + modOf(abilScore(char, weaponAbilKey({ ability: o.abil }, char.abilities)));
   const best = {};
   unarmedOptions(char, probe).forEach(o => {
     const cur = best[o.src];

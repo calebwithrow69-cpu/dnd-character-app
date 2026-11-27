@@ -7,7 +7,7 @@ import { attacksOf } from "./gear.js";
 import { optionNames, optionGroup } from "./progression.js";
 import { parseSpecies, classifyText } from "./species.js";
 import { variantDef, stripVariantText } from "./choices.js";
-import { evalDice } from "./effects.js";
+import { evalDice, abilScore } from "./effects.js";
 
 export const COSTS = ["Action", "Bonus", "Reaction", "Passive"];
 export const COST_LABEL = { Action: "Action", Bonus: "Bonus Action", Reaction: "Reaction", Passive: "Passive", Other: "Other" };
@@ -54,7 +54,7 @@ function boonRoll(text, c) {
   if (!m) return null;
   const ab = /Add your (Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) modifier/i.exec(t);
   const key = ab ? ab[1].slice(0, 3).toLowerCase() : null;
-  const mod = key ? Math.floor((Number((c.abilities || {})[key] || 10) - 10) / 2) : 0;
+  const mod = key ? Math.floor((Number(abilScore(c, key) || 10) - 10) / 2) : 0;
   const type = (/(\d*d\d+) (\w+) damage/i.exec(t) || [])[2] || (/reduce the damage/i.test(t) ? "damage reduced" : "");
   return { dice: m[1], mod, type, label: /reduce the damage/i.test(t) ? "Damage reduced" : "Damage", note: ab ? `includes your ${ab[1]} modifier` : "" };
 }
@@ -123,9 +123,9 @@ export function buildCombat(app, c, d) {
       const res = a.res ? resFor(a.res) : null, cost = a.cost || "Other";
       let block = turnBlock(c, turn, cost, false);
       if (!block && res && res.cur <= 0) block = `No ${a.res} left. Back on a ${res.reset === "short" ? "short or long" : "long"} rest.`;
-      const modv = a.mod ? Math.floor((Number((c.abilities || {})[a.mod] || 10) - 10) / 2) : 0;
+      const modv = a.mod ? Math.floor((Number(abilScore(c, a.mod) || 10) - 10) / 2) : 0;
       const dice = evalDice(a.dice, c);
-      const dc = a.dcAbil ? 8 + d.prof + Math.floor((Number((c.abilities || {})[a.dcAbil] || 10) - 10) / 2) : null;
+      const dc = a.dcAbil ? 8 + d.prof + Math.floor((Number(abilScore(c, a.dcAbil) || 10) - 10) / 2) : null;
       const note = [a.save && dc != null ? `${a.save} save DC ${dc}${a.half ? ", half on a success" : ""}` : "", a.mod ? `includes your ${a.mod.toUpperCase()} modifier` : "", a.note || ""].filter(Boolean).join(" \u00b7 ");
       add({ id: "a:" + f.from + ":" + a.name, name: a.name, cost, src: f.from + " " + (a.lv || f.lv), type: "feature", lv: a.lv || f.lv, kind: "Ability", block, res, text: a.text || "",
         act: { a: "rollBoon", dice: dice || String(modv), mod: dice ? modv : 0, type: a.type || "", label: a.label || "Damage", note, title: a.name, res: res ? res.i : "" } });

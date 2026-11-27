@@ -4,6 +4,7 @@
 // ASCII only.
 import { findByName } from "./data.js";
 import { trackersOf } from "./effects.js";
+import { slotRows } from "./rules.js";
 
 export const pbOf = level => Math.ceil((level || 1) / 4) + 1;
 const modOf = s => Math.floor((Number(s || 10) - 10) / 2);
@@ -24,6 +25,7 @@ export function ensureLuck(c) {
       if ((r.shortRegain || 0) !== (t.shortRegain || 0)) { if (t.shortRegain) r.shortRegain = t.shortRegain; else delete r.shortRegain; }
     }
   });
+  if (c.class === "Paladin" && (c.level || 1) >= 2 && !(c.resources || []).some(x => x.name === "Paladin's Smite")) c.resources.push({ name: "Paladin's Smite", max: 1, used: 0, reset: "long", note: "Cast Divine Smite once without a spell slot" });
   PB_TRACKERS.forEach(t => {
     if (!t.when(c)) return;
     const r = (c.resources || []).find(x => x.name === t.name);
@@ -58,6 +60,31 @@ function hasFeature(app, c, name) {
 
 export function starryOn(c) { return (c.active || []).some(a => /Starry Form/.test(a.id)); }
 
+// Smite spells: a Bonus Action taken right after a melee hit, so the prompt belongs on a weapon roll.
+// die = the die size; base = dice at the spell's own level; one more die per slot level above it.
+export const SMITES = {
+  "Divine Smite": { lv: 1, base: 2, die: 8, type: "radiant", note: "+1d8 against a Fiend or Undead" },
+  "Searing Smite": { lv: 1, base: 1, die: 6, type: "fire", note: "Burns each turn; Con save ends it" },
+  "Thunderous Smite": { lv: 1, base: 2, die: 6, type: "thunder", note: "Str save or pushed 10 ft and Prone" },
+  "Wrathful Smite": { lv: 1, base: 1, die: 6, type: "necrotic", note: "Wis save or Frightened" },
+  "Shining Smite": { lv: 2, base: 2, die: 6, type: "radiant", note: "Concentration; attacks against it have Advantage" },
+  "Blinding Smite": { lv: 3, base: 3, die: 8, type: "radiant", note: "Con save or Blinded" }
+};
+const smiteKnown = (c, name) => (c.spellcasting && c.spellcasting.spells || []).some(x => x.name === name && (x.prepared || x.always)) || (name === "Divine Smite" && c.class === "Paladin" && (c.level || 1) >= 2);
+// One chip per spell per slot level you still have, plus the Paladin's free Divine Smite.
+export function smiteRiders(c) {
+  const out = [], rows = slotRows(c.class, c.level || 1), used = (c.spellcasting && c.spellcasting.slotsUsed) || [];
+  const free = (c.resources || []).find(r => r.name === "Paladin's Smite");
+  Object.entries(SMITES).forEach(([name, sm]) => {
+    if (!smiteKnown(c, name)) return;
+    if (name === "Divine Smite" && free && free.max - free.used > 0) out.push({ id: "smite-free", label: "Divine Smite, free", dice: `${sm.base}d${sm.die}`, note: `Paladin's Smite, no slot. ${sm.note}`, res: "Paladin's Smite" });
+    rows.filter(r => r.level >= sm.lv && r.max - (used[r.level - 1] || 0) > 0).slice(0, 5).forEach(r => {
+      out.push({ id: `smite-${name}-${r.level}`, label: `${name} (level ${r.level})`, dice: `${sm.base + (r.level - sm.lv)}d${sm.die}`, note: `${sm.type[0].toUpperCase() + sm.type.slice(1)}. ${sm.note}`, res: `slot:${r.level}` });
+    });
+  });
+  return out;
+}
+
 // ctx: { kind: "weapon" | "spell" | "check", cantrip, heal }
 // Returns { pre, attack, damage }: arrays of { id, label, note, dice?, flat?, once?, adv?, res? }.
 export function ridersFor(app, c, d, ctx) {
@@ -71,6 +98,7 @@ export function ridersFor(app, c, d, ctx) {
   if (c.species === "Goblin" && !ctx.heal && (ctx.kind === "weapon" || ctx.kind === "spell") && fury && fury.max - fury.used > 0) {
     out.damage.push({ id: "fury", label: "Fury of the Small", flat: pb, note: `Target is larger than you. ${fury.max - fury.used} use${fury.max - fury.used === 1 ? "" : "s"} left`, res: "Fury of the Small" });
   }
+  if (ctx.kind === "weapon" && ctx.melee) out.damage.push(...smiteRiders(c));
   if (ctx.kind === "weapon" && c.class === "Druid" && hasFeature(app, c, "Elemental Fury") && c.furyChoice !== "Potent Spellcasting") {
     out.damage.push({ id: "primal", label: "Primal Strike", dice: "1d8", note: "Cold, Fire, Lightning or Thunder. Once per turn, on a hit.", once: true });
   }

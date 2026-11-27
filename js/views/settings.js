@@ -42,7 +42,7 @@ export function settingsBody(app) {
   const theme = p.theme || "auto", size = p.size || "normal";
   const sfxOn = (p.sfx || "on") === "on";
   const vol = p.vol == null ? 70 : p.vol;
-  const op = id => (app.setOpen ? app.setOpen.has(id) : id === "appearance" || id === "feel");
+  const op = id => (app.setOpen ? app.setOpen.has(id) : id === "appearance");
 
   const appearance =
     choice("theme", "Theme", "Auto follows your device.", [["auto", "Auto"], ["dark", "Dark Tome"], ["light", "Parchment"]], theme, { kw: "dark light mode" }) +
@@ -53,7 +53,7 @@ export function settingsBody(app) {
     choice("density", "Spacing", "", [["compact", "Compact"], ["normal", "Normal"], ["roomy", "Roomy"]], p.density || "normal", { kw: "density compact padding gap" });
 
   const feel =
-    sw("sfx", "Button sounds", "Soft taps, page turns and dice clatter.", sfxOn, { kw: "sound audio" }) +
+    sw("sfx", "Button sounds", "Taps, page turns, dice.", sfxOn, { kw: "sound audio" }) +
     `<div class="setrow col" data-s="volume loud quiet sound">
       <div class="setinfo"><div class="setlabel">Volume</div><div class="sethint">${vol}%</div></div>
       <div class="volrow"><input type="range" min="0" max="100" step="5" value="${vol}" data-pref-range="vol" aria-label="Sound volume" ${sfxOn ? "" : "disabled"}>
@@ -70,13 +70,13 @@ export function settingsBody(app) {
     `<div class="setrow" data-s="quick menu tools button shortcuts"><div class="setinfo"><div class="setlabel">Quick menu</div><div class="sethint">Tools on the Quick button.</div></div><button class="btn sm" data-a="quickEditOpen">Edit</button></div>`;
 
   const play =
-    sw("wake", "Keep screen awake", HAS_WAKE ? "Stops your phone sleeping while the app is open at the table." : "Not supported on this browser.", !!p.wake && HAS_WAKE, { disabled: !HAS_WAKE, kw: "sleep screen on" }) +
-    sw("turns", "Turn tracker", "Action, Bonus Action and Reaction pips on the Play tab.", p.turns !== false, { kw: "combat round action reaction" }) +
-    sw("concprompt", "Concentration prompts", "When you are hit while concentrating, asks for the Constitution save.", !!p.concprompt, { kw: "concentration save" }) +
-    sw("vignette", "Red edge glow at low HP", "The screen edges pulse red when you are nearly down.", p.vignette !== false, { kw: "vignette danger" }) +
-    choice("rollfx", "Roll animation", "The full-screen dice roll. Crits only skips the tumble but keeps the natural 1 and 20 effects. Off keeps the screen but drops the motion.", [["full", "Full"], ["crits", "Crits only"], ["off", "Off"]], p.rollfx || "full", { kw: "dice animation effects natural 20 natural 1 reduce motion" }) +
-    sw("cxfx", "Character creation effects", "Falling leaves, sparks, stars and colour changes behind the creation screens, and the seal when you finish. Turn off for a plain screen.", p.cxfx !== false, { kw: "creation effects particles animation reduce motion" }) +
-    sw("keys", "Keyboard shortcuts", "Play Mode on a laptop: / search, J and K move, Enter uses, N next turn, 1 2 3 mark Action, Bonus Action and Reaction. Also shows the shortcut bar.", p.keys !== false, { kw: "keyboard keys hotkeys shortcuts buttons controls" });
+    sw("wake", "Keep screen awake", HAS_WAKE ? "Screen stays on while the app is open." : "Not supported on this browser.", !!p.wake && HAS_WAKE, { disabled: !HAS_WAKE, kw: "sleep screen on" }) +
+    sw("turns", "Turn tracker", "Action, Bonus Action, Reaction pips.", p.turns !== false, { kw: "combat round action reaction" }) +
+    sw("concprompt", "Concentration prompts", "Asks for the Constitution save when you are hit.", !!p.concprompt, { kw: "concentration save" }) +
+    sw("vignette", "Red edge glow at low HP", "Screen edges pulse red when nearly down.", p.vignette !== false, { kw: "vignette danger" }) +
+    choice("rollfx", "Roll animation", "Full-screen dice roll.", [["full", "Full"], ["crits", "Crits only"], ["off", "Off"]], p.rollfx || "full", { kw: "dice animation effects natural 20 natural 1 reduce motion" }) +
+    sw("cxfx", "Character creation effects", "Particles behind the creation screens.", p.cxfx !== false, { kw: "creation effects particles animation reduce motion" }) +
+    sw("keys", "Keyboard shortcuts", "Laptop Play tab: / J K Enter N 1 2 3, with a shortcut bar.", p.keys !== false, { kw: "keyboard keys hotkeys shortcuts buttons controls" });
 
   const access =
     choice("motion", "Animations", "Auto follows your device's reduce-motion setting.", [["auto", "Auto"], ["reduced", "Reduced"]], p.motion || "auto", { kw: "motion reduce animation" }) +
@@ -99,14 +99,6 @@ export function settingsBody(app) {
       <div class="setinfo"><div class="setlabel">Settings file</div><div class="sethint">Move your settings to another device.</div></div>
       <button class="btn block" data-a="exportPrefs">Export settings</button>
       <button class="btn block" data-a="importPrefs">Import settings</button>
-    </div>` +
-    `<div class="setrow col" data-s="update rules data refresh check">
-      <div class="setinfo"><div class="setlabel">Rules data</div><div class="sethint">App updates install themselves: at launch, or with an Update now bar. ${L ? esc((app.campaign && app.campaign.name) || "Campaign") + ": " + L.classes.length + " classes, " + L.species.length + " species, " + L.spells.length + " spells, " + L.items.length + " items." : ""}</div></div>
-      <button class="btn block" data-a="checkUpdates">Check for updates now</button>
-    </div>` +
-    `<div class="setrow col" data-s="install home screen shortcut phone qr">
-      <div class="setinfo"><div class="setlabel">Open with one tap</div></div>
-      ${installCard(app, { inSettings: true })}
     </div>`;
 
   const danger =
@@ -137,19 +129,26 @@ export function settingsBody(app) {
       <button class="btn block" data-a="openChangelog">What's new (changelog)</button>
       ${L && updatesOf(L).length ? `<button class="btn block" data-a="openUpdate">Content update <span class="muted">${esc(updatesOf(L).slice(-1)[0].date || "")}</span></button>` : ""}
     </div>` +
+    `<div class="setrow col" data-s="update rules data refresh check">
+      <div class="setinfo"><div class="setlabel">Rules data</div><div class="sethint">App updates install themselves: at launch, or with an Update now bar. ${L ? esc((app.campaign && app.campaign.name) || "Campaign") + ": " + L.classes.length + " classes, " + L.species.length + " species, " + L.spells.length + " spells, " + L.items.length + " items." : ""}</div></div>
+      <button class="btn block" data-a="checkUpdates">Check for updates now</button>
+    </div>` +
+    `<div class="setrow col" data-s="install home screen shortcut phone qr">
+      <div class="setinfo"><div class="setlabel">Open with one tap</div></div>
+      ${installCard(app, { inSettings: true })}
+    </div>` +
     (L && L.credits ? `<div class="setrow col" data-s="credits license srd">${L.credits.map(t => `<div class="sethint">${esc(t)}</div>`).join("")}</div>` : "");
 
   const body = `<div class="stack">
     <div class="search"><input class="f" type="search" placeholder="Search settings" aria-label="Search settings" data-set-search="1" autocomplete="off"></div>
     <div id="set-empty" class="sethint hide">No settings match that.</div>
-    ${section("appearance", "Appearance", appearance, op("appearance"), true)}
-    ${section("sheet", "Character sheet", sheet, op("sheet"), true)}
-    ${section("feel", "Sound and feel", feel, op("feel"), true)}
-    ${section("play", "Play", play, op("play"), true)}
-    ${section("access", "Accessibility", access, op("access"), true)}
-    ${section("data", "Data and backups", data, op("data"), true)}
-    ${section("experimental", "Experimental features", experimental, op("experimental"), true)}
-    ${section("about", "About and what's new", about, op("about"))}
+    ${section("appearance", "Appearance and accessibility", appearance + access, op("appearance"))}
+    ${section("sheet", "Character sheet", sheet, op("sheet"))}
+    ${section("play", "Play", play, op("play"))}
+    ${section("feel", "Sound and vibration", feel, op("feel"))}
+    ${section("data", "Data and backups", data, op("data"))}
+    ${section("about", "App and help", about, op("about"))}
+    ${section("experimental", "Experimental features", experimental, op("experimental"))}
     ${section("danger", "Reset and repair", danger, op("danger"))}
   </div>`;
   return body;

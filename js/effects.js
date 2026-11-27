@@ -21,6 +21,7 @@ const baseName = n => String(n || "").replace(/\s*\(.*$/, "");
 //   { t: target, op?: "add"|"set"|"max"|"min"|"adv"|"dis"|"reroll"|"grant", v?: Expr, when?: Cond, lv?: n, name?: label }
 // Targets (stat):  ac  ac.base  speed  init  hp.max  pp  save.<ab>|save.all  skill.<id>|skill.all|skill.nonprof  spell.dc  spell.atk
 // Targets (roll):  atk  dmg  check.<ab> (ability checks; skills also read their ability)  (use `when` with {attack:..} / {wield:..} to narrow them), plus save.* skill.* init for adv/dis
+// Targets (score): abil.<ab> adds to the ability score itself (a drain is a negative value); every modifier, save, skill and attack reads it through abilScore.
 // Targets (ability): abil.alt, op grant, v:{abil:"dex"} = a weapon or Unarmed Strike may use that modifier instead when it is better (Dexterous Attacks); `when` {wield:"monk"} = simple melee or Light martial weapon
 // Targets (grant): grant.resist.<type>  grant.immune.<type>  grant.prof.<skill|save|armor|weapon|tool>.<name>  grant.sense.<name>  grant.language.<name>
 // Expr:   a number, or { perLevel } { lvl } { prof } { halfProf } { abil, min } { classLevel } { steps:[[lvl,n]..] }
@@ -39,7 +40,7 @@ export const FX_TARGETS = [
   ["save.all", "All saving throws"], ["skill.all", "All skills"], ["spell.dc", "Spell save DC"], ["spell.atk", "Spell attack"]
 ];
 const ABS = "str|dex|con|int|wis|cha";
-const TARGET_RES = [new RegExp("^check\\.(" + ABS + ")$"), /^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks|abil\.alt)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
+const TARGET_RES = [new RegExp("^(check|abil)\\.(" + ABS + ")$"), /^(ac|ac\.base|speed|init|hp\.max|pp|spell\.dc|spell\.atk|atk|dmg|unarmed|attacks|abil\.alt)$/, new RegExp("^save\\.(all|" + ABS + ")$"), /^skill\.[a-z]+$/, /^skill\.(all|nonprof)$/,
   /^grant\.(resist|immune|prof|sense|language)\.[A-Za-z. ]+$/];
 const OPS = ["add", "set", "max", "min", "adv", "dis", "reroll", "grant"];
 const EXPR_KEYS = ["ctx", "perLevel", "lvl", "prof", "halfProf", "abil", "classLevel", "steps", "add", "mul", "half", "neg", "max", "min", "if", "dice"];
@@ -109,7 +110,7 @@ export function evalExpr(v, c, ctx = {}) {
   if (v.lvl) return L;
   if (v.prof) return pbOf(L) * (v.prof === true ? 1 : v.prof);
   if (v.halfProf) return Math.floor(pbOf(L) / 2);
-  if (v.abil) return Math.max(v.min == null ? -99 : v.min, modOf((c.abilities || {})[v.abil]));
+  if (v.abil) return Math.max(v.min == null ? -99 : v.min, modOf(abilScore(c, v.abil)));
   if (v.classLevel) return c.class === v.classLevel ? L : 0;
   if (v.steps) { let r = 0; v.steps.forEach(([lv, n]) => { if (L >= lv) r = n; }); return r; }
   if (v.add) return v.add.reduce((n, x) => n + ev(x), 0);
@@ -193,6 +194,12 @@ export function fxList(c, targets, ctx = {}) {
   return collectEffects(c).filter(e => want.includes(e.t) && (e.op || "add") === "add" && applies(e, c, ctx))
     .map(e => ({ src: e.src, v: evalExpr(e.v, c, ctx), custom: e.custom, id: e.id, when: e.when }));
 }
+// Effective ability score: the saved score plus abil.<ab> effects, kept within 1-30.
+export function abilScore(c, ab) {
+  const base = Number(((c && c.abilities) || {})[ab] || 10);
+  const adj = fxSum(fxList(c, "abil." + ab));
+  return adj ? Math.max(1, Math.min(30, base + adj)) : base;
+}
 export const fxSum = list => list.reduce((n, x) => n + x.v, 0);
 
 // A stat with formulas: "set" replaces the base, "max"/"min" pick the better/worse of base and formula, then "add" bonuses stack.
@@ -259,7 +266,7 @@ export function featHpGain(feat, level) {
 
 // ---- Hit points: max = dice + Con per level + effects + hand adjustment ----
 export function hpParts(c) {
-  const level = c.level || 1, con = modOf((c.abilities || {}).con);
+  const level = c.level || 1, con = modOf(abilScore(c, "con"));
   const fx = fxList(c, "hp.max");
   const base = c.hp.base == null ? 0 : c.hp.base, adjust = c.hp.adjust || 0;
   const parts = [["Hit dice", base], [`Constitution (${con >= 0 ? "+" : ""}${con} x level ${level})`, con * level], ...fx.map(x => [x.src, x.v])];
@@ -273,7 +280,7 @@ const TOUGH_OLD = /Hit Point maximum increases by an amount equal to twice your 
 // get their dice total worked out once from the old stored maximum.
 export function syncHp(c) {
   if (!c || !c.hp || !effectsReady()) return false;
-  const s = SRC(), level = c.level || 1, con = modOf((c.abilities || {}).con);
+  const s = SRC(), level = c.level || 1, con = modOf(abilScore(c, "con"));
   let changed = false;
   if (c.hp.base == null) {
     const toughOld = (c.feats || []).reduce((n, f) => { const e = s.feats.find(x => x.name === f) || s.feats.find(x => x.name === baseName(f)); return n + (e && TOUGH_OLD.test(e.text || "") ? 2 * level : 0); }, 0);

@@ -1,5 +1,5 @@
 import { computeAC, gearSaveBonus } from "./gear.js";
-import { fxList, fxSum, rollMods } from "./effects.js";
+import { fxList, fxSum, rollMods, abilScore } from "./effects.js";
 import { attackCtx } from "./attackctx.js";
 
 // Pure D&D 2024 rules helpers. No DOM, no state — math and tables only,
@@ -166,7 +166,7 @@ export function deriveCharacter(char) {
   const level = char.level || 1;
   const prof = proficiencyBonus(level);
   const mods = {};
-  ABILITIES.forEach(a => { mods[a] = abilityMod(char.abilities?.[a] ?? 10); });
+  ABILITIES.forEach(a => { mods[a] = abilityMod(abilScore(char, a)); });
 
   const acInfo = computeAC(char);
   const acTotal = acInfo.total;
