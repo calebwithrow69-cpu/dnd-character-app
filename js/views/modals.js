@@ -31,6 +31,7 @@ import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
 import { renderBadges, renderLevelUp, renderDiscard } from "./notes.js";
 import { renderContentUpdate } from "./contentupdate.js";
+import { packBody, packAddBody, isPack } from "./packview.js";
 import { renderLoadoutBody, renderLoadoutSave, loadoutsOf, isActive, loadoutPlan } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
 import { COPY, backupAge, storageReport } from "../storagerisk.js";
@@ -228,6 +229,7 @@ export function renderModal(app) {
       const items = [
         it.weapon ? row("attackRoll", { id: it.id, close: "1" }, "⚔ Attack") : "",
         k ? row("unequip", { id: it.id }, "✋ Take off") : (kind && fitSlot ? row("equipHere", { id: it.id, slot: fitSlot }, "🛡 Equip") : ""),
+        isPack(app, it) ? row("packOpen", { id: it.id }, "\u25a4 Contents") : "",
         consumable ? row("useItem", { id: it.id }, "✓ Use one") : "",
         it.attune ? row("ctxAttune", { id: it.id }, it.attuned ? "◇ End attunement" : "◆ Attune") : "",
         row("addHotbar", { kind: it.weapon ? "attack" : "item", id: it.id, close: "1" }, "➕ Add to hotbar"),
@@ -275,6 +277,11 @@ export function renderModal(app) {
           ${!weapons.length && !spells.length && !c.inventory.length ? `<p class="muted small" style="padding:12px 0">Nothing to add yet.</p>` : ""}
         </div>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
+    }
+
+    case "pack": {
+      const it = itemById(c, m.id); if (!it) return "";
+      return modalShell(it.name, m.adding ? packAddBody(app, c, it) : packBody(app, c, it), m.adding ? `<button class="btn" data-a="packAdd" data-id="${esc(it.id)}">Back</button>` : `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
     case "loadouts": {

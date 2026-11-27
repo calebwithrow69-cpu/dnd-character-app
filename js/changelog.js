@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.103";
+export const VERSION = "0.1.104";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.104",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Pack contents.",
+    groups: [
+      { title: "Gear", items: [
+        "Packs open. Explorer's, Burglar's, Dungeoneer's, Entertainer's, Priest's and Scholar's packs list what is inside, with weights.",
+        "Take 1 or Take out moves an item from the pack to the bag. Take all out empties the pack.",
+        "Put in pack moves plain bag items inside. Worn, attuned and weapon items stay out.",
+        "Pack weight follows its contents."
+      ] }
+    ]
+  },
   {
     v: "0.1.103",
     date: "2026-11-27",

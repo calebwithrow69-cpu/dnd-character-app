@@ -40,7 +40,7 @@ function prep(c) {
   ["name", "species", "class", "subclass", "background", "alignment", "appearance", "backstory", "languages", "classFeatureNotes", "notes", "profsText", "size", "wielded"].forEach(k => { if (k in o) o[k] = txt(o[k], k === "backstory" || k === "notes" || k === "appearance" ? 20000 : 200); });
   ["feats", "conditions", "saveProf", "skillProf", "skillExpertise", "inventory", "resources", "weapons", "masteries", "lineageGranted", "hotbar", "loadouts", "pins", "formulas", "levelLog", "custom", "active"].forEach(k => { if (k in o && !Array.isArray(o[k])) o[k] = []; });
   ["inventory", "resources", "weapons"].forEach(k => { if (k in o) o[k] = o[k].filter(plain); });
-  if (o.inventory) o.inventory = o.inventory.map(it => ({ ...it, name: txt(it.name, 120) || "Item" }));
+  if (o.inventory) o.inventory = o.inventory.map(it => { const r = { ...it, name: txt(it.name, 120) || "Item" }; if ("contents" in r) { r.contents = Array.isArray(r.contents) ? r.contents.filter(x => x && typeof x === "object").slice(0, 60).map((x, i) => ({ id: txt(x.id, 24) || "p" + i, name: txt(x.name, 80) || "Item", qty: Math.max(1, Math.min(999, Math.round(Number(x.qty)) || 1)) })) : undefined; if (!r.contents) delete r.contents; } return r; });
   if (o.weapons) o.weapons = o.weapons.map(w => ({ ...w, name: txt(w.name, 120) || "Weapon" }));
   if (o.feats) o.feats = o.feats.filter(f => typeof f === "string" || plain(f));
   ["spellcasting", "choices", "coins", "equipment", "ac", "deathSaves", "hitDice", "hp", "abilities"].forEach(k => { if (k in o && !plain(o[k])) o[k] = {}; });

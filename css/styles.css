@@ -3216,3 +3216,13 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .qstep{display:inline-flex;align-items:center;gap:8px;justify-content:center}
 .acprev{display:block;font:700 .78rem var(--display);color:var(--muted)}
 .acprev.up{color:#5fae6a}.acprev.dn{color:#d1625a}
+
+/* Pack contents */
+.pk{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.pk-head{display:flex;justify-content:space-between;font:600 .64rem var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.pk-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.pk-nm i{font-style:normal;color:var(--amber);font-weight:700}
+.pk-row .w{font:600 .8rem system-ui,sans-serif;color:var(--muted)}
+.pk-row .btnrow{grid-column:1/-1;display:flex;gap:8px}
+@media (min-width:700px){.pk-row{grid-template-columns:minmax(0,1fr) 64px auto}.pk-row .btnrow{grid-column:auto}}
+.pk-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}

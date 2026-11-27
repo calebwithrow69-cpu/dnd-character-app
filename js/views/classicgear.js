@@ -4,6 +4,7 @@
 import { esc, ICONS, formatText } from "../ui.js";
 import { findByName, allItems, allWeapons } from "../data.js";
 import { loadoutsOf } from "./loadout.js";
+import { packBody, isPack, contentsOf } from "./packview.js";
 import { SLOTS, itemById, fitsOk, slotOf, slotsOf, wearKind, attunedCount, itemCategory } from "../gear.js";
 import { unitWeight, fmtLb } from "../weights.js";
 import { fmtMod, weaponNumbers } from "../rules.js";
@@ -44,7 +45,7 @@ function listPanel(app, c) {
     if (grouped && cat !== lastCat) { lastCat = cat; const same = items.filter(x => itemCategory(x) === cat), wt = same.reduce((t, x) => t + (unitWeight(x) ?? 0) * (x.qty == null ? 1 : x.qty), 0); head = `<div class="cg-grp"><span>${esc(cat)} \u00b7 ${same.length}</span><span>${fmtLb(wt)}</span></div>`; }
     return head + `<button class="bl-row cg-row ${k ? "equipped" : ""} ${app.gearSel === it.id ? "selected" : ""} ${it.qty ? "" : "empty"} cat-${cat}" data-a="gearSel" data-id="${esc(it.id)}">
       <span class="bag-ic">${ICONS[CAT_GLYPH[cat] || "flask"]}</span>
-      <span class="bl-nm"><b>${esc(it.name)}</b>${k ? `<span class="tag amber">Equipped</span>` : ""}${it.attuned ? `<span class="tag blue">Attuned</span>` : ""}</span>
+      <span class="bl-nm"><b>${esc(it.name)}</b>${k ? `<span class="tag amber">Equipped</span>` : ""}${it.attuned ? `<span class="tag blue">Attuned</span>` : ""}${isPack(app, it) ? `<span class="tag">${(contentsOf(app, it) || []).length} items</span>` : ""}</span>
       <span class="q">${q !== 1 ? "×" + q : ""}</span>
       <span class="w">${u == null ? "–" : fmtLb(u * q)}${u != null && q !== 1 ? `<small>${fmtLb(u)} each</small>` : ""}</span>
     </button>`;
@@ -72,6 +73,7 @@ function detailPanel(app, c) {
       ${w ? `<p class="small"><b>${fmtMod(n.toHit)}</b> to hit · <b>${esc(n.dice)}${n.dmgMod ? (n.dmgMod > 0 ? "+" : "") + n.dmgMod : ""}</b> ${esc(w.dtype || "")}${w.props ? ` · ${esc(w.props)}` : ""}</p>` : ""}
       ${ref && ref.text ? `<div class="cg-text">${formatText(ref.text)}</div>` : (it.notes ? "" : `<p class="muted small">No description on file.</p>`)}
       ${it.notes ? `<p class="small"><b>Notes.</b> ${esc(it.notes)}</p>` : ""}
+      ${isPack(app, it) ? packBody(app, c, it) : ""}
       <div class="btnrow">
         ${k ? btn("unequip", "Take off") : kind && fitSlot ? `<button class="btn sm pri" data-a="equipHere" data-id="${esc(it.id)}" data-slot="${esc(fitSlot)}">Equip</button>` : ""}
         ${it.attune ? btn("ctxAttune", it.attuned ? "End attunement" : "Attune") : ""}

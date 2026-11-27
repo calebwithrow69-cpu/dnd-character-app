@@ -80,6 +80,7 @@ import { hasFx, makeEntry } from "./spellfx.js";
 import { stepValidFor, spellsFor } from "./progression.js";
 import { downloadSheetPdf } from "./pdf.js";
 import { featUiDefault } from "./views/feats.js";
+import { parsePack, packable } from "./packs.js";
 import { SLOTS, ARMOR, itemById, fits, fitsOk, slotOf, slotsOf, wearKind, attunedCount, makeItem } from "./gear.js";
 import { rollFormula, rollD20, describeGroups, spin } from "./dice.js";
 import { analyzeSpell, castDice } from "./spells.js";
@@ -494,6 +495,16 @@ function save() {
   if (!persistAsked) { persistAsked = true; store.requestPersistence().then(p => { if (p) APP.persisted = true; }); }
 }
 function saveAndRender() { save(); render(); }
+function packEnsure(c, it) {
+  if (Array.isArray(it.contents)) return it.contents;
+  const ref = findByName(allItems(APP.library, APP.campaign), it.name), list = ref ? parsePack(ref.text) : null;
+  if (!list) return null; it.contents = list; return it.contents;
+}
+function packLoose(c, name, qty) {
+  const same = c.inventory.find(y => !y.weapon && !y.notes && !y.attune && !Array.isArray(y.contents) && y.name.toLowerCase() === name.toLowerCase());
+  if (same) { same.qty = (same.qty || 0) + qty; return; }
+  const it = makeItem(name, { weapons: allWeapons(APP.library, APP.campaign), items: allItems(APP.library, APP.campaign) }, store.newId); it.qty = qty; c.inventory.push(it);
+}
 
 // Anything that replaces an existing class asks first. A first pick (no class yet) does not.
 function classGuard(info, run) {
@@ -2338,6 +2349,27 @@ const ACTIONS = {
   },
   clearSel() { APP.selItem = null; render(); },
   // Loadouts (Advanced sheet > Gear). Opening one only previews it; loadoutApply is the confirm.
+  packOpen(el) { openModal({ type: "pack", id: el.dataset.id }); },
+  packTake(el) {
+    const c = APP.char, it = itemById(c, el.dataset.id); if (!it) return; const list = packEnsure(c, it); if (!list) return;
+    const x = list.find(y => y.id === el.dataset.cid); if (!x) return;
+    const n = el.dataset.n === "all" ? x.qty : Math.min(x.qty, +el.dataset.n || 1);
+    packLoose(c, x.name, n); x.qty -= n; if (x.qty <= 0) it.contents = list.filter(y => y !== x);
+    toast(`Took out ${n > 1 ? n + " " : ""}${x.name}`); saveAndRender();
+  },
+  packTakeAll(el) {
+    const c = APP.char, it = itemById(c, el.dataset.id); if (!it) return; const list = packEnsure(c, it); if (!list) return;
+    list.forEach(x => packLoose(c, x.name, x.qty)); it.contents = []; toast("Took everything out"); saveAndRender();
+  },
+  packAdd(el) { if (APP.modal && APP.modal.type === "pack") { APP.modal.adding = !APP.modal.adding; render(); } else { openModal({ type: "pack", id: el.dataset.id, adding: true }); } },
+  packPut(el) {
+    const c = APP.char, it = itemById(c, el.dataset.id), x = itemById(c, el.dataset.item); if (!it || !x || !packable(x, slotOf(c, x.id))) return;
+    const list = packEnsure(c, it); if (!list) return;
+    const same = list.find(y => y.name.toLowerCase() === x.name.toLowerCase());
+    if (same) same.qty += x.qty || 1; else list.push({ id: store.newId(), name: x.name, qty: x.qty || 1 });
+    c.inventory = c.inventory.filter(y => y.id !== x.id); c.hotbar = (c.hotbar || []).filter(h => h.id !== x.id);
+    if (APP.modal) APP.modal.adding = false; toast(`Put ${x.name} in ${it.name}`); saveAndRender();
+  },
   loadoutsMenu() { openModal({ type: "loadouts" }); },
   bagFilter(el) { APP.bagFilter = el.dataset.k; render(); },
   loadoutOpen(el) { openModal({ type: "loadout", id: el.dataset.id }); },

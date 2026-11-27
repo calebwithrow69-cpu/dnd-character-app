@@ -32,6 +32,7 @@ const lookup = n => { const full = String(n || "").toLowerCase().trim(); if (ful
 // Weight of ONE of the item, in lb, or null if unknown.
 export function unitWeight(it) {
   if (typeof it.weight === "number") return it.weight;
+  if (Array.isArray(it.contents)) return it.contents.reduce((t, x) => t + (lookup(x.name) ?? 0) * (x.qty || 0), 0);
   const w = lookup(it.name);
   if (w != null) return w;
   return it.weapon && it.weapon.base ? lookup(it.weapon.base) : null;
