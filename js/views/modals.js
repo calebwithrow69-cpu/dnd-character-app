@@ -35,6 +35,7 @@ import { applyDeltas, netCp, fmtNet, COIN_INFO } from "../equipment.js";
 import { packBody, packAddBody, isPack } from "./packview.js";
 import { renderLoadoutBody, renderLoadoutSave, loadoutsOf, isActive, loadoutPlan } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
+import { shopItemModal, shopListsModal, shopListNameModal, shopFilterModal } from "./shop.js";
 import { COPY, backupAge, storageReport } from "../storagerisk.js";
 import { trashList, daysLeft } from "../trash.js";
 import { listCharacters } from "../store.js";
@@ -280,6 +281,10 @@ export function renderModal(app) {
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
+    case "shopItem": { const r = shopItemModal(app, c, m); return modalShell(r.title, r.body, r.foot); }
+    case "shopFilter": { const r = shopFilterModal(app, c); return modalShell(r.title, r.body, r.foot); }
+    case "shopLists": { const r = shopListsModal(app, c, m); return modalShell(r.title, r.body, r.foot); }
+    case "shopListName": { const r = shopListNameModal(app, c, m); return modalShell(r.title, r.body, r.foot); }
     case "wallet": {
       const d = m.d || {}, net = netCp(d), next = applyDeltas(c.coins, d), any = Object.values(d).some(v => parseInt(v, 10));
       const sign = v => { const n = parseInt(v, 10) || 0; return n > 0 ? "pos" : n < 0 ? "neg" : ""; };

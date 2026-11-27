@@ -1,6 +1,7 @@
 import { allPortraits } from "./portraits.js";
 import { parseProfs } from "./rules.js";
 import { repairLevels } from "./levelfix.js";
+import { cleanShop } from "./shopdata.js";
 
 // Character roster: lives in this device's localStorage only.
 // Backups are plain JSON files the player saves wherever they like.
@@ -68,7 +69,7 @@ export function normalize(c, library) {
     speed: Number(c.speed) || 30, initBonus: Number(c.initBonus) || 0, size: c.size || "",
     hitDice: { total: c.level || 1, spent: 0, die: cls ? cls.hd : 8, ...(c.hitDice || {}) },
     deathSaves: { success: 0, fail: 0, ...(c.deathSaves || {}) },
-    conditions: c.conditions || [], active: Array.isArray(c.active) ? c.active.filter(a => a && a.id && a.name) : [], exhaustion: Number(c.exhaustion) || 0,
+    conditions: c.conditions || [], encumbrance: !!c.encumbrance, shop: cleanShop(c.shop), active: Array.isArray(c.active) ? c.active.filter(a => a && a.id && a.name) : [], exhaustion: Number(c.exhaustion) || 0,
     concentration: c.concentration || null,
     spellcasting: {
       slotsUsed: Array(10).fill(0),

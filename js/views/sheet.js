@@ -1,4 +1,6 @@
 import { walletCp, COIN_INFO } from "../equipment.js";
+import { encTier } from "../encumbrance.js";
+import { purseCard } from "./shopkit.js";
 import { readinessStrip, loadoutCards, wornRows } from "./loadout.js";
 import { tourCard } from "../tour.js";
 import { here as navHere, top as navTop, label as navLabel, sheetPath, MAIN_SUB } from "../nav.js";
@@ -359,12 +361,8 @@ export function shopBanner(c) {
 
 export function coinsPanel(c) {
   const tot = walletCp(c.coins) / 100, totTxt = tot >= 1 ? `${+tot.toFixed(2)} gp` : `${Math.round(tot * 100)} cp`;
-  return `<div class="panel wallet"><div class="panel-head"><h2>Coins</h2><span class="wal-tot" aria-label="Total ${esc(totTxt)}">${esc(totTxt)}</span></div><div class="panel-body stack">
-      <div class="coinrow">
-        ${COIN_INFO.map(([k, nm, col]) => `<div class="coinc"><button class="coinbtn" data-a="walOpen" aria-label="Change coins"><i class="disc" style="--c:${col}" aria-hidden="true"></i></button><span class="cn"><b>${k.toUpperCase()}</b><em>${nm}</em></span><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" aria-label="${nm} pieces"></div>`).join("")}
-      </div>
-      <div class="btnrow"><button class="btn sm pri" data-a="walOpen">Add or spend</button><button class="btn sm" data-a="walConvert">Combine coins</button></div>
-    </div></div>`;
+  return `<div class="wallet"><div data-a="walOpen" role="button" tabindex="0" aria-label="Change coins, ${esc(totTxt)}">${purseCard({ label: "Coins", big: totTxt, cells: COIN_INFO.map(([k]) => ({ k, v: c.coins[k] || 0 })) })}</div>
+    <div class="btnrow"><button class="btn sm pri" data-a="walOpen">Add or spend</button><button class="btn sm" data-a="walConvert">Combine coins</button></div></div>`;
 }
 
 // Advanced sheet gear: status strip, loadouts, worn gear as rows, then the bag and coins.
@@ -430,8 +428,12 @@ export function sortedInventory(app, c) {
   return inv.map(x => x.it);
 }
 export function weightBar(c) {
-  const w = carried(c), pct = Math.min(100, Math.round(w.total / w.capacity * 100));
-  return `<div class="wbar ${w.total > w.capacity ? "over" : ""}"><div class="wl"><span>Carrying <b>${fmtLb(w.total)}</b> of ${w.capacity} lb</span>${w.coins ? `<span class="sub2">coins ${fmtLb(w.coins)}</span>` : ""}</div><div class="track" aria-hidden="true"><i style="width:${pct}%"></i></div>${w.unknown ? `<p class="sub2">${w.unknown} item${w.unknown === 1 ? "" : "s"} with no listed weight are not counted.</p>` : ""}</div>`;
+  const w = carried(c), t = encTier(c), cap = w.capacity, pct = Math.min(100, Math.round(w.total / cap * 100));
+  const mk = t.marks.slice(0, 2).map(m => `<u style="left:${Math.round(m / cap * 100)}%"></u>`).join("");
+  return `<div class="wbar tier${t.i}"><div class="wl"><span>Carrying <b>${fmtLb(w.total)}</b> of ${cap} lb</span><span class="enc-tag">${esc(t.label)}</span></div>
+    <div class="track" aria-label="Carrying ${fmtLb(w.total)} of ${cap} pounds, ${esc(t.label)}"><i style="width:${pct}%"></i>${mk}</div>
+    <div class="wl sub2"><span>${c.encumbrance ? esc(t.note) : "Penalties off"}${w.coins ? ` \u00b7 coins ${fmtLb(w.coins)}` : ""}</span><button class="chipbtn sm" data-a="encToggle" aria-pressed="${!!c.encumbrance}">Apply</button></div>
+    ${w.unknown ? `<p class="sub2">${w.unknown} item${w.unknown === 1 ? "" : "s"} with no weight listed.</p>` : ""}</div>`;
 }
 const BAG_CATS = [["All", "All"], ["weapon", "Weapons"], ["armor", "Armor"], ["potion", "Potions"], ["gear", "Gear"]];
 function bagGrid(app, c) {

@@ -15,7 +15,7 @@ export function renderCxShop(app) {
     `<div class="shop-top">
       ${purseCard({ label: "Gold left", big: gp(left), id: "cxshop-left", cells: [{ k: "Start", v: gp(start) }, { k: "Items", v: items }], bar: start ? (start - left) / start * 100 : 0 })}
       ${searchBox("cxshop", app.cxShopQuery, "Search the shop")}
-      ${shelfTabs("cxShopCat", shelfCounts(creationStock(app, d).map(dec)), cat, ["Magic"])}
+      ${shelfTabs("cxShopCat", shelfCounts(creationStock(app, d).map(dec)), cat, ["Magic", "Loadouts"])}
       <p class="sub2 shop-train">Trained: ${esc(trainingSummary(t))}</p>
     </div>
     <div class="results shop-list" id="results-cxshop">${renderCxShopResults(app)}</div>`,

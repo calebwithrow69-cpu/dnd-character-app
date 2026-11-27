@@ -48,6 +48,41 @@ HINTS.push(
     body: "Export every character to a file. Do it before clearing browser data." }
 );
 
+HINTS.push(
+  { id: "shopViews", where: "sheet", sel: ".shop-views", title: "Browse, Cart, Lists",
+    body: "Browse the stock, review your cart, or open your wish lists. Counts show on the tabs." },
+  { id: "shopSearch", where: "sheet", sel: ".shop-find .search", title: "Search",
+    body: "Finds items even with a typo. Try a few letters of the name." },
+  { id: "shopSort", where: "sheet", sel: ".shop-sortbtn", title: "Sort and filter",
+    body: "Sort by price, weight or name. Show only Affordable, Wishlist, Light or In cart. Proficient limits the shop to gear you are trained in." },
+  { id: "shopKits", where: "sheet", sel: '.shelf [data-cat="Loadouts"]', title: "Loadouts",
+    body: "Ready-made kits. You pay the full price of everything inside and get every item." },
+  { id: "shopTap", where: "sheet", sel: ".shopitem .k-main", title: "Item page",
+    body: "Tap an item for its stats, weight, attunement and what it does to your load." },
+  { id: "shopAdd", where: "sheet", sel: '.shopitem [data-a="shopAdd"]', title: "Add to cart",
+    body: "Nothing is spent until you check out. Change amounts in the cart." },
+  { id: "shopHeart", where: "sheet", sel: ".shopitem .heart", title: "Wish list",
+    body: "Save an item for later. Lists belong to this character, and you can keep up to 8." },
+  { id: "cartBar", where: "sheet", sel: ".cartbar", title: "Your cart",
+    body: "Count, total and what is left. Checkout opens the cart." },
+  { id: "cartLines", where: "sheet", sel: ".cartline", title: "Cart lines",
+    body: "Change the amount, remove a line, or save it for later." },
+  { id: "cartSum", where: "sheet", sel: ".cartsum", title: "Before you pay",
+    body: "Shows your coins after checkout, the weight you add and any attunement or encumbrance flags." },
+  { id: "cartGo", where: "sheet", sel: ".cs-go", title: "Check out",
+    body: "Takes the coins and adds everything to your bag. Undo is on the message that follows." },
+  { id: "lists", where: "sheet", sel: ".lv-tabs", title: "Wish lists",
+    body: "Make named lists, sort each by name, price or weight, and add a whole list to the cart." },
+  { id: "wallet", where: "sheet", sel: ".cgear .wallet .purse", title: "Coins",
+    body: "Tap to add or spend any coins in one go. Combine coins merges them into the fewest." },
+  { id: "encumb", where: "sheet", sel: ".wbar .chipbtn", title: "Encumbrance",
+    body: "The bar marks Light, Encumbered and Heavily encumbered. Apply puts the penalties on this character." },
+  { id: "equipped", where: "sheet", sel: ".cg-slots", title: "Equipped",
+    body: "Tap a slot to wear or swap an item." },
+  { id: "bagFilters", where: "sheet", sel: ".cg-filters", title: "Bag filters",
+    body: "Narrow the bag to equipped, consumables, attunement or heavy items." }
+);
+
 const wideNow = () => typeof matchMedia === "function" && matchMedia("(min-width:1100px)").matches;
 export function hintState() {
   try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); return s && typeof s === "object" ? s : {}; } catch (e) { return {}; }

@@ -68,7 +68,8 @@ import { nbVisible, renderNotes, nbState, nbCats, nbList, nbStats, nbFoot, nbEdi
 import { subList as scList } from "./views/subclass.js";
 import { setSpellNames } from "./ui.js";
 import { renderModal, renderRollCard } from "./views/modals.js";
-import { renderShopResults, shopPrice } from "./views/shop.js";
+import { renderShopResults, shopPrice, shopRows, shopCtx, shopRowMap } from "./views/shop.js";
+import * as SD from "./shopdata.js";
 import { renderCxShopResults } from "./views/cxshop.js";
 import { shopStock, pay, fmtPrice, walletCp, applyDeltas, netCp } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, fullPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
@@ -1197,6 +1198,21 @@ function flushRender() {
 document.addEventListener("focusout", () => setTimeout(flushRender, 0));
 
 // ---------------- actions ----------------
+// Shop helpers: give the character a shop row (a kit gives every part), snapshot/restore for Undo.
+function grantRow(c, row, qty) {
+  const L = APP.library, C = APP.campaign, refs = { weapons: allWeapons(L, C), items: allItems(L, C) };
+  const give = (name, q, magic) => {
+    const same = c.inventory.find(i => i.name === name && !i.notes && !slotOf(c, i.id));
+    if (same && !magic) same.qty += q;
+    else if (magic) for (let k = 0; k < q; k++) c.inventory.push(makeItem(name, refs, store.newId));
+    else { const it = makeItem(name, refs, store.newId); it.qty = q; c.inventory.push(it); }
+  };
+  if (row.kit) row.parts.forEach(p => give(p.name, p.qty * qty, p.row.magic)); else give(row.name, qty, row.magic);
+}
+const shopSnap = c => ({ coins: { ...c.coins }, inv: c.inventory.map(i => ({ ...i })), shop: JSON.parse(JSON.stringify(SD.shopOf(c))) });
+function shopRestore(c, b) { c.coins = b.coins; c.inventory = b.inv; c.shop = b.shop; saveAndRender(); }
+function keepY(fn) { const y = window.scrollY; fn(); window.scrollTo(0, y); }
+
 const ACTIONS = {
   // roster
   newCharHome() { APP.startFrom = "home"; ACTIONS.newChar(); },
@@ -2291,23 +2307,72 @@ const ACTIONS = {
   pickerAllClasses(el) { APP.pickerAllClasses = el.checked; render(); },
 
   // pickers
-  openShop() { APP.shopQuery = ""; APP.shopCat = "All"; APP.shopTrained = true; openPage("shop"); },
+  openShop() { APP.shopQuery = ""; APP.shopCat = "All"; APP.shopTrained = true; APP.shopView = "browse"; APP.shopFilt = {}; APP.shopSort = "rel"; openPage("shop"); },
   shopTrained(el) { APP.shopTrained = el.dataset.v !== "0"; render(); },
   shopCat(el) { APP.shopCat = el.dataset.cat; render(); },
   buyItem(el) {
-    const c = APP.char, L = APP.library, C = APP.campaign, name = el.dataset.name;
-    const row = shopStock(L, C, allWeapons(L, C), allItems(L, C), Object.keys(ARMOR).filter(a => a !== "Clothing")).find(r => r.name === name);
-    if (!row) return;
-    const cost = Math.round(shopPrice(c, row) * 100);
-    const paid = pay(c.coins, cost);
+    const c = APP.char, row = shopRowMap(APP).get(el.dataset.name);
+    if (!row || row.kit) return;
+    const cost = Math.round(shopPrice(c, row) * 100), paid = pay(c.coins, cost);
     if (!paid) { toast("Not enough money"); return; }
-    const before = { coins: { ...c.coins }, inv: c.inventory.map(i => ({ ...i })) };
-    c.coins = paid;
-    const same = c.inventory.find(i => i.name === name && !i.notes && !slotOf(c, i.id));
-    if (same && !row.magic) same.qty += 1;
-    else c.inventory.push(makeItem(name, { weapons: allWeapons(L, C), items: allItems(L, C) }, store.newId));
+    const before = shopSnap(c);
+    c.coins = paid; grantRow(c, row, 1); SD.cartRemove(c, row.name);
+    if (APP.modal && APP.modal.type === "shopItem") closeModal();
     saveAndRender();
-    toast(`Bought ${name} for ${fmtPrice(cost / 100)}`, { action: "Undo", onAction: () => { c.coins = before.coins; c.inventory = before.inv; saveAndRender(); } });
+    toast(`Bought ${row.name} for ${fmtPrice(cost / 100)}`, { action: "Undo", onAction: () => shopRestore(c, before) });
+  },
+  buyKit(el) {
+    const c = APP.char, kit = shopRowMap(APP).get(el.dataset.name);
+    if (!kit || !kit.kit) return;
+    const paid = pay(c.coins, Math.round(kit.gp * 100));
+    if (!paid) { toast("Not enough money"); return; }
+    const before = shopSnap(c);
+    c.coins = paid; grantRow(c, kit, 1); SD.cartRemove(c, kit.name);
+    if (APP.modal && APP.modal.type === "shopItem") closeModal();
+    saveAndRender();
+    toast(`Bought ${kit.name}`, { action: "Undo", onAction: () => shopRestore(c, before) });
+  },
+  shopView(el) { APP.shopView = el.dataset.v; render(); window.scrollTo(0, 0); },
+  shopSort(el) { APP.shopSort = el.value; render(); },
+  shopFilt(el) { APP.shopFilt = { ...(APP.shopFilt || {}), [el.dataset.k]: !(APP.shopFilt || {})[el.dataset.k] }; render(); },
+  shopFilterOpen() { openModal({ type: "shopFilter" }); },
+  shopFilterReset() { APP.shopSort = "rel"; APP.shopFilt = {}; APP.shopTrained = true; render(); },
+  shopOpenItem(el) { openModal({ type: "shopItem", name: el.dataset.name }); },
+  shopAdd(el) { SD.cartAdd(APP.char, el.dataset.name); keepY(() => saveAndRender()); },
+  shopCartQty(el) { const c = APP.char; SD.cartSet(c, el.dataset.name, SD.cartQty(c, el.dataset.name) + (+el.dataset.n)); keepY(() => saveAndRender()); },
+  shopCartRemove(el) { SD.cartRemove(APP.char, el.dataset.name); keepY(() => saveAndRender()); },
+  shopCartLater(el) { SD.cartLater(APP.char, el.dataset.name); keepY(() => saveAndRender()); },
+  shopLaterBack(el) { SD.laterBack(APP.char, el.dataset.name); keepY(() => saveAndRender()); },
+  shopLaterRemove(el) { SD.laterRemove(APP.char, el.dataset.name); keepY(() => saveAndRender()); },
+  shopHeart(el) {
+    const c = APP.char, name = el.dataset.name, s = SD.shopOf(c);
+    if (s.lists.length === 1) { SD.listToggle(c, name, s.lists[0].id); keepY(() => saveAndRender()); return; }
+    openModal({ type: "shopLists", name });
+  },
+  shopListToggle(el) { SD.listToggle(APP.char, el.dataset.name, el.dataset.id); saveAndRender(); },
+  shopListPick(el) { APP.shopList = el.dataset.id; render(); },
+  shopListSort(el) { const s = SD.shopOf(APP.char); SD.listSort(APP.char, APP.shopList || s.lists[0].id, el.value); saveAndRender(); },
+  shopListNameOpen(el) { openModal({ type: "shopListName", mode: el.dataset.mode, id: el.dataset.id, item: el.dataset.item }); setTimeout(() => { const f = document.getElementById("f-slname"); if (f) { f.focus(); f.select(); } }, 60); },
+  shopListNameSave() {
+    const c = APP.char, m = APP.modal, name = ((document.getElementById("f-slname") || {}).value || "").trim();
+    if (m.mode === "rename") SD.listRename(c, m.id, name);
+    else { const id = SD.listCreate(c, name); if (!id) { toast("8 lists max"); return; } APP.shopList = id; if (m.item) SD.listToggle(c, m.item, id); }
+    closeModal(); saveAndRender();
+  },
+  shopListDelete(el) { const c = APP.char; SD.listDelete(c, el.dataset.id); APP.shopList = SD.shopOf(c).lists[0].id; saveAndRender(); },
+  shopListToCart() { const c = APP.char, s = SD.shopOf(c), cur = s.lists.find(l => l.id === APP.shopList) || s.lists[0], map = shopRowMap(APP); cur.items.filter(n => map.has(n)).forEach(n => { if (!SD.cartQty(c, n)) SD.cartAdd(c, n); }); saveAndRender(); toast(`Added ${cur.name} to cart`); },
+  shopCheckout() {
+    const c = APP.char, map = shopRowMap(APP), ctx = shopCtx(APP), sum = SD.cartSummary(c, n => map.get(n), ctx, walletCp(c.coins));
+    if (!sum.lines.length) return;
+    const paid = pay(c.coins, sum.totalCp);
+    if (!paid) { toast("Not enough money"); return; }
+    const before = shopSnap(c);
+    c.coins = paid;
+    sum.lines.forEach(l => grantRow(c, l.row, l.qty));
+    c.shop.cart = c.shop.cart.filter(x => !map.has(x.name));
+    saveAndRender();
+    const n = sum.lines.reduce((t, l) => t + l.qty, 0);
+    toast(`Bought ${n} item${n === 1 ? "" : "s"} for ${fmtPrice(sum.totalCp / 100)}`, { action: "Undo", onAction: () => shopRestore(c, before) });
   },
   buyBox(el) {
     const c = APP.char, box = boxById(el.dataset.box);

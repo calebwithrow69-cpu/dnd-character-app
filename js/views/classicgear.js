@@ -86,8 +86,8 @@ function detailPanel(app, c) {
 export function classicGear(app, c, d) {
   return `<div class="cgear">
     ${shopBanner(c)}
-    <div class="cg-main"><div class="cg-left">${summary(app, c, d)}${listPanel(app, c)}</div>
-    <div class="cg-right">${detailPanel(app, c)}${coinsPanel(c)}
-    <details class="panel cg-ac"><summary class="panel-head"><h2>Armor class ${d.ac}</h2></summary><div class="panel-body stack">${acBody(c, d)}</div></details></div></div>
+    <div class="cg-main"><div class="cg-left">${summary(app, c, d)}${detailPanel(app, c)}${coinsPanel(c)}
+    <details class="panel cg-ac"><summary class="panel-head"><h2>Armor class ${d.ac}</h2></summary><div class="panel-body stack">${acBody(c, d)}</div></details></div>
+    <div class="cg-right">${listPanel(app, c)}</div></div>
   </div>`;
 }

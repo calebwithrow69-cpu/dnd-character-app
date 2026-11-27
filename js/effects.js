@@ -7,6 +7,7 @@
 // homebrew effects sit inline in campaign.json; players add their own as custom bonuses.
 
 import { conditionEffects } from "./conditions.js";
+import { encumbranceEffects } from "./encumbrance.js";
 let SRC = () => null;
 // fn returns { feats, classes, subclasses, species, effectsV } or null while rules are locked.
 export function setEffectsSource(fn) { SRC = fn; }
@@ -177,6 +178,7 @@ export function collectEffects(c) {
   (c.spellfx || []).forEach(sf => (sf.effects || []).forEach(e => { if (e && e.t) out.push({ ...e, src: sf.name, spellfx: sf.id }); }));
   (c.custom || []).forEach(e => { if (e && e.t) out.push({ t: e.t, v: Number(e.v) || 0, src: e.label || "Custom", custom: true, id: e.id }); });
   conditionEffects(c).forEach(e => out.push(e));
+  encumbranceEffects(c).forEach(e => out.push(e));
   if (!s) return out;
   (c.feats || []).forEach(f => { const b = baseName(f), e = s.feats.find(x => x.name === f) || s.feats.find(x => x.name === b); if (e) add(b, e.effects); const opt = (/\((.+)\)$/.exec(f) || [])[1], oe = opt && s.feats.find(x => x.name === opt); if (oe) add(opt, oe.effects); });
   const cls = s.classes.find(x => x.name === c.class);

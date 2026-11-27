@@ -12,6 +12,7 @@ export const SHELVES = [
   { k: "Tools", label: "Tools", icon: "settings", tone: "green" },
   { k: "Gear", label: "Gear", icon: "gear", tone: "faint" },
   { k: "Magic", label: "Magic", icon: "flask", tone: "feat" },
+  { k: "Loadouts", label: "Loadouts", icon: "gear", tone: "amber" },
 ];
 const TONE = Object.fromEntries(SHELVES.map(s => [s.k, s.tone || "faint"]));
 const AISLE_ORDER = ["Simple Melee", "Simple Ranged", "Martial Melee", "Martial Ranged", "Light armor", "Medium armor", "Heavy armor", "Shield"];
@@ -36,7 +37,7 @@ export function shopDecorator(L, C) {
       aisle = r.name === "Shield" ? "Shield" : `${ARMOR[r.name]?.cat || "Other"} armor`;
       icon = "shield"; sub = acText(r.name);
     } else {
-      aisle = r.sub || group; sub = "";
+      aisle = r.kit ? "Ready-made kits" : (r.sub || group); sub = r.kit ? r.sub : "";
       if (group === "Tools") icon = "settings";
       else if (group === "Magic") { const t = `${r.name} ${r.sub || ""}`; icon = /potion|elixir|philter|oil/i.test(t) ? "flask" : /\bring\b/i.test(t) ? "ring" : /scroll/i.test(t) ? "scroll" : "star"; }
     }
@@ -64,18 +65,19 @@ export function shelfTabs(action, counts, active, skip = [], extra = "") {
 export function shopRow(r, o) {
   const b = o.buy;
   const minus = o.minus ? `<button class="btn sm shop-minus" data-a="${o.minus.action}" data-name="${esc(r.name)}" aria-label="${esc(o.minus.label)}">${ICONS.minus}</button>` : "";
-  const buy = `<button class="btn sm shop-buy ${b.ok ? "pri" : ""}" data-a="${b.action}" data-name="${esc(r.name)}" ${b.ok ? "" : "disabled"} aria-label="${esc(b.label)}">${ICONS.coin}<span>${esc(b.text)}</span></button>`;
+  const buy = `<button class="btn sm shop-buy ${b.ok ? "pri" : ""}" data-a="${b.action}" data-name="${esc(r.name)}" ${b.ok ? "" : "disabled"} aria-label="${esc(b.label)}">${b.icon || ICONS.coin}<span>${esc(b.text)}</span></button>`;
+  const heart = o.heart ? `<button class="iconbtn heart ${o.heart.on ? "on" : ""}" data-a="shopHeart" data-name="${esc(r.name)}" aria-pressed="${!!o.heart.on}" aria-label="${esc(o.heart.label)}">${ICONS.heart}</button>` : "";
   return kRow({ icon: ICONS[r.icon] || "", tone: r.tone, title: r.name, cap: o.cap || "", sub: r.sub || "", status: o.status ? esc(o.status) : "",
-    mainAttrs: o.mainAttrs || "", actions: minus + buy, extra: o.detail || "", off: !b.ok && !o.listed, cls: `shopitem${o.listed ? " on" : ""}${o.open ? " open" : ""}` });
+    mainAttrs: o.mainAttrs || "", actions: heart + minus + buy, extra: o.detail || "", off: !b.ok && !o.listed, cls: `shopitem${o.listed ? " on" : ""}${o.open ? " open" : ""}` });
 }
 
 // Rows grouped like aisles: by shelf on All, by aisle inside one shelf, one flat list while searching.
-export function shopList(rows, { cat = "All", q = "", row, limit = 300, empty = "Nothing matches.", sticky = true }) {
+export function shopList(rows, { cat = "All", q = "", flat = false, row, limit = 300, empty = "Nothing matches.", sticky = true }) {
   if (!rows.length) return `<div class="shop-empty">${ICONS.search}<span>${esc(empty)}</span></div>`;
   const shown = rows.slice(0, limit);
   const capOf = r => r.aisle === r.group ? r.group : `${r.group} · ${r.aisle}`;
   let html = "";
-  if (q) html = kGroup("Results", rows.length) + shown.map(r => row(r, capOf(r))).join("");
+  if (q || flat) html = kGroup("Results", rows.length) + shown.map(r => row(r, capOf(r))).join("");
   else {
     const byShelf = cat === "All", by = new Map();
     for (const r of shown) { const k = byShelf ? r.group : r.aisle; if (!by.has(k)) by.set(k, []); by.get(k).push(r); }

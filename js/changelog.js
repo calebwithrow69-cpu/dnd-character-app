@@ -2,11 +2,22 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.107";
+export const VERSION = "0.1.108";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.108",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "The shop update: an online-style shop, kits, encumbrance and a tidier Gear page.",
+    groups: [
+      { title: "Shop", items: ["Tap an item for its page: price, weight, shelf, what you own, attunement slots used, and what the weight does to your load.", "Cart with quantities, Save for later and a running total. A bar shows count, total and what is left, and leads to Checkout.", "Checkout takes the coins, adds everything to your bag and flags attunement items and a heavier encumbrance tier. Undo is on the toast.", "Wish lists: up to 8 named lists per character, sorted by name, price or weight, with Add all to cart.", "Search forgives typos. One sort button holds sorting, the Affordable, Wishlist, Light and In cart filters, and the Proficient switch (was Trained).", "Browse, Cart and Lists have icons. The shop icon is now a bag.", "New Loadouts shelf: six ready-made kits at the full price of everything inside."] },
+      { title: "Encumbrance", items: ["The weight bar shows Light, Encumbered, Heavily encumbered and Over capacity, with marks at 5x and 10x Strength.", "Apply switches the penalties on for that character: speed down, and disadvantage when heavily encumbered. Off by default."] },
+      { title: "Gear", items: ["Equipped is smaller and sits beside the item list on wide screens, with details, coins and armor class under it.", "Coins use the shop's purse look. Tap it to add or spend.", "Hints cover the shop, cart, lists, coins and encumbrance."] }
+    ]
+  },
   {
     v: "0.1.107",
     date: "2026-11-27",
