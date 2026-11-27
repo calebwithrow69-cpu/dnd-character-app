@@ -15,7 +15,6 @@ import { characterBody, concBanner } from "./character.js";
 import { classicBody } from "./classic.js";
 import { hubCell, toolIco } from "./tools.js";
 import { condLine, condTag } from "../conditions.js";
-import { stylePicker } from "./stylepick.js";
 import { xpForLevel } from "../rules.js";
 import { grantsOf } from "../effects.js";
 import { shieldSvg, armorTier } from "../shield.js";
@@ -78,7 +77,6 @@ export function renderSheet(app) {
   const tab = app.sheetTab;
   const dots = new Set(tabs.map(t => t[0]).filter(id => id !== "hub" && id !== tab && tabIsNew(id)));
   markTabSeen(tab);
-  if (tab === "stats" && (app.styleAsk === c.id || (app.prefs.sheetStyle !== "classic" && app.prefs.sheetStyle !== "advanced"))) return stylePicker(app);
 
   const pct = Math.max(0, Math.min(100, (c.hp.cur / Math.max(1, c.hp.max)) * 100));
   const hpState = c.hp.cur <= c.hp.max * 0.25 ? "low" : c.hp.cur <= c.hp.max * 0.6 ? "mid" : "";
@@ -99,16 +97,15 @@ export function renderSheet(app) {
   const meta = `Level ${c.level} ${c.species} ${c.class}${c.subclass ? " · " + c.subclass : ""}`;
 
   let body;
-  const styled = app.prefs.sheetStyle === "advanced" || app.prefs.sheetStyle === "classic";
-  if (tab === "stats") body = app.prefs.sheetStyle === "advanced" ? characterBody(app, c, d) : classicBody(app, c, d);
+  if (tab === "stats") body = classicBody(app, c, d);
   else if (tab === "shop") body = app.shopCat === "loot" && app.prefs && app.prefs.experimental ? renderLootPage(app) : renderShopPage(app);
   else if (tab === "settings") body = `<div class="setpage">${settingsBody(app)}</div>`;
   else if (tab === "notes") body = notesBody(app);
   else body = rulesTab(app);
   const page = tab === "shop" || tab === "settings" || tab === "notes";
-  const wide = tab === "rules" || tab === "shop" || tab === "notes" || (tab === "stats" && app.prefs.sheetStyle === "advanced" && ["gear", "stats", "rolls"].includes(app.charSub));
+  const wide = tab === "rules" || tab === "shop" || tab === "notes";
 
-  return `<div class="sheetview" data-sheet="${app.prefs.sheetStyle === "advanced" ? "advanced" : "classic"}">
+  return `<div class="sheetview" data-sheet="classic">
     ${sheetBar(app, c, d, meta)}
     <main class="wrap page ${wide ? "wide" : ""}">
       ${tab === "rules" ? "" : c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}

@@ -444,9 +444,6 @@ export function renderModal(app) {
           </div>
           <button class="btn block" data-a="customAdd">Add bonus</button>
           <button class="btn block" data-a="openBreakdown">Breakdown</button>
-          <p class="lab" style="margin-top:6px">Sheet style</p>
-          <div class="seg" role="group" aria-label="Sheet style">${[["classic", "Classic"], ["advanced", "Advanced"]].map(([v, l]) => `<button data-a="setPrefV" data-k="sheetStyle" data-v="${v}" aria-pressed="${(app.prefs.sheetStyle || "classic") === v}">${l}</button>`).join("")}</div>
-          <p class="sub2">Character data is unchanged.</p>
           <div class="panel" style="margin-top:10px"><div class="panel-body stack">
             <button class="btn block" data-a="downloadPdf">Download character sheet (PDF)</button>
             <button class="btn block" data-a="exportOne">Export character</button>

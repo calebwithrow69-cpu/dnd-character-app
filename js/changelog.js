@@ -2,11 +2,25 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.101";
+export const VERSION = "0.1.102";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.102",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "One character sheet.",
+    groups: [
+      { title: "Sheet", items: [
+        "The Advanced sheet and the style switch are gone. Every character uses the one sheet with five sections: Play, Sheet, Spells, Gear, Features.",
+        "The Tools section is gone. Tools stay in the round button in the bottom bar.",
+        "Features now shows the level 1 to 20 progression.",
+        "The sheet chooser after creating a character is gone."
+      ] }
+    ]
+  },
   {
     v: "0.1.101",
     date: "2026-11-27",

@@ -108,7 +108,7 @@ const mount = document.getElementById("app");
 const modalRoot = document.getElementById("modal-root");
 const rollRoot = document.getElementById("roll-root");
 
-function readPrefs() { try { const p = JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); return p && typeof p === "object" && !Array.isArray(p) ? p : {}; } catch (e) { return {}; } }
+function readPrefs() { try { const p = JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); if (p && typeof p === "object" && !Array.isArray(p)) { p.sheetStyle = "classic"; return p; } return { sheetStyle: "classic" }; } catch (e) { return {}; } }
 function readFlag(k) { try { return localStorage.getItem(k) === "1"; } catch (e) { return false; } }
 function savePrefs() { try { localStorage.setItem(LS_PREFS, JSON.stringify(APP.prefs)); } catch (e) { } }
 let wakeLock = null;
@@ -988,7 +988,7 @@ function refreshWizardChrome() {
 function playKeys(e) {
   if (APP.char && APP.char.dead) return;
   if (APP.screen !== "sheet" || APP.prefs.keys === false || APP.modal || rollStageOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
-  if (APP.sheetTab !== "stats" || ((APP.prefs.sheetStyle || "classic") === "advanced" ? APP.charSub !== "play" : APP.classicSub !== "play")) return;
+  if (APP.sheetTab !== "stats" || APP.classicSub !== "play") return;
   const t = e.target, typing = t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
   if (typing) { if (e.key === "Escape" && t.id === "pm-q") { t.blur(); } return; }
   const k = e.key;
@@ -1825,7 +1825,6 @@ const ACTIONS = {
     store.setActiveId(char.id); APP.prefs.lastChar = char.id; APP.prefs.recent = { ...(APP.prefs.recent || {}), [char.id]: Date.now() }; savePrefs();
     clearDraft(); APP.createDraft = null; APP.progressOpen = false; APP.sheetTab = "stats"; APP.roll = null; APP.lvl = null;
     APP.shopAfterChoices = goldOnly;
-    APP.styleAsk = char.id; // every new character gets to pick its sheet style first
     if (cp && (cp.steps.length || cp.expertise)) { APP.lvl = cp.lvl; applyLevelUp(); } // applies subclass, spells, invocations... and opens the sheet
     else {
       if (goldOnly) { APP.shopAfterChoices = false; APP._shopLater = true; }
@@ -1843,7 +1842,7 @@ const ACTIONS = {
     APP.nav = { stack: APP.nav.stack.slice(0, -1), last: APP.nav.last }; APP._navBack = true;
     if (t.screen === "sheet") {
       APP.sheetTab = t.tab; APP.selItem = null;
-      if (t.tab === "stats" && t.sub) { if (APP.prefs.sheetStyle === "advanced") APP.charSub = t.sub; else APP.classicSub = t.sub; }
+      if (t.tab === "stats" && t.sub) { APP.classicSub = t.sub; }
     } else { save(); store.setActiveId(null); APP.char = null; APP.roll = null; APP.screen = t.screen; }
     render(); window.scrollTo(0, 0);
   },

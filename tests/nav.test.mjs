@@ -15,7 +15,6 @@ go(L("home")); ok(nav.stack.length === 0, "home clears the stack");
 go(L("roster")); go(L("sheet", "stats", "b", "sheet")); ok(label(top(nav)) === "Characters", "opened from the roster, back says Characters");
 ok(here({ screen: "create", prefs: {} }) === null, "flows are not tracked");
 ok(here({ screen: "sheet", sheetTab: "stats", classicSub: "gear", char: { id: "a" }, prefs: {} }).sub === "gear", "classic sub");
-ok(here({ screen: "sheet", sheetTab: "stats", charSub: "rolls", char: { id: "a" }, prefs: { sheetStyle: "advanced" } }).sub === "rolls", "advanced sub");
 ok(sheetPath("G", L("sheet", "shop")).join(">") === "G>Gear>Shop", "shop path");
 ok(sheetPath("G", L("sheet", "stats", "a", "sheet")).join(">") === "G", "main path is just the name");
 ok(sheetPath("G", L("sheet", "stats", "a", "spells")).join(">") === "G>Spells", "sub path");

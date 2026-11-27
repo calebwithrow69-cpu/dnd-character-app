@@ -102,7 +102,7 @@ function slotsRail(c, d, part = "all") {
     : `<span class="stepper"><button data-a="resStep" data-i="${i}" data-n="1" aria-label="Use one">\u2212</button><b>${r.max - r.used}</b><button data-a="resStep" data-i="${i}" data-n="-1" aria-label="Regain one">+</button></span>`}</div>`).join("");
   const res = `<section><h3>Resources</h3><div class="res">${hdRow}${inspRow}${trk}</div></section>`;
   const rest = `<section class="pm-rest"><div class="btnrow"><button class="btn sm" data-a="openShortRest">Short rest</button><button class="btn sm" data-a="openLongRest">Long rest</button></div>
-    <button class="linkbtn pm-lvl" data-a="charSub" data-sub="features">Level ${c.level} \u00b7 Progression</button></section>`;
+    <button class="linkbtn pm-lvl" data-a="classicSub" data-sub="features">Level ${c.level} \u00b7 Progression</button></section>`;
   return part === "none" ? "" : part === "slots" ? slots : part === "rest" ? res + rest : res + slots + rest;
 }
 

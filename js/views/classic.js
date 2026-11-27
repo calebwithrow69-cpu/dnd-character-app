@@ -12,7 +12,7 @@ import { classicGear } from "./classicgear.js";
 import { subclassesFor } from "../data.js";
 import { weaponsOf } from "../gear.js";
 import { trackersPanel } from "./trackers.js";
-import { playTab } from "./play.js";
+import { playTab, trackHtml } from "./play.js";
 
 const row = (name, sub, kind, extra = "") => `<button class="rowline rollable" data-a="showDetail" data-kind="${kind}" ${extra}><span class="nm">${esc(name)}</span><span class="sub2">${esc(sub)}</span></button>`;
 
@@ -112,7 +112,7 @@ export function classicBody(app, c, d) {
   const pips = (n, kind, cls2) => Array.from({ length: 3 }, (_, i) => `<button class="pip ${cls2} ${i < n ? "" : "used"}" data-a="deathSave" data-kind="${kind}" data-i="${i}" aria-label="${kind} ${i + 1}"><i></i></button>`).join("");
   const val = (label, v, attrs = "") => `<${attrs ? "button" : "div"} class="cval" ${attrs}><b>${v}</b><span>${label}</span></${attrs ? "button" : "div"}>`;
 
-  const subs = [["play", "Play"], ["sheet", "Sheet"], ["features", "Features"], si ? ["spells", "Spells"] : null, ["gear", "Gear"], ["tools", "Tools"]].filter(Boolean);
+  const subs = [["play", "Play"], ["sheet", "Sheet"], ["features", "Features"], si ? ["spells", "Spells"] : null, ["gear", "Gear"]].filter(Boolean);
   const sub = subs.some(x => x[0] === app.classicSub) ? app.classicSub : "sheet";
   const profsBox = `<div class="panel"><div class="panel-head"><h2>Equipment training and proficiencies</h2></div><div class="panel-body stack">
       ${profsChecks(c)}
@@ -146,7 +146,8 @@ export function classicBody(app, c, d) {
     ${trackersPanel(c)}
       </div>
     </div>`,
-    features: `<div class="cl-cols3 cl-two"><div>
+    features: `<div class="pm prog-wrap"><div class="prog-head"><h2 class="sub2">Progression, level 1 to 20</h2></div>${trackHtml(app, c)}</div>
+    <div class="cl-cols3 cl-two"><div>
     <div class="panel"><div class="panel-head"><h2>Class features</h2>
       <button class="btn sm pri" data-a="openLevelMenu" ${c.level >= 20 ? "disabled" : ""}>Level up</button></div><div class="panel-body flush">
       ${(c.masteries || []).length ? `<div class="rowline"><span class="nm">Weapon mastery</span><span class="sub2" style="text-align:right">${esc(c.masteries.join(", "))}</span></div>` : ""}

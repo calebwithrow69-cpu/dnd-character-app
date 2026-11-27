@@ -16,12 +16,11 @@ export const keyOf = l => l.screen + "|" + l.tab + "|" + l.id;
 export function here(A) {
   if (!TRACKED.includes(A.screen)) return null;
   const sheet = A.screen === "sheet" && A.char;
-  const adv = A.prefs && A.prefs.sheetStyle === "advanced";
   return {
     screen: A.screen,
     tab: sheet ? A.sheetTab || "stats" : "",
     id: sheet ? A.char.id : "",
-    sub: sheet && (A.sheetTab || "stats") === "stats" ? (adv ? A.charSub : A.classicSub) || "" : ""
+    sub: sheet && (A.sheetTab || "stats") === "stats" ? A.classicSub || "" : ""
   };
 }
 

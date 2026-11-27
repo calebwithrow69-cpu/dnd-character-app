@@ -13,9 +13,7 @@ export const HINTS = [
   { id: "hotbar", where: "sheet", sel: ".hotbar-panel, .hb-slim", title: "Hotbar",
     body: "Pin attacks, spells and items here. One tap uses them." },
   { id: "trackers", where: "sheet", sel: ".trkpanel", title: "Trackers",
-    body: "Limited uses with their reset. Tap a pip to spend one. Long rest refills them." },
-  { id: "tools", where: "sheet", sel: ".toolgrid", title: "Tools",
-    body: "Small apps for the table. The ones you star show in Quick tools." }
+    body: "Limited uses with their reset. Tap a pip to spend one. Long rest refills them." }
 ];
 
 HINTS.splice(0, 0,

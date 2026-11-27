@@ -63,7 +63,6 @@ export function settingsBody(app) {
     sw("haptics", "Vibration on tap", HAS_VIBRATE ? "A tiny buzz on supported phones." : "Not supported on this device (iPhones do not allow it).", p.haptics !== "off" && HAS_VIBRATE, { disabled: !HAS_VIBRATE, kw: "buzz haptic" });
 
   const sheet =
-    choice("sheetStyle", "Character sheet", "Changing it asks you to confirm.", [["classic", "Classic"], ["advanced", "Advanced"]], p.sheetStyle || "classic", { kw: "sheet layout classic advanced beginner" }) +
     choice("startTab", "Open characters on", "Which tab shows first.", [["stats", "Character"], ["rules", "Rules"]], p.startTab || "stats", { kw: "default start tab" }) +
     choice("width", "Laptop width", "Standard or full window.", [["standard", "Standard"], ["wide", "Wide"]], p.width || "standard", { kw: "wide layout desktop screen" }) +
     sw("showxp", "Show XP line", "Experience under the level seal.", p.showxp !== false, { kw: "experience points level" }) +
