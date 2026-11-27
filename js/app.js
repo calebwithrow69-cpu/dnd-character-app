@@ -12,7 +12,7 @@ import { captureLevel, diffLevel, deLevel } from "./levelfix.js";
 import { ridersFor, rerollsFor, ensureLuck, shortRestRefill } from "./riders.js";
 import { VERSION, CHANGELOG } from "./changelog.js";
 import { splashPlan } from "./whatsnew.js";
-import { here as navHere, step as navStep, blank as navBlank, top as navTop } from "./nav.js";
+import { here as navHere, step as navStep, blank as navBlank, top as navTop, MAIN_SUB } from "./nav.js";
 import { loadPortraits, savePortrait, removePortrait, importPortraits, portraitsBroken } from "./portraits.js";
 import { spUiDefault, favKey } from "./views/codex.js";
 import { renderDm, dmActions, dmListHtml } from "./views/dm.js";
@@ -70,7 +70,7 @@ import { setSpellNames } from "./ui.js";
 import { renderModal, renderRollCard } from "./views/modals.js";
 import { renderShopResults, shopPrice } from "./views/shop.js";
 import { renderCxShopResults } from "./views/cxshop.js";
-import { shopStock, pay, fmtPrice, walletCp } from "./equipment.js";
+import { shopStock, pay, fmtPrice, walletCp, applyDeltas, netCp } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, fullPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
 import { syncCustom, loadCustom, saveCustom, blankCustom, customValid } from "./custombg.js";
 import { featAbilityIncrease, applyFeat, ASI_FEAT } from "./featfx.js";
@@ -1036,7 +1036,7 @@ function onInput(e) {
   if (el.id === "pm-q") { APP.playQ = el.value; render(); return; }
   if (el.id === "st-q") { APP.stQ = el.value; render(); return; }
   if (el.id === "sp-q") { APP.spQ = el.value; render(); return; }
-  if (el.id === "wal-amt") { if (APP.modal && APP.modal.type === "wallet") { APP.modal.amt = el.value.replace(/\D/g, "").slice(0, 9); render(); } return; }
+  if (el.dataset.wal) { if (APP.modal && APP.modal.type === "wallet") { const v = el.value.replace(/[^\d-]/g, "").replace(/(?!^)-/g, "").slice(0, 9); APP.modal.d[el.dataset.wal] = v; render(); } return; }
   if (el.id === "bag-q") { APP.bagQ = el.value; render(); return; }
   if (el.id === "f-formula") { APP.diceFormula = el.value; return; }
   if (el.id === "hp-amt") { updateHpPreview(); return; }
@@ -1861,6 +1861,8 @@ const ACTIONS = {
   navBack() {
     const t = navTop(APP.nav || navBlank());
     APP.hubOpen = false; closeModal();
+    const l = navHere(APP);
+    if (l && l.screen === "sheet" && l.tab === "stats" && l.sub && !MAIN_SUB.includes(l.sub)) { APP.classicSub = "sheet"; render(); window.scrollTo(0, 0); return; }
     if (!t || t.screen === "home" || (t.screen === "sheet" && !(APP.char && APP.char.id === t.id))) { ACTIONS.backToRoster(); return; }
     APP.nav = { stack: APP.nav.stack.slice(0, -1), last: APP.nav.last }; APP._navBack = true;
     if (t.screen === "sheet") {
@@ -2361,17 +2363,16 @@ const ACTIONS = {
   },
   clearSel() { APP.selItem = null; render(); },
   // Loadouts (Advanced sheet > Gear). Opening one only previews it; loadoutApply is the confirm.
-  walOpen(el) { openModal({ type: "wallet", mode: "add", unit: el.dataset.unit || "gp", amt: "" }); },
-  walMode(el) { APP.modal.mode = el.dataset.v; render(); },
-  walUnit(el) { APP.modal.unit = el.dataset.v; render(); },
-  walChip(el) { APP.modal.amt = String((parseInt(APP.modal.amt, 10) || 0) + (+el.dataset.n || 0)); render(); },
+  walOpen() { openModal({ type: "wallet", d: {}, step: 1 }); },
+  walStep(el) { const m = APP.modal, k = el.dataset.k; m.d[k] = String((parseInt(m.d[k], 10) || 0) + (+el.dataset.s) * m.step); render(); },
+  walSize(el) { APP.modal.step = +el.dataset.v; render(); },
+  walClear() { APP.modal.d = {}; render(); },
   walGo() {
-    const m = APP.modal, c = APP.char, n = parseInt(m.amt, 10) || 0; if (n <= 0) return;
-    const prev = { ...c.coins }, rate = { cp: 1, sp: 10, ep: 50, gp: 100, pp: 1000 }[m.unit];
-    if (m.mode === "spend") { const left = pay(c.coins, n * rate); if (!left) { toast("Not enough coins"); return; } c.coins = left; }
-    else c.coins = { ...c.coins, [m.unit]: (c.coins[m.unit] || 0) + n };
-    closeModal(); save(); render();
-    toast(`${m.mode === "spend" ? "Spent" : "Added"} ${n} ${m.unit}`, { action: "Undo", onAction: () => { c.coins = prev; save(); render(); } });
+    const m = APP.modal, c = APP.char, next = applyDeltas(c.coins, m.d), net = netCp(m.d);
+    if (!next || !Object.values(m.d).some(v => parseInt(v, 10))) return;
+    const prev = { ...c.coins };
+    c.coins = next; closeModal(); save(); render();
+    toast(`${net < 0 ? "Spent" : net > 0 ? "Added" : "Swapped"} coins`, { action: "Undo", onAction: () => { c.coins = prev; save(); render(); } });
   },
   walConvert() {
     const c = APP.char, prev = { ...c.coins }; let t = walletCp(c.coins); const out = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };

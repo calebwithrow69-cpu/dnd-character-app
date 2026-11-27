@@ -97,6 +97,24 @@ export function pay(coins, costCp) {
   for (const k of ["gp", "sp", "cp"]) { const n = Math.floor(change / RATE[k]); left[k] += n; change -= n * RATE[k]; }
   return left;
 }
+export const COIN_RATE = RATE;
+export const COIN_INFO = [["pp", "Platinum", "#D9D6E2"], ["gp", "Gold", "#E3BF5C"], ["ep", "Electrum", "#CFC49A"], ["sp", "Silver", "#C9CCD1"], ["cp", "Copper", "#C98B5B"]];
+// Net value of a set of signed coin changes, in copper.
+export const netCp = d => Object.entries(RATE).reduce((t, [k, r]) => t + (parseInt(d?.[k], 10) || 0) * r, 0);
+// Apply signed changes per coin. A coin that would go below zero is covered from the rest (making change); null if short.
+export function applyDeltas(coins, d) {
+  const out = {}; let deficit = 0;
+  for (const k of Object.keys(RATE)) {
+    const v = (+coins[k] || 0) + (parseInt(d?.[k], 10) || 0);
+    if (v < 0) { deficit += -v * RATE[k]; out[k] = 0; } else out[k] = v;
+  }
+  return deficit ? pay(out, deficit) : out;
+}
+export function fmtNet(cp) {
+  if (!cp) return "0";
+  const a = Math.abs(cp), s = cp < 0 ? "-" : "+";
+  return a >= 100 ? `${s}${+(a / 100).toFixed(2)} gp` : a >= 10 ? `${s}${+(a / 10).toFixed(1)} sp` : `${s}${a} cp`;
+}
 export function fmtPrice(gp) {
   if (gp == null) return "";
   if (gp >= 1) return `${+gp.toFixed(2)} gp`;

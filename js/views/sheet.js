@@ -1,7 +1,7 @@
-import { walletCp } from "../equipment.js";
+import { walletCp, COIN_INFO } from "../equipment.js";
 import { readinessStrip, loadoutCards, wornRows } from "./loadout.js";
 import { tourCard } from "../tour.js";
-import { here as navHere, top as navTop, label as navLabel, sheetPath } from "../nav.js";
+import { here as navHere, top as navTop, label as navLabel, sheetPath, MAIN_SUB } from "../nav.js";
 import { portraitFor } from "../portraits.js";
 import { tabIsNew, markTabSeen } from "../tabsseen.js";
 import { esc, topbar, ICONS, searchBox, formatText, conditionIcon, glossaryEntry, infoRow, activeChips, hotbarToggle, kRow, kGroup, snipOf } from "../ui.js";
@@ -48,7 +48,7 @@ function sheetBar(app, c, d, meta) {
   const pill = (v, l) => `<span class="sb-pill"><b>${v}</b><i>${l}</i></span>`;
   const loc = navHere(app), path = sheetPath(c.name, loc), title = path[path.length - 1];
   const trail = path.length > 1 ? path.slice(0, -1).join(" \u203a ") : "";
-  const prev = navLabel(navTop(app.nav || { stack: [] }));
+  const prev = loc && loc.tab === "stats" && loc.sub && !MAIN_SUB.includes(loc.sub) ? "Character" : navLabel(navTop(app.nav || { stack: [] }));
   const img = portraitFor(c.species);
   let h = 0; for (const ch of c.name) h = (h * 31 + ch.charCodeAt(0)) % 360;
   const face = img ? `<img src="${esc(img)}" alt="">` : `<span style="--h:${h}">${esc(Array.from(c.name)[0] || "?").toUpperCase()}</span>`;
@@ -359,12 +359,11 @@ export function shopBanner(c) {
 
 export function coinsPanel(c) {
   const tot = walletCp(c.coins) / 100, totTxt = tot >= 1 ? `${+tot.toFixed(2)} gp` : `${Math.round(tot * 100)} cp`;
-  const COINS = [["pp", "#D9D6E2", "Platinum"], ["gp", "#E3BF5C", "Gold"], ["ep", "#CFC49A", "Electrum"], ["sp", "#C9CCD1", "Silver"], ["cp", "#C98B5B", "Copper"]];
   return `<div class="panel wallet"><div class="panel-head"><h2>Coins</h2><span class="wal-tot" aria-label="Total ${esc(totTxt)}">${esc(totTxt)}</span></div><div class="panel-body stack">
       <div class="coinrow">
-        ${COINS.map(([k, col, nm]) => `<div class="coinc"><button class="coinbtn" data-a="walOpen" data-unit="${k}" aria-label="Add or spend ${nm.toLowerCase()}"><i style="background:radial-gradient(circle at 35% 30%,#fff9,${col} 55%,${col})">${k.toUpperCase()}</i></button><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" aria-label="${nm} pieces"></div>`).join("")}
+        ${COIN_INFO.map(([k, nm, col]) => `<div class="coinc"><button class="coinbtn" data-a="walOpen" aria-label="Change coins"><i class="disc" style="--c:${col}" aria-hidden="true"></i></button><span class="cn"><b>${k.toUpperCase()}</b><em>${nm}</em></span><input class="f num" type="number" inputmode="numeric" min="0" data-coin="${k}" value="${c.coins[k] || 0}" aria-label="${nm} pieces"></div>`).join("")}
       </div>
-      <div class="btnrow"><button class="btn sm pri" data-a="walOpen" data-unit="gp">Add or spend</button><button class="btn sm" data-a="walConvert">Combine coins</button></div>
+      <div class="btnrow"><button class="btn sm pri" data-a="walOpen">Add or spend</button><button class="btn sm" data-a="walConvert">Combine coins</button></div>
     </div></div>`;
 }
 

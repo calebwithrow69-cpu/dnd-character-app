@@ -31,7 +31,7 @@ import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
 import { renderBadges, renderLevelUp, renderDiscard } from "./notes.js";
 import { renderContentUpdate } from "./contentupdate.js";
-import { pay, walletCp } from "../equipment.js";
+import { applyDeltas, netCp, fmtNet, COIN_INFO } from "../equipment.js";
 import { packBody, packAddBody, isPack } from "./packview.js";
 import { renderLoadoutBody, renderLoadoutSave, loadoutsOf, isActive, loadoutPlan } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
@@ -281,16 +281,16 @@ export function renderModal(app) {
     }
 
     case "wallet": {
-      const have = walletCp(c.coins), rate = { cp: 1, sp: 10, ep: 50, gp: 100, pp: 1000 }, n = parseInt(m.amt, 10) || 0, spend = m.mode === "spend";
-      const after = n ? (spend ? pay(c.coins, n * rate[m.unit]) : { ...c.coins, [m.unit]: (c.coins[m.unit] || 0) + n }) : null;
-      const fmt = k => ["pp", "gp", "ep", "sp", "cp"].filter(x => (k[x] || 0) > 0).map(x => `${k[x]} ${x}`).join(" \u00b7 ") || "nothing";
-      const seg = (a, items, cur) => `<div class="seg" role="group">${items.map(([v, l]) => `<button data-a="${a}" data-v="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
-      const body = `<div class="stack">${seg("walMode", [["add", "Add"], ["spend", "Spend"]], m.mode)}
-        <div class="wal-in"><input class="f num" id="wal-amt" inputmode="numeric" autocomplete="off" placeholder="0" value="${esc(m.amt || "")}" aria-label="Amount"></div>
-        ${seg("walUnit", [["pp", "pp"], ["gp", "gp"], ["ep", "ep"], ["sp", "sp"], ["cp", "cp"]], m.unit)}
-        <div class="wal-chips">${[1, 5, 10, 50, 100].map(x => `<button class="chipbtn" data-a="walChip" data-n="${x}">+${x}</button>`).join("")}</div>
-        <div class="wal-sum"><span>Now</span><b>${esc(fmt(c.coins))}</b><span>${spend ? "After spending" : "After adding"}</span><b class="${after ? "" : "dn"}">${n ? (after ? esc(fmt(after)) : "Not enough coins") : "\u2013"}</b></div></div>`;
-      return modalShell("Coins", body, `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="walGo" ${n && after ? "" : "disabled"}>${spend ? "Spend" : "Add"}</button>`);
+      const d = m.d || {}, net = netCp(d), next = applyDeltas(c.coins, d), any = Object.values(d).some(v => parseInt(v, 10));
+      const sign = v => { const n = parseInt(v, 10) || 0; return n > 0 ? "pos" : n < 0 ? "neg" : ""; };
+      const rows = COIN_INFO.map(([k, nm, col]) => `<div class="wal-row ${sign(d[k])}"><div class="wal-id"><i class="disc" style="--c:${col}" aria-hidden="true"></i><span><b>${k.toUpperCase()}</b><em>${nm}</em></span></div>
+        <span class="wal-have">${c.coins[k] || 0}</span>
+        <div class="wal-ctl"><button class="iconbtn" data-a="walStep" data-k="${k}" data-s="-1" aria-label="Remove ${nm.toLowerCase()}">\u2212</button><input class="f num" inputmode="text" autocomplete="off" placeholder="0" data-wal="${k}" value="${esc(d[k] || "")}" aria-label="${nm} change"><button class="iconbtn" data-a="walStep" data-k="${k}" data-s="1" aria-label="Add ${nm.toLowerCase()}">+</button></div></div>`).join("");
+      const fmt = k => COIN_INFO.filter(([x]) => (k[x] || 0) > 0).map(([x]) => `${k[x]} ${x}`).join(" \u00b7 ") || "nothing";
+      const body = `<div class="stack"><div class="wal-head"><span></span><span>Have</span><span>Change</span></div>${rows}
+        <div class="wal-step"><span>Step</span><div class="seg" role="group">${[1, 5, 10, 50, 100].map(x => `<button data-a="walSize" data-v="${x}" aria-pressed="${m.step === x}">${x}</button>`).join("")}</div></div>
+        <div class="wal-sum"><span>Net</span><b class="net ${net > 0 ? "pos" : net < 0 ? "neg" : ""}">${esc(fmtNet(net))}</b><span>After</span><b class="${next ? "" : "neg"}">${any ? (next ? esc(fmt(next)) : "Not enough coins") : esc(fmt(c.coins))}</b></div></div>`;
+      return modalShell("Coins", body, `<button class="btn" data-a="${any ? "walClear" : "closeModal"}">${any ? "Reset" : "Cancel"}</button><button class="btn pri" data-a="walGo" ${any && next ? "" : "disabled"}>Apply</button>`);
     }
 
     case "pack": {

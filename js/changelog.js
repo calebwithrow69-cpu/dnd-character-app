@@ -2,11 +2,22 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.105";
+export const VERSION = "0.1.106";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.106",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "One coin panel, Back fix, compact gear.",
+    groups: [
+      { title: "Wallet", items: ["One panel for adding and spending: a row per coin with its symbol, abbreviation and name, a change field with minus and plus, and a step size.", "Net shows green with + when you gain and red with - when you spend. A coin that would go below zero is covered from your other coins.", "Coin symbols and names on the Gear page are clearer and further apart."] },
+      { title: "Navigation", items: ["Back from Gear, Spells or Features returns to the Character page. Main menu is only one Back from the Character page."] },
+      { title: "Gear", items: ["On laptops the item list runs in two columns, so there is less scrolling."] }
+    ]
+  },
   {
     v: "0.1.105",
     date: "2026-11-27",
