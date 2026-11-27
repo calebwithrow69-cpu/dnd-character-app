@@ -2,11 +2,23 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.100";
+export const VERSION = "0.1.101";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.101",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Hit point bar color fix, red screen edges at low health.",
+    groups: [
+      { title: "Hit point bar", items: [
+        "Fixed the bar turning green, purple and blue at very low HP. It now stays red.",
+        "At half HP or less the screen edges glow red. The glow grows as health falls and beats with the heartbeat."
+      ] }
+    ]
+  },
   {
     v: "0.1.100",
     date: "2026-11-27",

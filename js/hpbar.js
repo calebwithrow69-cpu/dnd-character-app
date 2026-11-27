@@ -25,10 +25,10 @@ function theme() {
   CS = { panel2: g("--panel2"), line: g("--line"), frame: g("--frame"), red: g("--red"), amber: g("--amber"), ink: g("--ink") };
 }
 // Fill colour by health: green, yellow, amber, orange, red, then crimson at the end.
-const HUES = [[1, 128], [0.75, 92], [0.55, 50], [0.38, 28], [0.2, 8], [0, 350]];
+const HUES = [[1, 128], [0.75, 92], [0.55, 50], [0.38, 28], [0.2, 8], [0, 0]];
 function hueFor(p) {
   for (let i = 1; i < HUES.length; i++) if (p >= HUES[i][0]) { const [p0, h0] = HUES[i - 1], [p1, h1] = HUES[i], t = (p - p1) / (p0 - p1); return h1 + (h0 - h1) * t; }
-  return 350;
+  return 0;
 }
 const gauss = (d, w) => Math.exp(-(d / w) * (d / w));
 // Heartbeat shape: a strong beat, then a softer one a moment later.
@@ -64,7 +64,7 @@ function sizeCanvas(stage) {
   cv.width = Math.round(CW * dpr); cv.height = Math.round(CH * dpr);
   cv.style.width = CW + "px"; cv.style.height = CH + "px";
 }
-export function unmountHp() { cv = null; }
+export function unmountHp() { cv = null; edge(false); }
 
 // ---- the loop ----
 function active() {
@@ -72,7 +72,7 @@ function active() {
 }
 function frame(now) {
   raf = requestAnimationFrame(frame);
-  if (!cv || !cv.isConnected || document.hidden) { last = now; return; }
+  if (!cv || !cv.isConnected || document.hidden) { last = now; if (!cv || !cv.isConnected) edge(false); return; }
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   // idle: the surface only glints, so draw about 12 times a second
   if (!active() && !view.calm) { idleSkip += dt; if (idleSkip < 0.08) return; update(idleSkip); idleSkip = 0; draw(); sync(); return; }
@@ -82,7 +82,17 @@ function frame(now) {
   if (num) { if (num.textContent !== String(v)) num.textContent = v; num.classList.toggle("low", view.cur / view.max < 0.34); cv.parentElement.classList.toggle("low", view.cur / view.max < 0.34); }
 }
 // Bloodied (half or less) and Down labels, and the beat value the number and glow share.
+// Red glow around the screen edges: grows as health falls and beats with the heart.
+function edge(on) {
+  let el = document.getElementById("fearedge");
+  if (!on) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("div"); el.id = "fearedge"; el.setAttribute("aria-hidden", "true"); document.body.appendChild(el); }
+  const f = view.cur <= 0 ? 0.55 : Math.max(0.12, view.fear), pulse = view.cur <= 0 ? 0.5 + 0.5 * Math.sin(view.t * 2.2) : view.calm ? 0.6 : view.beat;
+  el.style.opacity = (0.3 + 0.7 * pulse).toFixed(3);
+  el.style.boxShadow = `inset 0 0 ${Math.round(50 + 150 * f)}px ${Math.round(4 + 38 * f)}px rgba(${view.cur <= 0 ? "120,10,10" : "210,15,15"},${(0.3 + 0.55 * f).toFixed(2)})`;
+}
 function sync() {
+  edge(!!cv && cv.isConnected && view.cur / view.max <= 0.5 && !view.dead);
   const stage = cv && cv.parentElement; if (!stage) return;
   const em = stage.querySelector(".hpover em"); if (!em) return;
   const txt = view.cur <= 0 ? "DOWN" : view.cur / view.max <= 0.5 ? "BLOODIED" : "HP";

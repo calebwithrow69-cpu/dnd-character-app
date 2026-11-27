@@ -3196,3 +3196,5 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .hpover em.bl{opacity:1;color:#fff;background:linear-gradient(180deg,#b3261e,#6e100c);padding:3px 7px 3px 9px;border-radius:999px;letter-spacing:.18em;box-shadow:0 0 0 1px rgba(255,120,110,.5),0 0 calc(4px + 10px * var(--fear,0)) rgba(255,50,40,calc(.35 + .5 * var(--beat,0)))}
 .hpover em.dn{opacity:1;color:#ffd7d3;background:#2a0706;padding:3px 7px 3px 9px;border-radius:999px;letter-spacing:.18em;box-shadow:0 0 0 1px rgba(255,90,80,.5)}
 @media (prefers-reduced-motion:reduce){.hpstage .hpover .hpnum{transform:none}}
+
+#fearedge{position:fixed;inset:0;z-index:40;pointer-events:none;transition:opacity .06s linear}
