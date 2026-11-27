@@ -11,6 +11,16 @@ import { recommendFeats } from "../featfit.js";
 import { renderFeatControls, renderFeatGrid, renderFeatSheet } from "./feats.js";
 import { featAbilityIncrease, previewFeat, ASI_FEAT } from "../featfx.js";
 
+// A Read button for a random pick, so the player can see what it does before keeping it.
+function readBtn(app, stepId, name) {
+  const L = app.library || {}, has = k => (L[k] || []).some(e => e.name === name || name.startsWith(e.name + " ("));
+  const b = (a, extra) => `<button class="btn sm" data-a="${a}" ${extra}>Read</button>`;
+  if (stepId === "subclass") return b("scOpen", `data-name="${esc(name)}"`);
+  if (stepId === "spells" || stepId === "cantrips") return has("spells") ? b("showDetail", `data-kind="spell" data-name="${esc(name)}"`) : "";
+  if ((stepId === "options" || stepId === "style") && has("feats")) return b("showDetail", `data-kind="feat" data-name="${esc(name)}"`);
+  return "";
+}
+
 export function newLevelDraft(char, { fromCreation = false } = {}) {
   const next = fromCreation ? char.level : char.level + 1;
   // a hit-die roll is kept on the character, so closing and reopening level up cannot re-roll or swap to the average
@@ -310,7 +320,7 @@ export function levelBody(app) {
     const lab = x => SKILLS.find(s => s.id === x)?.label || x;
     const picks = { subclass: [d.subclass], style: [d.style], order: [d.order], language: [d.language], expertise: d.expertise.map(lab), mastery: d.mastery, options: d.options, cantrips: d.cantrips, spells: d.spells }[step.id].filter(Boolean);
     const lastStep = d.step === p.steps.length - 1;
-    return { body: `<div class="rndres big"><span class="lab">Random ${RAND[step.id]}</span><ul class="rndlist">${picks.map(x => `<li>${esc(x)}</li>`).join("") || "<li>Nothing available</li>"}</ul>
+    return { body: `<div class="rndres big"><span class="lab">Random ${RAND[step.id]}</span><ul class="rndlist">${picks.map(x => `<li><span>${esc(x)}</span>${readBtn(app, step.id, x)}</li>`).join("") || "<li>Nothing available</li>"}</ul>
       <div class="btnrow"><button class="btn" data-a="lvlRndUndo">Undo</button><button class="btn" data-a="lvlRandomStep">Reroll</button><button class="btn pri" data-a="lvlRndKeep">${lastStep ? "Keep" : "Continue"}</button></div></div>`, step, plan: p };
   }
   if (RAND[step.id]) body = `<div class="randrow"><button class="btn sm" data-a="lvlRandomStep">Randomize ${RAND[step.id]}</button></div>` + body;

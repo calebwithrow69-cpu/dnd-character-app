@@ -577,7 +577,7 @@ export function renderCreate(app) {
     if (id === "class") tools = `<button class="btn sm" data-a="randomAll">Random character</button>`;
     if (id === "background") tools = `<button class="btn sm" data-a="openCustomBg">Custom background</button>`;
     content = `${renderControls(app, cfg)}${searchBox("wizard", d.query, `Search ${cfg.items.length} ${cfg.noun}`)}
-      ${app.rndCard && app.rndCard.kind === id ? `<div class="rndres" id="rnd-card"><span class="lab">Random ${esc(cfg.kind)}</span><button class="rndname" data-a="rndView">${esc(app.rndCard.name)}</button><div class="btnrow"><button class="btn sm" data-a="rndUndo">Undo</button><button class="btn sm" data-a="randomPick">Reroll</button><button class="btn sm pri" data-a="rndKeep">Keep</button></div></div>` : ""}
+      ${app.rndCard && app.rndCard.kind === id ? `<div class="rndres" id="rnd-card"><span class="lab">Random ${esc(cfg.kind)}</span><button class="rndname" data-a="rndView">${esc(app.rndCard.name)}</button><div class="btnrow"><button class="btn sm" data-a="showDetail" data-kind="${esc(id)}" data-name="${esc(app.rndCard.name)}">Read</button><button class="btn sm" data-a="rndUndo">Undo</button><button class="btn sm" data-a="randomPick">Reroll</button><button class="btn sm pri" data-a="rndKeep">Keep</button></div></div>` : ""}
       <div class="sp-list" id="wizard-results">${renderWizardResults(app)}</div>`;
   } else if (id === "abilities") content = abilitiesBody(app, d);
   else if (id === "classOpts") {

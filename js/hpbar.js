@@ -12,7 +12,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const view = {
   id: null, init: false, disp: 0, vel: 0, ghost: 0, hold: 0, tdisp: 0, tvel: 0, amp: 0, t: 0,
   flash: 0, flashCol: "255,80,70", slash: 0, slashX: 0, shake: 0, soft: false, shown: 0,
-  bubbles: [], part: [], max: 1, cur: 0, temp: 0, down: false, dead: false, calm: false
+  ph: 0, beat: 0, fear: 0, bubbles: [], part: [], max: 1, cur: 0, temp: 0, down: false, dead: false, calm: false
 };
 for (let i = 0; i < 12; i++) view.bubbles.push({ f: Math.random(), y: Math.random(), r: rnd(1.1, 2.6), sp: rnd(0.12, 0.45) });
 const cracks = (() => { const out = []; let s = 7; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
@@ -24,6 +24,15 @@ function theme() {
   const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim();
   CS = { panel2: g("--panel2"), line: g("--line"), frame: g("--frame"), red: g("--red"), amber: g("--amber"), ink: g("--ink") };
 }
+// Fill colour by health: green, yellow, amber, orange, red, then crimson at the end.
+const HUES = [[1, 128], [0.75, 92], [0.55, 50], [0.38, 28], [0.2, 8], [0, 350]];
+function hueFor(p) {
+  for (let i = 1; i < HUES.length; i++) if (p >= HUES[i][0]) { const [p0, h0] = HUES[i - 1], [p1, h1] = HUES[i], t = (p - p1) / (p0 - p1); return h1 + (h0 - h1) * t; }
+  return 350;
+}
+const gauss = (d, w) => Math.exp(-(d / w) * (d / w));
+// Heartbeat shape: a strong beat, then a softer one a moment later.
+const heart = ph => Math.max(gauss(Math.min(ph, 1 - ph), 0.05), 0.62 * gauss(Math.abs(ph - 0.3), 0.055));
 function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 const edgeX = v => PADX + (CW - PADX * 2) * clamp(v / view.max, 0, 1);
 function spawn(n, f) { for (let i = 0; i < n && view.part.length < 220; i++) view.part.push(f(i)); }
@@ -39,7 +48,7 @@ export function mountHp(canvas, st) {
     Object.assign(view, { id: st.id, init: true, disp: st.cur, vel: 0, ghost: st.cur, hold: 0, tdisp: st.temp, tvel: 0, shown: st.cur, part: [], amp: 0, flash: 0, slash: 0, shake: 0, soft: false });
   } else if (Math.abs(view.disp - st.cur) > view.max) { view.disp = st.cur; view.ghost = st.cur; view.shown = st.cur; }
   if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
-  draw();
+  draw(); sync();
 }
 let ro = null, roEl = null;
 function watch(stage) {
@@ -59,20 +68,31 @@ export function unmountHp() { cv = null; }
 
 // ---- the loop ----
 function active() {
-  return view.vel || view.hold > 0 || view.ghost > view.disp + 0.01 || view.amp > 0.05 || view.flash > 0.01 || view.slash > 0.01 || view.shake > 0.02 || view.part.length || view.soft || Math.abs(view.tdisp - view.temp) > 0.01 || Math.abs(view.disp - view.cur) > 0.01 || Math.abs(view.shown - view.cur) > 0.4;
+  return view.vel || view.hold > 0 || view.ghost > view.disp + 0.01 || view.amp > 0.05 || view.flash > 0.01 || view.slash > 0.01 || view.shake > 0.02 || (view.fear > 0 && !view.calm) || view.part.length || view.soft || Math.abs(view.tdisp - view.temp) > 0.01 || Math.abs(view.disp - view.cur) > 0.01 || Math.abs(view.shown - view.cur) > 0.4;
 }
 function frame(now) {
   raf = requestAnimationFrame(frame);
   if (!cv || !cv.isConnected || document.hidden) { last = now; return; }
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   // idle: the surface only glints, so draw about 12 times a second
-  if (!active() && !view.calm) { idleSkip += dt; if (idleSkip < 0.08) return; update(idleSkip); idleSkip = 0; draw(); return; }
+  if (!active() && !view.calm) { idleSkip += dt; if (idleSkip < 0.08) return; update(idleSkip); idleSkip = 0; draw(); sync(); return; }
   update(dt); draw();
+  sync();
   const num = cv.closest(".hpwrap")?.querySelector(".hpnum"), v = Math.round(view.shown);
   if (num) { if (num.textContent !== String(v)) num.textContent = v; num.classList.toggle("low", view.cur / view.max < 0.34); cv.parentElement.classList.toggle("low", view.cur / view.max < 0.34); }
 }
+// Bloodied (half or less) and Down labels, and the beat value the number and glow share.
+function sync() {
+  const stage = cv && cv.parentElement; if (!stage) return;
+  const em = stage.querySelector(".hpover em"); if (!em) return;
+  const txt = view.cur <= 0 ? "DOWN" : view.cur / view.max <= 0.5 ? "BLOODIED" : "HP";
+  if (em.textContent !== txt) { em.textContent = txt; em.classList.toggle("bl", txt === "BLOODIED"); em.classList.toggle("dn", txt === "DOWN"); }
+  stage.style.setProperty("--beat", view.calm ? 0 : view.beat.toFixed(3)); stage.style.setProperty("--fear", view.fear.toFixed(2));
+}
 function update(dt) {
   view.t += dt;
+  { const pc = view.cur / view.max; view.fear = view.cur <= 0 ? 0 : view.cur === 1 ? 1 : clamp((0.5 - pc) / 0.45, 0, 1);
+    view.ph = (view.ph + dt * (52 + 78 * view.fear) / 60) % 1; view.beat = view.fear > 0 ? heart(view.ph) * (0.35 + 0.65 * view.fear) : 0; }
   const k = view.soft ? 38 : 230, damp = view.soft ? 8 : 24;
   view.vel += ((view.cur - view.disp) * k - view.vel * damp) * dt; view.disp += view.vel * dt;
   if (Math.abs(view.cur - view.disp) < 0.01 && Math.abs(view.vel) < 0.05) { view.disp = view.cur; view.vel = 0; view.soft = false; }
@@ -106,13 +126,13 @@ function draw() {
   if (!ctx) return;
   const max = view.max, x0 = PADX, y0 = PADT, w = CW - PADX * 2, h = TH, R = h / 2;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, CW, CH);
-  const pct = clamp(view.disp / max, 0, 1), down = view.down, hue = 118 * pct, calm = view.calm;
+  const pct = clamp(view.disp / max, 0, 1), down = view.down, hue = hueFor(pct), calm = view.calm;
   // the vial is a capsule; the glass is drawn last, over the liquid
   rr(x0, y0, w, h, R);
   const tg = ctx.createLinearGradient(0, y0, 0, y0 + h); tg.addColorStop(0, "rgba(10,8,8,.55)"); tg.addColorStop(1, "rgba(30,22,18,.35)");
   ctx.fillStyle = CS.panel2; ctx.fill(); ctx.fillStyle = tg; ctx.fill();
   ctx.save(); rr(x0, y0, w, h, R); ctx.clip();
-  if (down) { ctx.strokeStyle = "rgba(120,20,20,.45)"; ctx.lineWidth = 6; for (let i = -h; i < w; i += 14) { ctx.beginPath(); ctx.moveTo(x0 + i, y0 + h); ctx.lineTo(x0 + i + h, y0); ctx.stroke(); } }
+  if (down) { ctx.fillStyle = `rgba(150,16,16,${0.16 + 0.1 * Math.sin(view.t * 2.2)})`; ctx.fillRect(x0, y0, w, h); }
   if (view.ghost > view.disp + 0.05) {
     const gx = x0 + w * clamp(view.ghost / max, 0, 1), fx0 = x0 + w * pct;
     ctx.fillStyle = "#F6E7B8"; ctx.globalAlpha = 0.92; ctx.fillRect(fx0, y0, gx - fx0, h);
@@ -135,16 +155,9 @@ function draw() {
     ctx.restore();
     if (view.soft && view.cur > view.disp + 0.2) { const hx = x0 + w * clamp(view.cur / max, 0, 1); ctx.fillStyle = `rgba(150,255,180,${0.35 + 0.2 * Math.sin(view.t * 12)})`; ctx.fillRect(fx, y0, hx - fx, h); }
   } else if (view.soft && view.cur > 0) { const hx = x0 + w * clamp(view.cur / max, 0, 1); ctx.fillStyle = "rgba(150,255,180,.4)"; ctx.fillRect(x0, y0, hx - x0, h); }
-  // segments: equal chunks of the maximum, cut by slanted gaps; the chunk the fill edge sits in is lit
-  const n = clamp(Math.round(max / 10), 5, 16), sw = w / n, sk = 5;
-  if (fx > x0 + 0.5) {
-    const k = Math.min(n - 1, Math.floor((fx - x0) / sw)), lit = 0.10 + 0.07 * Math.sin(view.t * 3.2);
-    ctx.fillStyle = `rgba(255,255,255,${lit})`; ctx.beginPath(); ctx.moveTo(x0 + k * sw + sk, y0); ctx.lineTo(Math.min(fx, x0 + (k + 1) * sw) + sk, y0); ctx.lineTo(Math.min(fx, x0 + (k + 1) * sw), y0 + h); ctx.lineTo(x0 + k * sw, y0 + h); ctx.closePath(); ctx.fill();
-  }
-  ctx.strokeStyle = "rgba(8,5,5,.78)"; ctx.lineWidth = 2.2;
-  for (let i = 1; i < n; i++) { const tx = Math.round(x0 + sw * i) + 0.5; ctx.beginPath(); ctx.moveTo(tx + sk, y0 - 1); ctx.lineTo(tx - sk, y0 + h + 1); ctx.stroke(); }
-  ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 1;
-  for (let i = 1; i < n; i++) { const tx = Math.round(x0 + sw * i) + 2; ctx.beginPath(); ctx.moveTo(tx + sk, y0); ctx.lineTo(tx - sk, y0 + h); ctx.stroke(); }
+  // low-health pulse over the liquid, then quarter marks (the half mark is the bloodied line)
+  if (view.fear > 0 && fx > x0 + 0.5 && !calm) { ctx.fillStyle = `rgba(255,50,40,${0.2 * view.fear * view.beat})`; ctx.fillRect(x0, y0, fx - x0, h); }
+  for (const [q, al] of [[0.25, 0.14], [0.5, 0.34], [0.75, 0.14]]) { const tx = Math.round(x0 + w * q) + 0.5; ctx.strokeStyle = `rgba(8,5,5,${al + 0.2})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(tx, y0 + (q === 0.5 ? 0 : 5)); ctx.lineTo(tx, y0 + h - (q === 0.5 ? 0 : 5)); ctx.stroke(); }
   if (fx > x0 + 3 && !down) { const ea = 0.55 + 0.25 * Math.sin(view.t * 6); ctx.save(); ctx.shadowColor = `hsl(${hue},90%,70%)`; ctx.shadowBlur = 9; ctx.strokeStyle = `rgba(255,255,255,${ea})`; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(fx + 1, y0 + 2); ctx.lineTo(fx + 1, y0 + h - 2); ctx.stroke(); ctx.restore(); }
   // temp HP shield
   const tw = w * clamp(view.tdisp / max, 0, 1);
@@ -152,8 +165,7 @@ function draw() {
     ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, tw, h); ctx.clip();
     const sg = ctx.createLinearGradient(0, y0, 0, y0 + h); sg.addColorStop(0, "rgba(150,205,255,.62)"); sg.addColorStop(1, "rgba(70,130,230,.42)");
     ctx.fillStyle = sg; ctx.fillRect(x0, y0, tw, h);
-    ctx.strokeStyle = "rgba(220,240,255,.5)"; ctx.lineWidth = 1;
-    for (let i = -h; i < tw + h; i += 10) { const o = (view.t * 12) % 10; ctx.beginPath(); ctx.moveTo(x0 + i + o, y0 + h); ctx.lineTo(x0 + i + o + h, y0); ctx.stroke(); }
+    { const sx = x0 + ((view.t * 0.35) % 1.4 - 0.2) * tw, sg2 = ctx.createLinearGradient(sx - 20, 0, sx + 20, 0); sg2.addColorStop(0, "rgba(255,255,255,0)"); sg2.addColorStop(0.5, "rgba(255,255,255,.3)"); sg2.addColorStop(1, "rgba(255,255,255,0)"); ctx.fillStyle = sg2; ctx.fillRect(sx - 20, y0, 40, h); }
     ctx.restore();
     ctx.save(); ctx.shadowColor = "rgba(140,200,255,1)"; ctx.shadowBlur = 8 + 4 * Math.sin(view.t * 5); ctx.strokeStyle = "rgba(200,230,255,.95)"; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(x0 + tw, y0 + 1); ctx.lineTo(x0 + tw, y0 + h - 1); ctx.stroke(); ctx.restore();
@@ -169,7 +181,10 @@ function draw() {
   ctx.restore();
   // the glass edge
   const bcol = down ? CS.red : pct < 0.34 ? CS.red : pct < 0.6 ? "#D9A441" : CS.frame;
-  ctx.save(); rr(x0, y0, w, h, R); ctx.lineWidth = 1.6; ctx.strokeStyle = bcol; ctx.stroke(); ctx.restore();
+  const pulse = down ? 0.5 + 0.5 * Math.sin(view.t * 2.2) : calm ? 0.6 : view.beat, fe = down ? 0.8 : view.fear;
+  ctx.save(); rr(x0, y0, w, h, R); ctx.lineWidth = 1.6 + 2.4 * fe * (0.4 + 0.6 * pulse); ctx.strokeStyle = bcol;
+  if (fe > 0 || down) { ctx.shadowColor = `rgba(255,35,30,${clamp((0.3 + 0.7 * fe) * (0.4 + 0.6 * pulse), 0, 1)})`; ctx.shadowBlur = 5 + 15 * fe * (0.5 + pulse); ctx.strokeStyle = `hsl(${4 + 8 * (1 - fe)},${70 + 25 * fe}%,${46 + 12 * pulse * fe}%)`; }
+  ctx.stroke(); ctx.restore();
   if (view.slash > 0.01) {
     const sx = view.slashX, a = view.slash, grow = 1 - a;
     ctx.save(); ctx.lineCap = "round"; ctx.shadowColor = "#fff"; ctx.shadowBlur = 10;

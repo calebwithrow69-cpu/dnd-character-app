@@ -2,11 +2,30 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.98";
+export const VERSION = "0.1.99";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.99",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Read random picks before keeping them. A tenser hit point bar.",
+    groups: [
+      { title: "Random picks", items: [
+        "Read button on the random result card in character creation.",
+        "Read buttons on random subclass, spell, cantrip, feat and option picks at level-up."
+      ] },
+      { title: "Hit point bar", items: [
+        "Slanted cuts removed. Quarter marks instead, with the half mark as the bloodied line.",
+        "Fill moves through green, yellow, amber, orange, red and crimson as health drops.",
+        "Bloodied tag at half HP or less. Down tag at 0.",
+        "Below half HP the edge glows red and the glow grows as health falls.",
+        "A heartbeat starts below half HP and gets faster and harder. At 1 HP it is at its worst."
+      ] }
+    ]
+  },
   {
     v: "0.1.98",
     date: "2026-11-27",

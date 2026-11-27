@@ -3187,3 +3187,12 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
   .pm-slots .res .r .n{justify-content:flex-start;gap:8px;flex-wrap:nowrap}
   .pm-slots .res .r .pips{justify-content:flex-end;max-width:190px}
 }
+.rndres .rndlist li{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rndres .rndlist li .btn{flex:none}
+
+/* HP bar: bloodied tag and heartbeat number */
+.hpstage .hpover .hpnum{display:inline-block;transform-origin:left center;transform:scale(calc(1 + var(--beat,0) * .22))}
+.hpstage.low .hpover .hpnum{animation:none}
+.hpover em.bl{opacity:1;color:#fff;background:linear-gradient(180deg,#b3261e,#6e100c);padding:3px 7px 3px 9px;border-radius:999px;letter-spacing:.18em;box-shadow:0 0 0 1px rgba(255,120,110,.5),0 0 calc(4px + 10px * var(--fear,0)) rgba(255,50,40,calc(.35 + .5 * var(--beat,0)))}
+.hpover em.dn{opacity:1;color:#ffd7d3;background:#2a0706;padding:3px 7px 3px 9px;border-radius:999px;letter-spacing:.18em;box-shadow:0 0 0 1px rgba(255,90,80,.5)}
+@media (prefers-reduced-motion:reduce){.hpstage .hpover .hpnum{transform:none}}
