@@ -5,7 +5,7 @@ import { parseList, slotRows } from "../rules.js";
 import { listsFor, listPlan } from "../spelllists.js";
 import { applyDeltas } from "../equipment.js";
 import { tableCounts } from "../progression.js";
-import { SCHOOLS, NUMERAL, ROLES, DAMAGE_TYPES, spellFacts, scaleRows, schoolKey } from "../spellinfo.js";
+import { SCHOOLS, NUMERAL, ROLES, DAMAGE_TYPES, spellFacts, scaleRows, schoolKey, matCost } from "../spellinfo.js";
 import { describeArea } from "../areagrid.js";
 import { spellIcon } from "./spellicon.js";
 
@@ -48,18 +48,16 @@ function chips(spf) {
 }
 export const spellSubLine = s => [s.school, s.time, s.range].filter(Boolean).join(" · ");
 
-function row(app, s, mine, wished, detailFor) {
-  const key = "spell:" + s.name, open = app.info.has(key), f = spellFacts(s);
-  const has = mine.has(s.name);
-  return `<div class="inforow sprow ${open ? "open" : ""}">
+function row(app, s, mine, wished) {
+  const f = spellFacts(s), has = mine.has(s.name), cmp = (app.spCmp || []).includes(s.name);
+  return `<div class="inforow sprow">
     <div class="inforow-top">
-      <button class="optcard" data-a="${has ? "noop" : "addSpell"}" data-name="${esc(s.name)}" ${has ? "disabled" : ""}>
+      <button class="optcard" data-a="spgOpen" data-name="${esc(s.name)}">
         ${spellIcon(s)}<span class="grow"><b>${esc(s.name)}</b><span>${esc(spellSubLine(s))}</span><span class="spchips">${chips(f)}</span></span>
-        <span class="tag ${has ? "amber" : ""}">${has ? "Added" : "Add"}</span></button>
-      <button class="iconbtn heart ${wished ? "on" : ""}" data-a="spWish" data-name="${esc(s.name)}" aria-pressed="${wished}" aria-label="Wanted: ${esc(s.name)}">${ICONS.heart}</button>
-      <button class="infobtn" data-a="toggleInfo" data-key="${esc(key)}" aria-expanded="${open}" aria-label="What ${esc(s.name)} does">${open ? ICONS.close : ICONS.info}</button>
+        ${has ? `<span class="tag amber">Learned</span>` : ""}</button>
+      <button class="iconbtn cmpbtn ${cmp ? "on" : ""}" data-a="spCmp" data-name="${esc(s.name)}" aria-pressed="${cmp}" aria-label="Compare: ${esc(s.name)}">${ICONS.sort}</button>
+      <button class="iconbtn heart ${wished ? "on" : ""}" data-a="spWish" data-name="${esc(s.name)}" aria-pressed="${wished}" aria-label="Bookmark: ${esc(s.name)}">${ICONS.heart}</button>
     </div>
-    ${open ? `<div class="about">${detailFor(app, "spell", s.name).body}${scaleBlock(s)}</div>` : ""}
   </div>`;
 }
 
@@ -71,8 +69,8 @@ export function scaleBlock(s) {
 
 export function renderBrowseResults(app, detailFor) {
   const c = app.char, list = browseList(app), mine = new Set(c.spellcasting.spells.map(x => x.name)), wish = new Set(c.spellWish || []);
-  if (!list.length) return `<p class="muted small" style="padding:12px 0">${sbState(app).tab === "wanted" ? "No wanted spells" : "No spells match"}</p>`;
-  return `<div class="optlist" style="margin-top:4px">${list.slice(0, 60).map(s => row(app, s, mine, wish.has(s.name), detailFor)).join("")}</div>`
+  if (!list.length) return `<p class="muted small" style="padding:12px 0">${sbState(app).tab === "wanted" ? "No bookmarks" : "No spells match"}</p>`;
+  return `<div class="optlist" style="margin-top:4px">${list.slice(0, 60).map(s => row(app, s, mine, wish.has(s.name))).join("")}</div>`
     + (list.length > 60 ? `<p class="muted small" style="padding:10px 0">Showing 60 of ${list.length}</p>` : "");
 }
 
@@ -95,7 +93,7 @@ export function renderListPreview(app, id) {
 function tabsHtml(app, c, s, wn) {
   return `<div class="seg sbtabs" role="group" aria-label="Shelf">
       <button data-a="spTab" data-tab="browse" aria-pressed="${s.tab === "browse"}">Browse</button>
-      <button data-a="spTab" data-tab="wanted" aria-pressed="${s.tab === "wanted"}">Wanted <em>${wn}</em></button>
+      <button data-a="spTab" data-tab="wanted" aria-pressed="${s.tab === "wanted"}">Bookmarks <em>${wn}</em></button>
       ${listsFor(c.class).length ? `<button data-a="spTab" data-tab="lists" aria-pressed="${s.tab === "lists"}">Lists <em>${listsFor(c.class).length}</em></button>` : ""}</div>`;
 }
 
@@ -103,7 +101,7 @@ export function renderBrowserBody(app, detailFor) {
   const c = app.char, s = sbState(app), n = sbCount(s), wn = (c.spellWish || []).length;
   if (s.tab === "lists") return tabsHtml(app, c, s, wn) + `<div class="results">${listCards(app)}</div>`;
   return tabsHtml(app, c, s, wn) + `
-    <div class="sbfind">${searchBox("picker", app.pickerQuery, s.tab === "wanted" ? "Search wanted" : `Search ${esc(c.class)} spells`)}
+    <div class="sbfind">${searchBox("picker", app.pickerQuery, s.tab === "wanted" ? "Search bookmarks" : `Search ${esc(c.class)} spells`)}
       <button class="btn sm ${n ? "pri" : ""}" data-a="spFilterOpen" aria-label="Filter and sort">${ICONS.sort}<span>Filter</span>${n ? `<b class="sbbadge">${n}</b>` : ""}</button></div>
     <div class="seg sblv" role="group" aria-label="Spell level"><button data-a="pickerLevel" data-lv="" aria-pressed="${app.pickerLevel == null}">All</button>
       ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(l => `<button data-a="pickerLevel" data-lv="${l}" aria-pressed="${app.pickerLevel === l}" aria-label="${l ? "Level " + l : "Cantrips"}">${l ? NUMERAL[l] : "○"}</button>`).join("")}</div>
@@ -208,4 +206,43 @@ export function renderScribeConfirm(app, m) {
   return modalShell(`Scribe ${sp.name}`, `<div class="scribe">${spellIcon(sp, "big")}<dl class="kv"><dt>Level</dt><dd>${sp.level}</dd><dt>Time</dt><dd>${k.hours} hours</dd><dt>Cost</dt><dd>${k.gp} gp (you have ${gp})</dd>
       ${m.scroll ? `<dt>Scroll</dt><dd>Used up. This cannot be undone.</dd>` : `<dt>Source</dt><dd>Another spellbook</dd>`}</dl></div>${ok ? "" : `<p class="small" style="color:var(--red)">Not enough coins</p>`}`,
     `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="scribeGo" ${ok ? "" : "disabled"}>Scribe</button>`);
+}
+
+// ---------- Spell glossary page ----------
+export function spellBanner(app, c) {
+  const n = c.spellcasting.spells.length, w = (c.spellWish || []).length;
+  return `<button class="shopban press" data-a="openGlossary"><span class="sb-ic">${ICONS.spell}</span><span class="sb-t"><b>Spell glossary</b><i>${n} learned${w ? ` \u00b7 ${w} bookmarked` : ""}</i></span><span class="sb-go" aria-hidden="true">${ICONS.chev || "\u203a"}</span></button>`;
+}
+export function renderSpellPage(app, detailFor) {
+  if (app.spgView) return renderSpellDetail(app, app.spgView, detailFor);
+  const cmp = app.spCmp || [];
+  return `<div class="spg-page">${renderBrowserBody(app, detailFor)}
+    ${cmp.length ? `<div class="cmpbar"><b>${cmp.length}</b><span>selected</span><button class="btn sm" data-a="spCmpClear">Clear</button><button class="btn sm pri" data-a="spCmpOpen" ${cmp.length < 2 ? "disabled" : ""}>Compare</button></div>` : ""}</div>`;
+}
+export function renderSpellDetail(app, name, detailFor) {
+  const c = app.char, sp = findByName(enabledSpells(app.library, app.campaign), name) || findByName(app.library.spells, name);
+  if (!sp) return `<div class="spg-page"><button class="btn sm" data-a="spgBack">Back</button><p class="muted">Spell not found</p></div>`;
+  const f = spellFacts(sp), has = c.spellcasting.spells.some(x => x.name === sp.name), wished = (c.spellWish || []).includes(sp.name), cmp = (app.spCmp || []).includes(sp.name);
+  const mc = matCost(sp), cls = classOf(sp).includes(c.class);
+  return `<div class="spg-page spg-detail">
+    <button class="btn sm ghost" data-a="spgBack">${ICONS.back || ""}<span>Glossary</span></button>
+    <header class="spg-hd">${spellIcon(sp, "big")}<div><h2>${esc(sp.name)}</h2><p>${sp.level ? "Level " + sp.level : "Cantrip"} ${esc(sp.school || "")}${sp.ritual ? " \u00b7 ritual" : ""}</p><div class="spchips">${chips(f)}</div></div></header>
+    <div class="spg-act">
+      <button class="btn pri" data-a="spLearn" data-name="${esc(sp.name)}" ${has ? "disabled" : ""}>${has ? "Learned" : "Learn spell"}</button>
+      <button class="btn ${wished ? "pri" : ""}" data-a="spWish" data-name="${esc(sp.name)}" aria-pressed="${wished}">${ICONS.heart}<span>${wished ? "Bookmarked" : "Bookmark"}</span></button>
+      <button class="btn ${cmp ? "pri" : ""}" data-a="spCmp" data-name="${esc(sp.name)}" aria-pressed="${cmp}">${ICONS.sort}<span>Compare</span></button>
+    </div>
+    ${cls ? "" : `<p class="small muted">Not on the ${esc(c.class)} list</p>`}
+    ${detailFor(app, "spell", sp.name).body}
+    ${mc ? `<p class="small muted">Material cost: ${mc.gp.toLocaleString()}${mc.min ? "+" : ""} gp${mc.consumed ? ", used up when cast" : ", not used up"}</p>` : ""}
+    ${scaleBlock(sp)}</div>`;
+}
+export function renderCompare(app) {
+  const names = app.spCmp || [], pool = enabledSpells(app.library, app.campaign);
+  const sps = names.map(n => findByName(pool, n) || findByName(app.library.spells, n)).filter(Boolean);
+  const rows = [["Level", sp => sp.level ? sp.level : "Cantrip"], ["School", sp => sp.school], ["Casting time", sp => sp.time], ["Range", sp => sp.range], ["Duration", sp => (sp.conc && !/^concentration/i.test(sp.dur || "") ? "Concentration, " : "") + (sp.dur || "")],
+    ["Area", sp => { const a = spellFacts(sp).area; return a ? describeArea(a) : "None"; }], ["Damage", sp => spellFacts(sp).dmg.join(", ") || "None"], ["Save", sp => spellFacts(sp).save || "None"],
+    ["Role", sp => spellFacts(sp).roles.join(", ")], ["Components", sp => sp.comp], ["Ritual", sp => sp.ritual ? "Yes" : "No"]];
+  return modalShell("Compare spells", `<div class="cmptab" style="--n:${sps.length}"><div class="cmphd"><span></span>${sps.map(sp => `<div>${spellIcon(sp, "small")}<b>${esc(sp.name)}</b></div>`).join("")}</div>
+    ${rows.map(([k, fn]) => `<div class="cmprow"><em>${k}</em>${sps.map(sp => `<div>${esc(String(fn(sp) ?? ""))}</div>`).join("")}</div>`).join("")}</div>`, `<button class="btn pri" data-a="closeModal">Done</button>`, "cmpm");
 }

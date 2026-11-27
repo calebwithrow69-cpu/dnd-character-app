@@ -3455,20 +3455,28 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .jp-n{font-weight:700}
 .jp-s{font-size:.78rem;color:var(--muted);white-space:nowrap}
 
-/* Spell icons: numeral by level, colour and lettering by school */
-.spi{--h:210;flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;border:2px solid hsl(var(--h) 55% 45%);background:hsl(var(--h) 55% 45% / .16);color:hsl(var(--h) 60% 38%);font:700 .92rem/1 var(--display);letter-spacing:0;overflow:hidden;white-space:nowrap}
-html[data-mode="dark"] .spi{color:hsl(var(--h) 75% 72%);border-color:hsl(var(--h) 60% 58%);background:hsl(var(--h) 60% 50% / .2)}
-.spi.cant{background:transparent;border-style:dashed}
-.spi.cant::after{content:"";width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.55}
-.spi.sch-abjuration{--h:212;font:700 .95rem/1 var(--display)}
-.spi.sch-conjuration{--h:38;font:italic 700 1rem/1 Georgia,"Times New Roman",serif}
-.spi.sch-divination{--h:178;font:600 .86rem/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:-.04em}
-.spi.sch-enchantment{--h:322;font:italic 400 1.05rem/1 "Palatino Linotype",Palatino,Georgia,serif;letter-spacing:.04em}
-.spi.sch-evocation{--h:4;font:900 .95rem/1 "Arial Black",Impact,system-ui,sans-serif}
-.spi.sch-illusion{--h:268;font:italic 300 1.05rem/1 "Palatino Linotype",Georgia,serif;letter-spacing:.08em}
-.spi.sch-necromancy{--h:132;font:400 .95rem/1 "Copperplate","Papyrus",fantasy;letter-spacing:.06em}
-.spi.sch-transmutation{--h:24;font:800 .9rem/1 "Trebuchet MS",system-ui,sans-serif;letter-spacing:.02em}
-.spi.big{width:52px;height:52px;font-size:1.15rem}
+/* Spell emblem: polygon with level+2 sides, numeral inside, school colour and lettering */
+.spi{--h:210;flex:none;position:relative;width:42px;height:42px;display:grid;place-items:center;color:hsl(var(--h) 60% 34%);font:700 .86rem/1 var(--display);white-space:nowrap}
+html[data-mode="dark"] .spi{color:hsl(var(--h) 80% 76%)}
+.spi svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.spi .em-o{fill:hsl(var(--h) 60% 48% / .2);stroke:hsl(var(--h) 62% 44%);stroke-width:4.5;stroke-linejoin:round}
+.spi .em-i{fill:none;stroke:hsl(var(--h) 62% 44% / .45);stroke-width:1.8;stroke-linejoin:round}
+.spi .em-c{fill:hsl(var(--h) 62% 44%)}
+html[data-mode="dark"] .spi .em-o{fill:hsl(var(--h) 60% 52% / .26);stroke:hsl(var(--h) 70% 62%)}
+html[data-mode="dark"] .spi .em-i{stroke:hsl(var(--h) 70% 62% / .5)}
+html[data-mode="dark"] .spi .em-c{fill:hsl(var(--h) 70% 62%)}
+.spi b{position:relative;font:inherit;letter-spacing:inherit;margin-top:1px}
+.spi.sch-abjuration{--h:212}
+.spi.sch-conjuration{--h:38;font:italic 700 .95rem/1 Georgia,"Times New Roman",serif}
+.spi.sch-divination{--h:178;font:600 .78rem/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:-.05em}
+.spi.sch-enchantment{--h:322;font:italic 400 1rem/1 "Palatino Linotype",Palatino,Georgia,serif;letter-spacing:.03em}
+.spi.sch-evocation{--h:4;font:900 .86rem/1 "Arial Black",Impact,system-ui,sans-serif}
+.spi.sch-illusion{--h:268;font:italic 300 1rem/1 "Palatino Linotype",Georgia,serif;letter-spacing:.06em}
+.spi.sch-necromancy{--h:132;font:400 .88rem/1 "Copperplate","Papyrus",fantasy;letter-spacing:.05em}
+.spi.sch-transmutation{--h:24;font:800 .82rem/1 "Trebuchet MS",system-ui,sans-serif}
+.spi.sch-none{--h:30}
+.spi.big{width:56px;height:56px;font-size:1.05rem}
+.spi.small{width:30px;height:30px;font-size:.66rem}
 
 /* Area highlights and grid diagram */
 .areahit{all:unset;cursor:pointer;color:var(--amber);border-bottom:2px solid var(--amber);font-weight:600;border-radius:2px}
@@ -3509,3 +3517,25 @@ html[data-mode="dark"] .spi{color:hsl(var(--h) 75% 72%);border-color:hsl(var(--h
 /* Scribe, lists, grouping */
 .sp2-grp{margin-left:auto}.sp2-grp button{padding-inline:8px}
 .scribe{display:flex;gap:12px;align-items:flex-start}.scribe .kv{flex:1;margin:0}
+
+/* Spell glossary page */
+.spg-page{max-width:900px;margin:0 auto;padding-bottom:90px}
+.spg-hd{display:flex;gap:14px;align-items:center;margin:12px 0}.spg-hd h2{margin:0;font:700 1.4rem var(--display)}.spg-hd p{margin:2px 0 6px;color:var(--muted)}
+.spg-act{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}.spg-act .btn{display:inline-flex;gap:6px;align-items:center}.spg-act svg{width:16px;height:16px}
+.cmpbar{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom,0px));margin:0 auto;max-width:520px;display:flex;gap:10px;align-items:center;padding:10px 14px;background:var(--panel);border:1px solid var(--amber);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:20}
+.cmpbar span{flex:1;color:var(--muted)}.cmpbar b{font:700 1.1rem var(--display)}
+.iconbtn.cmpbtn.on{color:var(--amber);border-color:var(--amber)}
+.cmptab{display:grid;gap:2px;font-size:.85rem}.cmphd,.cmprow{display:grid;grid-template-columns:78px repeat(var(--n),1fr);gap:6px;padding:6px 0;border-bottom:1px solid var(--line,rgba(128,128,128,.25))}
+.cmphd div{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}.cmprow em{font-style:normal;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.modal.cmpm{max-width:640px}
+
+/* Compact spell slots, recent casts */
+.slp{display:flex;flex-direction:column;gap:8px}
+.slp-hd{display:flex;align-items:center;gap:8px}.slp-hd .sec2{flex:1;margin:0}.slp-n{font-size:.85rem;color:var(--muted)}.slp-n b{font:700 1.05rem var(--display);color:var(--ink)}
+.slotchips{display:flex;flex-wrap:wrap;gap:6px}
+.slotchip{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 5px;border:1px solid var(--line,rgba(128,128,128,.4));border-radius:999px;background:var(--panel);color:var(--ink);cursor:pointer}
+.slotchip .n{font-size:.78rem;color:var(--muted)}.slotchip .n b{font:700 1rem var(--display);color:var(--ink)}
+.slotchip.empty{opacity:.45}.slotchip.pact{border-style:dashed}
+.slotchip .spi.small{--h:30}
+.recent{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0 8px}.recent span{font:600 .7rem var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.spg-detail>p.sub2{display:none}

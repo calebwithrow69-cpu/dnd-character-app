@@ -1,5 +1,8 @@
 import { renderJump } from "./jump.js";
-import { renderBrowserBody, renderFilterModal, renderPrepModal, renderLoadPreview, renderListPreview, renderScribe, renderScribeConfirm } from "./spellbrowser.js";
+import { matCost } from "../spellinfo.js";
+import { spellIcon } from "./spellicon.js";
+import { canPay } from "./spellbrowser.js";
+import { renderBrowserBody, renderFilterModal, renderPrepModal, renderLoadPreview, renderListPreview, renderScribe, renderScribeConfirm, renderCompare } from "./spellbrowser.js";
 import { areaSvg, areaStats, describeArea, originNote } from "../areagrid.js";
 import { PHYS } from "../phys.js";
 import { renderDmModal } from "./dmmode.js";
@@ -115,6 +118,14 @@ export function renderModal(app) {
          <p class="sub2 areacap">${esc(originNote(a))}. Each cell is 5 ft. About ${st.cells} cells${a.shape === "cylinder" ? `, ${a.h} ft tall` : ""}.</p>`,
         `<button class="btn pri" data-a="closeModal">Close</button>`);
     }
+    case "matCost": {
+      const sp = findByName(app.library.spells, m.name), mc = sp && matCost(sp), gp = (c.coins && c.coins.gp) || 0;
+      if (!mc) return modalShell("Component", `<p>No cost</p>`, `<button class="btn pri" data-a="closeModal">Close</button>`);
+      const ok = canPay(c, mc.gp);
+      return modalShell(`${sp.name}: material`, `<div class="scribe">${spellIcon(sp, "big")}<dl class="kv"><dt>Component</dt><dd>${esc(mc.text)}</dd><dt>Price</dt><dd>${mc.gp.toLocaleString()}${mc.min ? "+" : ""} gp, used up</dd><dt>You have</dt><dd>${gp.toLocaleString()} gp</dd></dl></div>${ok ? "" : `<p class="small" style="color:var(--red)">Not enough coins</p>`}`,
+        `<button class="btn" data-a="closeModal">Cancel</button><button class="btn" data-a="matGo" data-pay="0">I have it</button><button class="btn pri" data-a="matGo" data-pay="1" ${ok ? "" : "disabled"}>Pay ${mc.gp.toLocaleString()} gp</button>`);
+    }
+    case "spCompare": return renderCompare(app);
     case "spFilter": return renderFilterModal(app);
     case "spList": return renderListPreview(app, m.id);
     case "scribe": return modalShell("Scribe spells", renderScribe(app), `<button class="btn pri" data-a="closeModal">Done</button>`);

@@ -6,7 +6,7 @@
 
 export const TRACKED = ["home", "roster", "rules", "notes", "sheet", "graveyard"];
 export const MAIN_SUB = ["", "sheet", "play"];
-const PAGE_LABEL = { stats: "Character", notes: "Notes", rules: "Rules", shop: "Shop", settings: "Settings" };
+const PAGE_LABEL = { stats: "Character", notes: "Notes", rules: "Rules", shop: "Shop", spellgl: "Spell glossary", settings: "Settings" };
 const SCREEN_LABEL = { home: "Main menu", roster: "Characters", rules: "Rules", notes: "Notes", graveyard: "Graveyard" };
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -56,6 +56,7 @@ export function label(l) {
 export function sheetPath(name, l) {
   if (!l || l.screen !== "sheet") return [name];
   if (l.tab === "shop") return [name, "Gear", "Shop"];
+  if (l.tab === "spellgl") return [name, "Spells", "Spell glossary"];
   if (l.tab !== "stats") return [name, PAGE_LABEL[l.tab] || ""].filter(Boolean);
   const s = subLabel(l.sub);
   return s ? [name, s] : [name];

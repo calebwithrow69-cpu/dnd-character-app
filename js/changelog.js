@@ -2,11 +2,23 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.118";
+export const VERSION = "0.1.119";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.119",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Spell glossary page, new level emblems, compact spell slots, material costs and compare.",
+    groups: [
+      { title: "Spell glossary", items: ["Spells open as a full page like the Shop, from the banner on the Spells tab.", "Tap a spell to read it, then learn it or bookmark it. There is no one-tap add any more.", "Mark up to three spells and compare them side by side."] },
+      { title: "Emblems", items: ["Spell levels use a polygon with level plus two sides, the Roman numeral inside, and the school's colour and lettering. Cantrips are a dashed ring."] },
+      { title: "Spell slots", items: ["Slots are one row of level chips. Tap a chip to spend a slot, with Undo.", "Details expands to a gem per slot."] },
+      { title: "Casting", items: ["Spells with a consumed material that has a gold price ask first, then charge the gold or let you say you have it.", "A Recent row on the Spells tab recasts your last spells.", "Concentration, ritual and prepared show as chips on every spell row."] }
+    ]
+  },
   {
     v: "0.1.118",
     date: "2026-11-27",

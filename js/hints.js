@@ -99,14 +99,17 @@ HINTS.push(
   { id: "spIcons", where: "sheet", sel: ".k-row .spi", title: "Spell icons", body: "The numeral is the spell level and the ring is a cantrip. The school sets the colour and lettering." },
   { id: "spPrepare", where: "sheet", sel: '[data-a="spPrepOpen"]', title: "Prepare spells", body: "Count against your limit, All and None, search, and saved loadouts." },
   { id: "spEdit", where: "sheet", sel: '[data-a="spEditToggle"]', title: "Edit list", body: "Shows the remove buttons. Tap again to hide them." },
-  { id: "spFilter", where: "spbrowse", sel: '[data-a="spFilterOpen"]', title: "Filter and sort", body: "Narrow by school, role, area shape, damage, saving throw and casting time." },
-  { id: "spLevels", where: "spbrowse", sel: ".sblv", title: "Spell levels", body: "Numerals are spell levels. The ring is cantrips." },
-  { id: "spHeart", where: "spbrowse", sel: ".sprow .heart", title: "Wanted", body: "Heart a spell to keep it on the Wanted shelf for later." },
-  { id: "spLists", where: "spbrowse", sel: '[data-a="spTab"][data-tab="lists"]', title: "Premade lists", body: "Themed spell lists for your class. Preview first, then add what fits your level." },
+  { id: "spFilter", where: "spgl", sel: '[data-a="spFilterOpen"]', title: "Filter and sort", body: "Narrow by school, role, area shape, damage, saving throw and casting time." },
+  { id: "spLevels", where: "spgl", sel: ".sblv", title: "Spell levels", body: "Numerals are spell levels. The ring is cantrips." },
+  { id: "spHeart", where: "spgl", sel: ".sprow .heart", title: "Bookmark", body: "Heart a spell to keep it on the Bookmarks shelf for later." },
+  { id: "spLists", where: "spgl", sel: '[data-a="spTab"][data-tab="lists"]', title: "Premade lists", body: "Themed spell lists for your class. Preview first, then add what fits your level." },
   { id: "spGroup", where: "sheet", sel: ".sp2-grp", title: "Group spells", body: "Group your list by level, school or prepared." },
   { id: "spScribe", where: "sheet", sel: '[data-a="spScribeOpen"]', title: "Scribe spells", body: "Copy a spell into your spellbook from a scroll or another book. Cost and time show before you commit." },
   { id: "spRitual", where: "sheet", sel: '[data-a="castRitual"]', title: "Ritual casting", body: "Cast a ritual spell from your spellbook without preparing it or using a slot." },
-  { id: "spArea", where: "spdetail", sel: ".areahit", title: "Area diagrams", body: "Underlined areas open a 5-foot grid. Switch between square and hex." }
+  { id: "spBanner", where: "sheet", sel: '.shopban[data-a="openGlossary"]', title: "Spell glossary", body: "Browse every spell. Open one to read it, then learn it or bookmark it." },
+  { id: "spSlots", where: "sheet", sel: ".slotchips", title: "Spell slots", body: "Tap a level to spend a slot. Details shows a gem per slot." },
+  { id: "spCmp", where: "spgl", sel: ".cmpbtn", title: "Compare", body: "Mark up to three spells, then compare them side by side." },
+  { id: "spArea", where: "spgl", sel: ".areahit", title: "Area diagrams", body: "Underlined areas open a 5-foot grid. Switch between square and hex." }
 );
 
 const wideNow = () => typeof matchMedia === "function" && matchMedia("(min-width:1100px)").matches;

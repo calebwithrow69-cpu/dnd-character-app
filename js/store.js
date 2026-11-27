@@ -112,6 +112,7 @@ export function normalize(c, library) {
     : (h.kind === "attack" || h.kind === "item") ? out.inventory.some(i => i.id === h.id)
     : h.kind === "ability" ? true : false));
   out.featMarks = (Array.isArray(c.featMarks) ? c.featMarks : []).filter((k, i, a) => typeof k === "string" && k.length < 160 && a.indexOf(k) === i).slice(0, 200);
+  out.recentCasts = (Array.isArray(c.recentCasts) ? c.recentCasts : []).filter((k, i, a) => typeof k === "string" && k.length < 80 && a.indexOf(k) === i).slice(0, 6);
   out.spellWish = (Array.isArray(c.spellWish) ? c.spellWish : []).filter((k, i, a) => typeof k === "string" && k.length < 80 && a.indexOf(k) === i).slice(0, 200);
   out.spellLoadouts = (Array.isArray(c.spellLoadouts) ? c.spellLoadouts : []).filter(l => l && typeof l.id === "string" && typeof l.name === "string" && Array.isArray(l.prep)).map(l => ({ id: l.id.slice(0, 40), name: l.name.slice(0, 30), prep: l.prep.filter(n => typeof n === "string").slice(0, 120) })).slice(0, 8);
   out.loadouts = (Array.isArray(c.loadouts) ? c.loadouts : []).filter(l => l && l.id && l.name && l.eq && typeof l.eq === "object").slice(0, 12);

@@ -1,5 +1,5 @@
-import { spellIcon } from "./spellicon.js";
-import { scaleBlock } from "./spellbrowser.js";
+import { spellIcon, levelEmblem } from "./spellicon.js";
+import { scaleBlock, renderSpellPage, spellBanner } from "./spellbrowser.js";
 import { walletCp, COIN_INFO } from "../equipment.js";
 import { encTier } from "../encumbrance.js";
 import { purseCard } from "./shopkit.js";
@@ -34,7 +34,7 @@ export { renderRulesResults };
 const levelLabel = l => (Number(l) === 0 ? "Cantrip" : `Level ${l}`);
 
 // Pages the sheet can show. Shop is a page but has no tab: it opens from the Gear tab.
-const PAGES = ["stats", "notes", "rules", "shop", "settings"];
+const PAGES = ["stats", "notes", "rules", "shop", "spellgl", "settings"];
 export function sheetTabs(app) {
   return [
     ["stats", "Character", ICONS.stats],
@@ -104,11 +104,12 @@ export function renderSheet(app) {
   let body;
   if (tab === "stats") body = classicBody(app, c, d);
   else if (tab === "shop") body = app.shopCat === "loot" && app.prefs && app.prefs.experimental ? renderLootPage(app) : renderShopPage(app);
+  else if (tab === "spellgl") body = renderSpellPage(app, detailFor);
   else if (tab === "settings") body = `<div class="setpage">${settingsBody(app)}</div>`;
   else if (tab === "notes") body = notesBody(app);
   else body = rulesTab(app);
-  const page = tab === "shop" || tab === "settings" || tab === "notes";
-  const wide = tab === "rules" || tab === "shop" || tab === "notes";
+  const page = tab === "shop" || tab === "spellgl" || tab === "settings" || tab === "notes";
+  const wide = tab === "rules" || tab === "shop" || tab === "spellgl" || tab === "notes";
 
   return `<div class="sheetview" data-sheet="classic">
     ${sheetBar(app, c, d, meta)}
@@ -216,6 +217,26 @@ export function needsFirstChoices(app, c) {
   return levelUpPlan(app.library, c, 1, {}, { fromCreation: true }).steps.length > 1;
 }
 
+
+// Spell slots: one row of level chips (tap to spend one), or the full rows with a gem per slot.
+function slotsPanel(app, c, info) {
+  const open = !!(app.prefs && app.prefs.slotsOpen), rows = info.slots;
+  const used = r => c.spellcasting.slotsUsed[r.level - 1] || 0;
+  const total = rows.reduce((t, r) => t + r.max - used(r), 0), max = rows.reduce((t, r) => t + r.max, 0);
+  const head = `<div class="slp-hd"><h2 class="sec2">Spell slots</h2><span class="slp-n"><b>${total}</b>/${max}</span><button class="btn sm ghost" data-a="slotsToggle" aria-expanded="${open}">${open ? "Less" : "Details"}</button></div>`;
+  if (!rows.length) return `<div class="sp2-side slp">${head}<p class="muted small">No spell slots at this level.</p></div>`;
+  const chips = `<div class="slotchips">${rows.map(r => { const left = r.max - used(r);
+    return `<button class="slotchip ${left ? "" : "empty"} ${r.pact ? "pact" : ""}" data-a="slotSpend" data-lvl="${r.level}" data-max="${r.max}" aria-label="${r.pact ? "Pact " : ""}${levelLabel(r.level)}: ${left} of ${r.max} left. Spend one">${levelEmblem(r.level, "small")}<span class="n"><b>${left}</b>/${r.max}</span></button>`; }).join("")}</div>`;
+  const detail = open ? `<div class="slp-rows">${rows.map(r => `<div class="sp2-slot"><span class="lv">${r.pact ? `Pact \u00b7 level ${r.level}` : levelLabel(r.level)}</span>
+      <span class="gems">${Array.from({ length: r.max }, (_, i) => `<button class="pip ${i < r.max - used(r) ? "" : "used"}" data-a="toggleSlot" data-lvl="${r.level}" data-i="${i}" data-max="${r.max}" aria-label="${levelLabel(r.level)} slot ${i + 1}, ${i < r.max - used(r) ? "available" : "used"}"></button>`).join("")}</span></div>`).join("")}
+    ${rows.some(r => r.pact) ? `<p class="sub2">Pact slots come back on a short rest.</p>` : ""}<p class="sub2 sp2-key">\u2726 always prepared</p></div>` : "";
+  return `<div class="sp2-side slp">${head}${chips}${detail}</div>`;
+}
+
+function recentStrip(app, c, known) {
+  const names = (c.recentCasts || []).filter(n => known.some(k => k.name === n && k.ref && (k.ref.level === 0 || k.prepared || k.always)));
+  return names.length ? `<div class="recent"><span>Recent</span>${names.map(n => { const k = known.find(x => x.name === n); return `<button class="chipbtn" data-a="${k.ref.level === 0 ? "castCantrip" : "openCast"}" data-name="${esc(n)}">${esc(n)}</button>`; }).join("")}</div>` : "";
+}
 // ---------------- Spells ----------------
 const ORD_SHORT = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 export function spellsTab(app, c, d) {
@@ -240,6 +261,7 @@ export function spellsTab(app, c, d) {
   const levels = Object.keys(byLevel).sort((a, b) => grp === "prepared" ? ORDER[a] - ORDER[b] : grp === "school" ? a.localeCompare(b) : (byLevel[a][0] && lvOf(byLevel[a][0])) - (byLevel[b][0] && lvOf(byLevel[b][0])));
 
   return `
+    ${spellBanner(app, c)}
     ${info ? `<div class="panel"><div class="panel-body">
       <div class="quick" style="margin-top:0;grid-template-columns:repeat(3,1fr)">
         <div><b>${info.dc}</b><span>Save DC</span></div>
@@ -248,14 +270,9 @@ export function spellsTab(app, c, d) {
       </div></div></div>` : ""}
 
     <div class="sp2">
-    <div class="sp2-side"><h2 class="sec2">Spell slots</h2>
-      ${info.slots.length ? info.slots.map(r => {
-        const used = c.spellcasting.slotsUsed[r.level - 1] || 0;
-        return `<div class="sp2-slot"><span class="lv">${r.pact ? `Pact · level ${r.level}` : levelLabel(r.level)}</span>
-          <span class="gems">${Array.from({ length: r.max }, (_, i) => `<button class="pip ${i < r.max - used ? "" : "used"}" data-a="toggleSlot" data-lvl="${r.level}" data-i="${i}" data-max="${r.max}" aria-label="${levelLabel(r.level)} slot ${i + 1}, ${i < r.max - used ? "available" : "used"}"></button>`).join("")}</span></div>`;
-      }).join("") + (info.slots.some(r => r.pact) ? `<p class="sub2">Pact slots come back on a short rest.</p>` : "") : `<p class="muted small">No spell slots at this level.</p>`}
-      <p class="sub2 sp2-key">✦ always prepared</p></div>
-    <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><span class="sp2-btns"><button class="btn sm" data-a="spPrepOpen">Prepare</button>${c.class === "Wizard" ? `<button class="btn sm" data-a="spScribeOpen">Scribe</button>` : ""}<button class="btn sm ${app.spEdit ? "pri" : ""}" data-a="spEditToggle" aria-pressed="${!!app.spEdit}">Edit list</button><button class="btn sm pri" data-a="openPicker" data-picker="spells">Add spells</button></span></div>
+    ${slotsPanel(app, c, info)}
+    <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><span class="sp2-btns"><button class="btn sm" data-a="spPrepOpen">Prepare</button>${c.class === "Wizard" ? `<button class="btn sm" data-a="spScribeOpen">Scribe</button>` : ""}<button class="btn sm ${app.spEdit ? "pri" : ""}" data-a="spEditToggle" aria-pressed="${!!app.spEdit}">Edit list</button></span></div>
+      ${recentStrip(app, c, known)}
       ${filterBar}
       ${known.length ? (levels.length ? "" : `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`) + levels.map(lv => kGroup(lv, byLevel[lv].length, { tone: lv === "Cantrip" || lv === "Cantrips" ? "faint" : "amber" }) + `<div class="k-list">` + byLevel[lv].map(s => {
         const lvn = lvOf(s);
@@ -265,7 +282,7 @@ export function spellsTab(app, c, d) {
         const unprep = lvn > 0 && !s.always && !s.prepared;
         return kRow({
           icon: r ? spellIcon(r) : "", glyph: (r?.school || s.name)[0], tone: lvn === 0 ? "blue" : "amber", off: unprep,
-          title: s.name + (s.always ? " \u2726" : ""), cap: [r?.school, tag].filter(Boolean).join(" \u00b7 "), sub, snip: snipOf(r?.text),
+          title: s.name + (s.always ? " \u2726" : ""), capHtml: `${esc(r?.school || "")}${r?.conc ? ` <i class="spchip">Conc.</i>` : ""}${r?.ritual ? ` <i class="spchip">Ritual</i>` : ""}${s.always ? ` <i class="spchip">Always</i>` : lvn > 0 && s.prepared ? ` <i class="spchip">Prepared</i>` : ""}`, sub, snip: snipOf(r?.text),
           mainAttrs: `data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"`,
           actions: `${c.class === "Wizard" && lvn > 0 && r?.ritual && !s.prepared && !s.always ? `<button class="btn sm" data-a="castRitual" data-name="${esc(s.name)}">Ritual</button>` : ""}${info && (lvn === 0 || s.prepared || s.always) ? `<button class="btn sm ${lvn === 0 ? "" : "pri"}" data-a="${lvn === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
             ${app.spEdit && !s.always ? `<button class="iconbtn sp2-x" data-a="askRemove" data-do="removeSpell" data-what="spell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}`

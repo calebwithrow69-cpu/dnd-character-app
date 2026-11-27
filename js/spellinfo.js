@@ -102,3 +102,12 @@ export function scaleRows(sp) {
   for (let l = sp.level; l <= 9; l++) out.push([["", "1st", "2nd", "3rd"][l] || l + "th", castDice(base, a, { charLevel: 1, slotLevel: l, spellLevel: sp.level })]);
   return out;
 }
+
+// A material component with a gold price: { gp, min (the "+" in "300+ GP"), consumed, text }, or null. Only the first price is read.
+export function matCost(sp) {
+  const comp = String((sp && sp.comp) || "");
+  if (!/\bM\b/.test(comp)) return null;
+  const m = /(\d[\d,]*)(\+)?[,\s]*GP/i.exec(comp);
+  if (!m) return null;
+  return { gp: parseInt(m[1].replace(/,/g, ""), 10), min: !!m[2], consumed: /consum/i.test(comp), text: comp.replace(/^.*?\bM\s*\(+/, "").replace(/\)+\s*$/, "") };
+}

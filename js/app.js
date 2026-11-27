@@ -56,6 +56,7 @@ import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lin
 import { jumpResults } from "./views/jump.js";
 import { renderBrowseResults, prepResults, preparedNames, sbState, scribeResults, scribeCost, canPay, maxSpellLevel } from "./views/spellbrowser.js";
 import { listsFor, listPlan } from "./spelllists.js";
+import { matCost } from "./spellinfo.js";
 import { renderSheet, renderSpellResults, renderGearResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat } from "./views/glossary.js";
 import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
@@ -117,6 +118,7 @@ const rollRoot = document.getElementById("roll-root");
 
 function readPrefs() { try { const p = JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); if (p && typeof p === "object" && !Array.isArray(p)) { p.sheetStyle = "classic"; return p; } return { sheetStyle: "classic" }; } catch (e) { return {}; } }
 function readFlag(k) { try { return localStorage.getItem(k) === "1"; } catch (e) { return false; } }
+const recordCast = (c, n) => { c.recentCasts = [n, ...(c.recentCasts || []).filter(x => x !== n)].slice(0, 6); };
 function keepModalY(fn) { const b = modalRoot.querySelector(".modal-body"), y = b ? b.scrollTop : 0; fn(); const n = modalRoot.querySelector(".modal-body"); if (n) n.scrollTop = y; }
 function savePrefs() { try { localStorage.setItem(LS_PREFS, JSON.stringify(APP.prefs)); } catch (e) { } }
 let wakeLock = null;
@@ -258,9 +260,9 @@ let hintPause = 0, hintCool = null;
 // After a tour ends, hints wait 15 seconds or until the player moves to another tab or subtab.
 const hintPlace = () => [APP.screen, APP.sheetTab, APP.charSub, APP.classicSub].join("|");
 document.addEventListener("tour-end", () => { hintPause = Date.now() + 15000; hintCool = "pending"; setTimeout(() => render(), 15100); });
-const hintScreen = () => APP.screen === "home" ? "home" : (APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes")) ? "notes"
+const hintScreen = () => APP.screen === "sheet" && APP.sheetTab === "spellgl" ? "spgl" : APP.screen === "home" ? "home" : (APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes")) ? "notes"
   : (APP.screen === "rules" || (APP.screen === "sheet" && APP.sheetTab === "rules")) ? "rules" : APP.screen === "sheet" ? "sheet" : "";
-const hintModal = () => !APP.modal ? "" : APP.modal.type === "picker" && APP.modal.picker === "spells" ? "spbrowse" : APP.modal.type === "detail" && APP.modal.kind === "spell" ? "spdetail" : "";
+const hintModal = () => !APP.modal ? "" : APP.modal.type === "detail" && APP.modal.kind === "spell" ? "spdetail" : "";
 function syncHint() {
   if (hintCool === "pending") hintCool = hintPlace();
   if (hintCool && (hintPlace() !== hintCool || Date.now() > hintPause)) { if (hintPlace() !== hintCool) hintPause = 0; hintCool = null; }
@@ -1102,7 +1104,7 @@ function onInput(e) {
   if (ds.query === "picker") {
     APP.pickerQuery = el.value;
     const r = document.getElementById("results-picker");
-    if (r) r.innerHTML = APP.modal.picker === "spells" ? renderBrowseResults(APP, detailFor) : renderGearResults(APP, APP.modal.picker);
+    if (r) r.innerHTML = (APP.modal ? APP.modal.picker === "spells" : APP.sheetTab === "spellgl") ? renderBrowseResults(APP, detailFor) : renderGearResults(APP, APP.modal.picker);
     return;
   }
   if (ds.query === "scribe") { APP.scQ = el.value; const r = document.getElementById("results-scribe"); if (r) r.innerHTML = scribeResults(APP); return; }
@@ -1679,13 +1681,39 @@ const ACTIONS = {
     if (!c.spellcasting.spells.some(s => s.name === sp.name)) c.spellcasting.spells.push({ name: sp.name, prepared: false, always: false });
     save(); const under = APP._under; APP._under = null; APP.modal = under || null; render(); toast(`Scribed ${sp.name}`);
   },
+  matGo(el) {
+    const c = APP.char, p = APP._matPending; if (!p) return;
+    const sp = findByName(APP.library.spells, p.name), mc = sp && matCost(sp);
+    if (el.dataset.pay === "1" && mc) { if (!canPay(c, mc.gp)) { toast("Not enough coins"); return; } c.coins = applyDeltas(c.coins, { gp: -mc.gp }); save(); }
+    APP._matPending = null; APP._under = null; APP._matOk = true;
+    if (p.ritual) { APP.modal = null; ACTIONS.castRitual({ dataset: { name: p.name } }); }
+    else { APP.modal = { type: "cast", name: p.name }; ACTIONS.castWith({ dataset: { lvl: p.lvl } }); }
+    APP._matOk = false;
+    if (el.dataset.pay === "1" && mc) toast(`Paid ${mc.gp} gp`);
+  },
   castRitual(el) {
     const c = APP.char, name = el.dataset.name, sp = findByName(APP.library.spells, name);
+    const mc = sp && matCost(sp);
+    if (mc && mc.consumed && !APP._matOk) { APP._matPending = { name, ritual: true }; APP._under = APP.modal; openModal({ type: "matCost", name }); return; }
     if (sp && sp.conc) { c.concentration = name; c.spellfx = (c.spellfx || []).filter(x => !x.conc); syncHp(c); }
-    saveAndRender(); toast(`Ritual cast: ${name}`);
+    recordCast(c, name); saveAndRender(); toast(`Ritual cast: ${name}`);
   },
   spGroup(el) { APP.spGroup = el.dataset.v; render(); },
   spRit() { APP.spRit = !APP.spRit; render(); },
+  openGlossary() { APP.pickerQuery = ""; APP.pickerLevel = null; APP.spgView = null; sbState(APP).tab = "browse"; openPage("spellgl"); },
+  spgOpen(el) { APP.spgView = el.dataset.name; render(); window.scrollTo(0, 0); },
+  spgBack() { APP.spgView = null; render(); },
+  spLearn(el) { const c = APP.char, n = el.dataset.name; if (!c.spellcasting.spells.some(s => s.name === n)) c.spellcasting.spells.push({ name: n, prepared: true, always: false }); saveAndRender(); toast(`Learned ${n}`); },
+  spCmp(el) { const a = APP.spCmp || (APP.spCmp = []), n = el.dataset.name, i = a.indexOf(n); if (i >= 0) a.splice(i, 1); else if (a.length >= 3) { toast("Compare up to 3"); return; } else a.push(n); render(); },
+  spCmpClear() { APP.spCmp = []; render(); },
+  spCmpOpen() { openModal({ type: "spCompare" }); },
+  slotsToggle() { APP.prefs.slotsOpen = !APP.prefs.slotsOpen; savePrefs(); render(); },
+  slotSpend(el) {
+    const lvl = +el.dataset.lvl, max = +el.dataset.max, used = APP.char.spellcasting.slotsUsed, n = used[lvl - 1] || 0;
+    if (n >= max) { toast(`No level ${lvl} slots left`); return; }
+    used[lvl - 1] = n + 1; saveAndRender();
+    toast(`Level ${lvl} slot spent`, { action: "Undo", onAction: () => { used[lvl - 1] = Math.max(0, (used[lvl - 1] || 0) - 1); saveAndRender(); } });
+  },
   noop() { },
   spWish(el) { const c = APP.char, n = el.dataset.name, w = c.spellWish || (c.spellWish = []), i = w.indexOf(n); if (i < 0) w.push(n); else w.splice(i, 1); save(); keepModalY(() => render()); },
   spTab(el) { sbState(APP).tab = el.dataset.tab; render(); },
@@ -2353,6 +2381,8 @@ const ACTIONS = {
   castWith(el) {
     const c = APP.char, lvl = +el.dataset.lvl, name = APP.modal.name;
     const sp = findByName(APP.library.spells, name);
+    const mc = sp && matCost(sp);
+    if (mc && mc.consumed && !APP._matOk) { APP._matPending = { name, lvl }; APP._under = APP.modal; openModal({ type: "matCost", name }); return; }
     if (lvl > 0) {
       const row = slotRows(c.class, c.level).find(r => r.level === lvl);
       const used = c.spellcasting.slotsUsed;
@@ -2360,7 +2390,7 @@ const ACTIONS = {
       used[lvl - 1] = (used[lvl - 1] || 0) + 1;
     }
     if (sp && sp.conc) { c.concentration = name; c.spellfx = (c.spellfx || []).filter(x => !x.conc); syncHp(c); }
-    save(); closeModal();
+    recordCast(c, name); save(); closeModal();
     const rolled = spellRoll(sp, lvl || sp?.level || 1);
     if (!rolled && hasFx(sp)) { openModal({ type: "applySpell", name, lvl: lvl || sp.level || 1 }); return; }
     if (!rolled) toast(`Cast ${name}${lvl ? ` with a level ${lvl} slot` : ""}${sp && sp.conc ? " — concentrating" : ""}`);
@@ -2384,7 +2414,7 @@ const ACTIONS = {
     syncHp(c); saveAndRender();
   },
   castCantrip(el) {
-    const sp = findByName(APP.library.spells, el.dataset.name);
+    const sp = findByName(APP.library.spells, el.dataset.name); recordCast(APP.char, el.dataset.name); save();
     if (!spellRoll(sp, 0)) toast(`Cast ${el.dataset.name}`);
   },
   addSpell(el) { APP.char.spellcasting.spells.push({ name: el.dataset.name, prepared: true, always: false }); saveAndRender(); },
@@ -2532,7 +2562,7 @@ const ACTIONS = {
     saveAndRender();
     showLoot(APP, box, res, boxCount(c, box));
   },
-  openPicker(el) { APP.pickerQuery = ""; APP.pickerLevel = null; openModal({ type: "picker", picker: el.dataset.picker }); },
+  openPicker(el) { if (el.dataset.picker === "spells") { ACTIONS.openGlossary(); return; } APP.pickerQuery = ""; APP.pickerLevel = null; openModal({ type: "picker", picker: el.dataset.picker }); },
   pickFrom(el) { addPicked(el.dataset.picker, el.dataset.name, false); },
   pickCustom(el) { addPicked(el.dataset.picker, APP.pickerQuery.trim(), true); },
   askRemove(el) { APP._rm = { act: el.dataset.do, data: { ...el.dataset }, what: el.dataset.what, name: el.dataset.name }; APP._rmUnder = APP.modal || null; openModal({ type: "confirmRemove" }); },
