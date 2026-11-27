@@ -2,11 +2,21 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.104";
+export const VERSION = "0.1.105";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.105",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Delete confirms and a faster wallet.",
+    groups: [
+      { title: "Confirms", items: ["Removing an item, pack, custom bonus, counter, saved background or debug changes now asks first, with the consequence named.", "Clearing roll history asks once there is more than a few rolls."] },
+      { title: "Wallet", items: ["Tap any coin or Add or spend to open one quick panel: Add or Spend, amount, coin type, +1 / +5 / +10 / +50 / +100 chips, and a before and after line.", "Spending makes change automatically and blocks when you are short.", "Combine coins merges everything into the fewest coins.", "Total in gold on the panel header, Undo on every change."] }
+    ]
+  },
   {
     v: "0.1.104",
     date: "2026-11-27",

@@ -70,7 +70,7 @@ import { setSpellNames } from "./ui.js";
 import { renderModal, renderRollCard } from "./views/modals.js";
 import { renderShopResults, shopPrice } from "./views/shop.js";
 import { renderCxShopResults } from "./views/cxshop.js";
-import { shopStock, pay, fmtPrice } from "./equipment.js";
+import { shopStock, pay, fmtPrice, walletCp } from "./equipment.js";
 import { renderLevelUp, renderLevelResults, newLevelDraft, plan as levelPlan, fullPlan, stepValid, asiResult, featDef } from "./views/levelup.js";
 import { syncCustom, loadCustom, saveCustom, blankCustom, customValid } from "./custombg.js";
 import { featAbilityIncrease, applyFeat, ASI_FEAT } from "./featfx.js";
@@ -874,9 +874,20 @@ function onClick(e) {
   if ((a === "closeModalBackdrop" || a === "closeProgressBackdrop" || a === "featCloseBackdrop") && e.target !== el) return;
   if (APP.prefs.wake && !wakeLock) syncWake();
   if (a !== "closeModalBackdrop" && a !== "closeProgressBackdrop" && a !== "featCloseBackdrop") feedback(el);
+  if (GUARD[a] && el.dataset.sure !== "1") { const g = GUARD[a](el); if (g) { APP._rm = { act: a, data: { ...el.dataset, sure: "1" }, what: g.what, name: g.name, note: g.note }; APP._rmUnder = APP.modal || null; openModal({ type: "confirmRemove" }); return; } }
   const fn = ACTIONS[a];
   if (fn) fn(el, e);
 }
+// Destructive actions that ask first: each returns what to name, or null to go ahead.
+const GUARD = {
+  removeItem: el => { const it = itemById(APP.char, el.dataset.id); return it && { what: "item", name: it.name, note: Array.isArray(it.contents) && it.contents.length ? "Everything inside goes with it." : "It leaves your bag and any worn slot." }; },
+  customRemove: el => { const x = (APP.char.custom || []).find(y => y.id === el.dataset.id); return x && { what: "bonus", name: x.label || "Custom bonus", note: "The numbers it changed go back." }; },
+  debugClear: () => ({ what: "debug", name: "debug changes", note: "AC, speed and other numbers return to the rules." }),
+  deleteResource: () => { const r = APP.char.resources[APP.modal && APP.modal.i]; return r && { what: "counter", name: r.name || "this counter", note: "Its uses are lost." }; },
+  dropFormula: el => ({ what: "formula", name: el.dataset.f, note: "" }),
+  cbDelete: el => ({ what: "background", name: el.dataset.name, note: "Characters using it keep their copy." }),
+  clearHistory: () => (APP.history || []).length > 3 ? { what: "history", name: "roll history", note: "" } : null
+};
 
 // DM tour steps name where to be ("dm:<tab>" or "dm:screen"); the mover redraws before the tour looks for its target.
 tourHooks.go = spec => {
@@ -1025,6 +1036,7 @@ function onInput(e) {
   if (el.id === "pm-q") { APP.playQ = el.value; render(); return; }
   if (el.id === "st-q") { APP.stQ = el.value; render(); return; }
   if (el.id === "sp-q") { APP.spQ = el.value; render(); return; }
+  if (el.id === "wal-amt") { if (APP.modal && APP.modal.type === "wallet") { APP.modal.amt = el.value.replace(/\D/g, "").slice(0, 9); render(); } return; }
   if (el.id === "bag-q") { APP.bagQ = el.value; render(); return; }
   if (el.id === "f-formula") { APP.diceFormula = el.value; return; }
   if (el.id === "hp-amt") { updateHpPreview(); return; }
@@ -2349,6 +2361,24 @@ const ACTIONS = {
   },
   clearSel() { APP.selItem = null; render(); },
   // Loadouts (Advanced sheet > Gear). Opening one only previews it; loadoutApply is the confirm.
+  walOpen(el) { openModal({ type: "wallet", mode: "add", unit: el.dataset.unit || "gp", amt: "" }); },
+  walMode(el) { APP.modal.mode = el.dataset.v; render(); },
+  walUnit(el) { APP.modal.unit = el.dataset.v; render(); },
+  walChip(el) { APP.modal.amt = String((parseInt(APP.modal.amt, 10) || 0) + (+el.dataset.n || 0)); render(); },
+  walGo() {
+    const m = APP.modal, c = APP.char, n = parseInt(m.amt, 10) || 0; if (n <= 0) return;
+    const prev = { ...c.coins }, rate = { cp: 1, sp: 10, ep: 50, gp: 100, pp: 1000 }[m.unit];
+    if (m.mode === "spend") { const left = pay(c.coins, n * rate); if (!left) { toast("Not enough coins"); return; } c.coins = left; }
+    else c.coins = { ...c.coins, [m.unit]: (c.coins[m.unit] || 0) + n };
+    closeModal(); save(); render();
+    toast(`${m.mode === "spend" ? "Spent" : "Added"} ${n} ${m.unit}`, { action: "Undo", onAction: () => { c.coins = prev; save(); render(); } });
+  },
+  walConvert() {
+    const c = APP.char, prev = { ...c.coins }; let t = walletCp(c.coins); const out = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
+    for (const [k, r] of [["pp", 1000], ["gp", 100], ["sp", 10], ["cp", 1]]) { out[k] = Math.floor(t / r); t -= out[k] * r; }
+    if (["pp", "gp", "ep", "sp", "cp"].every(k => (c.coins[k] || 0) === out[k])) { toast("Already in the fewest coins"); return; }
+    c.coins = out; save(); render(); toast("Coins combined", { action: "Undo", onAction: () => { c.coins = prev; save(); render(); } });
+  },
   packOpen(el) { openModal({ type: "pack", id: el.dataset.id }); },
   packTake(el) {
     const c = APP.char, it = itemById(c, el.dataset.id); if (!it) return; const list = packEnsure(c, it); if (!list) return;

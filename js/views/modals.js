@@ -31,6 +31,7 @@ import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
 import { renderBadges, renderLevelUp, renderDiscard } from "./notes.js";
 import { renderContentUpdate } from "./contentupdate.js";
+import { pay, walletCp } from "../equipment.js";
 import { packBody, packAddBody, isPack } from "./packview.js";
 import { renderLoadoutBody, renderLoadoutSave, loadoutsOf, isActive, loadoutPlan } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
@@ -140,7 +141,7 @@ export function renderModal(app) {
       const r = app._rm || {};
       const note = r.what === "spell" ? "It leaves your spell list. You can add it back any time from Add spells."
         : r.what === "note" ? "It is deleted from this device. A backup keeps older copies." : r.what === "feat" ? "It comes off your sheet. Bonuses it already gave, such as ability points or hit points, are not undone." : "";
-      return modalShell(`Remove ${r.name || "this"}?`, `<p>Are you sure you want to remove <b>${esc(r.name || "this")}</b>?</p><p class="sub2">${esc(note)}</p>`,
+      return modalShell(`Remove ${r.name || "this"}?`, `<p>Are you sure you want to remove <b>${esc(r.name || "this")}</b>?</p><p class="sub2">${esc(r.note || note)}</p>`,
         `<button class="btn" data-a="cancelRemove">Keep it</button><button class="btn danger" data-a="confirmRemove">Remove</button>`);
     }
     case "customBg": return renderCustomBg(app);
@@ -277,6 +278,19 @@ export function renderModal(app) {
           ${!weapons.length && !spells.length && !c.inventory.length ? `<p class="muted small" style="padding:12px 0">Nothing to add yet.</p>` : ""}
         </div>`,
         `<button class="btn pri" data-a="closeModal">Done</button>`);
+    }
+
+    case "wallet": {
+      const have = walletCp(c.coins), rate = { cp: 1, sp: 10, ep: 50, gp: 100, pp: 1000 }, n = parseInt(m.amt, 10) || 0, spend = m.mode === "spend";
+      const after = n ? (spend ? pay(c.coins, n * rate[m.unit]) : { ...c.coins, [m.unit]: (c.coins[m.unit] || 0) + n }) : null;
+      const fmt = k => ["pp", "gp", "ep", "sp", "cp"].filter(x => (k[x] || 0) > 0).map(x => `${k[x]} ${x}`).join(" \u00b7 ") || "nothing";
+      const seg = (a, items, cur) => `<div class="seg" role="group">${items.map(([v, l]) => `<button data-a="${a}" data-v="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
+      const body = `<div class="stack">${seg("walMode", [["add", "Add"], ["spend", "Spend"]], m.mode)}
+        <div class="wal-in"><input class="f num" id="wal-amt" inputmode="numeric" autocomplete="off" placeholder="0" value="${esc(m.amt || "")}" aria-label="Amount"></div>
+        ${seg("walUnit", [["pp", "pp"], ["gp", "gp"], ["ep", "ep"], ["sp", "sp"], ["cp", "cp"]], m.unit)}
+        <div class="wal-chips">${[1, 5, 10, 50, 100].map(x => `<button class="chipbtn" data-a="walChip" data-n="${x}">+${x}</button>`).join("")}</div>
+        <div class="wal-sum"><span>Now</span><b>${esc(fmt(c.coins))}</b><span>${spend ? "After spending" : "After adding"}</span><b class="${after ? "" : "dn"}">${n ? (after ? esc(fmt(after)) : "Not enough coins") : "\u2013"}</b></div></div>`;
+      return modalShell("Coins", body, `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="walGo" ${n && after ? "" : "disabled"}>${spend ? "Spend" : "Add"}</button>`);
     }
 
     case "pack": {

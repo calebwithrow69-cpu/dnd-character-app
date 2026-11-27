@@ -3226,3 +3226,14 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .pk-row .btnrow{grid-column:1/-1;display:flex;gap:8px}
 @media (min-width:700px){.pk-row{grid-template-columns:minmax(0,1fr) 64px auto}.pk-row .btnrow{grid-column:auto}}
 .pk-act{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+
+/* Wallet */
+.wal-tot{font:700 1.1rem var(--display);color:var(--amber)}
+.coinbtn{background:none;border:0;padding:0;cursor:pointer;border-radius:50%}
+.coinbtn:hover i{filter:brightness(1.08)}
+.wal-in .f{width:100%;font:700 2rem var(--display);text-align:center;padding:10px}
+.wal-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.wal-sum{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.wal-sum span{font:600 .62rem var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);align-self:center}
+.wal-sum b{font:600 .9rem system-ui,sans-serif;text-align:right}
+.wal-sum b.dn{color:#d1625a}
