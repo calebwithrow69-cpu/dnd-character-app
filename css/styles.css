@@ -3059,3 +3059,35 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .statmeta .condbar::-webkit-scrollbar{display:none}
 .statmeta .condbar .chip{flex:none;white-space:nowrap}
 .sheetview[data-sheet] .status.statcard .quick{max-width:none;margin-inline:-12px}
+
+/* Wide screens: HP row and quick stats sit side by side, so the card stays short */
+@container statbox (min-width:900px){
+  .sheetview[data-sheet] .status.statcard{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,400px);grid-template-areas:"v q" "m m";align-items:center;gap:0 24px;padding:14px 20px 0;max-width:none}
+  .statcard .vitals{grid-area:v;grid-template-columns:70px minmax(200px,520px) 72px;gap:16px;justify-content:start;margin:0}
+  .statcard .seal{width:70px;height:70px}
+  .statcard .seal .wax{width:54px;height:54px}
+  .statcard .seal .wax b{font-size:1.7rem}
+  .statcard .shieldbtn{width:72px;height:84px}
+  .statcard .shieldbtn b{font-size:1.75rem}
+  .statcard .shieldbtn span{bottom:15px;font-size:.48rem}
+  .statcard .hpstage{height:36px}
+  .statcard .hpover .hpnum{font-size:1.25rem}
+  .sheetview[data-sheet] .status.statcard .quick{grid-area:q;margin:0;border-radius:12px;max-width:none;grid-template-columns:repeat(4,1fr)}
+  .statcard .statmeta{grid-area:m;margin-top:10px}
+  .statcard .chips,.statcard .concbanner{grid-column:1/-1}
+}
+
+/* Tablet portrait: one column, HP row centred and kept from stretching */
+@container statbox (min-width:600px) and (max-width:899px){
+  .statcard .vitals{grid-template-columns:70px minmax(200px,460px) 72px;gap:16px;justify-content:center}
+  .statcard .seal{width:70px;height:70px}
+  .statcard .seal .wax{width:54px;height:54px}
+  .statcard .seal .wax b{font-size:1.7rem}
+  .statcard .shieldbtn{width:72px;height:84px}
+  .statcard .shieldbtn b{font-size:1.75rem}
+  .statcard .shieldbtn span{bottom:15px;font-size:.48rem}
+  .statcard .hpstage{height:36px}
+  .statmeta{justify-content:space-between}
+}
+
+.statwrap{container:statbox / inline-size}

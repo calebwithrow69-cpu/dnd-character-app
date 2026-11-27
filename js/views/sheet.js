@@ -111,7 +111,7 @@ export function renderSheet(app) {
     ${sheetBar(app, c, d, meta)}
     <main class="wrap page ${wide ? "wide" : ""}">
       ${tab === "rules" ? "" : c.dead ? `<div class="deadbar" role="status"><span><b>${esc(c.name)} has died.</b> ${c.dead.cause ? esc(c.dead.cause) : "Cause unknown."} <button class="linkbtn" data-a="editCause">${c.dead.cause ? "Edit" : "Add cause"}</button></span><button class="btn sm" data-a="reviveAsk" data-id="${esc(c.id)}" data-name="${esc(c.name)}">Revive</button></div>` : ""}
-      ${page || tab === "rules" ? "" : `<section class="status statcard" aria-label="Status">
+      ${page || tab === "rules" ? "" : `<div class="statwrap"><section class="status statcard" aria-label="Status">
         <div class="vitals">
           <button class="seal" data-a="openLevelMenu" aria-label="Level ${c.level}, ${(c.xp || 0).toLocaleString()} experience points">
             <svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="45" class="ring-bg"/><circle cx="50" cy="50" r="45" class="ring-fg" pathLength="100" stroke-dasharray="${xpPct} 100"/></svg>
@@ -134,7 +134,7 @@ export function renderSheet(app) {
         </div>`}
         ${chips ? `<div class="chips">${chips}</div>` : ""}
         ${concBanner(app)}
-      </section>`}
+      </section></div>`}
       ${tab === "stats" ? tourCard("sheet") : ""}
       ${body}
     </main>

@@ -2,11 +2,27 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.91";
+export const VERSION = "0.1.92";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.92",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Status card fits wide screens.",
+    groups: [
+      {
+        title: "Status card",
+        items: [
+          "Laptop and wide iPad: HP row and quick stats sit side by side, so the card is about 40% shorter.",
+          "iPad portrait: one column with the HP bar kept from stretching.",
+          "The layout follows the space the card has, not the screen width."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.91",
     date: "2026-11-27",
