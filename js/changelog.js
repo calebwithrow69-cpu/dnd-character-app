@@ -2,11 +2,23 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.115";
+export const VERSION = "0.1.116";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.116",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Spell overhaul, part one: school icons, area diagrams, a real spell browser, a prepare menu and spell loadouts.",
+    groups: [
+      { title: "Spell icons", items: ["Every spell has an icon: a Roman numeral for its level, a ring for cantrips.", "The school sets the colour and the lettering."] },
+      { title: "Area diagrams", items: ["Areas in spell text are underlined. Tap one to see it on a 5-foot grid.", "Switch the grid between square and hex. Sphere, cone, line, cube, cylinder and emanation are drawn."] },
+      { title: "Spell browser", items: ["Filter and sort by school, role, area shape, damage type, saving throw, casting time, concentration and ritual.", "Star spells to keep them on a Wanted shelf.", "Damage and healing by slot level (or character level for cantrips) show in each spell."] },
+      { title: "Your spell list", items: ["Prepare opens a menu with a count against your limit, All and None, search and level filters.", "Save prepared sets as loadouts and apply them after a preview.", "Edit list shows the remove buttons. They are hidden otherwise."] }
+    ]
+  },
   {
     v: "0.1.115",
     date: "2026-11-27",

@@ -1,4 +1,6 @@
 import { renderJump } from "./jump.js";
+import { renderBrowserBody, renderFilterModal, renderPrepModal, renderLoadPreview } from "./spellbrowser.js";
+import { areaSvg, areaStats, describeArea, originNote } from "../areagrid.js";
 import { PHYS } from "../phys.js";
 import { renderDmModal } from "./dmmode.js";
 import { renderToolModal, renderQuickEdit, renderAllTools, condEffectsBlock } from "./tools.js";
@@ -104,7 +106,20 @@ export function renderModal(app) {
       return modalShell("Swap weapon", `<p class="sub2" style="margin-bottom:8px">Swapping weapons costs a Bonus Action. Only the held weapon attacks.</p><div class="optlist" style="margin-top:0">${rows}</div>`, `<button class="btn" data-a="closeModal">Cancel</button>`);
     }
 
+    case "area": {
+      const a = { shape: m.shape, r: +m.r || 0, size: +m.size || 0, len: +m.len || 0, wid: +m.wid || 0, h: +m.h || 0 };
+      const mode = app.prefs.gridMode === "hex" ? "hex" : "square", st = areaStats(a, mode);
+      return modalShell(describeArea(a),
+        `<div class="seg" role="group" aria-label="Grid">${["square", "hex"].map(g => `<button data-a="areaMode" data-mode="${g}" aria-pressed="${mode === g}">${g === "hex" ? "Hex" : "Square"}</button>`).join("")}</div>
+         <div class="areabox">${areaSvg(a, mode)}</div>
+         <p class="sub2 areacap">${esc(originNote(a))}. Each cell is 5 ft. About ${st.cells} cells${a.shape === "cylinder" ? `, ${a.h} ft tall` : ""}.</p>`,
+        `<button class="btn pri" data-a="closeModal">Close</button>`);
+    }
+    case "spFilter": return renderFilterModal(app);
+    case "spPrep": return renderPrepModal(app);
+    case "spLoadPrev": return renderLoadPreview(app, m.id);
     case "picker": {
+      if (m.picker === "spells") return modalShell("Add spells", renderBrowserBody(app, detailFor), `<button class="btn pri" data-a="closeModal">Done</button>`, "spbrowse");
       const titles = { spells: "Add spells", items: "Add to your bag", feats: "Add a feat" };
       let filters = "";
       if (m.picker === "spells") {

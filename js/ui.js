@@ -1,4 +1,5 @@
 // Shared rendering helpers.
+import { highlightAreas } from "./spellinfo.js";
 
 export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({
@@ -106,7 +107,7 @@ function tableHtml(t) {
 // Rules text: paragraphs on blank lines, bold lead-ins ("Darkvision. You…"
 // or "Speed: 30 feet"), tables drawn as tables, and the first mention of each
 // glossary term turned into a tap/hover definition.
-export function formatText(text, { terms = true } = {}) {
+export function formatText(text, { terms = true, areas = false } = {}) {
   const t = String(text || "").trim();
   if (!t) return `<p class="muted">No description in the rules data.</p>`;
   const seen = new Set();
@@ -116,7 +117,7 @@ export function formatText(text, { terms = true } = {}) {
     // Title Case lead-ins only ("Hop Up.", "Creature Type:"), never an ordinary sentence.
     const m = si === 0 ? /^([A-Z][\w'’()-]*(?: (?:[A-Z0-9][\w'’()-]*|of|the|and|or|to|in|a|an|with|for|on|at)){0,6})([.:])\s+(?=\S)/.exec(seg.s) : null;
     if (m) { lead = m[1] + m[2]; body = seg.s.slice(m[0].length); }
-    const fmt = x => { const e = esc(x).replace(/\n/g, "<br>"); return terms ? linkTerms(e, seen) : e; };
+    const fmt = x => { let e = esc(x).replace(/\n/g, "<br>"); if (areas) e = highlightAreas(e); return terms ? linkTerms(e, seen) : e; };
     return `<p>${lead ? `<b class="lead">${esc(lead)}</b> ` : ""}${fmt(body)}</p>`;
   }).join("")).join("");
 }

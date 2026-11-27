@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { areasIn, highlightAreas, rangeFeet } from "../js/spellinfo.js";
+import { areaStats, areaSvg } from "../js/areagrid.js";
+let n = 0; const t = (m, f) => { f(); n++; };
+t("sphere", () => { const a = areasIn("Each creature in a 20-foot-radius Sphere centered on that point")[0]; assert.deepEqual([a.shape, a.r], ["sphere", 20]); });
+t("cone cube emanation", () => { assert.equal(areasIn("a 15-foot Cone")[0].size, 15); assert.equal(areasIn("a 10-foot Cube")[0].shape, "cube"); assert.equal(areasIn("a 10-foot Emanation")[0].r, 10); });
+t("cylinder both orders", () => { assert.deepEqual(areasIn("a 10-foot-radius, 40-foot-high Cylinder").map(a => [a.r, a.h])[0], [10, 40]); assert.deepEqual(areasIn("a 40-foot-tall, 10-foot-radius Cylinder").map(a => [a.r, a.h])[0], [10, 40]); });
+t("line both orders", () => { assert.deepEqual(areasIn("a 100-foot-long, 5-foot-wide Line").map(a => [a.len, a.wid])[0], [100, 5]); assert.deepEqual(areasIn("a 5-foot-wide, 60-foot-long Line").map(a => [a.len, a.wid])[0], [60, 5]); });
+t("highlight keeps text", () => { const h = highlightAreas("in a 20-foot-radius Sphere."); assert.ok(h.includes("areahit")); assert.ok(h.includes("20-foot-radius Sphere</button>")); });
+t("fireball area is about 12.5 squares of radius", () => { const s = areaStats({ shape: "sphere", r: 20 }, "square"); assert.ok(s.cells >= 44 && s.cells <= 56, String(s.cells)); });
+t("cone cube counts", () => { assert.equal(areaStats({ shape: "cube", size: 10 }, "square").cells, 4); const c = areaStats({ shape: "cone", size: 15 }, "square").cells; assert.ok(c >= 5 && c <= 10, String(c)); });
+t("svg renders both grids", () => { for (const m of ["square", "hex"]) assert.ok(areaSvg({ shape: "sphere", r: 20 }, m).startsWith("<svg")); });
+t("range", () => { assert.equal(rangeFeet({ range: "Self" }), 0); assert.equal(rangeFeet({ range: "150 feet" }), 150); assert.equal(rangeFeet({ range: "1 mile" }), 5280); });
+console.log("spellinfo: " + n + " checks passed");

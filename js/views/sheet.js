@@ -1,3 +1,5 @@
+import { spellIcon } from "./spellicon.js";
+import { scaleBlock } from "./spellbrowser.js";
 import { walletCp, COIN_INFO } from "../equipment.js";
 import { encTier } from "../encumbrance.js";
 import { purseCard } from "./shopkit.js";
@@ -249,20 +251,19 @@ export function spellsTab(app, c, d) {
           <span class="gems">${Array.from({ length: r.max }, (_, i) => `<button class="pip ${i < r.max - used ? "" : "used"}" data-a="toggleSlot" data-lvl="${r.level}" data-i="${i}" data-max="${r.max}" aria-label="${levelLabel(r.level)} slot ${i + 1}, ${i < r.max - used ? "available" : "used"}"></button>`).join("")}</span></div>`;
       }).join("") + (info.slots.some(r => r.pact) ? `<p class="sub2">Pact slots come back on a short rest.</p>` : "") : `<p class="muted small">No spell slots at this level.</p>`}
       <p class="sub2 sp2-key">✦ always prepared</p></div>
-    <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><button class="btn sm pri" data-a="openPicker" data-picker="spells">Add spells</button></div>
+    <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><span class="sp2-btns"><button class="btn sm" data-a="spPrepOpen">Prepare</button><button class="btn sm ${app.spEdit ? "pri" : ""}" data-a="spEditToggle" aria-pressed="${!!app.spEdit}">Edit list</button><button class="btn sm pri" data-a="openPicker" data-picker="spells">Add spells</button></span></div>
       ${filterBar}
       ${known.length ? (levels.length ? "" : `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`) + levels.map(lv => kGroup(levelLabel(lv), byLevel[lv].length, { tone: lv === 0 ? "faint" : "amber" }) + `<div class="k-list">` + byLevel[lv].map(s => {
         const r = s.ref;
         const sub = r ? [r.time, r.range].filter(Boolean).join(" \u00b7 ") : "";
-        const tag = r?.conc ? "Concentration" : r?.ritual ? "Ritual" : s.always ? "Always prepared" : "";
+        const tag = r?.conc ? "Concentration" : r?.ritual ? "Ritual" : s.always ? "Always prepared" : lv > 0 && s.prepared ? "Prepared" : "";
         const unprep = lv > 0 && !s.always && !s.prepared;
         return kRow({
-          glyph: (r?.school || s.name)[0], tone: lv === 0 ? "blue" : "amber", off: unprep,
+          icon: r ? spellIcon(r) : "", glyph: (r?.school || s.name)[0], tone: lv === 0 ? "blue" : "amber", off: unprep,
           title: s.name + (s.always ? " \u2726" : ""), cap: [r?.school, tag].filter(Boolean).join(" \u00b7 "), sub, snip: snipOf(r?.text),
           mainAttrs: `data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"`,
-          actions: `${lv > 0 && !s.always ? `<label class="prep" data-pop="prep:${esc(s.name)}" title="Prepared"><input type="checkbox" data-a="togglePrepared" data-name="${esc(s.name)}" ${s.prepared ? "checked" : ""} aria-label="Prepared: ${esc(s.name)}"><span>Prep</span></label>` : ""}
-            ${info && (lv === 0 || s.prepared || s.always) ? `<button class="btn sm ${lv === 0 ? "" : "pri"}" data-a="${lv === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
-            ${!s.always ? `<button class="iconbtn sp2-x" data-a="askRemove" data-do="removeSpell" data-what="spell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}`
+          actions: `${info && (lv === 0 || s.prepared || s.always) ? `<button class="btn sm ${lv === 0 ? "" : "pri"}" data-a="${lv === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
+            ${app.spEdit && !s.always ? `<button class="iconbtn sp2-x" data-a="askRemove" data-do="removeSpell" data-what="spell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}`
         });
       }).join("") + "</div>").join("") : `<p class="muted small" style="padding:12px 0">No spells.</p>`}
     </div></div>`;
@@ -521,7 +522,7 @@ export function detailFor(app, kind, name, i, from) {
     const s = findByName(enabledSpells(L, C), name) || findByName(L.spells, name);
     if (!s) return { title: name, body: formatText("") };
     return { title: s.name, body: `<p class="sub2" style="margin-bottom:10px">${s.level ? "Level " + s.level : "Cantrip"} ${esc(s.school || "")}${s.ritual ? " · ritual" : ""}</p>` +
-      kv([["Casting time", s.time], ["Range", s.range], ["Components", s.comp], ["Duration", (s.conc ? "Concentration, " : "") + (s.dur || "")], ["Classes", parseList(s.classes).join(", ")]]) + formatText(s.text) };
+      kv([["Casting time", s.time], ["Range", s.range], ["Components", s.comp], ["Duration", (s.conc && !/^concentration/i.test(s.dur || "") ? "Concentration, " : "") + (s.dur || "")], ["Classes", parseList(s.classes).join(", ")]]) + formatText(s.text, { areas: true }) + scaleBlock(s) };
   }
   if (kind === "feat") {
     const f = findFeat(enabledFeats(L, C), name) || findFeat(L.feats, name);

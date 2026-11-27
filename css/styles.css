@@ -3454,3 +3454,54 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .jp-row.on,.jp-row:hover{background:var(--amber-dim)}
 .jp-n{font-weight:700}
 .jp-s{font-size:.78rem;color:var(--muted);white-space:nowrap}
+
+/* Spell icons: numeral by level, colour and lettering by school */
+.spi{--h:210;flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;border:2px solid hsl(var(--h) 55% 45%);background:hsl(var(--h) 55% 45% / .16);color:hsl(var(--h) 60% 38%);font:700 .92rem/1 var(--display);letter-spacing:0;overflow:hidden;white-space:nowrap}
+html[data-mode="dark"] .spi{color:hsl(var(--h) 75% 72%);border-color:hsl(var(--h) 60% 58%);background:hsl(var(--h) 60% 50% / .2)}
+.spi.cant{background:transparent;border-style:dashed}
+.spi.cant::after{content:"";width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.55}
+.spi.sch-abjuration{--h:212;font:700 .95rem/1 var(--display)}
+.spi.sch-conjuration{--h:38;font:italic 700 1rem/1 Georgia,"Times New Roman",serif}
+.spi.sch-divination{--h:178;font:600 .86rem/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:-.04em}
+.spi.sch-enchantment{--h:322;font:italic 400 1.05rem/1 "Palatino Linotype",Palatino,Georgia,serif;letter-spacing:.04em}
+.spi.sch-evocation{--h:4;font:900 .95rem/1 "Arial Black",Impact,system-ui,sans-serif}
+.spi.sch-illusion{--h:268;font:italic 300 1.05rem/1 "Palatino Linotype",Georgia,serif;letter-spacing:.08em}
+.spi.sch-necromancy{--h:132;font:400 .95rem/1 "Copperplate","Papyrus",fantasy;letter-spacing:.06em}
+.spi.sch-transmutation{--h:24;font:800 .9rem/1 "Trebuchet MS",system-ui,sans-serif;letter-spacing:.02em}
+.spi.big{width:52px;height:52px;font-size:1.15rem}
+
+/* Area highlights and grid diagram */
+.areahit{all:unset;cursor:pointer;color:var(--amber);border-bottom:2px solid var(--amber);font-weight:600;border-radius:2px}
+.areahit:hover,.areahit:focus-visible{background:color-mix(in srgb,var(--amber) 16%,transparent)}
+.areabox{margin:12px 0 6px;display:grid;place-items:center;background:var(--panel-2,rgba(128,128,128,.08));border:1px solid var(--line,rgba(128,128,128,.3));border-radius:var(--radius-sm,8px);padding:8px}
+.areasvg{width:100%;max-height:52vh;height:auto}
+.areasvg polygon{fill:transparent;stroke:rgba(128,128,128,.35);stroke-width:.25}
+.areasvg polygon.in{fill:color-mix(in srgb,var(--amber) 45%,transparent);stroke:var(--amber);stroke-width:.3}
+.areasvg .me{fill:var(--ink,#222);stroke:#fff;stroke-width:.3}
+.areacap{margin-top:6px}
+
+/* Spell browser, prepare menu */
+.k-ic:has(.spi){background:none;border:0;padding:0;width:auto;height:auto}
+.optcard .spi{margin-right:2px}
+.sp2-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.sbtabs{margin-bottom:8px}.sbtabs em{font-style:normal;opacity:.7;margin-left:4px}
+.sbfind{display:flex;gap:8px;align-items:center;margin-top:8px}.sbfind .search{flex:1;min-width:0}
+.sbfind .btn{display:inline-flex;gap:6px;align-items:center}.sbfind .btn svg{width:16px;height:16px}
+.sbbadge{background:var(--amber);color:#fff;border-radius:999px;font-size:.7rem;min-width:18px;height:18px;display:inline-grid;place-items:center;padding:0 4px}
+.sblv{margin-top:8px}.sblv button{padding-inline:0;flex:1;min-width:0;font-family:var(--display)}
+.spchips{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.sbh{margin:14px 0 6px;font:600 .72rem var(--display);letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+.modal .chips{display:flex;gap:6px;flex-wrap:wrap}
+.spscale{margin-top:10px}.spscale div{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.spscale span{border:1px solid var(--line,rgba(128,128,128,.3));border-radius:6px;padding:3px 7px;font-size:.8rem;display:grid;text-align:center}
+.spscale em{font-style:normal;font-size:.66rem;opacity:.7}
+.prepstat{display:flex;align-items:center;gap:8px;margin-bottom:10px}.prepstat b{font:700 1.4rem var(--display)}.prepstat span{flex:1;opacity:.75}
+.prepstat.over b{color:var(--danger,#c0392b)}
+.prepcard[aria-pressed="false"]{opacity:.65}
+.sbsave{display:flex;gap:8px;margin-top:8px}.sbsave input{flex:1;min-width:0}
+
+.spchip{font-style:normal;font-size:.7rem;line-height:1;padding:3px 6px;border-radius:999px;border:1px solid var(--line,rgba(128,128,128,.35));color:var(--muted);white-space:nowrap}
+.spchip.area{border-color:var(--amber);color:var(--amber)}
+.optcard .grow .spchips{display:flex}
+.sp2-head{flex-wrap:wrap}.sp2-head .sec2{flex:1 0 100%}.sp2-btns{width:100%;justify-content:flex-start}
+@media(min-width:900px){.sp2-head .sec2{flex:1}.sp2-btns{width:auto}}

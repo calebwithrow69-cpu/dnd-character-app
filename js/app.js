@@ -54,6 +54,7 @@ import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
 import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { jumpResults } from "./views/jump.js";
+import { renderBrowseResults, prepResults, preparedNames, sbState } from "./views/spellbrowser.js";
 import { renderSheet, renderSpellResults, renderGearResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat } from "./views/glossary.js";
 import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
@@ -115,6 +116,7 @@ const rollRoot = document.getElementById("roll-root");
 
 function readPrefs() { try { const p = JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); if (p && typeof p === "object" && !Array.isArray(p)) { p.sheetStyle = "classic"; return p; } return { sheetStyle: "classic" }; } catch (e) { return {}; } }
 function readFlag(k) { try { return localStorage.getItem(k) === "1"; } catch (e) { return false; } }
+function keepModalY(fn) { const b = modalRoot.querySelector(".modal-body"), y = b ? b.scrollTop : 0; fn(); const n = modalRoot.querySelector(".modal-body"); if (n) n.scrollTop = y; }
 function savePrefs() { try { localStorage.setItem(LS_PREFS, JSON.stringify(APP.prefs)); } catch (e) { } }
 let wakeLock = null;
 async function syncWake() {
@@ -1098,9 +1100,10 @@ function onInput(e) {
   if (ds.query === "picker") {
     APP.pickerQuery = el.value;
     const r = document.getElementById("results-picker");
-    if (r) r.innerHTML = APP.modal.picker === "spells" ? renderSpellResults(APP) : renderGearResults(APP, APP.modal.picker);
+    if (r) r.innerHTML = APP.modal.picker === "spells" ? renderBrowseResults(APP, detailFor) : renderGearResults(APP, APP.modal.picker);
     return;
   }
+  if (ds.query === "spprep") { APP.spPQ = el.value; const r = document.getElementById("results-spprep"); if (r) r.innerHTML = prepResults(APP); return; }
   if (ds.query === "fx") { APP.fxQ = el.value; const r = document.getElementById("fx-list"); if (r && APP.char) r.innerHTML = fxListHtml(APP, APP.char); return; }
   if (ds.query === "cxshop") { APP.cxShopQuery = el.value; const r = document.getElementById("results-cxshop"); if (r) r.innerHTML = renderCxShopResults(APP); return; }
   if (ds.query === "ft") { ftState(APP).q = el.value; const r = document.getElementById("results-ft"); if (r) r.innerHTML = ftResults(APP, APP.char); return; }
@@ -1655,6 +1658,34 @@ const ACTIONS = {
   // modal plumbing
   closeModal() { closeModal(); },
   closeModalBackdrop() { closeModal(); },
+  noop() { },
+  spWish(el) { const c = APP.char, n = el.dataset.name, w = c.spellWish || (c.spellWish = []), i = w.indexOf(n); if (i < 0) w.push(n); else w.splice(i, 1); save(); keepModalY(() => render()); },
+  spTab(el) { sbState(APP).tab = el.dataset.tab; render(); },
+  spFilterOpen() { APP._under = APP.modal; openModal({ type: "spFilter" }); },
+  spSb(el) { const s = sbState(APP), a = s[el.dataset.k], v = el.dataset.v, i = a.indexOf(v); if (i < 0) a.push(v); else a.splice(i, 1); render(); },
+  spSort(el) { sbState(APP).sort = el.dataset.v; render(); },
+  spFlag(el) { const s = sbState(APP); s[el.dataset.v] = !s[el.dataset.v]; render(); },
+  spSbClear() { const s = sbState(APP); Object.assign(s, { school: [], role: [], shape: [], dmg: [], save: [], time: [], conc: false, ritual: false, hideAdded: false, sort: "level" }); render(); },
+  spEditToggle() { APP.spEdit = !APP.spEdit; render(); },
+  spPrepOpen() { APP.spPQ = ""; APP.spPLv = null; openModal({ type: "spPrep" }); },
+  spPLv(el) { APP.spPLv = el.dataset.lv === "" ? null : +el.dataset.lv; render(); },
+  spPrepToggle(el) { const s = APP.char.spellcasting.spells.find(x => x.name === el.dataset.name); if (s) { s.prepared = !s.prepared; save(); keepModalY(() => render()); } },
+  spPrepAll() { APP.char.spellcasting.spells.forEach(s => { s.prepared = true; }); save(); keepModalY(() => render()); },
+  spPrepNone() { APP.char.spellcasting.spells.forEach(s => { s.prepared = false; }); save(); keepModalY(() => render()); },
+  spLoadSave() {
+    const c = APP.char, el = document.getElementById("sp-lname"), name = (el && el.value || "").trim().slice(0, 30) || `Loadout ${(c.spellLoadouts || []).length + 1}`;
+    const l = c.spellLoadouts || (c.spellLoadouts = []); if (l.length >= 8) return;
+    l.push({ id: "sl" + Date.now().toString(36), name, prep: preparedNames(c) }); save(); render(); toast("Loadout saved");
+  },
+  spLoadDelete(el) { const c = APP.char, i = (c.spellLoadouts || []).findIndex(l => l.id === el.dataset.id); if (i < 0) return; const [gone] = c.spellLoadouts.splice(i, 1); save(); render(); toast(`Deleted ${gone.name}`, { action: "Undo", onAction: () => { c.spellLoadouts.splice(i, 0, gone); save(); render(); } }); },
+  spLoadPreview(el) { APP._under = APP.modal; openModal({ type: "spLoadPrev", id: el.dataset.id }); },
+  spLoadApply(el) {
+    const c = APP.char, l = (c.spellLoadouts || []).find(x => x.id === el.dataset.id); if (!l) return;
+    const want = new Set(l.prep); c.spellcasting.spells.forEach(s => { if (!s.always) s.prepared = want.has(s.name); });
+    save(); APP._under = null; APP.modal = { type: "spPrep" }; render(); toast("Loadout applied");
+  },
+  areaShow(el) { if (APP.modal && ["subclass", "detail"].includes(APP.modal.type)) { APP._under = APP.modal; APP._underScroll = modalRoot.querySelector(".modal-body")?.scrollTop || 0; } const d = el.dataset; openModal({ type: "area", shape: d.shape, r: d.r, size: d.size, len: d.len, wid: d.wid, h: d.h }); },
+  areaMode(el) { APP.prefs.gridMode = el.dataset.mode === "hex" ? "hex" : "square"; savePrefs(); render(); },
   showDetail(el) { if (APP.modal && ["subclass", "detail"].includes(APP.modal.type)) { APP._under = APP.modal; APP._underScroll = modalRoot.querySelector(".modal-body")?.scrollTop || 0; } openModal({ type: "detail", kind: el.dataset.kind, name: el.dataset.name, i: el.dataset.i != null ? +el.dataset.i : null, from: el.dataset.from }); },
 
   // wizard
@@ -2339,7 +2370,7 @@ const ACTIONS = {
     toast(`Removed ${name}`, { action: "Undo", onAction: () => { c.spellcasting.spells.splice(i, 0, gone); if (wasConc) c.concentration = name; saveAndRender(); } });
   },
   pickerLevel(el) { APP.pickerLevel = el.dataset.lv === "" ? null : +el.dataset.lv; render(); },
-  pickerAllClasses(el) { APP.pickerAllClasses = el.checked; render(); },
+  pickerAllClasses(el) { APP.pickerAllClasses = el.dataset.flip ? !APP.pickerAllClasses : el.checked; render(); },
 
   // pickers
   openShop() { APP.shopQuery = ""; APP.shopCat = "All"; APP.shopTrained = true; APP.shopView = "browse"; APP.shopFilt = {}; APP.shopSort = "rel"; openPage("shop"); },
