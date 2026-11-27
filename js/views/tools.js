@@ -52,7 +52,7 @@ export const TOOLS = [
   ["dice", "Dice roller", "dice", { modal: "dice" }, "Dice"],
   ["d20", "Roll d20", "d20", { a: "quickRoll", attrs: 'data-sides="20" data-count="1"' }],
   ["calc", "Calculator", "calc", { modal: "calc" }],
-  ["cond", "Conditions", "cond", { a: "openConditions" }],
+  ["cond", "Effects", "cond", { a: "openConditions" }],
   ["hp", "Hit points", "hp", { a: "openHp" }],
   ["init", "Initiative", "init", { a: "rollInit" }],
   ["death", "Death save", "death", { a: "rollDeathSave" }],

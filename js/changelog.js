@@ -2,11 +2,28 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.90";
+export const VERSION = "0.1.91";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.91",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Compact status card.",
+    groups: [
+      {
+        title: "Status card",
+        items: [
+          "Level, HP, AC, quick stats and effects now share one card, about half the height on a phone.",
+          "XP and the Effects button sit on one line. Active effects scroll sideways in one row.",
+          "Quick stats are a single band along the bottom of the card. Labels are shorter.",
+          "The card follows the accent colour. Quick menu Conditions is now Effects."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.90",
     date: "2026-11-27",
