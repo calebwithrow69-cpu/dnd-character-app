@@ -34,7 +34,7 @@ export const TOURS = {
       { sel: 'nav.tabs [data-tab="rules"]', title: "Rules", body: "Every class, spell, item and condition, searchable offline. Notes sits beside it." },
       { sel: ".addcond", title: "Active effects", body: "Conditions, spell effects and drains. They change your numbers, and End removes them." },
       { sel: ".hubcell", wideSel: ".hubfan", title: "Quick tools", body: "The round button opens dice, effects, calculator, rest and initiative. Edit the list in Settings.", wideBody: "The sidebar lists dice, effects, calculator, rest and initiative. Edit the list in Settings." },
-      { sel: '[data-a="openEdit"]', title: "Edit character", body: "Level up or lower, add feats, change scores, mark a character as dead." },
+      { sel: '[data-a="jumpOpen"]', title: "Search and jump", body: "Find any tab, tool, skill, feature or item. Edit character is in here too: level up, feats, scores." },
       { sel: ".navchar", title: "Back to character", body: "The portrait jumps straight to your character from any page. The arrow goes back one page." },
       { sel: '[data-a="helpOpen"]', title: "Help", body: "The ? replays this tour. Every screen has one in its header." },
       { sel: 'nav.tabs [data-tab="settings"]', title: "Settings", body: "Sheet style, sounds, rule sets and backups. Backups matter: there is no account behind this app." }

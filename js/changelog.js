@@ -2,11 +2,24 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.114";
+export const VERSION = "0.1.115";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.115",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Search and jump replaces the edit button.",
+    groups: [
+      { title: "Search", items: [
+        "The sheet header has a search in place of the pencil. Find any tab, tool, skill, feature, spell or item, then Enter opens the top result. Ctrl K opens it on a laptop.",
+        "Edit character is a tool: search for it or find it under All tools.",
+        "The Search sheet bar is gone from the Sheet page."
+      ] }
+    ]
+  },
   {
     v: "0.1.114",
     date: "2026-11-27",

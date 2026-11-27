@@ -53,6 +53,8 @@ HINTS.push(
     body: "Pick a preset, then reorder or hide blocks. It applies to every character on this device." },
   { id: "abSkills", where: "sheet", sel: ".skg", title: "Abilities and skills",
     body: "Tap a score, save or skill to roll. Tap the dot to change proficiency." },
+  { id: "jump", where: "sheet", sel: ".jumpbtn:not([hidden]), .jumpbtn-i", title: "Search and jump",
+    body: "Type to find a tab, tool, skill, feature, spell or item. Enter opens the top result. Edit character is here." },
   { id: "ftTabs", where: "sheet", sel: ".ft-tabs", title: "Feature shelves",
     body: "Class, subclass, species and feats each have a shelf. Saved holds your bookmarks." },
   { id: "ftSort", where: "sheet", sel: ".shop-sortbtn[data-a=\"ftFilterOpen\"]", title: "Group and filter",

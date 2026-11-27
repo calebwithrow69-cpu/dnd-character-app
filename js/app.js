@@ -53,7 +53,7 @@ import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./
 import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
 import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
-import { renderSheetSearch } from "./views/classic.js";
+import { jumpResults } from "./views/jump.js";
 import { renderSheet, renderSpellResults, renderGearResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat } from "./views/glossary.js";
 import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
@@ -856,6 +856,13 @@ function bindEvents() {
   document.addEventListener("input", onInput);
   document.addEventListener("submit", onSubmit);
   document.addEventListener("keydown", playKeys);
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && APP.screen === "sheet" && APP.char && !APP.modal) { e.preventDefault(); ACTIONS.jumpOpen(); return; }
+    if (!(APP.modal && APP.modal.type === "jump")) return;
+    const n = (APP._jumpItems || []).length;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); APP.jumpSel = n ? (APP.jumpSel + (e.key === "ArrowDown" ? 1 : n - 1)) % n : 0; const r = document.getElementById("results-jump"); if (r) { r.innerHTML = jumpResults(APP); const on = r.querySelector(".on"); if (on) on.scrollIntoView({ block: "nearest" }); } }
+    else if (e.key === "Enter" && n) { e.preventDefault(); ACTIONS.jumpGo({ dataset: { i: String(APP.jumpSel) } }); }
+  });
   document.addEventListener("scroll", e => { const t = e.target; if (t && t.classList && t.classList.contains("scscroll")) t.classList.toggle("past", t.scrollTop > 150); }, true);
   document.addEventListener("keydown", e => { if (e.key === "Escape" && APP.mobileSheetOpen) { APP.mobileSheetOpen = false; render(); } else if (e.key === "Escape" && APP.progressOpen) { APP.progressOpen = false; render(); } else if (e.key === "Escape" && APP.featUi && APP.featUi.open) { APP.featUi.open = null; render(); } else if (e.key === "Escape" && APP.hubOpen) { APP.hubOpen = false; render(); } else if (e.key === "Escape" && APP.modal) closeModal(); });
   window.addEventListener("popstate", () => {
@@ -1099,7 +1106,7 @@ function onInput(e) {
   if (ds.query === "ft") { ftState(APP).q = el.value; const r = document.getElementById("results-ft"); if (r) r.innerHTML = ftResults(APP, APP.char); return; }
   if (ds.query === "shop") { APP.shopQuery = el.value; const r = document.getElementById("results-shop"); if (r) r.innerHTML = renderShopResults(APP); return; }
   if (ds.query === "lvl" && APP.lvl) { APP.lvl.query = el.value; const r = document.getElementById("lvl-results"); if (r) r.innerHTML = renderLevelResults(APP); return; }
-  if (ds.query === "sheet") { APP.sheetQuery = el.value; const r = document.getElementById("results-sheet"); if (r) r.innerHTML = renderSheetSearch(APP); return; }
+  if (el.id === "jump-q") { APP.jumpQ = el.value; APP.jumpSel = 0; const r = document.getElementById("results-jump"); if (r) r.innerHTML = jumpResults(APP); return; }
   if (ds.query === "rules") { APP.rulesQuery = el.value; glState(APP).limit = 150; glRefresh({ tabs: 1, filters: 1, list: 1 }); return; }
   if (ds.query === "notes") { nbState(APP).q = el.value; nbRefresh({ list: 1 }); return; }
   if ((ds.nb === "title" || ds.nb === "body") && inNotes()) {
@@ -1610,7 +1617,7 @@ const ACTIONS = {
     APP.prefs.sheetStyle = APP._style; APP._style = null; savePrefs(); closeModal(); render(); window.scrollTo(0, 0);
     toast("Switched to the " + APP.prefs.sheetStyle + " sheet");
   },
-  searchRules() { APP.rulesQuery = APP.sheetQuery; Object.assign(glState(APP), { cat: "all", picked: true, sel: null, f: {}, sort: "", desc: false, limit: 150 }); APP.sheetTab = "rules"; render(); window.scrollTo(0, 0); },
+  searchRules() { APP.rulesQuery = APP.sheetQuery || APP.jumpQ || ""; Object.assign(glState(APP), { cat: "all", picked: true, sel: null, f: {}, sort: "", desc: false, limit: 150 }); APP.sheetTab = "rules"; render(); window.scrollTo(0, 0); },
   resetSection(el) {
     if (!window.confirm("Reset this section to its defaults?")) return;
     resetKeys(APP.prefs, el.dataset.sec); savePrefs(); applyPrefs(); render(); toast("Section reset");
@@ -1918,6 +1925,19 @@ const ACTIONS = {
     glRefresh({ tabs: 1, list: effCat(APP) === "marks" && !on ? 1 : 0 });
   },
   openEdit() { openModal({ type: "edit" }); },
+  jumpOpen() {
+    if (APP.screen !== "sheet" || !APP.char) return;
+    APP.hubOpen = false; APP.jumpQ = ""; APP.jumpSel = 0; openModal({ type: "jump" });
+    setTimeout(() => { const i = document.getElementById("jump-q"); if (i) i.focus(); }, 60);
+  },
+  jumpGo(el) {
+    const it = (APP._jumpItems || [])[+el.dataset.i]; if (!it) return;
+    if (it.q) APP.sheetQuery = it.q;
+    closeModal();
+    if (it.stats) { APP.sheetTab = "stats"; APP.selItem = null; }
+    const fn = ACTIONS[it.a];
+    if (fn) fn({ dataset: { ...it.data }, closest: () => null, getAttribute: () => null });
+  },
   askDelete() { openModal({ type: "confirmDelete" }); },
   goGraveyard() { APP.screen = "graveyard"; render(); window.scrollTo(0, 0); },
   markDeadAsk() { openModal({ type: "died" }); },

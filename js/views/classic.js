@@ -93,10 +93,10 @@ function featureRows(app, c) {
   ].sort((a, b) => a.lv - b.lv || a.name.localeCompare(b.name));
 }
 
-// Search the sheet: skills, abilities, features, feats, spells and bag items. Tapping a result rolls it or reads it.
-export function renderSheetSearch(app) {
-  const c = app.char, d = deriveCharacter(c), q = (app.sheetQuery || "").trim().toLowerCase();
-  if (!q) return "";
+// Search the character: abilities, skills, features, feats, spells, bag items. Used by the jump palette.
+export function sheetHits(app, qRaw) {
+  const c = app.char, d = deriveCharacter(c), q = String(qRaw || "").trim().toLowerCase();
+  if (!q) return [];
   const has = t => String(t || "").toLowerCase().includes(q);
   const hits = [];
   ABILITIES.forEach(a => { if (has(ABILITY_LABEL[a])) hits.push(["Roll", `${ABILITY_LABEL[a]} check`, fmtMod(d.mods[a]), `data-a="rollAbility" data-ab="${a}"`]); });
@@ -106,11 +106,7 @@ export function renderSheetSearch(app) {
   (c.spellcasting.spells || []).forEach(s => { if (has(s.name)) hits.push(["Spell", s.name, "", `data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"`]); });
   (c.inventory || []).forEach(it => { if (has(it.name)) hits.push(["Item", it.name, it.qty > 1 ? "x" + it.qty : "", `data-a="showDetail" data-kind="item" data-name="${esc(it.name)}"`]); });
   [[c.species, "species"], [c.background, "background"]].forEach(([n, k]) => { if (has(n)) hits.push([k === "species" ? "Species" : "Background", n, "", `data-a="showDetail" data-kind="${k}" data-name="${esc(n)}"`]); });
-  return `<div class="panel"><div class="panel-body flush">
-    ${hits.slice(0, 14).map(([g, n, v, at]) => `<button class="rowline rollable" ${at}><span class="nm">${esc(n)}</span><span class="sub2">${esc(g)}${v ? " \u00b7 " + esc(v) : ""}</span></button>`).join("")}
-    ${hits.length ? "" : `<p class="muted small" style="padding:12px 0">Nothing on your sheet matches.</p>`}
-    <button class="rowline rollable" data-a="searchRules"><span class="nm">Search all rules for \u201c${esc(app.sheetQuery.trim())}\u201d</span><span class="sub2">Glossary</span></button>
-  </div></div>`;
+  return hits;
 }
 
 export function classicBody(app, c, d) {
@@ -179,8 +175,6 @@ export function classicBody(app, c, d) {
   return `<div class="classic">
     <div class="subtabs seg" role="group" aria-label="Sheet sections" style="--n:${subs.length}">
       ${subs.map(([id, label]) => `<button data-a="classicSub" data-sub="${id}" aria-pressed="${sub === id}">${label}</button>`).join("")}</div>
-    ${sub === "tools" || sub === "play" ? "" : `${searchBox("sheet", app.sheetQuery, "Search sheet")}
-    <div id="results-sheet">${renderSheetSearch(app)}</div>`}
     ${!c.subclass && c.level >= 3 && subclassesFor(app.library, c.class).length ? `<div class="panel"><div class="panel-body"><div class="rowline" style="border:0"><span class="nm" style="color:var(--amber)">No subclass chosen yet</span><button class="btn sm" data-a="openEdit">Choose</button></div></div></div>` : ""}
     ${needsFirstChoices(app, c) ? `<div class="panel"><div class="panel-body"><div class="rowline" style="border:0"><span class="nm" style="color:var(--amber)">Level 1 choices not made yet</span><button class="btn sm pri" data-a="startFirstChoices">Choose</button></div></div></div>` : ""}
     ${typeof pages[sub] === "function" ? pages[sub]() : pages[sub]}
