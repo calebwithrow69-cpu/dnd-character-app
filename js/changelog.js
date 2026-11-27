@@ -2,11 +2,35 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.95";
+export const VERSION = "0.1.96";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.96",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Play Mode rework and more hints.",
+    groups: [
+      {
+        title: "Play Mode",
+        items: [
+          "Phone: one list at a time. Action, Bonus, Reaction, Spells and More, each with its own count. Spells group by level with slots on top; More holds trackers and rests.",
+          "Sort menu: Type, Level, Uses left, A to Z. Hotbar items stay on top and show a star. The Show list moved inside it.",
+          "Lighter rows: only attacks, spells and items show a description line.",
+          "Phone: Start combat, Search and Sort share one row. Laptop: slimmer hotbar."
+        ]
+      },
+      {
+        title: "Hints",
+        items: [
+          "New hints: Sheet sections, Hit points, Sort and show, One list at a time, Details, Turn tracker, Spell slots, Rests, Shop, Backups (Home).",
+          "Hints now also appear on Home."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.95",
     date: "2026-11-27",

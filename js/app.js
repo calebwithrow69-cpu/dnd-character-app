@@ -247,8 +247,8 @@ const helpSeen = () => { try { return !!localStorage.getItem(LS_HELP_INTRO); } c
 let hintPause = 0;
 function syncHint() {
   const quiet = !navigator.webdriver && hintsOn(APP.prefs) && !APP.modal && !tourActive() && !APP._tourPending && storageAcked() && helpSeen()
-    && APP.screen === "sheet" && APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen && Date.now() > hintPause;
-  const n = quiet ? nextHint("sheet") : null;
+    && ((APP.screen === "sheet" && APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen) || (APP.screen === "home" && !tourUnseen("home"))) && Date.now() > hintPause;
+  const n = quiet ? nextHint(APP.screen === "home" ? "home" : "sheet") : null;
   if (!n) { if (hintShownId()) clearHint(); return; }
   showHint(n);
 }
@@ -1451,6 +1451,8 @@ const ACTIONS = {
     APP.prefs.playShow = next; savePrefs(); render();
   },
   playFilter(el) { APP.playFilter = el.dataset.k; render(); },
+  playView(el) { APP.playView = el.dataset.k; render(); },
+  playSort(el) { APP.playSort = el.dataset.k; APP.prefs.playSort = el.dataset.k; savePrefs(); render(); },
   playShowMenu() { APP.playShowMenu = !APP.playShowMenu; render(); },
   playSel(el) {
     const id = el.dataset.id;
@@ -2650,6 +2652,8 @@ function showTerm(key, anchor, pinned) {
   el.style.top = (below + h < vh - 8 || above < 8 ? Math.min(below, vh - h - 8) : above) + "px";
 }
 function hideTerm() { const el = pop(); if (el) { el.classList.remove("show"); el.dataset.key = ""; } }
+// Play Mode switches between its phone and laptop layouts at 760px; redraw when a resize crosses it.
+{ const mq = matchMedia("(max-width:759px)"); const f = () => { if (APP.char && APP.sheetTab === "stats") render(); }; mq.addEventListener ? mq.addEventListener("change", f) : mq.addListener(f); }
 function bindTerms() {
   let hoverT = null, leaveT = null;
   const fine = matchMedia("(hover:hover) and (pointer:fine)");

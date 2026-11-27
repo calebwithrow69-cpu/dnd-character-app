@@ -18,6 +18,30 @@ export const HINTS = [
     body: "Small apps for the table. The ones you star show in Quick tools." }
 ];
 
+HINTS.splice(0, 0,
+  { id: "subtabs", where: "sheet", sel: ".classic .subtabs", title: "Sheet sections",
+    body: "Play, Sheet, Features, Spells, Gear and Tools. Play is the same screen on the Classic and Advanced sheets." },
+  { id: "hpbar", where: "sheet", sel: '[data-a="openHp"]', title: "Hit points",
+    body: "Tap the bar to take damage, heal or add temporary HP." });
+HINTS.push(
+  { id: "playsort", where: "sheet", sel: ".pm-top .psm", title: "Sort and show",
+    body: "Sort by type, level or uses left. Hotbar items stay on top. Choose which sources appear." },
+  { id: "playview", where: "sheet", sel: ".pvseg", title: "One list at a time",
+    body: "Action, Bonus, Reaction, Spells or More. Each shows only its own rows." },
+  { id: "playdetail", where: "sheet", sel: ".pm-side .det", title: "Details",
+    body: "Select a row to read it here. Your last rolls are listed underneath." },
+  { id: "playturn", where: "sheet", sel: ".pm .tracker", title: "Turn tracker",
+    body: "Mark Action, Bonus and Reaction as you use them. Next turn clears them." },
+  { id: "slots", where: "sheet", sel: ".pm-rail .pips .pip, .pm-slots .pips .pip", title: "Spell slots",
+    body: "Tap a gem to spend a slot or give it back." },
+  { id: "rests", where: "sheet", sel: '[data-a="openShortRest"]', title: "Rests",
+    body: "Short rest spends hit dice. Long rest refills HP, slots and trackers, then offers changes." },
+  { id: "shop", where: "sheet", sel: ".shopban", title: "Shop",
+    body: "Spend gold on gear. Price and weight show before you buy." },
+  { id: "backup", where: "home", sel: ".hbk", title: "Backups",
+    body: "Export every character to a file. Do it before clearing browser data." }
+);
+
 const wideNow = () => typeof matchMedia === "function" && matchMedia("(min-width:1100px)").matches;
 export function hintState() {
   try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); return s && typeof s === "object" ? s : {}; } catch (e) { return {}; }

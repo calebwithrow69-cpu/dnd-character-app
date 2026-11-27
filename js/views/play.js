@@ -9,6 +9,10 @@ import { detailFor, hotbar } from "./sheet.js";
 
 const GROUPS = [["Action", "Action"], ["Bonus", "Bonus Action"], ["Reaction", "Reaction"], ["Other", "Other"], ["Feat", "Feats"], ["Passive", "Passive"]];
 const FILTERS = [["All", "All"], ["Action", "Action"], ["Bonus", "Bonus"], ["Reaction", "Reaction"], ["Avail", "Ready"]];
+const PV = [["Action", "Action"], ["Bonus", "Bonus"], ["Reaction", "Reaction"], ["Spells", "Spells"], ["More", "More"]];
+const pvOf = e => e.type === "spell" ? "Spells" : e.cost === "Action" || e.cost === "Bonus" || e.cost === "Reaction" ? e.cost : "More";
+export const SORTS = [["type", "Type"], ["level", "Level"], ["uses", "Uses left"], ["az", "A to Z"]];
+export const phoneNow = () => typeof matchMedia === "function" && matchMedia("(max-width:759px)").matches;
 const ORD = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 const CHECK = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
@@ -57,8 +61,8 @@ function row(e, d, c, ctx, kid) {
   const html = `<div class="row ${e.cost.toLowerCase()} t-${e.type} ${dim ? "off" : ""} ${active ? "fxon" : ""} ${sel ? "sel" : ""} ${kid ? "kid" : ""}" data-row="${esc(e.id)}" data-cost="${e.cost}">
     <button class="r-main" data-a="playSel" data-id="${esc(e.id)}" aria-label="${esc(e.name)}, ${COST_LABEL[e.cost] || e.cost}, ${TYPE_WORD[e.type] || "Feature"}${dim ? ", unavailable: " + esc(e.block) : ""}">
       <span class="r-ic" aria-hidden="true">${typeIcon(e)}</span>
-      <span class="nmw"><h4>${esc(e.name)}${e.conc ? `<span class="mk" title="Concentration">C</span>` : ""}${e.ritual ? `<span class="mk" title="Ritual">R</span>` : ""}</h4><span class="cap">${esc(caption(e))}</span></span>
-      ${e.sub ? `<span class="sm">${esc(e.sub)}</span>` : `<span class="sm"></span>`}
+      <span class="nmw"><h4>${esc(e.name)}${e.conc ? `<span class="mk" title="Concentration">C</span>` : ""}${e.ritual ? `<span class="mk" title="Ritual">R</span>` : ""}${ctx.pins && ctx.pins(e) ? `<span class="pinmk" title="On hotbar">${ICONS.star}</span>` : ""}</h4><span class="cap">${esc(caption(e))}</span></span>
+      ${e.sub && (e.type === "attack" || e.type === "spell" || e.type === "item") ? `<span class="sm">${esc(e.sub)}</span>` : `<span class="sm"></span>`}
       <span class="st">${st}</span>
     </button><span class="go">${toggle}${go}</span>
     ${dim ? `<span class="why">${esc(e.block)}</span>` : ""}</div>`;
@@ -83,7 +87,7 @@ function gwmRow(app, c) {
     <button class="switch" role="switch" aria-checked="${app.gwm ? "true" : "false"}" aria-label="Great Weapon Master" data-a="togglePref" data-k="gwm"><i></i></button></div></div></div>`;
 }
 
-function slotsRail(c, d) {
+function slotsRail(c, d, part = "all") {
   const info = d.spellInfo;
   const slots = info && info.slots.length ? `<section><h3>Spell slots</h3><div class="res">${info.slots.map(r => {
     const used = c.spellcasting.slotsUsed[r.level - 1] || 0, left = r.max - used;
@@ -98,7 +102,7 @@ function slotsRail(c, d) {
     <button class="btn sm block" data-a="toggleInsp" aria-pressed="${!!c.inspiration}">Heroic Inspiration: ${c.inspiration ? "Have it" : "None"}</button>
     <div class="btnrow"><button class="btn sm" data-a="openShortRest">Short rest</button><button class="btn sm" data-a="openLongRest">Long rest</button></div>
     <button class="linkbtn pm-lvl" data-a="charSub" data-sub="features">Level ${c.level} \u00b7 Progression</button></div></section>`;
-  return slots + res + rest;
+  return part === "none" ? "" : part === "slots" ? slots : part === "rest" ? res + rest : slots + res + rest;
 }
 
 export function trackHtml(app, c) {
@@ -135,28 +139,42 @@ function keysBar() {
 }
 
 export function playTab(app, c, d) {
-  const show = playShow(app), filter = app.playFilter || "All", q = (app.playQ || "").trim().toLowerCase();
+  const show = playShow(app), q = (app.playQ || "").trim().toLowerCase();
+  const phone = phoneNow(), pv = PV.some(x => x[0] === app.playView) ? app.playView : "Action";
+  const filter = phone ? "All" : (app.playFilter || "All"), sortBy = [app.playSort, app.prefs && app.prefs.playSort].find(v => SORTS.some(x => x[0] === v)) || "type";
+  const pinSet = new Set((c.hotbar || []).flatMap(h => [h.id, h.name].filter(Boolean)));
+  const pinned = e => pinSet.has(e.id) || pinSet.has(e.name);
   const onIds = new Set((c.active || []).map(a => a.id));
   const all = playEntries(app, c, d);
   const inShow = e => show[e.type === "std" ? "std" : e.type === "feat" ? "feat" : e.type];
   const pool = all.filter(inShow);
-  const matches = e => (filter === "All" || (filter === "Avail" ? (!e.block && e.cost !== "Passive") : e.cost === filter))
+  const matches = e => (!phone || q || pvOf(e) === pv) && (filter === "All" || (filter === "Avail" ? (!e.block && e.cost !== "Passive") : e.cost === filter))
     && (!q || (e.name + " " + (e.sub || "") + " " + e.src).toLowerCase().includes(q) || (e.kids || []).some(k => k.name.toLowerCase().includes(q)));
   const shown = pool.filter(matches);
   const count = k => pool.filter(e => k === "All" ? true : k === "Avail" ? (!e.block && e.cost !== "Passive") : e.cost === k).length;
   const rank = { attack: 0, spell: 1, feature: 2, feat: 3, item: 4, std: 5 };
-  const order = (a, b) => (onIds.has(b.id) - onIds.has(a.id)) || (!!a.block - !!b.block) || ((rank[a.type] || 0) - (rank[b.type] || 0)) || (a.level || 0) - (b.level || 0) || a.name.localeCompare(b.name);
+  const left = e => e.res ? (e.res.max != null ? e.res.cur : 99) : 99;
+  const tail = {
+    type: (a, b) => ((rank[a.type] || 0) - (rank[b.type] || 0)) || (a.level || 0) - (b.level || 0) || a.name.localeCompare(b.name),
+    level: (a, b) => (a.level || 0) - (b.level || 0) || ((rank[a.type] || 0) - (rank[b.type] || 0)) || a.name.localeCompare(b.name),
+    uses: (a, b) => (left(a) - left(b)) || a.name.localeCompare(b.name),
+    az: (a, b) => a.name.localeCompare(b.name)
+  }[sortBy];
+  const order = (a, b) => (onIds.has(b.id) - onIds.has(a.id)) || (!!a.block - !!b.block) || (pinned(b) - pinned(a)) || tail(a, b);
   const open = new Set(app.playFeatOpen || []);
   const passiveOpen = !!app.playPassive || filter === "Passive" || !!q;
   const flat = [];
-  const ctxFor = sel => ({ on: onIds, sel, open });
+  const ctxFor = sel => ({ on: onIds, sel, open, pins: pinned });
   // selection: the chosen row if it is still visible, else the first available one
-  const vis = GROUPS.flatMap(([k]) => shown.filter(e => e.cost === k).sort(order).flatMap(e => k === "Passive" && !passiveOpen ? [] : [e, ...(open.has(e.id) ? e.kids || [] : [])]));
+  const bySpell = phone && pv === "Spells" && !q;
+  const groupDefs = bySpell ? Array.from({ length: 10 }, (_, i) => [String(i), i ? ORD[i] + " level" : "Cantrips"]) : GROUPS;
+  const inGroup = (e, k) => bySpell ? String(e.level || 0) === k : e.cost === k;
+  const vis = groupDefs.flatMap(([k]) => shown.filter(e => inGroup(e, k)).sort(order).flatMap(e => k === "Passive" && !passiveOpen ? [] : [e, ...(open.has(e.id) ? e.kids || [] : [])]));
   const selId = vis.some(e => e.id === app.playSel) ? app.playSel : (vis.find(e => !e.block && e.cost !== "Passive") || vis[0] || {}).id;
   const selE = vis.find(e => e.id === selId) || null;
   const ctx = ctxFor(selId);
-  const groups = GROUPS.map(([k, label]) => {
-    const list = shown.filter(e => e.cost === k).sort(order);
+  const groups = groupDefs.map(([k, label]) => {
+    const list = shown.filter(e => inGroup(e, k)).sort(order);
     if (!list.length) return "";
     flat.push([k, label, list.length]);
     const head = k === "Passive"
@@ -170,22 +188,26 @@ export function playTab(app, c, d) {
     ? `<div class="tracker" role="group" aria-label="This turn">${tk("Action", "Action", "--amber")}${tk("Bonus", "Bonus Action", "--green")}${tk("Reaction", "Reaction", "--blue")}
         <button class="tk next" data-a="turnNext">${t.round ? "Next turn" : "Start combat"}</button>${t.round ? `<button class="tk" data-a="turnEnd">End</button><span class="rnd">Round <b>${t.round}</b></span>` : ""}<button class="tk" data-a="togglePref" data-k="turns" aria-pressed="true">Turn tracker: On</button></div>`
     : `<div class="tracker"><button class="tk next" data-a="togglePref" data-k="turns" aria-pressed="false">Turn tracker: Off</button></div>`;
+  const trackerOut = phone && t.on && !t.round ? `<div class="tracker"><button class="tk next" data-a="turnNext">Start combat</button></div>` : tracker;
   const keys = app.prefs.keys !== false;
   return `<div class="pm ${keys ? "withkeys" : ""}">
     <div class="pm-cmd">
-      <div class="r">${tracker}
-        <label class="srch"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg><input id="pm-q" type="search" placeholder="Search" aria-label="Search abilities" value="${esc(app.playQ || "")}" autocomplete="off"><kbd>/</kbd></label></div>
-      <div class="r pm-filter"><div class="fseg" role="group" aria-label="Filter by action type">${FILTERS.map(([k, l]) => `<button class="fc" data-a="playFilter" data-k="${k}" aria-pressed="${filter === k}">${l} <b>${count(k)}</b></button>`).join("")}</div>
-        <div class="psm"><button class="btn sm showbtn" data-a="playShowMenu" aria-expanded="${!!app.playShowMenu}" aria-haspopup="true">Show <b>${SOURCES.filter(([k]) => show[k]).length}/${SOURCES.length}</b></button>
-          ${app.playShowMenu ? `<div class="psm-menu" role="group" aria-label="Show">${SOURCES.map(([k, l]) => `<button class="src" data-a="playShow" data-k="${k}" role="checkbox" aria-checked="${show[k]}" aria-pressed="${show[k]}"><span class="bx">${CHECK}</span>${l} <b>${all.filter(e => (e.type === "std" ? "std" : e.type) === k).length}</b></button>`).join("")}</div>` : ""}</div></div>
+      <div class="r pm-top">${trackerOut}
+        <label class="srch"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg><input id="pm-q" type="search" placeholder="Search" aria-label="Search abilities" value="${esc(app.playQ || "")}" autocomplete="off"><kbd>/</kbd></label>
+        <div class="psm"><button class="btn sm showbtn" data-a="playShowMenu" aria-expanded="${!!app.playShowMenu}" aria-haspopup="true">Sort <b>${esc(SORTS.find(x => x[0] === sortBy)[1])}</b></button>
+          ${app.playShowMenu ? `<div class="psm-menu" role="group" aria-label="Sort and show"><h3>Sort</h3>${SORTS.map(([k, l]) => `<button class="src" data-a="playSort" data-k="${k}" role="radio" aria-checked="${sortBy === k}" aria-pressed="${sortBy === k}"><span class="bx rad"></span>${l}</button>`).join("")}<h3>Show</h3>${SOURCES.map(([k, l]) => `<button class="src" data-a="playShow" data-k="${k}" role="checkbox" aria-checked="${show[k]}" aria-pressed="${show[k]}"><span class="bx">${CHECK}</span>${l} <b>${all.filter(e => (e.type === "std" ? "std" : e.type) === k).length}</b></button>`).join("")}</div>` : ""}</div></div>
+      <div class="r pm-filter">${phone
+        ? `<div class="fseg pvseg" role="group" aria-label="Section">${PV.map(([k, l]) => `<button class="fc" data-a="playView" data-k="${k}" aria-pressed="${pv === k}">${l} <b>${pool.filter(e => pvOf(e) === k).length}</b></button>`).join("")}</div>`
+        : `<div class="fseg" role="group" aria-label="Filter by action type">${FILTERS.map(([k, l]) => `<button class="fc" data-a="playFilter" data-k="${k}" aria-pressed="${filter === k}">${l} <b>${count(k)}</b></button>`).join("")}</div>`}
+      </div>
     </div>
     ${dying ? deathPanel(c) : ""}
-    ${hotbar(app, c, d)}
+    ${!phone || pv === "Action" ? hotbar(app, c, d) : ""}
     ${gwmRow(app, c)}
     <div class="pm-main">
       <aside class="pm-rail" aria-label="Resources">${slotsRail(c, d)}</aside>
       <div class="pm-list">
-        <div class="pm-slots">${slotsRail(c, d)}</div>
+        <div class="pm-slots">${slotsRail(c, d, phone ? (pv === "Spells" ? "slots" : pv === "More" ? "rest" : "none") : "all")}</div>
         ${groups || `<p class="muted small" style="padding:18px 0">Nothing matches. <button class="linkbtn" data-a="playClear">Reset filters</button></p>`}
         
       </div>
