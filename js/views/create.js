@@ -577,6 +577,7 @@ export function renderCreate(app) {
     if (id === "class") tools = `<button class="btn sm" data-a="randomAll">Random character</button>`;
     if (id === "background") tools = `<button class="btn sm" data-a="openCustomBg">Custom background</button>`;
     content = `${renderControls(app, cfg)}${searchBox("wizard", d.query, `Search ${cfg.items.length} ${cfg.noun}`)}
+      ${app.rndCard && app.rndCard.kind === id ? `<div class="rndres" id="rnd-card"><span class="lab">Random ${esc(cfg.kind)}</span><button class="rndname" data-a="rndView">${esc(app.rndCard.name)}</button><div class="btnrow"><button class="btn sm" data-a="rndUndo">Undo</button><button class="btn sm" data-a="randomPick">Reroll</button><button class="btn sm pri" data-a="rndKeep">Keep</button></div></div>` : ""}
       <div class="sp-list" id="wizard-results">${renderWizardResults(app)}</div>`;
   } else if (id === "abilities") content = abilitiesBody(app, d);
   else if (id === "classOpts") {
@@ -621,7 +622,7 @@ export function cxFlagNeed(app) {
   let el = null;
   if (id === "finish") el = document.getElementById("f-name");
   else if (LIST_KINDS.includes(id) && !d[id]) el = stage.querySelector("#wizard-results");
-  else el = stage.querySelector(".need, .sp-trait.pending") || stage.querySelector(".optlist, .panel");
+  else el = stage.querySelector(".sp-row.open .choice.need, .sp-row.open .vpick.need, .sp-row.open .gearpick.need, .sp-row.open .field.need") || stage.querySelector(".choice.need, .vpick.need, .gearpick.need, .field.need, .cx-methods.need") || stage.querySelector(".sp-trait.pending, .need") || stage.querySelector(".optlist, .panel");
   if (!el) return false;
   flagEl(el);
   const why = document.getElementById("wizard-why"); if (why) { why.classList.remove("flag-why"); void why.offsetWidth; why.classList.add("flag-why"); }

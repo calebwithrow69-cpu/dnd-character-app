@@ -2,11 +2,46 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.96";
+export const VERSION = "0.1.97";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.97",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Hints stay on their element, Play Mode resources, random picks you can undo.",
+    groups: [
+      {
+        title: "Hints",
+        items: [
+          "A hint follows its element while you scroll and hides when it leaves the screen.",
+          "Pause after Got it is now 10 seconds.",
+          "Turn off hints shows an Undo.",
+          "New hints for Notes (Note level, Sort notes) and Rules (Rule categories)."
+        ]
+      },
+      {
+        title: "Play Mode",
+        items: [
+          "The side column is now Resources: hit dice, Heroic Inspiration, trackers and spell slots, with the rest buttons under them.",
+          "Hotbar has its label back, with Add and Edit under it.",
+          "Start combat has a play icon, a bigger target, and turns the tracker on if it was off. End combat offers Undo.",
+          "Unarmed Strike with a fixed damage shows Deal damage instead of Roll damage.",
+          "Feats that grant a Fighting Style (Fighting Initiate) now apply the style you picked, so Unarmed Fighting changes your Unarmed Strike."
+        ]
+      },
+      {
+        title: "Creation and level-up",
+        items: [
+          "Continue on an unfinished step scrolls to the open choice that says Choose.",
+          "Random species, class and background show a result card under the search bar with Undo, Reroll and Keep.",
+          "Randomize on a level-up or class-choice step hides the list and shows the picks with Undo, Reroll and Continue."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.96",
     date: "2026-11-27",

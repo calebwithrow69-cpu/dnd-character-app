@@ -3150,8 +3150,7 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 }
 @media (min-width:1100px){
   .pm .hotbar-panel{display:flex;align-items:center;gap:14px;padding:0 12px 0 0}
-  .pm .hotbar-panel .panel-head{order:2;margin-left:auto;padding:0;border:0;background:none;flex:none}
-  .pm .hotbar-panel .panel-head h2{display:none}
+  .pm .hotbar-panel .panel-head{flex:none;padding:8px 6px 8px 14px;flex-direction:column;align-items:flex-start;gap:6px}
   .pm .hotbar-panel .panel-body{flex:1;min-width:0;padding:8px 12px}
   .pm .hotbar{display:flex;gap:8px;overflow-x:auto}
 }
@@ -3160,8 +3159,31 @@ nav.tabs .hubfan .hubopt,.sheetview[data-sheet] nav.tabs .hubfan .hubopt{positio
 .pm .hotbar-panel .panel-body{padding:6px 12px}
 @media (max-width:759px){
   .pm .hotbar-panel{display:flex;align-items:center;gap:6px;padding:0 8px 0 0;margin-bottom:8px}
-  .pm .hotbar-panel .panel-head{order:2;margin-left:auto;padding:0}
-  .pm .hotbar-panel .panel-head h2{display:none}
+  .pm .hotbar-panel .panel-head{flex:none;padding:8px 4px 8px 12px;flex-direction:column;align-items:flex-start;gap:6px}
   .pm .hotbar-panel .panel-body{flex:1;min-width:0}
   .pm .hotbar-panel .btnrow{flex-direction:column;gap:4px}
+}
+.pm .hotbar-panel .panel-head h2{display:block;margin:0;font:600 .64rem/1 var(--display);letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.pm .hotbar-panel .panel-head .btn.sm{min-height:30px;padding:0 10px}
+.pm .tk.go{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-width:2px;background:color-mix(in srgb,var(--amber) 14%,transparent)}
+.pm .tk.go svg,.pm .tk.go .i{width:14px;height:14px;fill:currentColor;stroke:none;flex:none}
+.pm .tk.go:hover{background:color-mix(in srgb,var(--amber) 26%,transparent)}
+.pm .pm-rail .pip{cursor:default}
+.pm .pips span.pip{display:grid;place-items:center;width:26px;height:26px}
+.pm .pips span.pip::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--tone);border:1.5px solid var(--tone)}
+.pm .pips span.pip.used::before{background:transparent;border-color:var(--faint);opacity:.6}
+@media (max-width:759px){.pm .pm-top .tk.go{padding:0 10px;font-size:.62rem;gap:5px}}
+/* Random result card */
+.rndres{margin:10px 0;padding:12px 14px;border:1px solid var(--amber,#b9873a);border-radius:var(--radius-md,12px);background:color-mix(in srgb,var(--amber,#b9873a) 10%,var(--panel,#fff));display:grid;gap:8px}
+.rndres .lab{font:600 .62rem var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.rndres .rndname{justify-self:start;text-align:left;font:600 1.1rem/1.2 var(--display,inherit);color:var(--ink);padding:4px 0;text-decoration:underline;text-decoration-color:var(--amber,#b9873a);text-underline-offset:4px}
+.rndres .btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.rndres.big{padding:16px}
+.rndlist{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.rndlist li{padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm,8px);background:var(--panel);font-weight:600}
+@media (max-width:759px){
+  .pm-slots .res{grid-template-columns:1fr;gap:6px}
+  .pm-slots .res .r{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:4px 2px;border-bottom:1px solid var(--line-soft)}
+  .pm-slots .res .r .n{justify-content:flex-start;gap:8px;flex-wrap:nowrap}
+  .pm-slots .res .r .pips{justify-content:flex-end;max-width:190px}
 }

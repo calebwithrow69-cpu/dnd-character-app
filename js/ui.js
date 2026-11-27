@@ -197,6 +197,7 @@ export function toast(msg, opts = {}) {
 
 const svg = p => `<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
 export const ICONS = {
+  play: svg('<path d="M7 4.5v15l12-7.5z" class="fill"/>'),
   back: svg('<path d="M15 18l-6-6 6-6"/>'),
   dice: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.3" class="fill"/><circle cx="16" cy="16" r="1.3" class="fill"/><circle cx="12" cy="12" r="1.3" class="fill"/>'),
   stats: svg('<path d="M5 20V10M12 20V4M19 20v-7"/>'),

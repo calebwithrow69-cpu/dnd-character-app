@@ -305,6 +305,14 @@ export function levelBody(app) {
   }
 
   const RAND = { subclass: "subclass", style: "fighting style", expertise: "expertise", mastery: "weapons", options: "picks", cantrips: "cantrips", spells: "spells" };
+  if (d && d.rnd && d.rnd.step !== step.id) d.rnd = null;
+  if (RAND[step.id] && d && d.rnd && d.rnd.step === step.id) {
+    const lab = x => SKILLS.find(s => s.id === x)?.label || x;
+    const picks = { subclass: [d.subclass], style: [d.style], order: [d.order], language: [d.language], expertise: d.expertise.map(lab), mastery: d.mastery, options: d.options, cantrips: d.cantrips, spells: d.spells }[step.id].filter(Boolean);
+    const lastStep = d.step === p.steps.length - 1;
+    return { body: `<div class="rndres big"><span class="lab">Random ${RAND[step.id]}</span><ul class="rndlist">${picks.map(x => `<li>${esc(x)}</li>`).join("") || "<li>Nothing available</li>"}</ul>
+      <div class="btnrow"><button class="btn" data-a="lvlRndUndo">Undo</button><button class="btn" data-a="lvlRandomStep">Reroll</button><button class="btn pri" data-a="lvlRndKeep">${lastStep ? "Keep" : "Continue"}</button></div></div>`, step, plan: p };
+  }
   if (RAND[step.id]) body = `<div class="randrow"><button class="btn sm" data-a="lvlRandomStep">Randomize ${RAND[step.id]}</button></div>` + body;
   return { body, step, plan: p };
 }

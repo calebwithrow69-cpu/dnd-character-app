@@ -47,7 +47,7 @@ import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
 import { boxById } from "./lootbox.js";
 import { showLoot, rollLoot, boxCount } from "./views/lootbox.js";
-import { nextHint, showHint, clearHint, hintShownId, hintMark, hintsOn, hintsReset } from "./hints.js";
+import { moveHint, nextHint, showHint, clearHint, hintShownId, hintMark, hintsOn, hintsReset } from "./hints.js";
 import { startTour, tourGo, skipTour, tourMark, tourUnseen, tourActive, tourHooks, tourReady } from "./tour.js";
 import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./views/start.js";
 import { templatePayload, templateCode, readShared } from "./templates.js";
@@ -248,12 +248,14 @@ let hintPause = 0, hintCool = null;
 // After a tour ends, hints wait 15 seconds or until the player moves to another tab or subtab.
 const hintPlace = () => [APP.screen, APP.sheetTab, APP.charSub, APP.classicSub].join("|");
 document.addEventListener("tour-end", () => { hintPause = Date.now() + 15000; hintCool = "pending"; setTimeout(() => render(), 15100); });
+const hintScreen = () => APP.screen === "home" ? "home" : (APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes")) ? "notes"
+  : (APP.screen === "rules" || (APP.screen === "sheet" && APP.sheetTab === "rules")) ? "rules" : APP.screen === "sheet" ? "sheet" : "";
 function syncHint() {
   if (hintCool === "pending") hintCool = hintPlace();
   if (hintCool && (hintPlace() !== hintCool || Date.now() > hintPause)) { if (hintPlace() !== hintCool) hintPause = 0; hintCool = null; }
   const quiet = !navigator.webdriver && hintsOn(APP.prefs) && !APP.modal && !tourActive() && !APP._tourPending && storageAcked() && helpSeen()
-    && ((APP.screen === "sheet" && APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen) || (APP.screen === "home" && !tourUnseen("home"))) && Date.now() > hintPause;
-  const n = quiet ? nextHint(APP.screen === "home" ? "home" : "sheet") : null;
+    && !!hintScreen() && !tourUnseen("home") && (APP.screen !== "sheet" || (APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen)) && Date.now() > hintPause;
+  const n = quiet ? nextHint(hintScreen()) : null;
   if (!n) { if (hintShownId()) clearHint(); return; }
   showHint(n);
 }
@@ -961,6 +963,7 @@ function randomName() {
   return `${r(NAME_A)}${r(NAME_B)} ${r(NAME_C)}`.trim();
 }
 
+const RND_FIELDS = ["subclass", "style", "order", "language", "expertise", "mastery", "options", "cantrips", "spells"];
 function refreshWizardChrome() {
   const d = APP.createDraft;
   const btn = mount.querySelector('[data-a="nextStep"], [data-a="finishCreate"]');
@@ -1405,8 +1408,13 @@ const ACTIONS = {
   classicSub(el) { APP.classicSub = el.dataset.sub; render(); window.scrollTo(0, 0); },
   charSub(el) { APP.charSub = el.dataset.sub; render(); window.scrollTo(0, 0); },
   turnPip(el) { const s = APP.turn.spent, k = el.dataset.k; if (s[k]) { delete s[k]; if (k === "Action") APP.turn.attacks = 0; } else s[k] = true; render(); },
+  combatStart() { APP.prefs.turns = true; savePrefs(); APP.turn.on = true; APP.turn.round = 1; APP.turn.spent = {}; APP.turn.attacks = 0; APP.turn.once = {}; render(); toast("Combat started"); },
   turnNext() { APP.turn.round += 1; APP.turn.spent = {}; APP.turn.attacks = 0; APP.turn.once = {}; render(); },
-  turnEnd() { APP.turn.round = 0; APP.turn.spent = {}; APP.turn.attacks = 0; APP.turn.once = {}; render(); },
+  turnEnd() {
+    const was = { ...APP.turn, spent: { ...APP.turn.spent }, once: { ...APP.turn.once } };
+    APP.turn.round = 0; APP.turn.spent = {}; APP.turn.attacks = 0; APP.turn.once = {}; render();
+    toast("Combat ended", { action: "Undo", onAction: () => { Object.assign(APP.turn, was); render(); } });
+  },
   toggleInsp() { APP.char.inspiration = !APP.char.inspiration; saveAndRender(); toast(APP.char.inspiration ? "Heroic Inspiration gained" : "Heroic Inspiration spent"); },
   concKeep() { APP.concPrompt = null; render(); },
   concLose() { APP.char.concentration = null; APP.concPrompt = null; saveAndRender(); toast("Concentration ended"); },
@@ -1553,8 +1561,8 @@ const ACTIONS = {
     };
     input.click();
   },
-  hintDone(el) { hintMark(el.dataset.id); clearHint(); hintCool = null; hintPause = Date.now() + 6000; setTimeout(() => render(), 6100); },
-  hintsOff() { APP.prefs.hints = false; savePrefs(); clearHint(); toast("Hints off"); },
+  hintDone(el) { hintMark(el.dataset.id); clearHint(); hintCool = null; hintPause = Date.now() + 10000; setTimeout(() => render(), 10100); },
+  hintsOff() { APP.prefs.hints = false; savePrefs(); clearHint(); toast("Hints off", { action: "Undo", onAction: () => { APP.prefs.hints = true; savePrefs(); hintPause = 0; render(); } }); },
   hintsShowAgain() { hintsReset(); APP.prefs.hints = true; savePrefs(); hintPause = 0; render(); toast("Hints on"); },
   testSound() { sfx("confirm"); sfx("dice"); },
   resetPrefs() {
@@ -1742,13 +1750,25 @@ const ACTIONS = {
     const items = listItems(APP, d, kind);
     if (!items.length) return;
     const it = items[Math.floor(Math.random() * items.length)];
+    const snap = APP.rndCard && APP.rndCard.kind === kind ? APP.rndCard.snap : JSON.parse(JSON.stringify(d));
     APP.spUi.k[kind].open = it.name;
     ACTIONS.cxChoose({ dataset: { kind, name: it.name } });
     if (kind !== "class" && draftChoices(APP, d, kind === "background" ? "bg" : "species").length) {
       for (let i = 0; i < 4; i++) randomize(draftChoices(APP, d, kind === "background" ? "bg" : "species"), APP, d);
       d.classSkills = d.classSkills.filter(sk => !takenSkills(APP, d).includes(sk)); render();
     }
-    requestAnimationFrame(() => { const r = mount.querySelector(".sp-row.open") || mount.querySelector(".sp-row.sel"); if (r) r.scrollIntoView({ block: "start", behavior: "smooth" }); });
+    APP.rndCard = { kind, name: it.name, snap }; render();
+    requestAnimationFrame(() => { const r = document.getElementById("rnd-card"); if (r) r.scrollIntoView({ block: "center", behavior: "smooth" }); });
+  },
+  rndUndo() {
+    const c = APP.rndCard, d = APP.createDraft; if (!c || !d) return;
+    Object.keys(d).forEach(k => delete d[k]); Object.assign(d, JSON.parse(JSON.stringify(c.snap))); APP.rndCard = null; render();
+  },
+  rndKeep() { APP.rndCard = null; render(); },
+  rndView() {
+    const c = APP.rndCard; if (!c) return;
+    APP.spUi.k[c.kind].open = c.name; render();
+    requestAnimationFrame(() => { const r = mount.querySelector(".sp-row.open"); if (r) r.scrollIntoView({ block: "start", behavior: "smooth" }); });
   },
   randomChoices() {
     const d = APP.createDraft, kind = chapterId(d);
@@ -2055,7 +2075,15 @@ const ACTIONS = {
   lvlRandomStep() {
     const d = APP.lvl, step = levelPlan(APP).steps[d.step];
     if (!step) return;
-    randomizeStep(APP, APP.char, d, step); render();
+    const snap = d.rnd && d.rnd.step === step.id ? d.rnd.snap : JSON.parse(JSON.stringify(RND_FIELDS.reduce((o, k) => (o[k] = d[k], o), {})));
+    Object.assign(d, JSON.parse(JSON.stringify(snap)));
+    randomizeStep(APP, APP.char, d, step); d.rnd = { step: step.id, snap }; render(); window.scrollTo(0, 0);
+  },
+  lvlRndUndo() { const d = APP.lvl; if (d.rnd) { Object.assign(d, JSON.parse(JSON.stringify(d.rnd.snap))); d.rnd = null; render(); } },
+  lvlRndKeep() {
+    const d = APP.lvl; d.rnd = null;
+    const plan = levelPlan(APP), step = plan.steps[d.step], last = d.step === plan.steps.length - 1;
+    if (!last && step && stepValid(APP, step)) { if (APP.screen === "create") ACTIONS.nextStep(); else ACTIONS.lvlNext(); } else render();
   },
   lvlShowAll(el) { APP.lvl.showAll = el.checked; render(); },
   lvlConfirm() { applyLevelUp(); },
@@ -2659,6 +2687,7 @@ function showTerm(key, anchor, pinned) {
 function hideTerm() { const el = pop(); if (el) { el.classList.remove("show"); el.dataset.key = ""; } }
 // Play Mode switches between its phone and laptop layouts at 760px; redraw when a resize crosses it.
 { const mq = matchMedia("(max-width:759px)"); const f = () => { if (APP.char && APP.sheetTab === "stats") render(); }; mq.addEventListener ? mq.addEventListener("change", f) : mq.addListener(f); }
+window.addEventListener("scroll", moveHint, { passive: true, capture: true }); window.addEventListener("resize", moveHint);
 function bindTerms() {
   let hoverT = null, leaveT = null;
   const fine = matchMedia("(hover:hover) and (pointer:fine)");

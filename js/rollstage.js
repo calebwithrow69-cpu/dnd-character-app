@@ -171,8 +171,9 @@ function paint() {
   if (ph === "ready") { $(".rs-d2").hidden = !two; root.classList.toggle("two", two); }
   const main = $(".rs-main");
   let txt = "";
-  if (ph === "ready") txt = sp.d20 ? "Roll d20" : (sp.dmg ? "Roll " + (sp.dmg.label || "damage").toLowerCase() : "Roll");
-  else if (ph === "rolled") txt = "Roll " + (sp.dmg.label || "damage").toLowerCase();
+  const verb = () => (/d\d/i.test(String(sp.dmg.dice || "")) ? "Roll " : sp.dmg.label === "Healing" ? "Apply " : "Deal ") + (sp.dmg.label || "damage").toLowerCase();
+  if (ph === "ready") txt = sp.d20 ? "Roll d20" : (sp.dmg ? verb() : "Roll");
+  else if (ph === "rolled") txt = verb();
   main.hidden = !txt || st.busy; main.textContent = txt;
   $(".rs-done").hidden = ph === "ready" ? false : st.busy;
   $(".rs-done").textContent = ph === "done" ? "Done" : ph === "ready" ? "Cancel" : "Skip";

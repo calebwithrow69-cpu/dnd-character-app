@@ -38,6 +38,12 @@ HINTS.push(
     body: "Short rest spends hit dice. Long rest refills HP, slots and trackers, then offers changes." },
   { id: "shop", where: "sheet", sel: ".shopban", title: "Shop",
     body: "Spend gold on gear. Price and weight show before you buy." },
+  { id: "nbLevel", where: "notes", sel: ".nb-level", title: "Note level",
+    body: "Writing earns badges and levels. Length is counted in words." },
+  { id: "nbSort", where: "notes", sel: ".nb-sort", title: "Sort notes",
+    body: "Sort by newest, oldest or title. Categories sit above." },
+  { id: "glTabs", where: "rules", sel: "#gl-tabs", title: "Rule categories",
+    body: "Switch between spells, items, feats, classes and conditions. Search covers all of them." },
   { id: "backup", where: "home", sel: ".hbk", title: "Backups",
     body: "Export every character to a file. Do it before clearing browser data." }
 );
@@ -66,17 +72,22 @@ export function nextHint(screen) {
 let shown = null;
 const root = () => document.getElementById("hint-root") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "hint-root" }));
 export function hintShownId() { return shown; }
-export function clearHint() { shown = null; const r = document.getElementById("hint-root"); if (r) r.innerHTML = ""; }
+export function clearHint() { shown = null; anchor = null; const r = document.getElementById("hint-root"); if (r) r.innerHTML = ""; }
 function zoomOf() { const e = root(); const k = e && e.offsetWidth ? e.getBoundingClientRect().width / e.offsetWidth : 1; return k > 0.2 && k < 5 ? k : 1; }
-export function showHint({ hint, el, body }) {
-  shown = hint.id;
-  const r = el.getBoundingClientRect(), k = zoomOf(), vw = innerWidth, vh = innerHeight, w = Math.min(300, vw - 24);
-  root().innerHTML = `<div class="hint-ring" style="left:${Math.round((r.left - 4) / k)}px;top:${Math.round((r.top - 4) / k)}px;width:${Math.round((r.width + 8) / k)}px;height:${Math.round((r.height + 8) / k)}px"></div>
-    <div class="hint-bubble" id="hint-bubble" role="note" aria-label="Hint: ${hint.title}">
-      <h3>${hint.title}</h3><p>${body}</p>
-      <div class="hint-act"><button class="linkbtn" data-a="hintsOff">Turn off hints</button><span class="grow"></span><button class="btn sm pri" data-a="hintDone" data-id="${hint.id}">Got it</button></div>
-    </div>`;
-  const b = document.getElementById("hint-bubble");
+let anchor = null; // { hint, sel } of the bubble on screen; it follows its element while the page scrolls
+function place() {
+  if (!anchor) return;
+  const ring = document.querySelector("#hint-root .hint-ring"), b = document.getElementById("hint-bubble");
+  if (!ring || !b) return;
+  const el = anchor.el && anchor.el.isConnected ? anchor.el : visible(anchor.sel);
+  const r = el ? el.getBoundingClientRect() : null, vw = innerWidth, vh = innerHeight;
+  const off = !r || r.bottom < 56 || r.top > vh - 60 || r.right < 0 || r.left > vw;
+  ring.style.display = b.style.display = off ? "none" : "";
+  if (off) return;
+  anchor.el = el;
+  const k = zoomOf(), w = Math.min(300, vw - 24);
+  ring.style.left = Math.round((r.left - 4) / k) + "px"; ring.style.top = Math.round((r.top - 4) / k) + "px";
+  ring.style.width = Math.round((r.width + 8) / k) + "px"; ring.style.height = Math.round((r.height + 8) / k) + "px";
   b.style.width = Math.round(w / k) + "px";
   const h = b.offsetHeight * k, cx = r.left + r.width / 2;
   const left = Math.max(12, Math.min(vw - w - 12, cx - w / 2));
@@ -85,4 +96,17 @@ export function showHint({ hint, el, body }) {
   b.style.left = Math.round(left / k) + "px"; b.style.top = Math.round(Math.max(8, top) / k) + "px";
   b.style.setProperty("--ax", Math.round(Math.max(18, Math.min(w - 18, cx - left)) / k) + "px");
   b.classList.toggle("up", !below);
+}
+let moving = 0;
+export function moveHint() { if (!anchor || moving) return; moving = requestAnimationFrame(() => { moving = 0; place(); }); }
+export function showHint({ hint, el, body }) {
+  shown = hint.id;
+  const wide = wideNow();
+  anchor = { hint, el, sel: wide && hint.wideSel ? hint.wideSel : hint.sel };
+  root().innerHTML = `<div class="hint-ring"></div>
+    <div class="hint-bubble" id="hint-bubble" role="note" aria-label="Hint: ${hint.title}">
+      <h3>${hint.title}</h3><p>${body}</p>
+      <div class="hint-act"><button class="linkbtn" data-a="hintsOff">Turn off hints</button><span class="grow"></span><button class="btn sm pri" data-a="hintDone" data-id="${hint.id}">Got it</button></div>
+    </div>`;
+  place();
 }

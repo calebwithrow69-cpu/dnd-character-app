@@ -94,15 +94,16 @@ function slotsRail(c, d, part = "all") {
     return `<div class="r"><div class="n"><span>${r.pact ? "Pact " + ORD[r.level] : ORD[r.level]}</span><b>${left}/${r.max}</b></div><div class="pips">${Array.from({ length: r.max }, (_, i) =>
       `<button class="pip ${i < left ? "" : "used"}" data-a="toggleSlot" data-lvl="${r.level}" data-i="${i}" data-max="${r.max}" aria-label="${ORD[r.level]} level slot ${i + 1}, ${i < left ? "available" : "used"}"></button>`).join("")}</div></div>`;
   }).join("")}</div></section>` : "";
-  const res = (c.resources || []).length ? `<section><h3>Trackers</h3><div class="res">${c.resources.map((r, i) => `<div class="r"><div class="n"><span>${esc(r.name)}</span><b>${r.max - r.used}/${r.max}</b></div>${r.max <= 8
+  const hd = c.hitDice || { total: 0, spent: 0, die: 8 }, hdLeft = hd.total - hd.spent;
+  const hdRow = hd.total ? `<div class="r"><div class="n"><span>Hit dice d${hd.die}</span><b>${hdLeft}/${hd.total}</b></div>${hd.total <= 12 ? `<div class="pips">${Array.from({ length: hd.total }, (_, i) => `<span class="pip ${i < hdLeft ? "" : "used"}" aria-hidden="true"></span>`).join("")}</div>` : ""}</div>` : "";
+  const inspRow = `<div class="r"><div class="n"><span>Heroic Inspiration</span><b>${c.inspiration ? "1/1" : "0/1"}</b></div><div class="pips"><button class="pip ${c.inspiration ? "" : "used"}" data-a="toggleInsp" aria-pressed="${!!c.inspiration}" aria-label="Heroic Inspiration, ${c.inspiration ? "have it" : "none"}"></button></div></div>`;
+  const trk = (c.resources || []).map((r, i) => `<div class="r"><div class="n"><span>${esc(r.name)}</span><b>${r.max - r.used}/${r.max}</b></div>${r.max <= 8
     ? `<div class="pips">${Array.from({ length: r.max }, (_, k) => `<button class="pip ${k < r.max - r.used ? "" : "used"}" data-a="toggleResource" data-i="${i}" data-k="${k}" aria-label="${esc(r.name)} ${k + 1}, ${k < r.max - r.used ? "available" : "used"}"></button>`).join("")}</div>`
-    : `<span class="stepper"><button data-a="resStep" data-i="${i}" data-n="1" aria-label="Use one">−</button><b>${r.max - r.used}</b><button data-a="resStep" data-i="${i}" data-n="-1" aria-label="Regain one">+</button></span>`}</div>`).join("")}</div></section>` : "";
-  const hd = c.hitDice || { total: 0, spent: 0, die: 8 };
-  const rest = `<section class="pm-rest"><h3>Rest</h3><div class="res"><div class="r"><div class="n"><span>Hit dice</span><b>${hd.total - hd.spent}/${hd.total} d${hd.die}</b></div></div>
-    <button class="btn sm block" data-a="toggleInsp" aria-pressed="${!!c.inspiration}">Heroic Inspiration: ${c.inspiration ? "Have it" : "None"}</button>
-    <div class="btnrow"><button class="btn sm" data-a="openShortRest">Short rest</button><button class="btn sm" data-a="openLongRest">Long rest</button></div>
-    <button class="linkbtn pm-lvl" data-a="charSub" data-sub="features">Level ${c.level} \u00b7 Progression</button></div></section>`;
-  return part === "none" ? "" : part === "slots" ? slots : part === "rest" ? res + rest : slots + res + rest;
+    : `<span class="stepper"><button data-a="resStep" data-i="${i}" data-n="1" aria-label="Use one">\u2212</button><b>${r.max - r.used}</b><button data-a="resStep" data-i="${i}" data-n="-1" aria-label="Regain one">+</button></span>`}</div>`).join("");
+  const res = `<section><h3>Resources</h3><div class="res">${hdRow}${inspRow}${trk}</div></section>`;
+  const rest = `<section class="pm-rest"><div class="btnrow"><button class="btn sm" data-a="openShortRest">Short rest</button><button class="btn sm" data-a="openLongRest">Long rest</button></div>
+    <button class="linkbtn pm-lvl" data-a="charSub" data-sub="features">Level ${c.level} \u00b7 Progression</button></section>`;
+  return part === "none" ? "" : part === "slots" ? slots : part === "rest" ? res + rest : res + slots + rest;
 }
 
 export function trackHtml(app, c) {
@@ -186,9 +187,9 @@ export function playTab(app, c, d) {
   const tk = (k, label, col) => `<button class="tk" style="--c:var(${col})" data-a="turnPip" data-k="${k}" aria-pressed="${!!t.spent[k]}" aria-label="${label} ${t.spent[k] ? "used" : "available"}"><i></i>${label}</button>`;
   const tracker = t.on
     ? `<div class="tracker" role="group" aria-label="This turn">${tk("Action", "Action", "--amber")}${tk("Bonus", "Bonus Action", "--green")}${tk("Reaction", "Reaction", "--blue")}
-        <button class="tk next" data-a="turnNext">${t.round ? "Next turn" : "Start combat"}</button>${t.round ? `<button class="tk" data-a="turnEnd">End</button><span class="rnd">Round <b>${t.round}</b></span>` : ""}</div>`
-    : `<div class="tracker"><button class="tk next" data-a="togglePref" data-k="turns" aria-pressed="false">Turn tracker: Off</button></div>`;
-  const trackerOut = phone && t.on && !t.round ? `<div class="tracker"><button class="tk next" data-a="turnNext">Start combat</button></div>` : tracker;
+        <button class="tk next go" data-a="${t.round ? "turnNext" : "combatStart"}">${ICONS.play}${t.round ? "Next turn" : "Start combat"}</button>${t.round ? `<button class="tk" data-a="turnEnd">End</button><span class="rnd">Round <b>${t.round}</b></span>` : ""}</div>`
+    : `<div class="tracker"><button class="tk next go" data-a="combatStart">${ICONS.play}Start combat</button></div>`;
+  const trackerOut = phone && t.on && !t.round ? `<div class="tracker"><button class="tk next go" data-a="combatStart">${ICONS.play}Start combat</button></div>` : tracker;
   const keys = app.prefs.keys !== false;
   return `<div class="pm ${keys ? "withkeys" : ""}">
     <div class="pm-cmd">

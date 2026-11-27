@@ -178,7 +178,7 @@ export function collectEffects(c) {
   (c.custom || []).forEach(e => { if (e && e.t) out.push({ t: e.t, v: Number(e.v) || 0, src: e.label || "Custom", custom: true, id: e.id }); });
   conditionEffects(c).forEach(e => out.push(e));
   if (!s) return out;
-  (c.feats || []).forEach(f => { const b = baseName(f), e = s.feats.find(x => x.name === f) || s.feats.find(x => x.name === b); if (e) add(b, e.effects); });
+  (c.feats || []).forEach(f => { const b = baseName(f), e = s.feats.find(x => x.name === f) || s.feats.find(x => x.name === b); if (e) add(b, e.effects); const opt = (/\((.+)\)$/.exec(f) || [])[1], oe = opt && s.feats.find(x => x.name === opt); if (oe) add(opt, oe.effects); });
   const cls = s.classes.find(x => x.name === c.class);
   ((cls && cls.features) || []).forEach(f => { if (f.lv <= (c.level || 1)) add(f.name, f.effects); });
   const sub = c.subclass ? s.subclasses.find(x => x.name === c.subclass) : null;
