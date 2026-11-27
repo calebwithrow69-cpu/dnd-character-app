@@ -2,11 +2,34 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.93";
+export const VERSION = "0.1.94";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.94",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "One-time hints and device-specific tour wording.",
+    groups: [
+      {
+        title: "Hints",
+        items: [
+          "One-time bubbles over the parts that are new to a sheet: Quick tools, Active effects, Hotbar, Trackers, Tools. Each shows once, after the tour, one at a time.",
+          "Got it dismisses one. Turn off hints stops them all.",
+          "Settings > App and help: Hints switch and Show hints again."
+        ]
+      },
+      {
+        title: "Tour",
+        items: [
+          "Sheet tour has an Active effects step.",
+          "The Quick tools step reads differently on a laptop (sidebar) and a phone (round button)."
+        ]
+      }
+    ]
+  },
   {
     v: "0.1.93",
     date: "2026-11-27",

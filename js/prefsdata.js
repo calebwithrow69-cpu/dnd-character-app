@@ -8,7 +8,7 @@ export const SECTION_KEYS = {
   access: ["motion", "contrast", "bigtap"],
   data: ["backupDays"],
   experimental: ["experimental"],
-  about: ["updateSplash"]
+  about: ["updateSplash", "hints"]
 };
 
 const CHOICES = {
@@ -18,7 +18,7 @@ const CHOICES = {
   width: ["standard", "wide"], rollfx: ["full", "crits", "off"], motion: ["auto", "reduced"], contrast: ["normal", "high"],
   backupDays: ["0", "7", "14", "30"], sheetStyle: ["classic", "advanced"]
 };
-const BOOLS = ["wake", "vignette", "cxfx", "keys", "turns", "concprompt", "bigtap", "showxp", "showquick", "experimental", "updateSplash"];
+const BOOLS = ["wake", "vignette", "cxfx", "keys", "turns", "concprompt", "bigtap", "showxp", "showquick", "experimental", "updateSplash", "hints"];
 
 export const SETTINGS_KEYS = [...Object.values(SECTION_KEYS).flat(), "sheetStyle"];
 

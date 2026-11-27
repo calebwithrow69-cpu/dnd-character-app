@@ -6,6 +6,7 @@ import { installCard } from "../install.js";
 import { rewardEarned } from "../tour.js";
 import { storageReport } from "../storagerisk.js";
 import { VERSION, STAGE, TESTERS, CHANGELOG } from "../changelog.js";
+import { hintsLeft } from "../hints.js";
 
 const HAS_VIBRATE = typeof navigator !== "undefined" && "vibrate" in navigator;
 const HAS_WAKE = typeof navigator !== "undefined" && "wakeLock" in navigator;
@@ -122,6 +123,8 @@ export function settingsBody(app) {
     </div>`;
   const experimental = sw("experimental", "Loot boxes", "Adds a Loot boxes shelf to the Shop", !!p.experimental, { kw: "experimental beta gamble random" });
   const about =
+    sw("hints", "Hints", "One-time tips over parts that are new to a sheet.", p.hints !== false, { kw: "tips tutorial help bubbles" }) +
+    `<div class="setrow" data-s="hints tips show again reset"><div class="setinfo"><div class="setlabel">Show hints again</div><div class="sethint">${hintsLeft()} not yet seen.</div></div><button class="btn sm" data-a="hintsShowAgain">Show</button></div>` +
     sw("updateSplash", "Update window", "Lists what changed after each update", p.updateSplash !== false, { kw: "whats new changelog splash popup updates" }) +
     tourRow +
     `<div class="setrow col" data-s="version changelog whats new about testers">

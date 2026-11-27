@@ -47,6 +47,7 @@ import { syncSubclassSpells } from "./subclassspells.js";
 import { loadSets, activeSet, effectiveCampaign } from "./rulesets.js";
 import { boxById } from "./lootbox.js";
 import { showLoot, rollLoot, boxCount } from "./views/lootbox.js";
+import { nextHint, showHint, clearHint, hintShownId, hintMark, hintsOn, hintsReset } from "./hints.js";
 import { startTour, tourGo, skipTour, tourMark, tourUnseen, tourActive, tourHooks, tourReady } from "./tour.js";
 import { startMenu, randomScreen, loadScreen, rndDefault, loadDefault } from "./views/start.js";
 import { templatePayload, templateCode, readShared } from "./templates.js";
@@ -241,6 +242,15 @@ function maybeStorageIntro() {
 // First-run help: a note about the ? button, then each tour starts by itself the first time its screen opens.
 const LS_HELP_INTRO = "dnd-help-intro-v1";
 const helpSeen = () => { try { return !!localStorage.getItem(LS_HELP_INTRO); } catch (e) { return true; } };
+// One-time hints: only on a quiet sheet, after the tours, one at a time with a pause between them.
+let hintPause = 0;
+function syncHint() {
+  const quiet = !navigator.webdriver && hintsOn(APP.prefs) && !APP.modal && !tourActive() && !APP._tourPending && storageAcked() && helpSeen()
+    && APP.screen === "sheet" && APP.char && !APP.char.dead && !tourUnseen("sheet") && !APP.hubOpen && Date.now() > hintPause;
+  const n = quiet ? nextHint("sheet") : null;
+  if (!n) { if (hintShownId()) clearHint(); return; }
+  showHint(n);
+}
 function maybeAutoTour() {
   if (navigator.webdriver || APP._tourPending || APP.modal || tourActive() || !storageAcked()) return;
   const sc = APP.screen;
@@ -374,6 +384,7 @@ function renderOnce() {
   renderNow();
   maybeStorageIntro();
   maybeAutoTour();
+  syncHint();
   syncHelpBtn();
   syncBarHeight();
   if (fsel) {
@@ -390,7 +401,7 @@ function lockDead() {
   if (["settings", "notes"].includes(APP.sheetTab)) { mount.querySelectorAll(".sheetview [data-a=openEdit]").forEach(el => el.setAttribute("inert", "")); return; }
   mount.querySelectorAll(".sheetview main.page > :not(.deadbar), .sheetview [data-a=openEdit], .sheetview nav").forEach(el => el.setAttribute("inert", ""));
 }
-const DEAD_OK = new Set(["helpOpen", "tourAsk", "tourConfirm", "tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "navBack", "toCharacter", "goRoster", "editCause", "goNotes"]);
+const DEAD_OK = new Set(["hintDone", "hintsOff", "hintsShowAgain", "helpOpen", "tourAsk", "tourConfirm", "tourStart", "tourNext", "tourBack", "tourSkip", "tourLater", "tourNoop", "reviveAsk", "reviveGo", "closeModal", "closeModalBackdrop", "confirmDead", "backToRoster", "navBack", "toCharacter", "goRoster", "editCause", "goNotes"]);
 const inNotes = () => APP.screen === "notes" || (APP.screen === "sheet" && APP.sheetTab === "notes");
 // Sheet pages (Notes, Shop, Settings) open inside the sheet frame like Rules does.
 function openPage(tab) { closeModal(); APP.selItem = null; APP.hubOpen = false; APP.sheetTab = tab; render(); window.scrollTo(0, 0); }
@@ -1528,6 +1539,9 @@ const ACTIONS = {
     };
     input.click();
   },
+  hintDone(el) { hintMark(el.dataset.id); clearHint(); hintPause = Date.now() + 6000; setTimeout(() => render(), 6100); },
+  hintsOff() { APP.prefs.hints = false; savePrefs(); clearHint(); toast("Hints off"); },
+  hintsShowAgain() { hintsReset(); APP.prefs.hints = true; savePrefs(); hintPause = 0; render(); toast("Hints on"); },
   testSound() { sfx("confirm"); sfx("dice"); },
   resetPrefs() {
     if (!window.confirm("Put every setting back to its default? Your characters are not touched.")) return;

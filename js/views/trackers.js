@@ -5,7 +5,7 @@ import { rationsHave } from "../rest.js";
 export const resetLine = r => r.reset === "short" ? "Back on a short or long rest" : r.shortRegain ? `Short rest: +${r.shortRegain}. Long rest: all` : "Back on a long rest";
 
 export function trackersPanel(c) {
-  return `<div class="panel"><div class="panel-head"><h2>Trackers</h2><button class="btn sm" data-a="openResource">Add</button></div>
+  return `<div class="panel trkpanel"><div class="panel-head"><h2>Trackers</h2><button class="btn sm" data-a="openResource">Add</button></div>
       <div class="panel-body flush">
         ${c.resources.length ? c.resources.map((r, i) => `<div class="rowline">
           <button class="nm linkbtn" style="text-decoration:none;flex-direction:column;align-items:flex-start;gap:0" data-a="openResource" data-i="${i}">

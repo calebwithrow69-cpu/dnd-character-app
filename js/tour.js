@@ -17,6 +17,9 @@ let run = null; // { id, i }
 // A step can name a place to be in first (st.go); the app supplies the mover.
 export const tourHooks = { go: null };
 const root = () => document.getElementById("tour-root") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "tour-root" }));
+const wideNow = () => typeof matchMedia === "function" && matchMedia("(min-width:1100px)").matches;
+const selOf = st => (wideNow() && st.wideSel) || st.sel;
+const bodyOf = st => (wideNow() && st.wideBody) || st.body;
 const target = sel => [...document.querySelectorAll(sel)].find(el => { const r = el.getBoundingClientRect(); return el.offsetParent !== null && r.width > 4 && r.height > 4; }) || null;
 
 export function tourActive() { return !!run; }
@@ -57,7 +60,7 @@ export function show() {
   if (!run) return;
   const t = TOURS[run.id], st = t.steps[run.i], n = t.steps.length;
   if (st.go && tourHooks.go) tourHooks.go(st.go);
-  const el = st.sel ? target(st.sel) : null;
+  const el = selOf(st) ? target(selOf(st)) : null;
   if (el) el.scrollIntoView({ block: "center", inline: "nearest" });
   const r = el ? el.getBoundingClientRect() : null, pad = 6, k = zoomOf();
   // Rects are screen pixels; the tour layer sits inside body, which Settings > Size may zoom. Divide that out.
@@ -66,7 +69,7 @@ export function show() {
   root().innerHTML = `<div class="tour-veil" data-a="tourNoop"></div>${hole}
     <div class="tour-card" role="dialog" aria-modal="true" aria-label="${t.name}, step ${run.i + 1} of ${n}" id="tour-card">
       <div class="tour-prog" aria-hidden="true">${dots}<em>${run.i + 1} of ${n}</em></div>
-      <h2>${st.title}</h2><p>${st.body}</p>
+      <h2>${st.title}</h2><p>${bodyOf(st)}</p>
       <div class="tour-act">
         <button class="linkbtn" data-a="tourSkip">Skip tour</button>
         <span class="grow"></span>

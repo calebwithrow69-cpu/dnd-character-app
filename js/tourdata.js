@@ -1,6 +1,6 @@
 // Tour content. Plain words, no tutorial voice: each step says what a thing is and where it is.
 // Content file: not scanned by copy-lint (like milestones.js). Keep every title under 5 words and every body under 30.
-// sel = the first VISIBLE element that matches; a step with no match is shown centered. ASCII only.
+// wideSel / wideBody replace sel / body on laptops (1100px and up). sel = the first VISIBLE element that matches; a step with no match is shown centered. ASCII only.
 export const TOURS = {
   home: {
     name: "Home tour",
@@ -32,7 +32,8 @@ export const TOURS = {
     steps: [
       { sel: ".status .vitals", title: "Level, HP, AC", body: "The seal is level and XP. The vial is hit points. The shield is armor class. Each one opens its own controls." },
       { sel: 'nav.tabs [data-tab="rules"]', title: "Rules", body: "Every class, spell, item and condition, searchable offline. Notes sits beside it." },
-      { sel: ".hubcell", title: "Quick tools", body: "Dice, conditions, calculator, rest and initiative. The Shop is on the Gear tab." },
+      { sel: ".addcond", title: "Active effects", body: "Conditions, spell effects and drains. They change your numbers, and End removes them." },
+      { sel: ".hubcell", wideSel: ".hubfan", title: "Quick tools", body: "The round button opens dice, effects, calculator, rest and initiative. Edit the list in Settings.", wideBody: "The sidebar lists dice, effects, calculator, rest and initiative. Edit the list in Settings." },
       { sel: '[data-a="openEdit"]', title: "Edit character", body: "Level up or lower, add feats, change scores, mark a character as dead." },
       { sel: ".navchar", title: "Back to character", body: "The portrait jumps straight to your character from any page. The arrow goes back one page." },
       { sel: '[data-a="helpOpen"]', title: "Help", body: "The ? replays this tour. Every screen has one in its header." },
