@@ -1,7 +1,9 @@
 // Spell browser (Add spells), Wanted shelf, filter + sort menu, prepare menu and spell loadouts.
 import { esc, ICONS, searchBox, modalShell, formatText } from "../ui.js";
 import { enabledSpells, findByName } from "../data.js";
-import { parseList } from "../rules.js";
+import { parseList, slotRows } from "../rules.js";
+import { listsFor, listPlan } from "../spelllists.js";
+import { applyDeltas } from "../equipment.js";
 import { tableCounts } from "../progression.js";
 import { SCHOOLS, NUMERAL, ROLES, DAMAGE_TYPES, spellFacts, scaleRows, schoolKey } from "../spellinfo.js";
 import { describeArea } from "../areagrid.js";
@@ -74,11 +76,33 @@ export function renderBrowseResults(app, detailFor) {
     + (list.length > 60 ? `<p class="muted small" style="padding:10px 0">Showing 60 of ${list.length}</p>` : "");
 }
 
-export function renderBrowserBody(app, detailFor) {
-  const c = app.char, s = sbState(app), n = sbCount(s), wn = (c.spellWish || []).length;
+export const maxSpellLevel = c => Math.max(0, ...slotRows(c.class, c.level).map(r => r.level));
+export function listCards(app) {
+  const c = app.char, known = c.spellcasting.spells.map(x => x.name), pool = enabledSpells(app.library, app.campaign), mx = maxSpellLevel(c);
+  return `<div class="optlist">${listsFor(c.class).map(l => { const p = listPlan(l, known, pool, c.class, mx);
+    return `<div class="inforow"><div class="inforow-top"><button class="optcard" data-a="spListOpen" data-id="${esc(l.id)}"><span class="grow"><b>${esc(l.name)}</b><span>${esc(l.blurb)}</span><span class="spchips"><i class="spchip">${p.add.length} to add</i><i class="spchip">${p.have.length} owned</i>${p.skip.length ? `<i class="spchip">${p.skip.length} skipped</i>` : ""}</span></span><span class="tag">View</span></button></div></div>`; }).join("")}</div>`;
+}
+export function renderListPreview(app, id) {
+  const c = app.char, l = listsFor(c.class).find(x => x.id === id);
+  if (!l) return modalShell("List", `<p>List gone</p>`, `<button class="btn pri" data-a="closeModal">Close</button>`);
+  const p = listPlan(l, c.spellcasting.spells.map(x => x.name), enabledSpells(app.library, app.campaign), c.class, maxSpellLevel(c));
+  const sec = (t, a, tone) => a.length ? `<h4 class="sbh">${t} (${a.length})</h4><div class="chips">${a.map(n => `<span class="tag ${tone}">${esc(n)}</span>`).join("")}</div>` : "";
+  return modalShell(l.name, `<p class="sub2">${esc(l.blurb)}</p>${sec("Add", p.add, "amber")}${sec("Already yours", p.have, "")}
+    ${p.skip.length ? `<h4 class="sbh">Skipped (${p.skip.length})</h4><div class="optlist">${p.skip.map(([n, w]) => `<p class="small muted" style="margin:2px 0">${esc(n)} \u00b7 ${esc(w)}</p>`).join("")}</div>` : ""}`,
+    `<button class="btn" data-a="closeModal">Back</button><button class="btn pri" data-a="spListApply" data-id="${esc(l.id)}" ${p.add.length ? "" : "disabled"}>Add ${p.add.length}</button>`);
+}
+
+function tabsHtml(app, c, s, wn) {
   return `<div class="seg sbtabs" role="group" aria-label="Shelf">
       <button data-a="spTab" data-tab="browse" aria-pressed="${s.tab === "browse"}">Browse</button>
-      <button data-a="spTab" data-tab="wanted" aria-pressed="${s.tab === "wanted"}">Wanted <em>${wn}</em></button></div>
+      <button data-a="spTab" data-tab="wanted" aria-pressed="${s.tab === "wanted"}">Wanted <em>${wn}</em></button>
+      ${listsFor(c.class).length ? `<button data-a="spTab" data-tab="lists" aria-pressed="${s.tab === "lists"}">Lists <em>${listsFor(c.class).length}</em></button>` : ""}</div>`;
+}
+
+export function renderBrowserBody(app, detailFor) {
+  const c = app.char, s = sbState(app), n = sbCount(s), wn = (c.spellWish || []).length;
+  if (s.tab === "lists") return tabsHtml(app, c, s, wn) + `<div class="results">${listCards(app)}</div>`;
+  return tabsHtml(app, c, s, wn) + `
     <div class="sbfind">${searchBox("picker", app.pickerQuery, s.tab === "wanted" ? "Search wanted" : `Search ${esc(c.class)} spells`)}
       <button class="btn sm ${n ? "pri" : ""}" data-a="spFilterOpen" aria-label="Filter and sort">${ICONS.sort}<span>Filter</span>${n ? `<b class="sbbadge">${n}</b>` : ""}</button></div>
     <div class="seg sblv" role="group" aria-label="Spell level"><button data-a="pickerLevel" data-lv="" aria-pressed="${app.pickerLevel == null}">All</button>
@@ -148,4 +172,40 @@ export function renderLoadPreview(app, id) {
   const list = (t, a, tone) => a.length ? `<h4 class="sbh">${t} (${a.length})</h4><div class="chips">${a.map(n => `<span class="tag ${tone}">${esc(n)}</span>`).join("")}</div>` : "";
   return modalShell(l.name, `${list("Prepare", on, "amber")}${list("Unprepare", off, "")}${list("Removed, will be skipped", miss, "")}${!on.length && !off.length && !miss.length ? `<p class="muted small">Already matches</p>` : ""}`,
     `<button class="btn" data-a="closeModal">Back</button><button class="btn pri" data-a="spLoadApply" data-id="${esc(l.id)}">Apply</button>`);
+}
+
+// ---------- Wizard: scribe spells into the spellbook ----------
+export const SCRIBE_GP = 50, SCRIBE_HOURS = 2;
+export function scrollSpell(it, pool) {
+  const m = /^(?:Spell Scroll\s*[(:,\-\u2013]\s*|Scroll of\s+)(.+?)\)?$/i.exec(String((it && it.name) || "").trim());
+  return m ? findByName(pool, m[1].trim()) || null : null;
+}
+const scribable = (c, sp, known, mx) => sp.level >= 1 && sp.level <= mx && !known.has(sp.name) && classOf(sp).includes("Wizard");
+export const scribeCost = sp => ({ gp: SCRIBE_GP * sp.level, hours: SCRIBE_HOURS * sp.level });
+export const canPay = (c, gp) => !!applyDeltas(c.coins || {}, { gp: -gp }) && Object.values(applyDeltas(c.coins || {}, { gp: -gp })).every(v => v >= 0);
+
+export function renderScribe(app) {
+  const c = app.char, pool = enabledSpells(app.library, app.campaign), known = new Set(c.spellcasting.spells.map(x => x.name)), mx = maxSpellLevel(c);
+  const q = (app.scQ || "").trim().toLowerCase();
+  const scrolls = (c.inventory || []).map(it => [it, scrollSpell(it, pool)]).filter(([, sp]) => sp && scribable(c, sp, known, mx));
+  const row = (sp, scrollId) => { const k = scribeCost(sp); return `<div class="inforow"><div class="inforow-top"><button class="optcard" data-a="scribeAsk" data-name="${esc(sp.name)}" ${scrollId ? `data-scroll="${esc(scrollId)}"` : ""}>
+    ${spellIcon(sp)}<span class="grow"><b>${esc(sp.name)}</b><span>${esc(spellSubLine(sp))}</span><span class="spchips"><i class="spchip">${k.gp} gp</i><i class="spchip">${k.hours} h</i></span></span><span class="tag amber">Scribe</span></button></div></div>`; };
+  const book = pool.filter(sp => scribable(c, sp, known, mx) && (!q || sp.name.toLowerCase().includes(q))).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+  return `<h4 class="sbh">From scrolls in your bag</h4>${scrolls.length ? `<div class="optlist">${scrolls.map(([it, sp]) => row(sp, it.id)).join("")}</div>` : `<p class="muted small">No named scrolls</p>`}
+    <h4 class="sbh">From another spellbook</h4>${searchBox("scribe", app.scQ, "Search Wizard spells")}
+    <div class="results" id="results-scribe">${scribeBook(book)}</div>`;
+  function scribeBook(list) { return list.length ? `<div class="optlist">${list.slice(0, 40).map(sp => row(sp, "")).join("")}</div>` : `<p class="muted small" style="padding:10px 0">No spells</p>`; }
+}
+export function scribeResults(app) {
+  const c = app.char, pool = enabledSpells(app.library, app.campaign), known = new Set(c.spellcasting.spells.map(x => x.name)), mx = maxSpellLevel(c), q = (app.scQ || "").trim().toLowerCase();
+  const list = pool.filter(sp => scribable(c, sp, known, mx) && (!q || sp.name.toLowerCase().includes(q))).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+  return list.length ? `<div class="optlist">${list.slice(0, 40).map(sp => { const k = scribeCost(sp); return `<div class="inforow"><div class="inforow-top"><button class="optcard" data-a="scribeAsk" data-name="${esc(sp.name)}">${spellIcon(sp)}<span class="grow"><b>${esc(sp.name)}</b><span>${esc(spellSubLine(sp))}</span><span class="spchips"><i class="spchip">${k.gp} gp</i><i class="spchip">${k.hours} h</i></span></span><span class="tag amber">Scribe</span></button></div></div>`; }).join("")}</div>` : `<p class="muted small" style="padding:10px 0">No spells</p>`;
+}
+export function renderScribeConfirm(app, m) {
+  const c = app.char, sp = findByName(enabledSpells(app.library, app.campaign), m.name) || findByName(app.library.spells, m.name);
+  if (!sp) return modalShell("Scribe", `<p>Spell gone</p>`, `<button class="btn pri" data-a="closeModal">Close</button>`);
+  const k = scribeCost(sp), ok = canPay(c, k.gp), gp = (c.coins && c.coins.gp) || 0;
+  return modalShell(`Scribe ${sp.name}`, `<div class="scribe">${spellIcon(sp, "big")}<dl class="kv"><dt>Level</dt><dd>${sp.level}</dd><dt>Time</dt><dd>${k.hours} hours</dd><dt>Cost</dt><dd>${k.gp} gp (you have ${gp})</dd>
+      ${m.scroll ? `<dt>Scroll</dt><dd>Used up. This cannot be undone.</dd>` : `<dt>Source</dt><dd>Another spellbook</dd>`}</dl></div>${ok ? "" : `<p class="small" style="color:var(--red)">Not enough coins</p>`}`,
+    `<button class="btn" data-a="closeModal">Cancel</button><button class="btn pri" data-a="scribeGo" ${ok ? "" : "disabled"}>Scribe</button>`);
 }

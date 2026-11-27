@@ -225,15 +225,19 @@ export function spellsTab(app, c, d) {
   const prepared = known.filter(s => s.ref && s.ref.level > 0 && (s.prepared || s.always)).length;
 
   const lvOf = s => s.ref ? s.ref.level : 1;
-  const sq = (app.spQ || "").trim().toLowerCase(), slv = app.spLv == null ? "All" : app.spLv;
-  const shownK = known.filter(s => (slv === "All" || lvOf(s) === slv) && (!app.spPrep || lvOf(s) === 0 || s.prepared || s.always) && (!sq || s.name.toLowerCase().includes(sq)));
+  const grp = app.spGroup || "level", sq = (app.spQ || "").trim().toLowerCase(), slv = app.spLv == null ? "All" : app.spLv;
+  const shownK = known.filter(s => (slv === "All" || lvOf(s) === slv) && (!app.spPrep || lvOf(s) === 0 || s.prepared || s.always) && (!app.spRit || s.ref?.ritual) && (!sq || s.name.toLowerCase().includes(sq)));
   const allLv = [...new Set(known.map(lvOf))].sort((a, b) => a - b);
   const filterBar = known.length ? `<div class="sp2-find"><div class="seg" role="group" aria-label="Spell level"><button data-a="spLv" data-lv="All" aria-pressed="${slv === "All"}">All</button>${allLv.map(l => `<button data-a="spLv" data-lv="${l}" aria-pressed="${slv === l}">${l === 0 ? "Cantrip" : ORD_SHORT[l] || l}</button>`).join("")}</div>
       <button class="btn sm ${app.spPrep ? "pri" : ""}" data-a="spPrep" aria-pressed="${!!app.spPrep}">Prepared only</button>
+      <button class="btn sm ${app.spRit ? "pri" : ""}" data-a="spRit" aria-pressed="${!!app.spRit}">Rituals</button>
+      <span class="seg sp2-grp" role="group" aria-label="Group by">${[["level", "Level"], ["school", "School"], ["prepared", "Prepared"]].map(([k, l]) => `<button data-a="spGroup" data-v="${k}" aria-pressed="${grp === k}">${l}</button>`).join("")}</span>
       <label class="st-q"><span class="sr">Search spells</span>${ICONS.search}<input id="sp-q" type="search" placeholder="Search" value="${esc(app.spQ || "")}" autocomplete="off"></label></div>` : "";
+  const keyOf = s => grp === "school" ? (s.ref?.school || "Other") : grp === "prepared" ? (lvOf(s) === 0 ? "Cantrips" : s.always || s.prepared ? "Prepared" : "Not prepared") : levelLabel(lvOf(s));
   const byLevel = {};
-  shownK.forEach(s => { const lv = lvOf(s); (byLevel[lv] = byLevel[lv] || []).push(s); });
-  const levels = Object.keys(byLevel).map(Number).sort((a, b) => a - b);
+  shownK.forEach(s => { const k = keyOf(s); (byLevel[k] = byLevel[k] || []).push(s); });
+  const ORDER = { Cantrips: 0, Prepared: 1, "Not prepared": 2 };
+  const levels = Object.keys(byLevel).sort((a, b) => grp === "prepared" ? ORDER[a] - ORDER[b] : grp === "school" ? a.localeCompare(b) : (byLevel[a][0] && lvOf(byLevel[a][0])) - (byLevel[b][0] && lvOf(byLevel[b][0])));
 
   return `
     ${info ? `<div class="panel"><div class="panel-body">
@@ -251,18 +255,19 @@ export function spellsTab(app, c, d) {
           <span class="gems">${Array.from({ length: r.max }, (_, i) => `<button class="pip ${i < r.max - used ? "" : "used"}" data-a="toggleSlot" data-lvl="${r.level}" data-i="${i}" data-max="${r.max}" aria-label="${levelLabel(r.level)} slot ${i + 1}, ${i < r.max - used ? "available" : "used"}"></button>`).join("")}</span></div>`;
       }).join("") + (info.slots.some(r => r.pact) ? `<p class="sub2">Pact slots come back on a short rest.</p>` : "") : `<p class="muted small">No spell slots at this level.</p>`}
       <p class="sub2 sp2-key">✦ always prepared</p></div>
-    <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><span class="sp2-btns"><button class="btn sm" data-a="spPrepOpen">Prepare</button><button class="btn sm ${app.spEdit ? "pri" : ""}" data-a="spEditToggle" aria-pressed="${!!app.spEdit}">Edit list</button><button class="btn sm pri" data-a="openPicker" data-picker="spells">Add spells</button></span></div>
+    <div class="sp2-main"><div class="sp2-head"><h2 class="sec2">Your spells</h2><span class="sp2-btns"><button class="btn sm" data-a="spPrepOpen">Prepare</button>${c.class === "Wizard" ? `<button class="btn sm" data-a="spScribeOpen">Scribe</button>` : ""}<button class="btn sm ${app.spEdit ? "pri" : ""}" data-a="spEditToggle" aria-pressed="${!!app.spEdit}">Edit list</button><button class="btn sm pri" data-a="openPicker" data-picker="spells">Add spells</button></span></div>
       ${filterBar}
-      ${known.length ? (levels.length ? "" : `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`) + levels.map(lv => kGroup(levelLabel(lv), byLevel[lv].length, { tone: lv === 0 ? "faint" : "amber" }) + `<div class="k-list">` + byLevel[lv].map(s => {
+      ${known.length ? (levels.length ? "" : `<p class="muted small" style="padding:12px 0">Nothing matches.</p>`) + levels.map(lv => kGroup(lv, byLevel[lv].length, { tone: lv === "Cantrip" || lv === "Cantrips" ? "faint" : "amber" }) + `<div class="k-list">` + byLevel[lv].map(s => {
+        const lvn = lvOf(s);
         const r = s.ref;
         const sub = r ? [r.time, r.range].filter(Boolean).join(" \u00b7 ") : "";
-        const tag = r?.conc ? "Concentration" : r?.ritual ? "Ritual" : s.always ? "Always prepared" : lv > 0 && s.prepared ? "Prepared" : "";
-        const unprep = lv > 0 && !s.always && !s.prepared;
+        const tag = r?.conc ? "Concentration" : r?.ritual ? "Ritual" : s.always ? "Always prepared" : lvn > 0 && s.prepared ? "Prepared" : "";
+        const unprep = lvn > 0 && !s.always && !s.prepared;
         return kRow({
-          icon: r ? spellIcon(r) : "", glyph: (r?.school || s.name)[0], tone: lv === 0 ? "blue" : "amber", off: unprep,
+          icon: r ? spellIcon(r) : "", glyph: (r?.school || s.name)[0], tone: lvn === 0 ? "blue" : "amber", off: unprep,
           title: s.name + (s.always ? " \u2726" : ""), cap: [r?.school, tag].filter(Boolean).join(" \u00b7 "), sub, snip: snipOf(r?.text),
           mainAttrs: `data-a="showDetail" data-kind="spell" data-name="${esc(s.name)}"`,
-          actions: `${info && (lv === 0 || s.prepared || s.always) ? `<button class="btn sm ${lv === 0 ? "" : "pri"}" data-a="${lv === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
+          actions: `${c.class === "Wizard" && lvn > 0 && r?.ritual && !s.prepared && !s.always ? `<button class="btn sm" data-a="castRitual" data-name="${esc(s.name)}">Ritual</button>` : ""}${info && (lvn === 0 || s.prepared || s.always) ? `<button class="btn sm ${lvn === 0 ? "" : "pri"}" data-a="${lvn === 0 ? "castCantrip" : "openCast"}" data-name="${esc(s.name)}">Cast</button>` : ""}
             ${app.spEdit && !s.always ? `<button class="iconbtn sp2-x" data-a="askRemove" data-do="removeSpell" data-what="spell" data-name="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${ICONS.close}</button>` : ""}`
         });
       }).join("") + "</div>").join("") : `<p class="muted small" style="padding:12px 0">No spells.</p>`}

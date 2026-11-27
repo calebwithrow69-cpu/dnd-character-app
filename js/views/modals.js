@@ -1,5 +1,5 @@
 import { renderJump } from "./jump.js";
-import { renderBrowserBody, renderFilterModal, renderPrepModal, renderLoadPreview } from "./spellbrowser.js";
+import { renderBrowserBody, renderFilterModal, renderPrepModal, renderLoadPreview, renderListPreview, renderScribe, renderScribeConfirm } from "./spellbrowser.js";
 import { areaSvg, areaStats, describeArea, originNote } from "../areagrid.js";
 import { PHYS } from "../phys.js";
 import { renderDmModal } from "./dmmode.js";
@@ -116,6 +116,9 @@ export function renderModal(app) {
         `<button class="btn pri" data-a="closeModal">Close</button>`);
     }
     case "spFilter": return renderFilterModal(app);
+    case "spList": return renderListPreview(app, m.id);
+    case "scribe": return modalShell("Scribe spells", renderScribe(app), `<button class="btn pri" data-a="closeModal">Done</button>`);
+    case "scribeConfirm": return renderScribeConfirm(app, m);
     case "spPrep": return renderPrepModal(app);
     case "spLoadPrev": return renderLoadPreview(app, m.id);
     case "picker": {

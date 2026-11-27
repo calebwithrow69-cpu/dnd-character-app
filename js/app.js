@@ -1,4 +1,4 @@
-import { loadData, checkForUpdates, findByName, allWeapons, allItems, LockedError, unlockWithPassword, verifyPassword, normalizeSubclass, setSubclassAllow } from "./data.js";
+import { loadData, checkForUpdates, findByName, enabledSpells, allWeapons, allItems, LockedError, unlockWithPassword, verifyPassword, normalizeSubclass, setSubclassAllow } from "./data.js";
 import * as store from "./store.js";
 import { feedback, sfx, setSfxEnabled, setHaptics, setVolume, preloadSamples } from "./sfx.js";
 import { mountHp, unmountHp, applyHp as hpFx } from "./hpbar.js";
@@ -54,7 +54,8 @@ import { templatePayload, templateCode, readShared } from "./templates.js";
 import { rationsNeed, spendRations, applyRestPicks, isRation } from "./rest.js";
 import { variantDef, draftChoices, randomize, optionsFor, syncLineageSpells, lineageSpells } from "./choices.js";
 import { jumpResults } from "./views/jump.js";
-import { renderBrowseResults, prepResults, preparedNames, sbState } from "./views/spellbrowser.js";
+import { renderBrowseResults, prepResults, preparedNames, sbState, scribeResults, scribeCost, canPay, maxSpellLevel } from "./views/spellbrowser.js";
+import { listsFor, listPlan } from "./spelllists.js";
 import { renderSheet, renderSpellResults, renderGearResults, needsFirstChoices, detailFor } from "./views/sheet.js";
 import { glState, glTabs, glFilters, glPane, renderRulesResults, marksOf, effCat } from "./views/glossary.js";
 import { loadMarks, saveMarks, toggleMark } from "./glossary.js";
@@ -1104,6 +1105,7 @@ function onInput(e) {
     if (r) r.innerHTML = APP.modal.picker === "spells" ? renderBrowseResults(APP, detailFor) : renderGearResults(APP, APP.modal.picker);
     return;
   }
+  if (ds.query === "scribe") { APP.scQ = el.value; const r = document.getElementById("results-scribe"); if (r) r.innerHTML = scribeResults(APP); return; }
   if (ds.query === "spprep") { APP.spPQ = el.value; const r = document.getElementById("results-spprep"); if (r) r.innerHTML = prepResults(APP); return; }
   if (ds.query === "fx") { APP.fxQ = el.value; const r = document.getElementById("fx-list"); if (r && APP.char) r.innerHTML = fxListHtml(APP, APP.char); return; }
   if (ds.query === "cxshop") { APP.cxShopQuery = el.value; const r = document.getElementById("results-cxshop"); if (r) r.innerHTML = renderCxShopResults(APP); return; }
@@ -1659,6 +1661,31 @@ const ACTIONS = {
   // modal plumbing
   closeModal() { closeModal(); },
   closeModalBackdrop() { closeModal(); },
+  spListOpen(el) { APP._under = APP.modal; openModal({ type: "spList", id: el.dataset.id }); },
+  spListApply(el) {
+    const c = APP.char, l = listsFor(c.class).find(x => x.id === el.dataset.id); if (!l) return;
+    const plan = listPlan(l, c.spellcasting.spells.map(x => x.name), enabledSpells(APP.library, APP.campaign), c.class, maxSpellLevel(c));
+    const pool = enabledSpells(APP.library, APP.campaign);
+    plan.add.forEach(n => { const sp = findByName(pool, n); c.spellcasting.spells.push({ name: n, prepared: sp && sp.level === 0 ? true : false, always: false }); });
+    save(); const under = APP._under; APP._under = null; APP.modal = under || null; render(); toast(`Added ${plan.add.length} spells`);
+  },
+  spScribeOpen() { APP.scQ = ""; openModal({ type: "scribe" }); },
+  scribeAsk(el) { APP._under = APP.modal; openModal({ type: "scribeConfirm", name: el.dataset.name, scroll: el.dataset.scroll || "" }); },
+  scribeGo() {
+    const c = APP.char, m = APP.modal, sp = findByName(APP.library.spells, m.name); if (!sp || c.class !== "Wizard") return;
+    const k = scribeCost(sp); if (!canPay(c, k.gp)) { toast("Not enough coins"); return; }
+    c.coins = applyDeltas(c.coins, { gp: -k.gp });
+    if (m.scroll) { const it = itemById(c, m.scroll); if (it) { if ((it.qty || 1) > 1) it.qty -= 1; else { unequip(it.id, true); c.inventory = c.inventory.filter(i => i.id !== it.id); } } }
+    if (!c.spellcasting.spells.some(s => s.name === sp.name)) c.spellcasting.spells.push({ name: sp.name, prepared: false, always: false });
+    save(); const under = APP._under; APP._under = null; APP.modal = under || null; render(); toast(`Scribed ${sp.name}`);
+  },
+  castRitual(el) {
+    const c = APP.char, name = el.dataset.name, sp = findByName(APP.library.spells, name);
+    if (sp && sp.conc) { c.concentration = name; c.spellfx = (c.spellfx || []).filter(x => !x.conc); syncHp(c); }
+    saveAndRender(); toast(`Ritual cast: ${name}`);
+  },
+  spGroup(el) { APP.spGroup = el.dataset.v; render(); },
+  spRit() { APP.spRit = !APP.spRit; render(); },
   noop() { },
   spWish(el) { const c = APP.char, n = el.dataset.name, w = c.spellWish || (c.spellWish = []), i = w.indexOf(n); if (i < 0) w.push(n); else w.splice(i, 1); save(); keepModalY(() => render()); },
   spTab(el) { sbState(APP).tab = el.dataset.tab; render(); },

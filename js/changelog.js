@@ -2,11 +2,22 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.117";
+export const VERSION = "0.1.118";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.118",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Spell overhaul, part two: scribing, premade lists, ritual casting and grouping.",
+    groups: [
+      { title: "Wizard", items: ["Scribe copies a spell into your spellbook from a named scroll in your bag or from another book. It shows the cost (50 gp per level) and time (2 hours per level) first, and a scroll is used up.", "Ritual casts a ritual spell from your spellbook without preparing it or using a slot."] },
+      { title: "Spell browser", items: ["A Lists shelf has themed spell lists for each caster class. Preview shows what is added, owned or skipped."] },
+      { title: "Your spell list", items: ["Group by level, school or prepared.", "A Rituals filter shows only ritual spells."] }
+    ]
+  },
   {
     v: "0.1.117",
     date: "2026-11-27",

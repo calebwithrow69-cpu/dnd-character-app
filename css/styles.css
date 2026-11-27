@@ -3505,3 +3505,7 @@ html[data-mode="dark"] .spi{color:hsl(var(--h) 75% 72%);border-color:hsl(var(--h
 .optcard .grow .spchips{display:flex}
 .sp2-head{flex-wrap:wrap}.sp2-head .sec2{flex:1 0 100%}.sp2-btns{width:100%;justify-content:flex-start}
 @media(min-width:900px){.sp2-head .sec2{flex:1}.sp2-btns{width:auto}}
+
+/* Scribe, lists, grouping */
+.sp2-grp{margin-left:auto}.sp2-grp button{padding-inline:8px}
+.scribe{display:flex;gap:12px;align-items:flex-start}.scribe .kv{flex:1;margin:0}

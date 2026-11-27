@@ -102,6 +102,10 @@ HINTS.push(
   { id: "spFilter", where: "spbrowse", sel: '[data-a="spFilterOpen"]', title: "Filter and sort", body: "Narrow by school, role, area shape, damage, saving throw and casting time." },
   { id: "spLevels", where: "spbrowse", sel: ".sblv", title: "Spell levels", body: "Numerals are spell levels. The ring is cantrips." },
   { id: "spHeart", where: "spbrowse", sel: ".sprow .heart", title: "Wanted", body: "Heart a spell to keep it on the Wanted shelf for later." },
+  { id: "spLists", where: "spbrowse", sel: '[data-a="spTab"][data-tab="lists"]', title: "Premade lists", body: "Themed spell lists for your class. Preview first, then add what fits your level." },
+  { id: "spGroup", where: "sheet", sel: ".sp2-grp", title: "Group spells", body: "Group your list by level, school or prepared." },
+  { id: "spScribe", where: "sheet", sel: '[data-a="spScribeOpen"]', title: "Scribe spells", body: "Copy a spell into your spellbook from a scroll or another book. Cost and time show before you commit." },
+  { id: "spRitual", where: "sheet", sel: '[data-a="castRitual"]', title: "Ritual casting", body: "Cast a ritual spell from your spellbook without preparing it or using a slot." },
   { id: "spArea", where: "spdetail", sel: ".areahit", title: "Area diagrams", body: "Underlined areas open a 5-foot grid. Switch between square and hex." }
 );
 
