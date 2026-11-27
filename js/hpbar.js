@@ -32,7 +32,7 @@ function hueFor(p) {
 }
 const gauss = (d, w) => Math.exp(-(d / w) * (d / w));
 // Heartbeat shape: a strong beat, then a softer one a moment later.
-const heart = ph => Math.max(gauss(Math.min(ph, 1 - ph), 0.05), 0.62 * gauss(Math.abs(ph - 0.3), 0.055));
+const heart = ph => Math.max(gauss(Math.min(ph, 1 - ph), 0.085), 0.7 * gauss(Math.abs(ph - 0.33), 0.075));
 function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 const edgeX = v => PADX + (CW - PADX * 2) * clamp(v / view.max, 0, 1);
 function spawn(n, f) { for (let i = 0; i < n && view.part.length < 220; i++) view.part.push(f(i)); }
@@ -88,8 +88,8 @@ function edge(on) {
   if (!on) { if (el) el.remove(); return; }
   if (!el) { el = document.createElement("div"); el.id = "fearedge"; el.setAttribute("aria-hidden", "true"); document.body.appendChild(el); }
   const f = view.cur <= 0 ? 0.55 : Math.max(0.12, view.fear), pulse = view.cur <= 0 ? 0.5 + 0.5 * Math.sin(view.t * 2.2) : view.calm ? 0.6 : view.beat;
-  el.style.opacity = (0.3 + 0.7 * pulse).toFixed(3);
-  el.style.boxShadow = `inset 0 0 ${Math.round(50 + 150 * f)}px ${Math.round(4 + 38 * f)}px rgba(${view.cur <= 0 ? "120,10,10" : "210,15,15"},${(0.3 + 0.55 * f).toFixed(2)})`;
+  el.style.opacity = (0.08 + 0.92 * pulse).toFixed(3);
+  el.style.boxShadow = `inset 0 0 ${Math.round((50 + 150 * f) * (0.8 + 0.4 * pulse))}px ${Math.round((4 + 38 * f) * (0.7 + 0.6 * pulse))}px rgba(${view.cur <= 0 ? "120,10,10" : "210,15,15"},${(0.3 + 0.55 * f).toFixed(2)})`;
 }
 function sync() {
   edge(!!cv && cv.isConnected && view.cur / view.max <= 0.5 && !view.dead);
@@ -102,7 +102,7 @@ function sync() {
 function update(dt) {
   view.t += dt;
   { const pc = view.cur / view.max; view.fear = view.cur <= 0 ? 0 : view.cur === 1 ? 1 : clamp((0.5 - pc) / 0.45, 0, 1);
-    view.ph = (view.ph + dt * (52 + 78 * view.fear) / 60) % 1; view.beat = view.fear > 0 ? heart(view.ph) * (0.35 + 0.65 * view.fear) : 0; }
+    view.ph = (view.ph + dt * (46 + 38 * view.fear) / 60) % 1; view.beat = view.fear > 0 ? heart(view.ph) * (0.55 + 0.45 * view.fear) : 0; }
   const k = view.soft ? 38 : 230, damp = view.soft ? 8 : 24;
   view.vel += ((view.cur - view.disp) * k - view.vel * damp) * dt; view.disp += view.vel * dt;
   if (Math.abs(view.cur - view.disp) < 0.01 && Math.abs(view.vel) < 0.05) { view.disp = view.cur; view.vel = 0; view.soft = false; }

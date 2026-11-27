@@ -2,11 +2,30 @@
 // and bump VERSION (and CACHE_VERSION in service-worker.js).
 // ASCII only in this file.
 
-export const VERSION = "0.1.102";
+export const VERSION = "0.1.103";
 export const STAGE = "Pre-build";
 export const TESTERS = "Caleb + 1 player";
 
 export const CHANGELOG = [
+  {
+    v: "0.1.103",
+    date: "2026-11-27",
+    stage: "Pre-build",
+    blurb: "Gear redesign, loadouts menu, slower heartbeat.",
+    groups: [
+      { title: "Gear", items: [
+        "Gear summary: armor class, attunement, item count and weight bar in one panel.",
+        "Worn gear as a slot grid. Tap a slot to pick from your bag, with the armor class change shown.",
+        "Loadouts moved to one button. It lists your saved sets, each with its armor class, and saves the current gear.",
+        "Bag search and filters: All, Equipped, Consumables, Attunement, 10 lb and up.",
+        "Type groups show their weight. Quantity has plus and minus buttons."
+      ] },
+      { title: "Hit point bar", items: [
+        "Heartbeat is slower and each beat is larger: a long first beat, a softer second, then a pause.",
+        "Screen edge glow swells and fades with each beat."
+      ] }
+    ]
+  },
   {
     v: "0.1.102",
     date: "2026-11-27",

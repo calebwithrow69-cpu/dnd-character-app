@@ -11,7 +11,7 @@ import {
   ABILITIES, ABILITY_LABEL, CONDITIONS, abilityMod, fmtMod, deriveCharacter, hpAverageGain, slotRows
 } from "../rules.js";
 import { findByName, subclassesFor, enabledSpecies, enabledBackgrounds, allItems, allWeapons } from "../data.js";
-import { SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, slotsOf, fitsOk, wearKind, attunedCount, armorTypeFromName, weaponsOf, itemCategory } from "../gear.js";
+import { computeAC, SLOTS, WEAR_CHOICES, ARMOR, itemById, slotOf, slotsOf, fitsOk, wearKind, attunedCount, armorTypeFromName, weaponsOf, itemCategory } from "../gear.js";
 import { formatText, infoRow, conditionIcon, glossaryEntry } from "../ui.js";
 import { detailFor, renderSpellResults, renderGearResults, acBody } from "./sheet.js";
 import { getCredits } from "../dice.js";
@@ -31,7 +31,7 @@ import { weaponNumbers } from "../rules.js";
 import { renderSubclassPage } from "./subclass.js";
 import { renderBadges, renderLevelUp, renderDiscard } from "./notes.js";
 import { renderContentUpdate } from "./contentupdate.js";
-import { renderLoadoutBody, renderLoadoutSave } from "./loadout.js";
+import { renderLoadoutBody, renderLoadoutSave, loadoutsOf, isActive, loadoutPlan } from "./loadout.js";
 import { renderCxShop } from "./cxshop.js";
 import { COPY, backupAge, storageReport } from "../storagerisk.js";
 import { trashList, daysLeft } from "../trash.js";
@@ -277,6 +277,13 @@ export function renderModal(app) {
         `<button class="btn pri" data-a="closeModal">Done</button>`);
     }
 
+    case "loadouts": {
+      const ls = loadoutsOf(c), acNow = computeAC(c).total;
+      const rows = ls.map(l => { const on = isActive(c, l), p = loadoutPlan(c, l), dlt = p.acNew - acNow;
+        return `<button class="optcard" data-a="loadoutOpen" data-id="${esc(l.id)}" aria-pressed="${on}"><span class="grow"><b>${esc(l.name)}</b><span>${on ? "Equipped now" : `${p.changes.length} change${p.changes.length === 1 ? "" : "s"}`}</span></span><span class="acprev ${on ? "" : dlt > 0 ? "up" : dlt < 0 ? "dn" : ""}">AC ${p.acNew}</span></button>`; }).join("");
+      return modalShell("Loadouts", `${rows ? `<div class="optlist" style="margin-top:0">${rows}</div>` : `<p class="muted small">No saved loadouts.</p>`}`, `<button class="btn" data-a="closeModal">Close</button><button class="btn pri" data-a="loadoutSaveOpen">Save current gear</button>`);
+    }
+
     case "loadout": { const r = renderLoadoutBody(app, c, m); return modalShell(r.title, r.body, r.foot); }
     case "loadoutSave": { const r = renderLoadoutSave(app, c); return modalShell(r.title, r.body, r.foot); }
 
@@ -290,7 +297,9 @@ export function renderModal(app) {
         <p class="lab" style="margin-top:12px">${options.length ? "From your bag" : ""}</p>
         <div class="optlist" style="margin-top:4px">${options.map(it => {
           const k = slotOf(c, it.id);
-          return `<button class="optcard" data-a="equipHere" data-id="${it.id}" data-slot="${m.slot}"><span class="grow"><b>${esc(it.name)}</b>
+          const eq2 = { ...c.equipment }; Object.keys(eq2).forEach(s => { if (eq2[s] === it.id && (it.qty || 1) <= 1) delete eq2[s]; }); eq2[m.slot] = it.id;
+          const acNow = computeAC(c).total, acNew = computeAC({ ...c, equipment: eq2, inventory: c.inventory.map(x => x.id === it.id && x.attune && !x.attuned && attunedCount(c) < 3 ? { ...x, attuned: true } : x) }).total;
+          return `<button class="optcard" data-a="equipHere" data-id="${it.id}" data-slot="${m.slot}"><span class="grow"><b>${esc(it.name)}</b><span class="acprev ${acNew > acNow ? "up" : acNew < acNow ? "dn" : ""}">${acNew === acNow ? "AC " + acNow : "AC " + acNow + " \u2192 " + acNew}</span>
             <span>${k ? ((it.qty || 1) > slotsOf(c, it.id).length ? "Equip another (" + (slotsOf(c, it.id).length + 1) + " of " + (it.qty || 1) + ")" : "Move from " + esc(SLOTS.find(s => s.key === k).label.toLowerCase())) : it.attune && !it.attuned ? "Needs attunement" : "Equip"}</span></span></button>`;
         }).join("") || `<p class="muted small">No matching items.</p>`}</div>`;
       return modalShell(label, body, `${cur ? `<button class="btn" data-a="unequip" data-id="${cur.id}" data-slot="${m.slot}">Take off</button>` : ""}<button class="btn pri" data-a="closeModal">Done</button>`);

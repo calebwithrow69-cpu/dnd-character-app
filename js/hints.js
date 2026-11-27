@@ -12,6 +12,8 @@ export const HINTS = [
     body: "Conditions, spell effects and drains that change your numbers. End any of them with one tap." },
   { id: "hotbar", where: "sheet", sel: ".hotbar-panel, .hb-slim", title: "Hotbar",
     body: "Pin attacks, spells and items here. One tap uses them." },
+  { id: "loadouts", where: "sheet", sel: '[data-a="loadoutsMenu"]', title: "Loadouts",
+    body: "Save what you wear and hold as a set. Tap to see your sets and swap with a preview." },
   { id: "trackers", where: "sheet", sel: ".trkpanel", title: "Trackers",
     body: "Limited uses with their reset. Tap a pip to spend one. Long rest refills them." }
 ];

@@ -2338,6 +2338,8 @@ const ACTIONS = {
   },
   clearSel() { APP.selItem = null; render(); },
   // Loadouts (Advanced sheet > Gear). Opening one only previews it; loadoutApply is the confirm.
+  loadoutsMenu() { openModal({ type: "loadouts" }); },
+  bagFilter(el) { APP.bagFilter = el.dataset.k; render(); },
   loadoutOpen(el) { openModal({ type: "loadout", id: el.dataset.id }); },
   loadoutAskDelete() { if (APP.modal) { APP.modal.confirmDelete = true; render(); } },
   loadoutSaveOpen() { openModal({ type: "loadoutSave" }); setTimeout(() => { const f = document.getElementById("f-ldname"); if (f) { f.focus(); f.select(); } }, 60); },
